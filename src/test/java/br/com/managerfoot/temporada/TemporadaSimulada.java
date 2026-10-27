@@ -38,8 +38,11 @@ final class TemporadaSimulada {
 	}
 
 	static TemporadaSimulada jogar(Divisao divisao, long semente) {
+		return jogar(divisao, semente, ParametrosMoral.padrao());
+	}
+
+	static TemporadaSimulada jogar(Divisao divisao, long semente, ParametrosMoral parametrosMoral) {
 		MotorPartida motor = new MotorPartida(ParametrosMotor.padrao());
-		ParametrosMoral parametrosMoral = ParametrosMoral.padrao();
 		SplittableRandom aleatorio = new SplittableRandom(semente);
 		Map<Clube, Escalacao> escalacoes = new HashMap<>();
 		Map<Clube, Moral> moral = new HashMap<>();

@@ -7,7 +7,8 @@ import org.junit.jupiter.api.Test;
 
 class MoralTest {
 
-	private final ParametrosMoral p = ParametrosMoral.padrao();
+	/** Sem retorno ao centro, para testar só as variações da SPEC §6.2. */
+	private final ParametrosMoral p = new ParametrosMoral(0, 30, 18, 2, 3, -1, 0, -3, -2, 15, 6, 0);
 
 	@Test
 	void comecaEm18() {
@@ -42,8 +43,20 @@ class MoralTest {
 	}
 
 	@Test
+	void retornoLevePuxaParaOValorInicial() {
+		ParametrosMoral comRetorno = ParametrosMoral.padrao();
+		assertThat(comRetorno.divisorRetorno()).isEqualTo(12);
+		// 0 + empate fora (0) + (18 - 0) / 12 = 1
+		assertThat(new Moral(0).aposJogo(false, 0, 0, comRetorno).valor()).isEqualTo(1);
+		// 30 + empate fora (0) + (18 - 30) / 12 = 29
+		assertThat(new Moral(30).aposJogo(false, 0, 0, comRetorno).valor()).isEqualTo(29);
+		// perto do centro o retorno é zero
+		assertThat(new Moral(20).aposJogo(false, 0, 0, comRetorno).valor()).isEqualTo(20);
+	}
+
+	@Test
 	void recusaParametrosIncoerentes() {
-		assertThatIllegalArgumentException().isThrownBy(() -> new ParametrosMoral(0, 30, 31, 2, 3, -1, 0, -3, -2, 15, 6));
-		assertThatIllegalArgumentException().isThrownBy(() -> new ParametrosMoral(0, 30, 18, 2, 3, -1, 0, -3, -2, 6, 15));
+		assertThatIllegalArgumentException().isThrownBy(() -> new ParametrosMoral(0, 30, 31, 2, 3, -1, 0, -3, -2, 15, 6, 0));
+		assertThatIllegalArgumentException().isThrownBy(() -> new ParametrosMoral(0, 30, 18, 2, 3, -1, 0, -3, -2, 6, 15, 0));
 	}
 }

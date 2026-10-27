@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 14 — 2026-10-27)
+-   **Status:** versão inicial para revisão (rev. 15 — 2026-10-27)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 15 (2026-10-27):** moral com retorno leve; clube inicial sorteado entre os 4 mais fracos da última divisão; divisões exibidas em sequência.
 -   **rev. 14 (2026-10-27):** mesmo motor em modo rápido; fluxo e ordem de processamento da rodada; referência da tela de jogos.
 -   **rev. 13 (2026-10-27):** fila de espera, demissão do usuário rebaixado para fora da liga, divisões sem usuário com resultado instantâneo.
 -   **rev. 12 (2026-10-27):** calendário sorteado por temporada; sorteio de desempate fixo na temporada.
@@ -118,6 +119,13 @@ Um participante sem privilégios de administrador:
   disponível/carregada.
 - Ao iniciar uma nova carreira individual, começará pela divisão mais
   baixa.
+- **Definido (rev. 15):** o clube do participante comum é **sorteado entre
+  os 4 clubes de menor força da última divisão** do país escolhido. Exemplo:
+  Inglaterra com uma só divisão leva ao sorteio entre os 4 mais fracos dela.
+  - Só o administrador escolhe qualquer clube.
+  - **Provisório:** o número 4 fica configurável.
+  - A essência do Elifoot 98 é começar por baixo, assumir outros times e
+    ser demitido.
 - Não poderá alterar regras globais da liga, salvo permissão explícita do
   administrador.
 - **Definido:** pode jogar no modo individual.
@@ -444,11 +452,14 @@ provisórios, a moral **satura nos extremos** ao longo de 38 rodadas.
 Se a moral for usada para demitir treinadores, isso causaria demissões
 demais.
 
-**Em aberto:** a correção. Opções:
-- reduzir as variações;
-- puxar a moral de volta para o valor inicial a cada rodada;
-- considerar a diferença de força (perder para um clube muito mais forte
-  pesar menos).
+**Definido (rev. 15): correção leve.** O usuário pediu para melhorar, mas
+não muito, porque o Elifoot 98 é sobre assumir times e ser demitido.
+- A cada jogo, a moral volta (18 − atual) ÷ 12 em direção a 18, com divisão
+  inteira.
+- No cenário realista, a faixa vermelha no fim da temporada cai de 36,5%
+  para 22%. 76% dos rebaixados continuam no vermelho.
+- **Provisório:** o divisor 12 pode ser recalibrado quando a regra de
+  demissão for definida (§5.4).
 
 ## 7. Motor de partidas (minuto a minuto, estilo elifoot98)
 
@@ -1157,12 +1168,17 @@ minuto. O resultado sai em instantes.
   4. Se o país tiver uma única divisão, todos os jogos da rodada (do
      usuário e da máquina) aparecem nessa tela.
 
-**Em aberto:**
-- Quando há usuários em mais de uma divisão (por exemplo, na 1ª e na 3ª),
-  se essas divisões rodam ao mesmo tempo, como no Elifoot 98, ou uma depois
-  da outra.
-- Se as divisões sem usuário aparecem já com o placar final na mesma tela,
-  ou são mostradas antes.
+**Definido (rev. 15) — exibição da rodada:**
+- As divisões são exibidas **uma depois da outra**, nunca ao mesmo tempo:
+  primeiro a mais inferior (por exemplo, a 3ª), depois a 2ª, e por último
+  a 1ª.
+- Quando uma divisão termina, a seguinte começa.
+- Divisão **com usuário:** roda na velocidade configurada.
+- Divisão **sem usuário:** mostra só os resultados, ou roda em velocidade
+  muito rápida, o que for mais rápido e melhor. A escolha final será feita
+  no modelo de tela.
+- Ao terminar a 1ª divisão, a tela de jogos fecha e o usuário volta à tela
+  do plantel.
 
 **Definido:** o processamento segue a prioridade em ordem **decrescente**.
 As divisões de número maior vêm primeiro (por exemplo, 3, depois 2) e a

@@ -26,7 +26,8 @@ public record Moral(int valor) {
 		} else {
 			variacao = emCasa ? parametros.derrotaEmCasa() : parametros.derrotaFora();
 		}
-		return new Moral(Math.clamp(valor + variacao, parametros.minimo(), parametros.maximo()));
+		int retorno = parametros.divisorRetorno() == 0 ? 0 : (parametros.inicial() - valor) / parametros.divisorRetorno();
+		return new Moral(Math.clamp(valor + variacao + retorno, parametros.minimo(), parametros.maximo()));
 	}
 
 	public Faixa faixa(ParametrosMoral parametros) {
