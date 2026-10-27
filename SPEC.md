@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 19 (2026-10-27):** números do asterisco; bônus de artilharia soma com o asterisco e vale para qualquer defensor; conflito resolvido.
 -   **rev. 18 (2026-10-27):** sorte/azar por divisão e oculto; bônus de artilharia como asterisco temporário, 15 por divisão; regras do asterisco; calendário por ordem e finais depois da liga.
 -   **rev. 17 (2026-10-27):** prêmio de artilharia dividido no empate; calendário do clube; elenco padrão de 23; sorte/azar da temporada; bônus de artilharia; efeito do asterisco (detalhes em aberto).
 -   **rev. 16 (2026-10-27):** histórico de gols do jogador e artilheiros; divisão sem usuário sempre rápida; modelos de escudo; telas aprovadas no modelo (§10.5).
@@ -360,8 +361,8 @@ rankings de artilheiros e o histórico de cartões de cada jogador (§7.4).
 **Definido (rev. 17) — bônus de artilharia da temporada:**
 - No início de cada temporada, o sistema sorteia cerca de **15 jogadores**
   que recebem um bônus na finalização, válido só naquela temporada.
-- Podem ser sorteados: meias e atacantes; defensores **somente com
-  asterisco**. Goleiros não.
+- Podem ser sorteados: defensores, meias e atacantes, com ou sem
+  asterisco (rev. 19). Goleiros não.
 - **Definido (rev. 18):**
   - São **15 jogadores por divisão**.
   - Sorteio com peso: jogador com asterisco tem **peso 2**; os demais,
@@ -371,8 +372,9 @@ rankings de artilheiros e o histórico de cartões de cada jogador (§7.4).
     sorteado de novo.
   - O asterisco temporário tem todos os efeitos do asterisco (§5.3),
     inclusive contar no limite de 3 em campo.
-- **Em aberto:** o que ganha o jogador que **já tem** asterisco quando é
-  sorteado (ver conflito registrado em §14).
+- **Definido (rev. 19):** o jogador que **já tem** asterisco e é sorteado
+  ganha um bônus extra de finalização na temporada, do mesmo tamanho do
+  bônus do asterisco, que **soma** ao do asterisco.
 
 O temperamento pode assumir:
 - Calmo.
@@ -411,10 +413,16 @@ torne uma vantagem desproporcional.
     escolhido finalizador**.
   - Até 3 asteriscos em campo, sem penalidade. **Mais de 3** gera uma
     penalidade que deve quase equilibrar os bônus dos asteriscos extras.
-- **Provisório:** jogador de linha com asterisco tem cerca de **15% a mais**
-  de chance de gol por finalização.
-- **Em aberto:** o peso na escolha do finalizador, se o bônus de conversão
-  vale no pênalti e a forma e o tamanho da penalidade acima de 3.
+- **Definido (rev. 19), valores provisórios:**
+  - Jogador de linha com asterisco tem **15% a mais** de chance de gol em
+    **todas** as finalizações, inclusive no pênalti que ele bate.
+  - Na escolha do finalizador, o asterisco conta como força **1,5 vez**
+    maior.
+  - A partir do **4º asterisco em campo**, cada asterisco a mais tira **5%**
+    do domínio do meio-campo, ajustado por simulação para quase equilibrar
+    o bônus dos asteriscos extras.
+  - Os efeitos se combinam: um batedor com asterisco contra um goleiro com
+    asterisco converte 75% × 1,15 × (65/75).
 
 ### 5.3.1 Sorte e azar da temporada
 
@@ -1459,12 +1467,8 @@ Novas questões abertas na rev. 2:
 - Detalhes das finais únicas (§8.2).
 - Lista de países equiparados a nacionais (§8.4).
 
-Conflito registrado na rev. 18 (aguarda decisão do usuário):
-- Bônus de artilharia × asterisco (§5.2). Uma resposta diz que o bônus e o
-  asterisco **se somam**; outra diz que, para quem já tem asterisco, o
-  bônus **não faz nada**, pois o bônus é virar asterisco. Além disso,
-  defensores só podem ser sorteados se já tiverem asterisco, então, na
-  segunda leitura, o sorteio nunca beneficiaria um defensor.
+Conflito da rev. 18 (bônus de artilharia × asterisco) **resolvido na
+rev. 19**: o bônus soma ao asterisco e vale para qualquer defensor (§5.2).
 
 ## 15. Plano de implementação
 
