@@ -1546,6 +1546,15 @@ começa depois que a anterior estiver testada.
   - **3b.2 (concluída):** jogadores no molde com posição, força,
     temperamento, asterisco permanente e nacionalidade (código do país,
     sem as regras de estrangeiros da §8.4); plantel de até 25 (migração V3).
+  - **Catálogo de países (rev. 21):** 211 membros da FIFA (migração V4).
+- Jogo em andamento (tabelas `jogo_*`), recorte aprovado em 2026-10-27:
+  - **3c.1 (concluída):** criar o jogo copiando a liga e os planteis do
+    país escolhido no molde, depois de validar a liga (migração V5). Os
+    outros países entram na Etapa 6; o jogo fica sem dono até as contas.
+  - **3c.2:** temporada e calendário gravados.
+  - **3c.3:** avanço de rodada que nunca processa a mesma rodada duas
+    vezes, com gols e semente.
+  - **3c.4:** fim de temporada (promoção e rebaixamento) gravado.
 - Avanço de rodada idempotente.
 - Script de administrador, link de cadastro e papéis (§3.4).
 - Banco padrão gerado: 23 jogadores por clube (máximo 25), 5 a 7 estrangeiros (§5.2).
