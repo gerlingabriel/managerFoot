@@ -31,6 +31,22 @@ automaticamente na inicialização.
 Alternativa sem `.env`: `./mvnw spring-boot:test-run` sobe a aplicação com um
 PostgreSQL temporário via Testcontainers.
 
+## Criar o administrador
+
+O primeiro administrador é criado por script (SPEC §3.4). A senha vai em
+variável de ambiente, nunca na linha de comando:
+
+```bash
+set -a && . ./.env && set +a
+read -rs ADMIN_SENHA && export ADMIN_SENHA     # digite a senha (8 a 72 caracteres)
+ADMIN_EMAIL=admin@exemplo.com ADMIN_NOME="Administrador" \
+  ./mvnw spring-boot:run -Dspring-boot.run.arguments="--criar-admin --spring.main.web-application-type=none"
+unset ADMIN_SENHA
+```
+
+Sem `--spring.main.web-application-type=none`, a aplicação cria o administrador
+e continua rodando normalmente.
+
 ## Testes
 
 | Comando | O que roda |
@@ -47,6 +63,7 @@ PostgreSQL temporário via Testcontainers.
 - `temporada`: calendário e competições.
 - `economia`: finanças e mercado.
 - `multiplayer`: sessões em rede.
+- `contas`: usuários, papéis e cadastro ([ADR 0007](docs/decisions/0007-contas-e-cadastro.md)).
 - `persistencia`: acesso ao banco e saves.
 - `web`: telas.
 

@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 23 — 2026-10-27)
+-   **Status:** versão inicial para revisão (rev. 24 — 2026-10-27)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 24 (2026-10-27):** link de cadastro de uso único válido por 7 dias; login por e-mail e senha de 8 ou mais caracteres; recuperação de senha pelo administrador por enquanto.
 -   **rev. 23 (2026-10-27):** o segundo amarelo na mesma partida também conta no acumulado de amarelos.
 -   **rev. 22 (2026-10-27):** escalação e tática da máquina pelo plantel; pesos 70/25/5 do vermelho direto; improvisação com elenco curto; o que a rodada grava.
 -   **rev. 21 (2026-10-27):** nacionalidade do jogador pode ser qualquer país do mundo; bandeira no plantel para estrangeiros, atenuada quando o jogador não conta como estrangeiro.
@@ -150,9 +151,19 @@ adicionais e como os arquivos/configurações são compartilhados.
   participante comum.
 - Convites para sessões em rede podem ser enviados por e-mail.
 
+**Definido (rev. 24):**
+- O link de cadastro é de **uso único** (um link por pessoa) e expira em
+  **7 dias** se não for usado. O prazo é configurável.
+- A pessoa entra com **e-mail e senha**. O e-mail é único, sem diferença
+  entre maiúsculas e minúsculas.
+- A senha tem **8 a 72 caracteres** (72 bytes é o limite do BCrypt) e é
+  guardada só como hash.
+- Por enquanto não há recuperação de senha pelo próprio usuário: o
+  administrador pode redefinir a senha de um participante.
+
 **Em aberto:**
-- Validade e uso único do link de cadastro e do convite.
-- Recuperação de senha.
+- Validade e uso do **convite para sessão em rede** (Etapa 5).
+- Recuperação de senha pelo próprio usuário (depende do serviço de e-mail).
 - Qual serviço de e-mail será usado. É uma dependência externa e precisa de
   credenciais fora do repositório.
 
@@ -1589,6 +1600,11 @@ começa depois que a anterior estiver testada.
     Moral e força dos jogadores não mudam na virada, até decisão própria.
 - Avanço de rodada idempotente.
 - Script de administrador, link de cadastro e papéis (§3.4).
+  - **3d.1 (concluída):** contas no servidor (migração V8,
+    `docs/decisions/0007`): script do administrador, link de uso único,
+    cadastro de participante, verificação de senha e redefinição pelo
+    administrador. Login com sessão e telas entram com o Spring Security,
+    junto das telas.
 - Banco padrão gerado: 23 jogadores por clube (máximo 25), 5 a 7 estrangeiros (§5.2).
 - Telas Thymeleaf + HTMX:
   - plantel e tática;
