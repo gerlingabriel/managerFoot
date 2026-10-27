@@ -1575,7 +1575,8 @@ começa depois que a anterior estiver testada.
     gols no calendário, cartões amarelos e vermelhos, suspensões e moral; a
     classificação é recalculada dos resultados. Dividida em 3c.3a
     (escalação da máquina e disciplina, só domínio) e 3c.3b (gravação e
-    avanço).
+    avanço), **ambas concluídas** (migração V7). Quem pede o avanço informa
+    a rodada esperada; pedido repetido ou fora de ordem é recusado.
   - **3c.4:** fim de temporada (promoção e rebaixamento) gravado.
 - Avanço de rodada idempotente.
 - Script de administrador, link de cadastro e papéis (§3.4).
