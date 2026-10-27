@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 7 — 2026-10-26)
+-   **Status:** versão inicial para revisão (rev. 8 — 2026-10-26)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 8 (2026-10-26):** caixa de substituição na expulsão; metas de zebra com piso de 1%.
 -   **rev. 7 (2026-10-26):** efeito da expulsão, goleiro expulso e escolha do batedor de pênalti.
 -   **rev. 6 (2026-10-26):** pesos do finalizador para as 8 formações; finalizador escolhido com peso pela força.
 -   **rev. 5 (2026-10-26):**
@@ -524,6 +525,18 @@ registrados aqui depois.
   menor força** vai para o gol.
   - Se não houver defensor, vai o jogador de linha de menor força.
   - **Provisório:** como goleiro, ele atua com **metade da força**.
+- **Caixa de substituição na expulsão (rev. 8, como no Elifoot 98):** quando
+  um jogador de um time controlado por usuário é expulso, abre-se a caixa
+  com o time e as opções de substituição.
+  - **Goleiro expulso:** o defensor de menor força vai automaticamente para
+    o gol. Se ainda houver substituições disponíveis, o treinador pode
+    trocar (por exemplo, colocar o goleiro reserva). Se não houver, ele
+    confirma e o time segue assim.
+  - **Jogador de linha expulso:** fica o buraco na tática. O treinador pode
+    usar a caixa para outras substituições permitidas.
+  - Times controlados pela máquina aplicam a regra automática.
+  - **Em aberto:** em rede, se a abertura dessa caixa pausa a partida para
+    todos (depende da §11.3).
 
 ### 7.4 Temperamento e cartões
 
@@ -608,6 +621,29 @@ não impõem resultados (§7.1).
 | Cartões amarelos por partida | cerca de 2 | **Definido** |
 | Expulsões por partida | 0,1 a 0,2 | **Definido** |
 | Pênaltis por partida | cerca de 0,3 | **Definido**; substitui o 1%/minuto do Elifoot, que daria cerca de 0,9 |
+
+**Definido (rev. 8) — frequência de zebras**, com o time mais fraco jogando
+em casa e formações iguais:
+
+| Diferença de força média | O fraco vence |
+|---|---|
+| 10 pontos (ex.: 20 × 30) | 15% a 20% |
+| 20 pontos (ex.: 20 × 40) | 5% a 10% |
+| 35 pontos (ex.: 10 × 45) | 1% a 3% |
+
+Por maior que seja a diferença, o fraco **nunca** deve ter 0%. O piso é de
+cerca de **1%**.
+
+**Resultado da calibração (Etapa 1d):** ver
+`docs/simulacoes/calibracao-motor.md`.
+- As metas de gols, mando, cartões, expulsões, pênaltis e zebras de 10 e 20
+  pontos foram atingidas.
+- **Em aberto:**
+  - 10 × 45: o fraco vence 0,9%, um pouco abaixo de 1%.
+  - 1 × 50: o fraco vence 0%. Os parâmetros sozinhos não atingem o piso
+    nesse caso; seria preciso um mecanismo novo.
+  - Equilíbrio entre formações: a 3-4-3 se sai melhor que a 4-4-2.
+  - Intensidade do efeito do temperamento na frequência de cartões.
 
 ## 8. Calendário, temporadas e competições
 

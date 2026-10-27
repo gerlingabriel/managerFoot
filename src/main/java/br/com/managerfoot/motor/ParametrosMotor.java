@@ -12,7 +12,7 @@ import br.com.managerfoot.dominio.Formacao;
  *
  * @param minutos duração da partida
  * @param chancePorMinuto probabilidade de haver uma jogada de finalização em cada minuto (sem pênalti)
- * @param fatorMando multiplicador do domínio do mandante (inicial: 7000/6000 do Elifoot 98)
+ * @param fatorMando multiplicador do domínio do mandante (Elifoot 98 usava 7000/6000 ≈ 1,17; recalibrado)
  * @param conversaoBase probabilidade de gol quando ataque × defesa e finalizador × goleiro se equivalem
  * @param sensibilidadeForca expoente aplicado às forças nas disputas; maior = força pesa mais
  * @param fatorPorGolMarcado multiplica a conversão do time a cada gol que ele já marcou (anti-goleada)
@@ -69,7 +69,8 @@ public record ParametrosMotor(int minutos, double chancePorMinuto, double fatorM
 		pesos.put(Formacao.F_5_4_1, new PesosFinalizador(45, 47, 7.99, 0.01));
 		pesos.put(Formacao.F_4_5_1, new PesosFinalizador(43, 51, 5.99, 0.01));
 		pesos.put(Formacao.F_3_6_1, new PesosFinalizador(40, 55, 4.99, 0.01));
-		return new ParametrosMotor(90, 0.15, 7000.0 / 6000.0, 0.28, 1.0, 0.85, 0.02, 0.6, 0.5, 0.1, pesos,
+		// calibrado na Etapa 1d: docs/simulacoes/calibracao-motor.md
+		return new ParametrosMotor(90, 0.15, 1.45, 0.24, 0.85, 0.85, 0.09, 0.6, 0.5, 0.1, pesos,
 				ParametrosDisciplina.padrao(), ParametrosPenalti.padrao());
 	}
 

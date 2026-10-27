@@ -37,6 +37,7 @@ PostgreSQL temporário via Testcontainers.
 |---|---|
 | `./mvnw test` | Testes unitários (`*Test.java`), rápidos, sem Docker |
 | `./mvnw verify` | Unitários + integração (`*IT.java`) com PostgreSQL real via Testcontainers |
+| `./mvnw test -Dgroups=simulacao -Dsurefire.excludedGroups=none` | Simulação em lote do motor; regenera [`docs/simulacoes/calibracao-motor.md`](docs/simulacoes/calibracao-motor.md) |
 
 ## Estrutura de pacotes
 
