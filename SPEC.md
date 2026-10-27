@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 12 — 2026-10-27)
+-   **Status:** versão inicial para revisão (rev. 13 — 2026-10-27)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 13 (2026-10-27):** fila de espera, demissão do usuário rebaixado para fora da liga, divisões sem usuário com resultado instantâneo.
 -   **rev. 12 (2026-10-27):** calendário sorteado por temporada; sorteio de desempate fixo na temporada.
 -   **rev. 11 (2026-10-27):** calendário com returno espelhado e mando alternado.
 -   **rev. 10 (2026-10-27):** banco de 7 reservas, substituições com mudança de formação e regra da máquina.
@@ -225,8 +226,24 @@ decorrem das regras acima.
 - As prioridades são 1, 2, 3..., sem repetir nem pular.
 - Um clube aparece uma única vez, em uma divisão ou na fila de espera.
 
-**Em aberto:** se os clubes na fila de espera podem disputar copas ou
-competições continentais.
+**Definido (rev. 13) — fila de espera e fim de temporada:**
+- O clube rebaixado da última divisão vai para a fila e fica **pelo menos
+  uma temporada fora**. O sorteio para subir considera apenas os clubes
+  que já estavam na fila antes do rebaixamento.
+- **Clube de usuário rebaixado para a fila** (sem divisão para jogar): o
+  usuário é **demitido na hora**.
+  - **Conflito resolvido:** é uma exceção explícita à §5.4, que proíbe
+    demissão automática de usuário.
+  - **Em aberto:** o que acontece com o usuário demitido. Opções: escolher
+    outro clube, assumir um clube que ofereça vaga, ou encerrar a
+    carreira.
+- **Clube da máquina rebaixado para a fila:** fica sem liga até ser
+  sorteado para subir.
+- **Rebaixado para outra divisão** (por exemplo, da 1ª para a 2ª): segue
+  normalmente na nova divisão, seja de usuário ou da máquina.
+
+**Em aberto:** se os clubes na fila de espera podem disputar copas
+(possivelmente por sorteio) ou competições continentais.
 
 ### 4.2 Configuração de divisão
 
@@ -1100,6 +1117,13 @@ configurando.
 **Em aberto:** definir a ordem exata de processamento quando
 participantes estão em divisões diferentes e quando existem competições
 sobrepostas.
+
+**Definido (rev. 13):** divisões sem usuário não usam a exibição minuto a
+minuto. O resultado sai em instantes.
+
+**Em aberto:** se isso usa o mesmo motor em modo rápido (recomendação do
+agente) ou um motor separado, mais simples e menos inteligente (ideia do
+usuário). Ver a discussão na conversa de 2026-10-27.
 
 **Definido:** o processamento segue a prioridade em ordem **decrescente**.
 As divisões de número maior vêm primeiro (por exemplo, 3, depois 2) e a
