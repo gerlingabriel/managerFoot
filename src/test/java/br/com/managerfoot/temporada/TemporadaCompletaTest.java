@@ -50,4 +50,15 @@ class TemporadaCompletaTest {
 		assertThat(TemporadaSimulada.jogar(divisao, 5).classificacao)
 			.isEqualTo(TemporadaSimulada.jogar(divisao, 5).classificacao);
 	}
+
+	@Test
+	void artilhariaDaTemporadaSomaTodosOsGolsDosPlacares() {
+		Divisao divisao = new Divisao("A", 1, 50, 0, 0, clubes(1, 20, 40));
+		TemporadaSimulada t = TemporadaSimulada.jogar(divisao, 11);
+
+		int golsDosArtilheiros = t.artilharia.golsTemporada().values().stream().mapToInt(Integer::intValue).sum();
+		assertThat(golsDosArtilheiros).isEqualTo(t.gols);
+		assertThat(t.artilharia.golsCarreira()).isEqualTo(t.artilharia.golsTemporada());
+		assertThat(t.artilharia.artilheirosDaTemporada()).isNotEmpty();
+	}
 }

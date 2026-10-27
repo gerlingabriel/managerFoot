@@ -1210,6 +1210,8 @@ da mesma divisão seguem na mesma tela.
   metade vertical, metade horizontal, listras verticais, listras
   horizontais, corte diagonal, faixa diagonal, faixa horizontal, quartos,
   cruz e liso com borda.
+- **Provisório:** clube sem escudo cadastrado usa liso branco com borda
+  preta.
 - **Definido (rev. 17):** os indicadores de divisão no topo **não são
   clicáveis**; só mostram em que divisão a rodada está. Para ver outra
   divisão, o usuário usa a classificação no plantel (§10.3).
@@ -1504,6 +1506,10 @@ começa depois que a anterior estiver testada.
 - Simulação de temporadas completas em lote.
 
 ### Etapa 3 — Persistência, contas e modo individual jogável
+- **3a (concluída):** escudo do clube e artilharia (gols na temporada e na
+  carreira, rankings, artilheiros empatados), só no domínio. Antes dela
+  entraram a sorte e o azar da temporada, os efeitos do asterisco e o
+  sorteio do bônus de artilharia.
 - Migrações e repositórios para o estado da temporada.
 - Avanço de rodada idempotente.
 - Script de administrador, link de cadastro e papéis (§3.4).

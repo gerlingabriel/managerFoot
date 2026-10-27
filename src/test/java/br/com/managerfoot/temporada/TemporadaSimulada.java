@@ -29,12 +29,15 @@ final class TemporadaSimulada {
 	final Map<Clube, Moral> moral;
 	final int gols;
 	final int jogos;
+	final Artilharia artilharia;
 
-	private TemporadaSimulada(Classificacao classificacao, Map<Clube, Moral> moral, int gols, int jogos) {
+	private TemporadaSimulada(Classificacao classificacao, Map<Clube, Moral> moral, int gols, int jogos,
+			Artilharia artilharia) {
 		this.classificacao = classificacao;
 		this.moral = moral;
 		this.gols = gols;
 		this.jogos = jogos;
+		this.artilharia = artilharia;
 	}
 
 	static TemporadaSimulada jogar(Divisao divisao, long semente) {
@@ -53,6 +56,7 @@ final class TemporadaSimulada {
 
 		List<ResultadoJogo> resultados = new ArrayList<>();
 		int gols = 0;
+		Artilharia artilharia = Artilharia.vazia();
 		for (Rodada rodada : Calendario.sorteado(divisao.clubes(), aleatorio).rodadas()) {
 			for (Jogo jogo : rodada.jogos()) {
 				ResultadoPartida r = motor.simular(escalacoes.get(jogo.mandante()), escalacoes.get(jogo.visitante()),
@@ -63,10 +67,11 @@ final class TemporadaSimulada {
 				moral.put(jogo.visitante(),
 						moral.get(jogo.visitante()).aposJogo(false, r.golsFora(), r.golsCasa(), parametrosMoral));
 				gols += r.golsCasa() + r.golsFora();
+				artilharia = artilharia.registrar(r);
 			}
 		}
 		return new TemporadaSimulada(Classificacao.calcular(divisao.clubes(), resultados, semente), moral, gols,
-				resultados.size());
+				resultados.size(), artilharia);
 	}
 
 	private static Escalacao escalacao(Clube clube) {
