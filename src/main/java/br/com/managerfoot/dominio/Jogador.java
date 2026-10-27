@@ -7,7 +7,8 @@ import java.util.Objects;
  * Nacionalidade e contrato entram nas etapas seguintes.
  *
  * @param id identificador único dentro do jogo; distingue jogadores com dados iguais
- * @param asterisco jogador especial (SPEC §5.3); por ora só desempata a escolha do batedor de pênalti
+ * @param asterisco jogador especial (SPEC §5.3): mais chance de finalizar e de marcar, e desempata o
+ *        batedor de pênalti; inclui o asterisco temporário do bônus de artilharia (SPEC §5.2)
  */
 public record Jogador(long id, String nome, Posicao posicao, int forca, Temperamento temperamento,
 		boolean asterisco) {

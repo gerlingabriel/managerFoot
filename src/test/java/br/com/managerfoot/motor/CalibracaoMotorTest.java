@@ -80,7 +80,7 @@ class CalibracaoMotorTest {
 		Escalacao a = escalacao(Formacao.F_4_4_2, 25, 1);
 		Escalacao b = escalacao(Formacao.F_4_4_2, 25, 100);
 		for (long s = 0; s < 200; s++) {
-			assertThat(motor.simular(RegrasPartida.padrao(), a, b, Map.of(Lado.CASA, Sorte.NEUTRA, Lado.FORA, Sorte.NEUTRA), s))
+			assertThat(motor.simular(RegrasPartida.padrao(), a, b, CondicoesPartida.comSorte(Map.of(Lado.CASA, Sorte.NEUTRA, Lado.FORA, Sorte.NEUTRA)), s))
 				.isEqualTo(motor.simular(a, b, s));
 		}
 	}
@@ -91,10 +91,10 @@ class CalibracaoMotorTest {
 		Escalacao a = escalacao(Formacao.F_4_4_2, 25, 1);
 		Escalacao b = escalacao(Formacao.F_4_4_2, 25, 100);
 		EstatisticasLote base = EstatisticasLote.medir(motor, a, b, 0, PARTIDAS);
-		EstatisticasLote benCasa = EstatisticasLote.medir(motor, a, b, Map.of(Lado.CASA, Sorte.BENEFICIADO), 0, PARTIDAS);
-		EstatisticasLote benFora = EstatisticasLote.medir(motor, a, b, Map.of(Lado.FORA, Sorte.BENEFICIADO), 0, PARTIDAS);
-		EstatisticasLote preCasa = EstatisticasLote.medir(motor, a, b, Map.of(Lado.CASA, Sorte.PREJUDICADO), 0, PARTIDAS);
-		EstatisticasLote preFora = EstatisticasLote.medir(motor, a, b, Map.of(Lado.FORA, Sorte.PREJUDICADO), 0, PARTIDAS);
+		EstatisticasLote benCasa = EstatisticasLote.medir(motor, a, b, CondicoesPartida.comSorte(Map.of(Lado.CASA, Sorte.BENEFICIADO)), 0, PARTIDAS);
+		EstatisticasLote benFora = EstatisticasLote.medir(motor, a, b, CondicoesPartida.comSorte(Map.of(Lado.FORA, Sorte.BENEFICIADO)), 0, PARTIDAS);
+		EstatisticasLote preCasa = EstatisticasLote.medir(motor, a, b, CondicoesPartida.comSorte(Map.of(Lado.CASA, Sorte.PREJUDICADO)), 0, PARTIDAS);
+		EstatisticasLote preFora = EstatisticasLote.medir(motor, a, b, CondicoesPartida.comSorte(Map.of(Lado.FORA, Sorte.PREJUDICADO)), 0, PARTIDAS);
 
 		double maisVitorias = (benCasa.pctCasa() - base.pctCasa() + benFora.pctFora() - base.pctFora()) / 2;
 		double maisDerrotas = (preCasa.pctFora() - base.pctFora() + preFora.pctCasa() - base.pctCasa()) / 2;

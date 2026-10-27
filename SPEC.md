@@ -418,9 +418,11 @@ torne uma vantagem desproporcional.
     **todas** as finalizações, inclusive no pênalti que ele bate.
   - Na escolha do finalizador, o asterisco conta como força **1,5 vez**
     maior.
-  - A partir do **4º asterisco em campo**, cada asterisco a mais tira **5%**
-    do domínio do meio-campo, ajustado por simulação para quase equilibrar
-    o bônus dos asteriscos extras.
+  - A partir do **4º asterisco em campo**, cada asterisco a mais tira
+    domínio do meio-campo, ajustado por simulação para quase equilibrar o
+    bônus dos asteriscos extras. Proposta inicial: 5%. Calibrado: **1%**,
+    pois 5% fazia cada asterisco extra custar cerca de 0,03 ponto por jogo
+    (`docs/simulacoes/calibracao-motor.md`).
   - Os efeitos se combinam: um batedor com asterisco contra um goleiro com
     asterisco converte 75% × 1,15 × (65/75).
 

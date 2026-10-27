@@ -40,6 +40,7 @@ class RelatorioCalibracaoTest {
 		todasContraTodas();
 		temperamento();
 		sorte();
+		asterisco();
 		Files.createDirectories(SAIDA.getParent());
 		Files.writeString(SAIDA, md.toString());
 		System.out.println(md);
@@ -69,6 +70,10 @@ class RelatorioCalibracaoTest {
 		linha("| proporcaoVermelhoDireto | " + f(parametros.disciplina().proporcaoVermelhoDireto(), 2) + " |");
 		linha("| penaltisPorMinuto | " + f(parametros.penalti().penaltisPorMinuto(), 4) + " |");
 		linha("| conversão do pênalti | " + f(parametros.penalti().conversao(), 2) + " |");
+		linha("| asterisco: bônus de conversão / peso na escolha / pênalti contra goleiro★ / limite / penalidade por excedente | "
+				+ f(parametros.asterisco().bonusConversao(), 2) + " / " + f(parametros.asterisco().fatorEscolhaFinalizador(), 1)
+				+ " / " + f(parametros.asterisco().conversaoPenaltiGoleiroAsterisco(), 2) + " / "
+				+ parametros.asterisco().limiteSemPenalidade() + " / " + f(parametros.asterisco().penalidadeDominioPorExcedente(), 3) + " |");
 		linha("| sorte: chancesExtras / fatorDominioPrejudicado | " + f(parametros.sorte().chancesExtras(), 3) + " / "
 				+ f(parametros.sorte().fatorDominioPrejudicado(), 2) + " |");
 		linha("");
@@ -202,7 +207,7 @@ class RelatorioCalibracaoTest {
 		linha("|---|---|---|---|---|---|");
 		for (Sorte sorte : new Sorte[] { Sorte.BENEFICIADO, Sorte.PREJUDICADO }) {
 			for (Lado lado : Lado.values()) {
-				EstatisticasLote e = EstatisticasLote.medir(motor, a, b, Map.of(lado, sorte), 0, PARTIDAS);
+				EstatisticasLote e = EstatisticasLote.medir(motor, a, b, CondicoesPartida.comSorte(Map.of(lado, sorte)), 0, PARTIDAS);
 				boolean casa = lado == Lado.CASA;
 				double v = casa ? e.pctCasa() : e.pctFora();
 				double d = casa ? e.pctFora() : e.pctCasa();
@@ -211,6 +216,25 @@ class RelatorioCalibracaoTest {
 				linha("| " + sorte + " " + (casa ? "em casa" : "fora") + " | " + pct(v) + " | " + pct(e.pctEmpate()) + " | "
 						+ pct(d) + " | " + sinal(v - v0) + " / " + sinal(d - d0) + " | " + f(e.mediaGols(), 2) + " |");
 			}
+		}
+		linha("");
+	}
+
+	private void asterisco() {
+		Escalacao adversario = escalacao(Formacao.F_4_4_2, 25, 100);
+		linha("## Asteriscos em campo (25 × 25, 4-4-2; SPEC §5.3)");
+		linha("");
+		linha("Asteriscos dados primeiro aos atacantes, depois aos meias, depois aos defensores. Pontos por jogo");
+		linha("contra um time sem asterisco, média de casa e fora. Meta: do 4º em diante, quase sem ganho.");
+		linha("");
+		linha("| Asteriscos | Pontos por jogo |");
+		linha("|---|---|");
+		for (int k = 0; k <= 7; k++) {
+			Escalacao time = EscalacoesDeTeste.comAsteriscos(k, 25, 1);
+			EstatisticasLote casa = medir(time, adversario);
+			EstatisticasLote fora = medir(adversario, time);
+			double ppj = (3.0 * casa.vitoriasCasa + casa.empates + 3.0 * fora.vitoriasFora + fora.empates) / (2.0 * PARTIDAS);
+			linha("| " + k + " | " + f(ppj, 3) + " |");
 		}
 		linha("");
 	}

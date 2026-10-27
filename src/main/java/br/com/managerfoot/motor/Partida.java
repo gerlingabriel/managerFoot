@@ -2,10 +2,8 @@ package br.com.managerfoot.motor;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.random.RandomGenerator;
@@ -27,7 +25,8 @@ import br.com.managerfoot.dominio.Temperamento;
  * <li>cada time pode receber um cartão, com o infrator sorteado pela roleta de temperamento.</li>
  * </ol>
  * A sorte da temporada (SPEC §5.3.1) dá ao beneficiado uma chance extra de finalização por minuto
- * e tira domínio do prejudicado.
+ * e tira domínio do prejudicado. O asterisco (SPEC §5.3) aumenta a chance de ser o finalizador e de
+ * marcar; acima do limite em campo, cada asterisco a mais tira domínio do time.
  * Entre os minutos, o treinador do usuário pode substituir ({@link #substituir}); os times da
  * máquina só reagem ao goleiro expulso ({@link TreinadorMaquina}).
  * Toda aleatoriedade vem do {@link RandomGenerator} recebido, para a partida ser reproduzível.
@@ -43,7 +42,7 @@ public final class Partida {
 	private final TimeEmCampo fora;
 	private final RandomGenerator aleatorio;
 	private final Set<Lado> ladosDaMaquina;
-	private final Map<Lado, Sorte> sorte;
+	private final CondicoesPartida condicoes;
 	private final List<EventoPartida> eventos = new ArrayList<>();
 	private int minuto;
 	private int golsCasa;
@@ -51,25 +50,24 @@ public final class Partida {
 
 	/**
 	 * @param ladosDoUsuario times controlados por usuários; os demais seguem o {@link TreinadorMaquina}
-	 * @param sorte sorte da temporada de cada lado; lado ausente é {@link Sorte#NEUTRA}
+	 * @param condicoes sorte e bônus de artilharia da temporada
 	 */
 	public Partida(ParametrosMotor parametros, RegrasPartida regras, Escalacao casa, Escalacao fora,
-			Set<Lado> ladosDoUsuario, Map<Lado, Sorte> sorte, RandomGenerator aleatorio) {
+			Set<Lado> ladosDoUsuario, CondicoesPartida condicoes, RandomGenerator aleatorio) {
 		this.parametros = Objects.requireNonNull(parametros);
 		double fatorImprovisado = parametros.penalti().fatorGoleiroImprovisado();
 		this.casa = new TimeEmCampo(Objects.requireNonNull(casa), fatorImprovisado, regras.substituicoes());
 		this.fora = new TimeEmCampo(Objects.requireNonNull(fora), fatorImprovisado, regras.substituicoes());
 		this.ladosDaMaquina = EnumSet.complementOf(
 				ladosDoUsuario.isEmpty() ? EnumSet.noneOf(Lado.class) : EnumSet.copyOf(ladosDoUsuario));
-		this.sorte = new EnumMap<>(Lado.class);
-		this.sorte.putAll(sorte);
+		this.condicoes = Objects.requireNonNull(condicoes);
 		this.aleatorio = Objects.requireNonNull(aleatorio);
 	}
 
-	/** Partida sem efeito de sorte. */
+	/** Partida sem sorte nem bônus de artilharia. */
 	public Partida(ParametrosMotor parametros, RegrasPartida regras, Escalacao casa, Escalacao fora,
 			Set<Lado> ladosDoUsuario, RandomGenerator aleatorio) {
-		this(parametros, regras, casa, fora, ladosDoUsuario, Map.of(), aleatorio);
+		this(parametros, regras, casa, fora, ladosDoUsuario, CondicoesPartida.NEUTRAS, aleatorio);
 	}
 
 	/** Partida só entre times da máquina, com as regras padrão. */
@@ -173,14 +171,18 @@ public final class Partida {
 		double duelo = disputa(finalizador.forca(), defesa.forcaGoleiro());
 		double antiGoleada = Math.pow(parametros.fatorPorGolMarcado(), gols(lado));
 		double conversao = Math.clamp(parametros.conversaoBase() * pressao * duelo * antiGoleada,
-				parametros.conversaoMinima(), parametros.conversaoMaxima());
+				parametros.conversaoMinima(), parametros.conversaoMaxima()) * bonusFinalizacao(finalizador);
 
 		registrarFinalizacao(lado, finalizador, conversao, false);
 	}
 
 	private void cobrarPenalti(Lado lado) {
 		Jogador batedor = time(lado).batedorPenalti(aleatorio);
-		registrarFinalizacao(lado, batedor, parametros.penalti().conversao(), true);
+		TimeEmCampo defesa = time(lado.adversario());
+		double conversao = defesa.goleiro().asterisco() && !defesa.goleiroImprovisado()
+				? parametros.asterisco().conversaoPenaltiGoleiroAsterisco()
+				: parametros.penalti().conversao();
+		registrarFinalizacao(lado, batedor, Math.min(1, conversao * bonusFinalizacao(batedor)), true);
 	}
 
 	private void registrarFinalizacao(Lado lado, Jogador finalizador, double conversao, boolean penalti) {
@@ -253,7 +255,16 @@ public final class Partida {
 			.filter(p -> !time.jogadoresNa(p).isEmpty() && pesos.peso(p) > 0)
 			.toList();
 		Posicao setor = Sorteio.ponderado(setores, pesos::peso, aleatorio);
-		return Sorteio.ponderado(time.jogadoresNa(setor), Jogador::forca, aleatorio);
+		double fator = parametros.asterisco().fatorEscolhaFinalizador();
+		return Sorteio.ponderado(time.jogadoresNa(setor), j -> j.asterisco() ? j.forca() * fator : j.forca(),
+				aleatorio);
+	}
+
+	/** Asterisco e bônus de artilharia somam, cada um, {@code bonusConversao} (SPEC §5.2, §5.3). */
+	private double bonusFinalizacao(Jogador jogador) {
+		double bonus = parametros.asterisco().bonusConversao();
+		int bonificacoes = (jogador.asterisco() ? 1 : 0) + (condicoes.bonusExtra().contains(jogador.id()) ? 1 : 0);
+		return 1 + bonus * bonificacoes;
 	}
 
 	/**
@@ -290,12 +301,16 @@ public final class Partida {
 	}
 
 	private double fatorDominio(Lado lado) {
-		return sorte.get(lado) == Sorte.PREJUDICADO ? parametros.sorte().fatorDominioPrejudicado() : 1;
+		double sorte = condicoes.sorteDe(lado) == Sorte.PREJUDICADO ? parametros.sorte().fatorDominioPrejudicado() : 1;
+		ParametrosAsterisco asterisco = parametros.asterisco();
+		long excedentes = time(lado).emCampo().stream().filter(Jogador::asterisco).count()
+				- asterisco.limiteSemPenalidade();
+		return excedentes > 0 ? sorte * Math.pow(1 - asterisco.penalidadeDominioPorExcedente(), excedentes) : sorte;
 	}
 
 	private Lado ladoCom(Sorte procurada) {
 		for (Lado lado : Lado.values()) {
-			if (sorte.get(lado) == procurada) {
+			if (condicoes.sorteDe(lado) == procurada) {
 				return lado;
 			}
 		}

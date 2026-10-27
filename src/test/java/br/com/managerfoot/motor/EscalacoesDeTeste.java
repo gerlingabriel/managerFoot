@@ -35,4 +35,20 @@ final class EscalacoesDeTeste {
 		}
 		return titulares;
 	}
+
+	/** 4-4-2 com os {@code quantidade} primeiros jogadores com asterisco: atacantes, depois meias, depois defensores. */
+	static Escalacao comAsteriscos(int quantidade, int forca, long primeiroId) {
+		List<Jogador> titulares = new ArrayList<>(titulares(Formacao.F_4_4_2, forca, primeiroId, Temperamento.NORMAL));
+		int marcados = 0;
+		for (Posicao posicao : new Posicao[] { Posicao.ATACANTE, Posicao.MEIO_CAMPISTA, Posicao.DEFENSOR }) {
+			for (int i = 0; i < titulares.size() && marcados < quantidade; i++) {
+				Jogador j = titulares.get(i);
+				if (j.posicao() == posicao) {
+					titulares.set(i, new Jogador(j.id(), j.nome(), j.posicao(), j.forca(), j.temperamento(), true));
+					marcados++;
+				}
+			}
+		}
+		return new Escalacao(Formacao.F_4_4_2, titulares);
+	}
 }

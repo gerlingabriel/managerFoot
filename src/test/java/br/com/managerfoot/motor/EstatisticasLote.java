@@ -7,7 +7,6 @@ import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 import br.com.managerfoot.dominio.Escalacao;
-import br.com.managerfoot.dominio.Sorte;
 
 /**
  * Agrega N partidas simuladas com sementes consecutivas (reproduzível). Ferramenta de calibração
@@ -33,14 +32,14 @@ final class EstatisticasLote {
 
 	static EstatisticasLote medir(MotorPartida motor, Escalacao casa, Escalacao fora, long sementeInicial,
 			int partidas) {
-		return medir(motor, casa, fora, Map.of(), sementeInicial, partidas);
+		return medir(motor, casa, fora, CondicoesPartida.NEUTRAS, sementeInicial, partidas);
 	}
 
-	static EstatisticasLote medir(MotorPartida motor, Escalacao casa, Escalacao fora, Map<Lado, Sorte> sorte,
+	static EstatisticasLote medir(MotorPartida motor, Escalacao casa, Escalacao fora, CondicoesPartida condicoes,
 			long sementeInicial, int partidas) {
 		EstatisticasLote est = new EstatisticasLote(partidas);
 		for (long s = sementeInicial; s < sementeInicial + partidas; s++) {
-			ResultadoPartida r = motor.simular(RegrasPartida.padrao(), casa, fora, sorte, s);
+			ResultadoPartida r = motor.simular(RegrasPartida.padrao(), casa, fora, condicoes, s);
 			est.golsCasa += r.golsCasa();
 			est.golsFora += r.golsFora();
 			if (r.golsCasa() > r.golsFora()) {

@@ -19,6 +19,7 @@ Todos os titulares de um time têm a mesma força; temperamento normal salvo ind
 | proporcaoVermelhoDireto | 0,05 |
 | penaltisPorMinuto | 0,0033 |
 | conversão do pênalti | 0,75 |
+| asterisco: bônus de conversão / peso na escolha / pênalti contra goleiro★ / limite / penalidade por excedente | 0,15 / 1,5 / 0,65 / 3 / 0,010 |
 | sorte: chancesExtras / fatorDominioPrejudicado | 0,095 / 0,83 |
 
 ## Times equilibrados (25 × 25, 4-4-2 × 4-4-2)
@@ -109,4 +110,20 @@ Meta: cerca de 5 pontos percentuais a mais de vitórias (beneficiado) e de derro
 | BENEFICIADO fora | 30,3% | 29,1% | 40,6% | +4,7 p.p. / -4,5 p.p. | 2,32 |
 | PREJUDICADO em casa | 39,6% | 30,0% | 30,4% | -5,5 p.p. / +4,9 p.p. | 2,18 |
 | PREJUDICADO fora | 21,2% | 28,6% | 50,2% | -4,4 p.p. / +5,1 p.p. | 2,17 |
+
+## Asteriscos em campo (25 × 25, 4-4-2; SPEC §5.3)
+
+Asteriscos dados primeiro aos atacantes, depois aos meias, depois aos defensores. Pontos por jogo
+contra um time sem asterisco, média de casa e fora. Meta: do 4º em diante, quase sem ganho.
+
+| Asteriscos | Pontos por jogo |
+|---|---|
+| 0 | 1,353 |
+| 1 | 1,412 |
+| 2 | 1,444 |
+| 3 | 1,454 |
+| 4 | 1,456 |
+| 5 | 1,454 |
+| 6 | 1,453 |
+| 7 | 1,447 |
 
