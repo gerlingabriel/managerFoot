@@ -18,7 +18,7 @@ import br.com.managerfoot.temporada.Artilharia.Artilheiro;
 class ArtilhariaTest {
 
 	private static Jogador jogador(long id) {
-		return new Jogador(id, "J" + id, Posicao.ATACANTE, 25, Temperamento.NORMAL);
+		return new Jogador(id, "J" + id, Posicao.ATACANTE, 25, Temperamento.NORMAL, "BRA");
 	}
 
 	private static EventoPartida gol(long id) {

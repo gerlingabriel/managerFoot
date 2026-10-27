@@ -70,6 +70,6 @@ public record BonusArtilharia(Set<Long> asteriscoTemporario, Set<Long> bonusExtr
 		if (!asteriscoTemporario.contains(jogador.id())) {
 			return jogador;
 		}
-		return new Jogador(jogador.id(), jogador.nome(), jogador.posicao(), jogador.forca(), jogador.temperamento(), true);
+		return jogador.comAsterisco(true);
 	}
 }

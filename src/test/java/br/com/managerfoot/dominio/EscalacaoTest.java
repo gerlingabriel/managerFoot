@@ -77,7 +77,7 @@ class EscalacaoTest {
 	private static List<Jogador> reservas(int quantidade) {
 		List<Jogador> reservas = new ArrayList<>();
 		for (int i = 0; i < quantidade; i++) {
-			reservas.add(new Jogador(100 + i, "Reserva " + i, Posicao.MEIO_CAMPISTA, 15, Temperamento.NORMAL));
+			reservas.add(new Jogador(100 + i, "Reserva " + i, Posicao.MEIO_CAMPISTA, 15, Temperamento.NORMAL, "BRA"));
 		}
 		return reservas;
 	}

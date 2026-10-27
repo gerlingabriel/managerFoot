@@ -27,7 +27,7 @@ class BonusArtilhariaTest {
 			for (int p = 0; p < posicoes.length; p++) {
 				for (int i = 0; i < quantidades[p]; i++) {
 					boolean asterisco = i == 0 && (posicoes[p] == Posicao.ATACANTE || posicoes[p] == Posicao.DEFENSOR);
-					jogadores.add(new Jogador(id, "J" + id, posicoes[p], 25, Temperamento.NORMAL, asterisco));
+					jogadores.add(new Jogador(id, "J" + id, posicoes[p], 25, Temperamento.NORMAL, asterisco, "BRA"));
 					id++;
 				}
 			}
@@ -83,8 +83,8 @@ class BonusArtilhariaTest {
 	@Test
 	void jogadorComAsteriscoTemPesoDobradoNoSorteio() {
 		// 1 com asterisco e 1 sem, sorteando 1: o com asterisco deve sair ~2/3 das vezes
-		Jogador com = new Jogador(1, "Com", Posicao.ATACANTE, 25, Temperamento.NORMAL, true);
-		Jogador sem = new Jogador(2, "Sem", Posicao.ATACANTE, 25, Temperamento.NORMAL, false);
+		Jogador com = new Jogador(1, "Com", Posicao.ATACANTE, 25, Temperamento.NORMAL, true, "BRA");
+		Jogador sem = new Jogador(2, "Sem", Posicao.ATACANTE, 25, Temperamento.NORMAL, false, "BRA");
 		int vezesCom = 0;
 		for (long s = 0; s < 6000; s++) {
 			vezesCom += BonusArtilharia.sortear(List.of(com, sem), 1, new SplittableRandom(s)).bonusExtra().size();
@@ -94,8 +94,8 @@ class BonusArtilhariaTest {
 
 	@Test
 	void aplicaOAsteriscoTemporarioSoAosSorteadosSemAsterisco() {
-		Jogador sem = new Jogador(1, "Sem", Posicao.MEIO_CAMPISTA, 25, Temperamento.NORMAL, false);
-		Jogador outro = new Jogador(2, "Outro", Posicao.MEIO_CAMPISTA, 25, Temperamento.NORMAL, false);
+		Jogador sem = new Jogador(1, "Sem", Posicao.MEIO_CAMPISTA, 25, Temperamento.NORMAL, false, "BRA");
+		Jogador outro = new Jogador(2, "Outro", Posicao.MEIO_CAMPISTA, 25, Temperamento.NORMAL, false, "BRA");
 		BonusArtilharia bonus = new BonusArtilharia(Set.of(1L), Set.of());
 
 		assertThat(bonus.aplicar(sem).asterisco()).isTrue();

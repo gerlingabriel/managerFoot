@@ -16,13 +16,16 @@ import org.springframework.transaction.annotation.Transactional;
 
 import br.com.managerfoot.dominio.Clube;
 import br.com.managerfoot.dominio.Escudo;
+import br.com.managerfoot.dominio.Jogador;
 import br.com.managerfoot.dominio.ModeloEscudo;
+import br.com.managerfoot.dominio.Posicao;
+import br.com.managerfoot.dominio.Temperamento;
 import br.com.managerfoot.temporada.ConfiguracaoLiga;
 import br.com.managerfoot.temporada.Divisao;
 
 /**
- * Molde editável (docs/decisions/0006): países e a liga nacional de cada um. Os ids dos clubes
- * recebidos são ignorados; o banco gera novos e eles voltam na liga retornada.
+ * Molde editável (docs/decisions/0006): países, a liga nacional de cada um e os planteis. Os ids
+ * dos clubes e jogadores recebidos são ignorados; o banco gera novos e eles voltam no retorno.
  */
 @Repository
 public class MoldeRepositorio {
@@ -101,6 +104,59 @@ public class MoldeRepositorio {
 					porDivisao.getOrDefault(rs.getLong("id"), List.of())))
 			.list();
 		return new ConfiguracaoLiga(nomeLiga, divisoes, fila);
+	}
+
+	/**
+	 * Acrescenta jogadores ao plantel do clube e devolve-os com os ids gerados. Recusa tudo se o
+	 * plantel passar de {@link Clube#MAXIMO_JOGADORES}. O asterisco gravado é o permanente.
+	 */
+	@Transactional
+	public List<Jogador> adicionarJogadores(long clubeId, List<Jogador> jogadores) {
+		// trava o clube para que duas gravações simultâneas não passem juntas do limite
+		jdbc.sql("SELECT id FROM molde_clube WHERE id = :clube FOR UPDATE")
+			.param("clube", clubeId)
+			.query(Long.class)
+			.optional()
+			.orElseThrow(() -> new NoSuchElementException("clube " + clubeId + " não existe no molde"));
+		long atuais = jdbc.sql("SELECT count(*) FROM molde_jogador WHERE clube_id = :clube")
+			.param("clube", clubeId)
+			.query(Long.class)
+			.single();
+		if (atuais + jogadores.size() > Clube.MAXIMO_JOGADORES) {
+			throw new IllegalStateException("o plantel do clube " + clubeId + " tem " + atuais + " jogadores; com mais "
+					+ jogadores.size() + " passaria do máximo de " + Clube.MAXIMO_JOGADORES);
+		}
+		return jogadores.stream().map(j -> inserirJogador(clubeId, j)).toList();
+	}
+
+	/** Plantel do clube em ordem de id. */
+	@Transactional(readOnly = true)
+	public List<Jogador> carregarPlantel(long clubeId) {
+		boolean existe = jdbc.sql("SELECT EXISTS (SELECT 1 FROM molde_clube WHERE id = :clube)")
+			.param("clube", clubeId)
+			.query(Boolean.class)
+			.single();
+		if (!existe) {
+			throw new NoSuchElementException("clube " + clubeId + " não existe no molde");
+		}
+		return jdbc.sql("""
+				SELECT id, nome, posicao, forca, temperamento, asterisco, nacionalidade
+				FROM molde_jogador WHERE clube_id = :clube ORDER BY id""")
+			.param("clube", clubeId)
+			.query((rs, n) -> new Jogador(rs.getLong("id"), rs.getString("nome"), Posicao.valueOf(rs.getString("posicao")),
+					rs.getInt("forca"), Temperamento.valueOf(rs.getString("temperamento")), rs.getBoolean("asterisco"),
+					rs.getString("nacionalidade")))
+			.list();
+	}
+
+	private Jogador inserirJogador(long clubeId, Jogador j) {
+		long id = inserir("""
+				INSERT INTO molde_jogador (clube_id, nome, nacionalidade, posicao, forca, temperamento, asterisco)
+				VALUES (:clube, :nome, :nacionalidade, :posicao, :forca, :temperamento, :asterisco)""",
+				Map.of("clube", clubeId, "nome", j.nome(), "nacionalidade", j.nacionalidade(), "posicao",
+						j.posicao().name(), "forca", j.forca(), "temperamento", j.temperamento().name(), "asterisco",
+						j.asterisco()));
+		return new Jogador(id, j.nome(), j.posicao(), j.forca(), j.temperamento(), j.asterisco(), j.nacionalidade());
 	}
 
 	private Clube inserirClube(long paisId, Long divisaoId, Clube c) {

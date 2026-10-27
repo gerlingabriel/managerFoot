@@ -14,7 +14,7 @@ final class JogadoresDeTeste {
 		long id = 1;
 		for (Posicao posicao : Posicao.values()) {
 			for (int i = 0; i < formacao.quantidade(posicao); i++) {
-				titulares.add(new Jogador(id, "Jogador " + id, posicao, forca, Temperamento.NORMAL));
+				titulares.add(new Jogador(id, "Jogador " + id, posicao, forca, Temperamento.NORMAL, "BRA"));
 				id++;
 			}
 		}

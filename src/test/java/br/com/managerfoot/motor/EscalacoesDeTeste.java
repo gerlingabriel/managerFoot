@@ -29,7 +29,7 @@ final class EscalacoesDeTeste {
 		long id = primeiroId;
 		for (Posicao posicao : Posicao.values()) {
 			for (int i = 0; i < formacao.quantidade(posicao); i++) {
-				titulares.add(new Jogador(id, "J" + id, posicao, forca, temperamento));
+				titulares.add(new Jogador(id, "J" + id, posicao, forca, temperamento, "BRA"));
 				id++;
 			}
 		}
@@ -44,7 +44,7 @@ final class EscalacoesDeTeste {
 			for (int i = 0; i < titulares.size() && marcados < quantidade; i++) {
 				Jogador j = titulares.get(i);
 				if (j.posicao() == posicao) {
-					titulares.set(i, new Jogador(j.id(), j.nome(), j.posicao(), j.forca(), j.temperamento(), true));
+					titulares.set(i, j.comAsterisco(true));
 					marcados++;
 				}
 			}

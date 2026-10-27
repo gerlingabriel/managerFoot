@@ -68,7 +68,7 @@ class AsteriscoTest {
 		Escalacao foraNormal = escalacao(Formacao.F_4_4_2, 25, 100);
 		List<Jogador> titulares = new ArrayList<>(foraNormal.titulares());
 		Jogador g = foraNormal.jogadoresNa(Posicao.GOLEIRO).getFirst();
-		titulares.set(titulares.indexOf(g), new Jogador(g.id(), g.nome(), g.posicao(), g.forca(), g.temperamento(), true));
+		titulares.set(titulares.indexOf(g), g.comAsterisco(true));
 		Escalacao foraAsterisco = new Escalacao(Formacao.F_4_4_2, titulares);
 
 		assertThat(conversaoPenaltisDoMandante(casa, foraNormal)).isBetween(0.71, 0.79);

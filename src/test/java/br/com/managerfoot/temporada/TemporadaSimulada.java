@@ -79,7 +79,7 @@ final class TemporadaSimulada {
 		long id = clube.id() * 100;
 		for (Posicao posicao : Posicao.values()) {
 			for (int i = 0; i < Formacao.F_4_4_2.quantidade(posicao); i++) {
-				titulares.add(new Jogador(id, clube.nome() + "-" + id, posicao, clube.forca(), Temperamento.NORMAL));
+				titulares.add(new Jogador(id, clube.nome() + "-" + id, posicao, clube.forca(), Temperamento.NORMAL, "BRA"));
 				id++;
 			}
 		}

@@ -12,6 +12,9 @@ import java.util.Objects;
  */
 public record Clube(long id, String nome, int forca, Escudo escudo) {
 
+	/** Máximo de jogadores no plantel (SPEC §5.2): os 23 gerados mais 2 vagas para o mercado. */
+	public static final int MAXIMO_JOGADORES = 25;
+
 	public Clube {
 		Objects.requireNonNull(escudo, "escudo do clube é obrigatório");
 		if (nome == null || nome.isBlank()) {

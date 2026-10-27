@@ -74,7 +74,7 @@ class PartidaDisciplinaTest {
 	void dentroDoTimeOViolentoEhOMaisPunido() {
 		List<Jogador> titulares = new java.util.ArrayList<>(titulares(Formacao.F_4_4_2, 25, 1, Temperamento.CALMO));
 		Jogador violento = new Jogador(titulares.get(6).id(), "Violento", titulares.get(6).posicao(), 25,
-				Temperamento.VIOLENTO);
+				Temperamento.VIOLENTO, "BRA");
 		titulares.set(6, violento);
 		Escalacao casa = new Escalacao(Formacao.F_4_4_2, titulares);
 		Escalacao fora = escalacao(Formacao.F_4_4_2, 25, 100);

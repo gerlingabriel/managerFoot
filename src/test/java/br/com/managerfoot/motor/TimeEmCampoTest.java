@@ -27,7 +27,7 @@ class TimeEmCampoTest {
 	}
 
 	private static Jogador com(Jogador j, int forca, boolean asterisco) {
-		return new Jogador(j.id(), j.nome(), j.posicao(), forca, j.temperamento(), asterisco);
+		return new Jogador(j.id(), j.nome(), j.posicao(), forca, j.temperamento(), asterisco, j.nacionalidade());
 	}
 
 	@Test

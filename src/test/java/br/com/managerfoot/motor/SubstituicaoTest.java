@@ -32,7 +32,7 @@ class SubstituicaoTest {
 			List.of(GOLEIRO_RESERVA, ZAGUEIRO_RESERVA, MEIA_RESERVA, ATACANTE_RESERVA, ATACANTE_RESERVA_2));
 
 	private static Jogador reserva(long id, Posicao posicao, int forca) {
-		return new Jogador(id, "R" + id, posicao, forca, Temperamento.NORMAL);
+		return new Jogador(id, "R" + id, posicao, forca, Temperamento.NORMAL, "BRA");
 	}
 
 	private Partida partida(int limite) {
@@ -153,7 +153,7 @@ class SubstituicaoTest {
 	@Test
 	void maquinaPoeGoleiroReservaNoLugarDoAtacanteMaisFraco() {
 		List<Jogador> lista = new java.util.ArrayList<>(titulares);
-		Jogador atacanteFraco = new Jogador(lista.get(10).id(), "Fraco", Posicao.ATACANTE, 10, Temperamento.NORMAL);
+		Jogador atacanteFraco = new Jogador(lista.get(10).id(), "Fraco", Posicao.ATACANTE, 10, Temperamento.NORMAL, "BRA");
 		lista.set(10, atacanteFraco);
 		TimeEmCampo time = new TimeEmCampo(new Escalacao(Formacao.F_4_4_2, lista, List.of(GOLEIRO_RESERVA)), 0.5, 5);
 		time.expulsar(time.goleiro());
@@ -180,7 +180,7 @@ class SubstituicaoTest {
 		// goleiro violento e o resto calmo: expulsões de goleiro aparecem nas sementes
 		List<Jogador> lista = new java.util.ArrayList<>(titulares(Formacao.F_4_4_2, 25, 1, Temperamento.CALMO));
 		Jogador goleiro = lista.getFirst();
-		lista.set(0, new Jogador(goleiro.id(), goleiro.nome(), Posicao.GOLEIRO, 25, Temperamento.VIOLENTO));
+		lista.set(0, new Jogador(goleiro.id(), goleiro.nome(), Posicao.GOLEIRO, 25, Temperamento.VIOLENTO, goleiro.nacionalidade()));
 		Escalacao maquina = new Escalacao(Formacao.F_4_4_2, lista, List.of(GOLEIRO_RESERVA));
 		MotorPartida motor = new MotorPartida(ParametrosMotor.padrao());
 		int verificadas = 0;

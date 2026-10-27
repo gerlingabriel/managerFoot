@@ -1527,6 +1527,9 @@ começa depois que a anterior estiver testada.
 - Migrações e repositórios para o estado da temporada.
   - **3b.1 (concluída):** molde com países, liga nacional, divisões e
     clubes com escudo (migração V2, `docs/decisions/0006`).
+  - **3b.2 (concluída):** jogadores no molde com posição, força,
+    temperamento, asterisco permanente e nacionalidade (código do país,
+    sem as regras de estrangeiros da §8.4); plantel de até 25 (migração V3).
 - Avanço de rodada idempotente.
 - Script de administrador, link de cadastro e papéis (§3.4).
 - Banco padrão gerado: 23 jogadores por clube (máximo 25), 5 a 7 estrangeiros (§5.2).
