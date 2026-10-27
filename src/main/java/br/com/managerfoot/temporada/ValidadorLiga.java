@@ -9,7 +9,8 @@ import br.com.managerfoot.dominio.Clube;
 import br.com.managerfoot.dominio.Jogador;
 
 /**
- * Verifica se uma liga pode iniciar (SPEC §4, §13). Devolve todos os problemas de uma vez, com
+ * Verifica se uma liga pode iniciar (SPEC §4, §13): o formato do molde com os clubes do país, ou a
+ * liga já distribuída. Devolve todos os problemas de uma vez, com
  * mensagens que dizem o que falta, para o editor exibir.
  */
 public final class ValidadorLiga {
@@ -65,40 +66,84 @@ public final class ValidadorLiga {
 		return problemas;
 	}
 
+	/**
+	 * Problemas do formato da liga do molde (SPEC §4.1, rev. 27), incluindo a falta de clubes no
+	 * país. Os promovidos não são validados: vêm dos rebaixados da divisão de cima.
+	 */
+	public static List<String> problemas(FormatoLiga formato, int clubesNoPais) {
+		List<String> problemas = new ArrayList<>();
+		if (formato.nome() == null || formato.nome().isBlank()) {
+			problemas.add("A liga precisa de um nome.");
+		}
+		List<FormatoDivisao> divisoes = formato.divisoes();
+		if (divisoes.isEmpty()) {
+			problemas.add("A liga precisa de ao menos uma divisão.");
+			return problemas;
+		}
+		for (int i = 0; i < divisoes.size(); i++) {
+			FormatoDivisao d = divisoes.get(i);
+			if (d.prioridade() != i + 1) {
+				problemas.add("As prioridades devem ser 1, 2, 3... sem repetir nem pular: " + descrever(d.nome(),
+						d.prioridade()) + " deveria ter prioridade " + (i + 1) + ".");
+			}
+			validarDivisao(d.nome(), d.prioridade(), d.quantidadeClubes(), d.limiteForca(), formato.promovidos(i),
+					d.rebaixados(), i == 0, problemas);
+		}
+		if (clubesNoPais < formato.clubesNecessarios()) {
+			problemas.add("A liga precisa de " + formato.clubesNecessarios() + " clubes do país (soma das divisões + "
+					+ divisoes.getLast().rebaixados() + " rebaixado(s) da última divisão), mas há " + clubesNoPais
+					+ ". Faltam " + (formato.clubesNecessarios() - clubesNoPais) + " clube(s).");
+		}
+		return problemas;
+	}
+
 	/** @throws IllegalArgumentException com todos os problemas, se a liga não puder iniciar */
 	public static void exigirValida(ConfiguracaoLiga liga) {
-		List<String> problemas = problemas(liga);
+		lancarSeHouver(problemas(liga));
+	}
+
+	/** @throws IllegalArgumentException com todos os problemas, se a liga não puder iniciar */
+	public static void exigirValido(FormatoLiga formato, int clubesNoPais) {
+		lancarSeHouver(problemas(formato, clubesNoPais));
+	}
+
+	private static void lancarSeHouver(List<String> problemas) {
 		if (!problemas.isEmpty()) {
 			throw new IllegalArgumentException("A liga não pode iniciar:\n- " + String.join("\n- ", problemas));
 		}
 	}
 
 	private static void validarDivisao(Divisao divisao, boolean principal, List<String> problemas) {
-		String nome = descrever(divisao);
-		if (divisao.nome() == null || divisao.nome().isBlank()) {
-			problemas.add("A divisão de prioridade " + divisao.prioridade() + " precisa de um nome.");
+		validarDivisao(divisao.nome(), divisao.prioridade(), divisao.clubes().size(), divisao.limiteForca(),
+				divisao.promovidos(), divisao.rebaixados(), principal, problemas);
+	}
+
+	private static void validarDivisao(String nomeDivisao, int prioridade, int clubes, int limiteForca,
+			int promovidos, int rebaixados, boolean principal, List<String> problemas) {
+		String nome = descrever(nomeDivisao, prioridade);
+		if (nomeDivisao == null || nomeDivisao.isBlank()) {
+			problemas.add("A divisão de prioridade " + prioridade + " precisa de um nome.");
 		}
-		int clubes = divisao.clubes().size();
 		if (clubes < MINIMO_CLUBES_POR_DIVISAO || clubes > MAXIMO_CLUBES_POR_DIVISAO) {
 			problemas.add(nome + " tem " + clubes + " clubes; cada divisão deve ter de " + MINIMO_CLUBES_POR_DIVISAO
 					+ " a " + MAXIMO_CLUBES_POR_DIVISAO + ".");
 		}
-		if (principal && divisao.limiteForca() != LIMITE_FORCA_PRINCIPAL) {
+		if (principal && limiteForca != LIMITE_FORCA_PRINCIPAL) {
 			problemas.add(nome + " é a liga principal e deve ter limite de força " + LIMITE_FORCA_PRINCIPAL + ", mas tem "
-					+ divisao.limiteForca() + ".");
+					+ limiteForca + ".");
 		}
-		if (divisao.limiteForca() < Jogador.FORCA_MINIMA || divisao.limiteForca() > Jogador.FORCA_MAXIMA) {
-			problemas.add(nome + " tem limite de força " + divisao.limiteForca() + "; deve estar entre "
+		if (limiteForca < Jogador.FORCA_MINIMA || limiteForca > Jogador.FORCA_MAXIMA) {
+			problemas.add(nome + " tem limite de força " + limiteForca + "; deve estar entre "
 					+ Jogador.FORCA_MINIMA + " e " + Jogador.FORCA_MAXIMA + ".");
 		}
-		if (principal && divisao.promovidos() != 0) {
+		if (principal && promovidos != 0) {
 			problemas.add(nome + " é a liga principal e não pode ter promovidos (não há divisão acima).");
 		}
-		if (divisao.promovidos() < 0 || divisao.rebaixados() < 0) {
+		if (promovidos < 0 || rebaixados < 0) {
 			problemas.add(nome + " não pode ter promovidos ou rebaixados negativos.");
 		}
-		if (divisao.promovidos() + divisao.rebaixados() > clubes) {
-			problemas.add(nome + " promove " + divisao.promovidos() + " e rebaixa " + divisao.rebaixados()
+		if (promovidos + rebaixados > clubes) {
+			problemas.add(nome + " promove " + promovidos + " e rebaixa " + rebaixados
 					+ ", mais do que os " + clubes + " clubes que tem.");
 		}
 	}
@@ -116,6 +161,10 @@ public final class ValidadorLiga {
 	}
 
 	private static String descrever(Divisao divisao) {
-		return "\"" + divisao.nome() + "\" (prioridade " + divisao.prioridade() + ")";
+		return descrever(divisao.nome(), divisao.prioridade());
+	}
+
+	private static String descrever(String nome, int prioridade) {
+		return "\"" + nome + "\" (prioridade " + prioridade + ")";
 	}
 }

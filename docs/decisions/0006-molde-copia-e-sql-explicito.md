@@ -40,8 +40,11 @@ Escolhidas pelo usuário em 2026-10-27:
 
 - Editar o molde não altera jogos já começados.
 - Vários jogos podem nascer do mesmo molde.
-- Cada país do molde tem uma liga nacional (nome, divisões e clubes). Um
-  clube do país sem divisão está na fila de espera daquela liga.
+- Cada país do molde tem uma liga nacional. **Atualizado em 2026-10-27
+  (SPEC rev. 27, migração V10):** o molde guarda só o formato da liga
+  (divisões com quantidade de clubes) e os clubes do país, sem divisão. A
+  distribuição pela força acontece na cópia para o jogo; a fila de espera só
+  existe no jogo.
 - O SQL é escrito à mão: cada consulta nova precisa de teste com
   PostgreSQL real (Testcontainers).
 - Mais código de mapeamento do que com um ORM, em troca de controle total

@@ -1,5 +1,7 @@
 package br.com.managerfoot.persistencia;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -23,7 +25,8 @@ import br.com.managerfoot.temporada.Divisao;
  * SQL comum às tabelas de divisões, clubes e jogadores do molde ({@code molde_*}, donas por
  * {@code pais_id}) e do jogo ({@code jogo_*}, donas por {@code jogo_id}), que têm as mesmas colunas.
  * O prefixo e a coluna dona são constantes dos repositórios, nunca entrada de usuário. Não abre
- * transação: quem chama abre.
+ * transação: quem chama abre. No molde os clubes não têm divisão (rev. 27): {@link #gravar} e
+ * {@link #carregar} são só do jogo.
  */
 final class TabelasLiga {
 
@@ -40,6 +43,7 @@ final class TabelasLiga {
 
 	/** Grava divisões e clubes; devolve a liga com os ids gerados, na mesma ordem da recebida. */
 	ConfiguracaoLiga gravar(JdbcClient jdbc, long donoId, ConfiguracaoLiga liga) {
+		exigirJogo();
 		List<Divisao> divisoes = new ArrayList<>();
 		for (Divisao d : liga.divisoes()) {
 			long divisaoId = inserir(jdbc, """
@@ -56,14 +60,12 @@ final class TabelasLiga {
 
 	/** Divisões por prioridade; clubes em ordem de id dentro de cada divisão e na fila. */
 	ConfiguracaoLiga carregar(JdbcClient jdbc, long donoId, String nomeLiga) {
+		exigirJogo();
 		List<LinhaClube> linhas = jdbc.sql("""
 				SELECT id, divisao_id, nome, forca, escudo_modelo, escudo_cor_1, escudo_cor_2
-				FROM %s_clube WHERE %s = :dono ORDER BY id""".formatted(prefixo, dono))
+				FROM jogo_clube WHERE jogo_id = :dono ORDER BY id""")
 			.param("dono", donoId)
-			.query((rs, n) -> new LinhaClube(rs.getObject("divisao_id", Long.class),
-					new Clube(rs.getLong("id"), rs.getString("nome"), rs.getInt("forca"),
-							new Escudo(ModeloEscudo.valueOf(rs.getString("escudo_modelo")), rs.getString("escudo_cor_1"),
-									rs.getString("escudo_cor_2")))))
+			.query((rs, n) -> new LinhaClube(rs.getObject("divisao_id", Long.class), clube(rs)))
 			.list();
 		Map<Long, List<Clube>> porDivisao = linhas.stream()
 			.filter(l -> l.divisaoId() != null)
@@ -80,6 +82,13 @@ final class TabelasLiga {
 					porDivisao.getOrDefault(rs.getLong("id"), List.of())))
 			.list();
 		return new ConfiguracaoLiga(nomeLiga, divisoes, fila);
+	}
+
+	/** Clube de uma linha com id, nome, força e escudo. */
+	static Clube clube(ResultSet rs) throws SQLException {
+		return new Clube(rs.getLong("id"), rs.getString("nome"), rs.getInt("forca"),
+				new Escudo(ModeloEscudo.valueOf(rs.getString("escudo_modelo")), rs.getString("escudo_cor_1"),
+						rs.getString("escudo_cor_2")));
 	}
 
 	boolean clubeExiste(JdbcClient jdbc, long clubeId) {
@@ -116,6 +125,12 @@ final class TabelasLiga {
 		KeyHolder chave = new GeneratedKeyHolder();
 		jdbc.sql(sql).params(parametros).update(chave, "id");
 		return chave.getKeyAs(Long.class);
+	}
+
+	private void exigirJogo() {
+		if (this != JOGO) {
+			throw new IllegalStateException("só o jogo tem clubes em divisões; o molde guarda o formato");
+		}
 	}
 
 	private Clube inserirClube(JdbcClient jdbc, long donoId, Long divisaoId, Clube c) {

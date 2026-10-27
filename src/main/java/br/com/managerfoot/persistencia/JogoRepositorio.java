@@ -23,7 +23,6 @@ import br.com.managerfoot.dominio.Jogador;
 import br.com.managerfoot.temporada.ClubeInicial;
 import br.com.managerfoot.temporada.ConfiguracaoLiga;
 import br.com.managerfoot.temporada.Divisao;
-import br.com.managerfoot.temporada.ValidadorLiga;
 
 /**
  * Jogo em andamento (docs/decisions/0006): nasce de uma cópia da liga e dos planteis de um país do
@@ -34,9 +33,10 @@ public class JogoRepositorio {
 
 	private final JdbcClient jdbc;
 	private final ContasRepositorio contas;
+	private final MoldeRepositorio moldes;
 	private final int candidatosClubeInicial;
 
-	public JogoRepositorio(JdbcClient jdbc, ContasRepositorio contas,
+	public JogoRepositorio(JdbcClient jdbc, ContasRepositorio contas, MoldeRepositorio moldes,
 			@Value("${managerfoot.jogo.candidatos-clube-inicial}") int candidatosClubeInicial) {
 		if (candidatosClubeInicial < 1) {
 			throw new IllegalArgumentException(
@@ -44,13 +44,15 @@ public class JogoRepositorio {
 		}
 		this.jdbc = jdbc;
 		this.contas = contas;
+		this.moldes = moldes;
 		this.candidatosClubeInicial = candidatosClubeInicial;
 	}
 
 	/**
-	 * Cria um jogo com a liga e os planteis do país do molde e dá ao usuário um clube sorteado entre
-	 * os mais fracos da última divisão (SPEC §3.2). Serve a participantes e ao administrador que
-	 * prefira o sorteio. Devolve o id do jogo.
+	 * Cria um jogo com os clubes e planteis do país do molde, distribuídos pela força nas divisões do
+	 * formato (SPEC §4.1, rev. 27), e dá ao usuário um clube sorteado entre os mais fracos da última
+	 * divisão (SPEC §3.2). Serve a participantes e ao administrador que prefira o sorteio. A semente
+	 * decide os empates da distribuição e o sorteio do clube. Devolve o id do jogo.
 	 *
 	 * @throws NoSuchElementException se o usuário ou o país não existem
 	 * @throws IllegalStateException se o país ainda não tem liga
@@ -59,31 +61,40 @@ public class JogoRepositorio {
 	@Transactional(isolation = Isolation.REPEATABLE_READ)
 	public long criarJogoComClubeSorteado(long paisMoldeId, long usuarioId, long semente) {
 		exigirUsuario(usuarioId);
-		Copia copia = copiar(paisMoldeId, usuarioId);
+		Copia copia = copiar(paisMoldeId, usuarioId, semente);
 		Clube clube = ClubeInicial.sortear(copia.liga().divisoes().getLast(), candidatosClubeInicial,
-				new SplittableRandom(semente));
-		jdbc.sql("UPDATE jogo SET semente_clube_inicial = :semente WHERE id = :jogo")
-			.param("semente", semente)
-			.param("jogo", copia.jogoId())
-			.update();
+				new SplittableRandom(~semente));
 		inserirTreinador(copia.jogoId(), usuarioId, clube.id());
 		return copia.jogoId();
 	}
 
 	/**
-	 * Cria um jogo como {@link #criarJogoComClubeSorteado} com o clube escolhido pelo administrador,
-	 * de qualquer divisão (a fila de espera não serve: não tem liga para jogar). Devolve o id do jogo.
+	 * Clubes do país distribuídos nas divisões como {@link #criarJogoComClubeSorteado} faria com a
+	 * mesma semente, ainda com os ids do molde. É o quadro em que o administrador escolhe o clube.
+	 *
+	 * @throws IllegalArgumentException com todos os problemas, se a liga não puder iniciar
+	 */
+	@Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+	public ConfiguracaoLiga distribuicao(long paisMoldeId, long semente) {
+		lerPais(paisMoldeId);
+		return distribuir(paisMoldeId, semente);
+	}
+
+	/**
+	 * Cria um jogo como {@link #criarJogoComClubeSorteado} com o clube escolhido pelo administrador
+	 * no quadro de {@link #distribuicao} da mesma semente. O clube precisa estar numa divisão: a fila
+	 * de espera não tem liga para jogar. Devolve o id do jogo.
 	 *
 	 * @param clubeMoldeId id do clube no molde; o jogo recebe a cópia dele
 	 * @throws AcessoNegadoException se quem pede não é administrador
 	 * @throws IllegalArgumentException se o clube não está numa divisão da liga do país
 	 */
 	@Transactional(isolation = Isolation.REPEATABLE_READ)
-	public long criarJogoComClubeEscolhido(long paisMoldeId, long administradorId, long clubeMoldeId) {
+	public long criarJogoComClubeEscolhido(long paisMoldeId, long administradorId, long semente, long clubeMoldeId) {
 		if (exigirUsuario(administradorId).papel() != Papel.ADMINISTRADOR) {
 			throw new AcessoNegadoException("só o administrador escolhe o clube; os demais recebem um clube sorteado");
 		}
-		Copia copia = copiar(paisMoldeId, administradorId);
+		Copia copia = copiar(paisMoldeId, administradorId, semente);
 		Long destino = copia.clubesPorOrigem().get(clubeMoldeId);
 		if (destino == null || copia.liga().filaDeEspera().stream().anyMatch(c -> c.id() == destino)) {
 			throw new IllegalArgumentException("O clube escolhido precisa estar numa divisão da liga deste país.");
@@ -103,25 +114,18 @@ public class JogoRepositorio {
 	}
 
 	/**
-	 * Copia a liga e os planteis do país; a leitura do molde é consistente mesmo que ele seja editado
-	 * ao mesmo tempo, pelo isolamento de quem chama.
+	 * Distribui os clubes do país e copia a liga e os planteis para um jogo novo. A leitura do molde
+	 * é consistente mesmo que ele seja editado ao mesmo tempo, pelo isolamento de quem chama.
 	 */
-	private Copia copiar(long paisMoldeId, long donoId) {
-		PaisMolde pais = jdbc.sql("SELECT molde_id, codigo, nome_liga FROM molde_pais WHERE id = :pais")
-			.param("pais", paisMoldeId)
-			.query((rs, n) -> new PaisMolde(rs.getLong("molde_id"), rs.getString("codigo"), rs.getString("nome_liga")))
-			.optional()
-			.orElseThrow(() -> new NoSuchElementException("país " + paisMoldeId + " não existe no molde"));
-		if (pais.nomeLiga() == null) {
-			throw new IllegalStateException("o país " + pais.codigo() + " ainda não tem liga no molde");
-		}
-		ConfiguracaoLiga liga = TabelasLiga.MOLDE.carregar(jdbc, paisMoldeId, pais.nomeLiga());
-		ValidadorLiga.exigirValida(liga);
+	private Copia copiar(long paisMoldeId, long donoId, long semente) {
+		PaisMolde pais = lerPais(paisMoldeId);
+		ConfiguracaoLiga liga = distribuir(paisMoldeId, semente);
 
 		long jogoId = TabelasLiga.inserir(jdbc, """
-				INSERT INTO jogo (molde_id, pais_codigo, nome_liga, dono_id)
-				VALUES (:molde, :codigo, :nome, :dono)""",
-				Map.of("molde", pais.moldeId(), "codigo", pais.codigo(), "nome", liga.nome(), "dono", donoId));
+				INSERT INTO jogo (molde_id, pais_codigo, nome_liga, dono_id, semente_criacao)
+				VALUES (:molde, :codigo, :nome, :dono, :semente)""",
+				Map.of("molde", pais.moldeId(), "codigo", pais.codigo(), "nome", liga.nome(), "dono", donoId, "semente",
+						semente));
 		ConfiguracaoLiga copia = TabelasLiga.JOGO.gravar(jdbc, jogoId, liga);
 		List<Clube> origens = clubes(liga);
 		List<Clube> destinos = clubes(copia);
@@ -133,6 +137,23 @@ public class JogoRepositorio {
 				.forEach(j -> TabelasLiga.JOGO.inserirJogador(jdbc, destino, j));
 		}
 		return new Copia(jogoId, copia, clubesPorOrigem);
+	}
+
+	private PaisMolde lerPais(long paisMoldeId) {
+		PaisMolde pais = jdbc.sql("SELECT molde_id, codigo, nome_liga FROM molde_pais WHERE id = :pais")
+			.param("pais", paisMoldeId)
+			.query((rs, n) -> new PaisMolde(rs.getLong("molde_id"), rs.getString("codigo"), rs.getString("nome_liga")))
+			.optional()
+			.orElseThrow(() -> new NoSuchElementException("país " + paisMoldeId + " não existe no molde"));
+		if (pais.nomeLiga() == null) {
+			throw new IllegalStateException("o país " + pais.codigo() + " ainda não tem liga no molde");
+		}
+		return pais;
+	}
+
+	private ConfiguracaoLiga distribuir(long paisMoldeId, long semente) {
+		return moldes.carregarFormato(paisMoldeId)
+			.distribuir(moldes.carregarClubes(paisMoldeId), new SplittableRandom(semente));
 	}
 
 	private Usuario exigirUsuario(long usuarioId) {

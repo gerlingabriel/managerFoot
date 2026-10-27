@@ -29,7 +29,7 @@ final class LigaDeTeste {
 	 */
 	static long criarJogo(MoldeRepositorio moldes, JogoRepositorio jogos, ContasRepositorio contas) {
 		long pais = moldes.criarPais(moldes.criarMolde("Padrão"), "BRA", "Brasil");
-		ConfiguracaoLiga liga = moldes.criarLiga(pais, new ConfiguracaoLiga("Nacional",
+		ConfiguracaoLiga liga = gravarNoMolde(moldes, pais, new ConfiguracaoLiga("Nacional",
 				List.of(new Divisao("Série A", 1, 50, 0, 2, clubes("A", 16, 35)),
 						new Divisao("Série B", 2, 30, 2, 2, clubes("B", 15, 22))),
 				clubes("Fila", 2, 15)));
@@ -37,6 +37,23 @@ final class LigaDeTeste {
 		liga.divisoes().forEach(d -> d.clubes().forEach(c -> moldes.adicionarJogadores(c.id(), plantel(c, aleatorio))));
 		liga.filaDeEspera().forEach(c -> moldes.adicionarJogadores(c.id(), plantel(c, aleatorio)));
 		return jogos.criarJogoComClubeSorteado(pais, participante(contas).id(), 1);
+	}
+
+	/**
+	 * Grava no molde o formato da liga (divisões com o tamanho, o limite e os rebaixados das
+	 * recebidas) e todos os clubes no país; devolve a liga com os ids gerados, no mesmo desenho da
+	 * recebida. Com forças decrescentes entre divisões e fila, é a distribuição que o jogo fará.
+	 */
+	static ConfiguracaoLiga gravarNoMolde(MoldeRepositorio moldes, long pais, ConfiguracaoLiga liga) {
+		moldes.criarLiga(pais, liga.nome());
+		List<Divisao> divisoes = new ArrayList<>();
+		for (Divisao d : liga.divisoes()) {
+			moldes.adicionarDivisao(pais, d.nome(), d.clubes().size(), d.limiteForca(), d.rebaixados());
+			divisoes.add(new Divisao(d.nome(), d.prioridade(), d.limiteForca(), d.promovidos(), d.rebaixados(),
+					d.clubes().stream().map(c -> moldes.adicionarClube(pais, c)).toList()));
+		}
+		return new ConfiguracaoLiga(liga.nome(), divisoes,
+				liga.filaDeEspera().stream().map(c -> moldes.adicionarClube(pais, c)).toList());
 	}
 
 	static Usuario administrador(ContasRepositorio contas) {

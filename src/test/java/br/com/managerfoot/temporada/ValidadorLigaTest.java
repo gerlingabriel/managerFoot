@@ -142,4 +142,33 @@ class ValidadorLigaTest {
 			.withMessageContaining("limite de força 50")
 			.withMessageContaining("Faltam 2 clube(s)");
 	}
+
+	@Test
+	void formatoDoMoldeConfereDivisoesEClubesDoPais() {
+		FormatoLiga formato = new FormatoLiga("Italiano", List.of(new FormatoDivisao("Serie A", 1, 19, 50, 2),
+				new FormatoDivisao("Serie B", 2, 20, 30, 4)));
+
+		assertThat(ValidadorLiga.problemas(formato, 43)).isEmpty();
+		assertThat(ValidadorLiga.problemas(formato, 42)).containsExactly(
+				"A liga precisa de 43 clubes do país (soma das divisões + 4 rebaixado(s) da última divisão), mas há 42. "
+						+ "Faltam 1 clube(s).");
+	}
+
+	@Test
+	void formatoComDivisaoForaDaFaixaOuPrincipalSemLimite50() {
+		FormatoLiga formato = new FormatoLiga("Liga", List.of(new FormatoDivisao("A", 1, 12, 40, 2)));
+
+		assertThat(ValidadorLiga.problemas(formato, 100)).hasSize(2)
+			.anyMatch(p -> p.contains("tem 12 clubes"))
+			.anyMatch(p -> p.contains("limite de força 50"));
+		assertThat(ValidadorLiga.problemas(new FormatoLiga(null, List.of()), 0))
+			.contains("A liga precisa de um nome.", "A liga precisa de ao menos uma divisão.");
+	}
+
+	@Test
+	void formatoComPrioridadeRepetidaOuPulada() {
+		FormatoLiga formato = new FormatoLiga("Liga",
+				List.of(new FormatoDivisao("A", 1, 20, 50, 2), new FormatoDivisao("C", 3, 20, 20, 2)));
+		assertThat(ValidadorLiga.problemas(formato, 100)).singleElement().asString().contains("deveria ter prioridade 2");
+	}
 }

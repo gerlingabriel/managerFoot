@@ -42,7 +42,7 @@ class MoldeJogadoresIT {
 	void criaClube() {
 		molde = repositorio.criarMolde("Padrão");
 		long pais = repositorio.criarPais(molde, "BRA", "Brasil");
-		ConfiguracaoLiga liga = repositorio.criarLiga(pais, new ConfiguracaoLiga("Nacional",
+		ConfiguracaoLiga liga = LigaDeTeste.gravarNoMolde(repositorio, pais, new ConfiguracaoLiga("Nacional",
 				List.of(new Divisao("Série A", 1, 50, 0, 0, List.of(new Clube(0, "Alvinegro", 35)))), List.of()));
 		clube = liga.divisoes().getFirst().clubes().getFirst().id();
 	}

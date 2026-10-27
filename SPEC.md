@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 26 — 2026-10-27)
+-   **Status:** versão inicial para revisão (rev. 27 — 2026-10-27)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 27 (2026-10-27):** clube pertence ao país, não à divisão; a liga só define o formato das divisões; clubes distribuídos pela força ao criar o jogo, com empate sorteado; prioridade automática; promovidos calculados; excluir divisão sobe as de baixo; quadro de escolha do administrador.
 -   **rev. 26 (2026-10-27):** divisões precisam estar completas para o jogo começar e a estrutura não muda durante o jogo; clube começa com a força cadastrada em qualquer divisão e perde força aos poucos até o teto; treinador da máquina com clube rebaixado para a fila segue a demissão por moral.
 -   **rev. 25 (2026-10-27):** todo jogo tem dono; empatados com o 4º mais fraco também entram no sorteio do clube inicial; o administrador pode escolher o clube ou pedir o sorteio; clube só de divisão, nunca da fila; divisão sem clubes suficientes fica em aberto.
 -   **rev. 24 (2026-10-27):** link de cadastro de uso único válido por 7 dias; login por e-mail e senha de 8 ou mais caracteres; recuperação de senha pelo administrador por enquanto.
@@ -298,6 +299,33 @@ decorrem das regras acima.
     demitido, outro treinador do jogo assume o clube.
 - **Rebaixado para outra divisão** (por exemplo, da 1ª para a 2ª): segue
   normalmente na nova divisão, seja de usuário ou da máquina.
+
+**Definido (rev. 27) — formato da liga e clubes do país:**
+- O clube é cadastrado no **país**, sem divisão. A liga do país só define o
+  **formato**: nome e, para cada divisão, nome, quantidade de clubes,
+  rebaixados e limite de força.
+- **Prioridade automática:** cada divisão nova recebe o próximo número (1,
+  2, 3...); não há como repetir nem pular. Ao **excluir** uma divisão, as de
+  baixo sobem um número e mantêm nome e limite. Exemplo: excluindo a Série B
+  de A, B e C, a Série C passa a ser a prioridade 2.
+- **Promovidos calculados:** os promovidos de uma divisão são os rebaixados
+  da divisão de cima; a principal não tem promovidos.
+- **Campeonato disponível:** um país só aparece para escolha se tiver liga
+  com formato válido e clubes suficientes. Exemplos: Premier League de 18
+  com 3 rebaixados precisa de 21 ingleses; 100 clubes italianos sem liga
+  cadastrada não formam campeonato; Itália com 1ª de 19 (2 rebaixados) e 2ª
+  de 20 (4 rebaixados) precisa de 43.
+- **Distribuição ao criar o jogo:** os clubes do país são ordenados pela
+  força, do mais forte ao mais fraco. Os primeiros preenchem a 1ª divisão,
+  os seguintes as de baixo, e o resto vai para a fila. **Empate de força é
+  sorteado**: com 22 clubes de força 50 para 20 vagas, 20 são sorteados para
+  a 1ª e 2 vão para a 2ª. A semente do jogo decide o sorteio.
+- **Escolha do campeonato (tela depois do login):** o usuário escolhe o
+  campeonato e o modo. O participante comum só tem o sorteio do clube; o
+  administrador pode também escolher o clube. Nesse caso, a tela seguinte
+  mostra um quadro com todos os clubes do país já nas suas divisões, pela
+  distribuição sorteada, e clicar num clube mostra o plantel. O jogo é
+  criado com essa mesma distribuição.
 
 **Definido (rev. 26) — liga completa e fixa:**
 - Todas as divisões configuradas precisam ter clubes suficientes. Se uma
@@ -1633,6 +1661,11 @@ começa depois que a anterior estiver testada.
     cadastro de participante, verificação de senha e redefinição pelo
     administrador. Login com sessão e telas entram com o Spring Security,
     junto das telas.
+  - **3e.1 (concluída):** formato da liga e clubes do país (migração V10,
+    rev. 27): divisões com prioridade automática e exclusão que sobe as de
+    baixo, promovidos calculados, campeonatos disponíveis e distribuição dos
+    clubes pela força, com empate sorteado, ao criar o jogo. A tela de
+    escolha entra com as telas (mockup antes).
   - **3d.2 (concluída):** dono do jogo e clube inicial (migração V9): o
     jogo nasce com dono e com o treinador humano no clube sorteado entre os
     mais fracos da última divisão (grupo configurável em

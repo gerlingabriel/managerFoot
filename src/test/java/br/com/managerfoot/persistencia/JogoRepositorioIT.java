@@ -55,7 +55,7 @@ class JogoRepositorioIT {
 	void criaMoldeComPlanteis() {
 		molde = moldes.criarMolde("Padrão");
 		brasil = moldes.criarPais(molde, "BRA", "Brasil");
-		ligaMolde = moldes.criarLiga(brasil, ligaDeDuasDivisoes("BR"));
+		ligaMolde = LigaDeTeste.gravarNoMolde(moldes, brasil, ligaDeDuasDivisoes("BR"));
 		moldes.adicionarJogadores(primeiroClube(ligaMolde).id(), plantel("Titular"));
 		moldes.adicionarJogadores(ligaMolde.filaDeEspera().getFirst().id(), plantel("Fila"));
 	}
@@ -99,7 +99,7 @@ class JogoRepositorioIT {
 	@Test
 	void soOPaisEscolhidoECopiado() {
 		long argentina = moldes.criarPais(molde, "ARG", "Argentina");
-		moldes.criarLiga(argentina, ligaDeDuasDivisoes("AR"));
+		LigaDeTeste.gravarNoMolde(moldes, argentina, ligaDeDuasDivisoes("AR"));
 
 		long jogo = criar(argentina);
 
@@ -126,7 +126,7 @@ class JogoRepositorioIT {
 	@Test
 	void ligaInvalidaERecusadaComOsProblemasESemGravarNada() {
 		long chile = moldes.criarPais(molde, "CHI", "Chile");
-		moldes.criarLiga(chile, new ConfiguracaoLiga("Pequena",
+		LigaDeTeste.gravarNoMolde(moldes, chile, new ConfiguracaoLiga("Pequena",
 				List.of(new Divisao("Única", 1, 50, 0, 0, clubes("CL", 3, 30))), List.of()));
 		long jogosAntes = contarJogos();
 
@@ -155,7 +155,7 @@ class JogoRepositorioIT {
 			sorteados.add(nomeDoClube(clube));
 			assertThat(jdbc.sql("SELECT dono_id FROM jogo WHERE id = ?").param(jogo).query(Long.class).single())
 				.isEqualTo(participante.id());
-			assertThat(jdbc.sql("SELECT semente_clube_inicial FROM jogo WHERE id = ?").param(jogo).query(Long.class)
+			assertThat(jdbc.sql("SELECT semente_criacao FROM jogo WHERE id = ?").param(jogo).query(Long.class)
 				.single()).isEqualTo(semente);
 		}
 		assertThat(sorteados).isSubsetOf("BR Segunda 1", "BR Segunda 2", "BR Segunda 3", "BR Segunda 4")
@@ -176,13 +176,29 @@ class JogoRepositorioIT {
 		Usuario admin = LigaDeTeste.administrador(contas);
 		Clube listrado = primeiroClube(ligaMolde);
 
-		long jogo = jogos.criarJogoComClubeEscolhido(brasil, admin.id(), listrado.id());
+		long jogo = jogos.criarJogoComClubeEscolhido(brasil, admin.id(), 1, listrado.id());
 
 		long clube = jogos.clubeDoTreinador(jogo, admin.id()).orElseThrow();
 		assertThat(clube).isEqualTo(primeiroClube(jogos.carregarLiga(jogo)).id());
-		assertThat(jdbc.sql("SELECT semente_clube_inicial FROM jogo WHERE id = ?").param(jogo).query(Long.class)
-			.optional()).isEmpty();
+		assertThat(jdbc.sql("SELECT semente_criacao FROM jogo WHERE id = ?").param(jogo).query(Long.class)
+			.single()).isEqualTo(1);
 		assertThat(jogos.clubeDoTreinador(jogo, LigaDeTeste.participante(contas).id())).isEmpty();
+	}
+
+	@Test
+	void quadroDoAdministradorMostraADistribuicaoQueOJogoUsa() {
+		// empate de força 40 entre a Série A e um clube cadastrado a mais: a semente decide
+		moldes.adicionarClube(brasil, new Clube(0, "BR Empatado", 40));
+		Usuario admin = LigaDeTeste.administrador(contas);
+
+		for (long semente = 0; semente < 6; semente++) {
+			ConfiguracaoLiga quadro = jogos.distribuicao(brasil, semente);
+			Clube escolhido = quadro.divisoes().getFirst().clubes().getLast();
+			long jogo = jogos.criarJogoComClubeEscolhido(brasil, admin.id(), semente, escolhido.id());
+
+			assertThat(semIds(jogos.carregarLiga(jogo))).isEqualTo(semIds(quadro));
+			assertThat(nomeDoClube(jogos.clubeDoTreinador(jogo, admin.id()).orElseThrow())).isEqualTo(escolhido.nome());
+		}
 	}
 
 	@Test
@@ -197,15 +213,15 @@ class JogoRepositorioIT {
 		Usuario admin = LigaDeTeste.administrador(contas);
 		Usuario participante = LigaDeTeste.participante(contas);
 		long argentina = moldes.criarPais(molde, "ARG", "Argentina");
-		ConfiguracaoLiga ligaArgentina = moldes.criarLiga(argentina, ligaDeDuasDivisoes("AR"));
+		ConfiguracaoLiga ligaArgentina = LigaDeTeste.gravarNoMolde(moldes, argentina, ligaDeDuasDivisoes("AR"));
 		long jogosAntes = contarJogos();
 
-		assertThatThrownBy(() -> jogos.criarJogoComClubeEscolhido(brasil, participante.id(),
+		assertThatThrownBy(() -> jogos.criarJogoComClubeEscolhido(brasil, participante.id(), 1,
 				primeiroClube(ligaMolde).id())).isInstanceOf(AcessoNegadoException.class);
-		assertThatThrownBy(() -> jogos.criarJogoComClubeEscolhido(brasil, admin.id(),
+		assertThatThrownBy(() -> jogos.criarJogoComClubeEscolhido(brasil, admin.id(), 1,
 				ligaMolde.filaDeEspera().getFirst().id())).isInstanceOf(IllegalArgumentException.class)
 			.hasMessageContaining("divisão");
-		assertThatThrownBy(() -> jogos.criarJogoComClubeEscolhido(brasil, admin.id(),
+		assertThatThrownBy(() -> jogos.criarJogoComClubeEscolhido(brasil, admin.id(), 1,
 				primeiroClube(ligaArgentina).id())).isInstanceOf(IllegalArgumentException.class);
 		assertThatThrownBy(() -> jogos.criarJogoComClubeSorteado(brasil, -1, 1))
 			.isInstanceOf(NoSuchElementException.class);
@@ -261,7 +277,7 @@ class JogoRepositorioIT {
 
 	/**
 	 * 1ª com 16 clubes e 2 rebaixados, 2ª com 16 clubes (forças 10 a 25, nessa ordem), 2 promovidos e
-	 * 2 rebaixados, fila com 2.
+	 * 2 rebaixados, fila com 2 de força 5.
 	 */
 	private static ConfiguracaoLiga ligaDeDuasDivisoes(String prefixo) {
 		List<Clube> primeira = new java.util.ArrayList<>(clubes(prefixo + " Primeira", 16, 40));
@@ -272,7 +288,7 @@ class JogoRepositorioIT {
 						new Divisao("Série B", 2, 30, 2, 2, IntStream.rangeClosed(1, 16)
 							.mapToObj(i -> new Clube(0, prefixo + " Segunda " + i, 9 + i))
 							.toList())),
-				clubes(prefixo + " Fila", 2, 15));
+				clubes(prefixo + " Fila", 2, 5));
 	}
 
 	private static List<Clube> clubes(String prefixo, int quantidade, int forca) {

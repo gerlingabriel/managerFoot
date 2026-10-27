@@ -55,7 +55,7 @@ class TemporadaRepositorioIT {
 	void criaJogo() {
 		long pais = moldes.criarPais(moldes.criarMolde("Padrão"), "BRA", "Brasil");
 		// 2ª divisão com número ímpar de clubes: há folga em cada rodada
-		ConfiguracaoLiga liga = moldes.criarLiga(pais, new ConfiguracaoLiga("Nacional",
+		ConfiguracaoLiga liga = LigaDeTeste.gravarNoMolde(moldes, pais, new ConfiguracaoLiga("Nacional",
 				List.of(new Divisao("Série A", 1, 50, 0, 2, clubes("A", 16, 40)),
 						new Divisao("Série B", 2, 30, 2, 2, clubes("B", 17, 25))),
 				clubes("Fila", 2, 15)));
