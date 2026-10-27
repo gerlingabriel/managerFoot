@@ -4,11 +4,13 @@ import java.util.Objects;
 
 /**
  * Jogador no mínimo necessário ao motor de partidas (Etapa 1).
- * Nacionalidade, contrato e asterisco entram nas etapas seguintes.
+ * Nacionalidade e contrato entram nas etapas seguintes.
  *
  * @param id identificador único dentro do jogo; distingue jogadores com dados iguais
+ * @param asterisco jogador especial (SPEC §5.3); por ora só desempata a escolha do batedor de pênalti
  */
-public record Jogador(long id, String nome, Posicao posicao, int forca, Temperamento temperamento) {
+public record Jogador(long id, String nome, Posicao posicao, int forca, Temperamento temperamento,
+		boolean asterisco) {
 
 	/** Escala de força definida na SPEC §4.2. */
 	public static final int FORCA_MINIMA = 1;
@@ -24,5 +26,10 @@ public record Jogador(long id, String nome, Posicao posicao, int forca, Temperam
 			throw new IllegalArgumentException("força de " + nome + " deve estar entre " + FORCA_MINIMA + " e "
 					+ FORCA_MAXIMA + ", mas foi " + forca);
 		}
+	}
+
+	/** Jogador sem asterisco. */
+	public Jogador(long id, String nome, Posicao posicao, int forca, Temperamento temperamento) {
+		this(id, nome, posicao, forca, temperamento, false);
 	}
 }

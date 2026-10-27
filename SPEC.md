@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 6 — 2026-10-26)
+-   **Status:** versão inicial para revisão (rev. 7 — 2026-10-26)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 7 (2026-10-26):** efeito da expulsão, goleiro expulso e escolha do batedor de pênalti.
 -   **rev. 6 (2026-10-26):** pesos do finalizador para as 8 formações; finalizador escolhido com peso pela força.
 -   **rev. 5 (2026-10-26):**
     -   papel dos setores (meio decide domínio);
@@ -511,6 +512,18 @@ registrados aqui depois.
 -   O efeito deve considerar o tempo restante e, se aplicável, a posição
     do jogador expulso.
 -   O efeito não deve tornar o resultado inevitável.
+
+**Definido (rev. 7):**
+- **Efeito da expulsão:** o jogador expulso **sai de campo** e o setor dele
+  perde a sua força. Não há penalidade extra.
+  - Se for meia, o time domina menos.
+  - Se for atacante, o time finaliza pior.
+  - Se for defensor, o time defende pior.
+  - Quanto mais cedo a expulsão, mais tempo o time joga com um a menos.
+- **Goleiro expulso** (enquanto não há substituições): o **defensor de
+  menor força** vai para o gol.
+  - Se não houver defensor, vai o jogador de linha de menor força.
+  - **Provisório:** como goleiro, ele atua com **metade da força**.
 
 ### 7.4 Temperamento e cartões
 
@@ -1021,6 +1034,20 @@ liga principal (1) por último. Com uma única liga, basta a prioridade 1.
     interação visual detalhada.
 -   Gols, expulsões e lesões devem gerar eventos consistentes para todos
     os clientes que acompanham a partida, no mesmo estilo elifoot98
+
+**Definido (rev. 7) — batedor de pênalti:**
+- O usuário escolhe o batedor na tela do plantel. A escolha é privada.
+- Se não escolheu, ou se o escolhido não está em campo, bate o jogador
+  **de maior força em campo**.
+  - **Provisório:** o goleiro fica fora desse critério.
+- Empate de força: tem prioridade quem tem **asterisco**.
+- Persistindo o empate: **sorteio**.
+
+**Provisório:** conversão de pênalti de **75%** (média do futebol real).
+Meta de frequência: cerca de 0,3 pênalti por jogo (§7.6).
+
+**Em aberto:** com a escolha prévia no plantel, se ainda deve existir a
+interação especial no momento do pênalti, descrita no início desta seção.
 
 ## 13. Critérios iniciais de aceitação
 

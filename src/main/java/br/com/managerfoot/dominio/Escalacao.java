@@ -6,13 +6,17 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 
 /**
  * Os 11 titulares de um time em uma formação. Só pode ser criada se respeitar a formação
  * (SPEC §7.2): 1 goleiro e o número exato de defensores, meias e atacantes, sem repetição.
+ *
+ * @param batedorPenalti escolha do treinador (pode ser nula); é uma preferência: se ele não estiver
+ *        em campo na hora do pênalti, o motor aplica a regra padrão (SPEC §12)
  */
-public record Escalacao(Formacao formacao, List<Jogador> titulares) {
+public record Escalacao(Formacao formacao, List<Jogador> titulares, Jogador batedorPenalti) {
 
 	public Escalacao {
 		Objects.requireNonNull(formacao, "formação é obrigatória");
@@ -23,6 +27,15 @@ public record Escalacao(Formacao formacao, List<Jogador> titulares) {
 			throw new IllegalArgumentException(
 					"Escalação inválida para " + formacao.rotulo() + ": " + String.join("; ", problemas) + ".");
 		}
+	}
+
+	/** Escalação sem batedor de pênalti escolhido. */
+	public Escalacao(Formacao formacao, List<Jogador> titulares) {
+		this(formacao, titulares, null);
+	}
+
+	public Optional<Jogador> batedorPreferido() {
+		return Optional.ofNullable(batedorPenalti);
 	}
 
 	public List<Jogador> jogadoresNa(Posicao posicao) {

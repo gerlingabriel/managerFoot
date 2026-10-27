@@ -11,7 +11,7 @@ import br.com.managerfoot.dominio.Formacao;
  * pelas metas da SPEC §7.6 (Etapa 1d).
  *
  * @param minutos duração da partida
- * @param chancePorMinuto probabilidade de haver uma jogada de finalização em cada minuto
+ * @param chancePorMinuto probabilidade de haver uma jogada de finalização em cada minuto (sem pênalti)
  * @param fatorMando multiplicador do domínio do mandante (inicial: 7000/6000 do Elifoot 98)
  * @param conversaoBase probabilidade de gol quando ataque × defesa e finalizador × goleiro se equivalem
  * @param sensibilidadeForca expoente aplicado às forças nas disputas; maior = força pesa mais
@@ -21,12 +21,17 @@ import br.com.managerfoot.dominio.Formacao;
  * @param proporcaoDefesa entre finalizações sem gol, fração defendida pelo goleiro
  * @param proporcaoTrave entre finalizações sem gol, fração na trave; o restante vai para fora
  * @param pesosFinalizador pesos por formação (SPEC §7.2)
+ * @param disciplina cartões e expulsões
+ * @param penalti pênaltis e goleiro improvisado
  */
 public record ParametrosMotor(int minutos, double chancePorMinuto, double fatorMando, double conversaoBase,
 		double sensibilidadeForca, double fatorPorGolMarcado, double conversaoMinima, double conversaoMaxima,
-		double proporcaoDefesa, double proporcaoTrave, Map<Formacao, PesosFinalizador> pesosFinalizador) {
+		double proporcaoDefesa, double proporcaoTrave, Map<Formacao, PesosFinalizador> pesosFinalizador,
+		ParametrosDisciplina disciplina, ParametrosPenalti penalti) {
 
 	public ParametrosMotor {
+		Objects.requireNonNull(disciplina, "parâmetros de disciplina são obrigatórios");
+		Objects.requireNonNull(penalti, "parâmetros de pênalti são obrigatórios");
 		Objects.requireNonNull(pesosFinalizador, "pesos do finalizador são obrigatórios");
 		pesosFinalizador = Map.copyOf(pesosFinalizador);
 		for (Formacao formacao : Formacao.values()) {
@@ -64,7 +69,8 @@ public record ParametrosMotor(int minutos, double chancePorMinuto, double fatorM
 		pesos.put(Formacao.F_5_4_1, new PesosFinalizador(45, 47, 7.99, 0.01));
 		pesos.put(Formacao.F_4_5_1, new PesosFinalizador(43, 51, 5.99, 0.01));
 		pesos.put(Formacao.F_3_6_1, new PesosFinalizador(40, 55, 4.99, 0.01));
-		return new ParametrosMotor(90, 0.15, 7000.0 / 6000.0, 0.28, 1.0, 0.85, 0.02, 0.6, 0.5, 0.1, pesos);
+		return new ParametrosMotor(90, 0.15, 7000.0 / 6000.0, 0.28, 1.0, 0.85, 0.02, 0.6, 0.5, 0.1, pesos,
+				ParametrosDisciplina.padrao(), ParametrosPenalti.padrao());
 	}
 
 	private static void exigirProbabilidade(String nome, double valor) {
