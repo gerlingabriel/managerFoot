@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 5 — 2026-10-26)
+-   **Status:** versão inicial para revisão (rev. 6 — 2026-10-26)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 6 (2026-10-26):** pesos do finalizador para as 8 formações; finalizador escolhido com peso pela força.
 -   **rev. 5 (2026-10-26):**
     -   papel dos setores (meio decide domínio);
     -   escalação presa à formação;
@@ -475,13 +476,23 @@ Consequências de ficar com um jogador a menos.
 
 Exemplos iniciais de pesos para seleção do finalizador:
 
+**Definido (rev. 6) — pesos iniciais**, configuráveis e sujeitos a ajuste
+por simulação:
+
 | Formação | Atacante | Meio-campista | Defesa | Goleiro |
 |---|---|---|---|---|
-| 4-4-2 (normal) | 64% | 31% | 4,99% | 0,01% |
+| 4-4-2 | 64% | 31% | 4,99% | 0,01% |
 | 4-3-3 | 75% | 21% | 3,99% | 0,01% |
-| Defensivas | maior participação relativa dos meio-campistas | | | |
+| 3-5-2 | 58% | 38% | 3,99% | 0,01% |
+| 3-4-3 | 74% | 23% | 2,99% | 0,01% |
+| 4-2-4 | 82% | 14% | 3,99% | 0,01% |
+| 5-4-1 | 45% | 47% | 7,99% | 0,01% |
+| 4-5-1 | 43% | 51% | 5,99% | 0,01% |
+| 3-6-1 | 40% | 55% | 4,99% | 0,01% |
 
-Na rev. 2, o peso de defesa foi ajustado para que cada linha some 100%.
+**Definido — escolha do finalizador:** depois de sorteado o setor, o
+jogador do setor é escolhido com **peso pela força**. Jogadores mais
+fortes finalizam mais vezes.
 
 Esses pesos são hipóteses e não devem ser fixados definitivamente sem
 simulação. As probabilidades precisam variar coerentemente com a
