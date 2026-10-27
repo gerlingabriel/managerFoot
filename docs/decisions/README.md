@@ -16,3 +16,4 @@ consideradas, decisão e consequências.
 | [0002](0002-maven-como-build.md) | Maven como ferramenta de build | Aceita |
 | [0003](0003-uso-da-referencia-elifoot98.md) | Uso do repositório de referência do Elifoot 98 | Aceita |
 | [0004](0004-servidor-autoritativo.md) | Servidor como autoridade do estado e do relógio | Aceita |
+| [0005](0005-pacotes-e-persistencia-inicial.md) | Estrutura de pacotes e persistência inicial | Aceita |
