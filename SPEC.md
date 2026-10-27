@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 13 — 2026-10-27)
+-   **Status:** versão inicial para revisão (rev. 14 — 2026-10-27)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 14 (2026-10-27):** mesmo motor em modo rápido; fluxo e ordem de processamento da rodada; referência da tela de jogos.
 -   **rev. 13 (2026-10-27):** fila de espera, demissão do usuário rebaixado para fora da liga, divisões sem usuário com resultado instantâneo.
 -   **rev. 12 (2026-10-27):** calendário sorteado por temporada; sorteio de desempate fixo na temporada.
 -   **rev. 11 (2026-10-27):** calendário com returno espelhado e mando alternado.
@@ -432,6 +433,22 @@ Vermelho: 0 a 5.
 
 A implementação deve definir limites mínimos/máximos e o efeito de
 vitórias, sequência de resultados e diferença de força.
+
+**Simulação (rev. 14, `docs/simulacoes/temporada.md`):** com os valores
+provisórios, a moral **satura nos extremos** ao longo de 38 rodadas.
+- Os clubes de cima terminam perto de 30.
+- Cerca de metade da liga termina na faixa vermelha (0 a 5).
+- O motivo: a moral funciona como um passeio aleatório sem nada que a puxe
+  de volta para o meio, e a escala é curta para 38 jogos.
+
+Se a moral for usada para demitir treinadores, isso causaria demissões
+demais.
+
+**Em aberto:** a correção. Opções:
+- reduzir as variações;
+- puxar a moral de volta para o valor inicial a cada rodada;
+- considerar a diferença de força (perder para um clube muito mais forte
+  pesar menos).
 
 ## 7. Motor de partidas (minuto a minuto, estilo elifoot98)
 
@@ -1063,6 +1080,10 @@ visual do andamento da partida.
 Gols podem ter efeitos visuais e som opcional, controlado nas
 configurações.
 
+**Referência visual (rev. 14):** tela de jogos da rodada do Elifoot 98,
+enviada pelo usuário. Descrição registrada em `docs/referencia-tela-jogos.md`.
+A imagem não fica no repositório.
+
 A tela deve mostrar **todos os jogos da divisão simultaneamente**. Enquanto
 a partida do usuário acontece, as outras seguem na mesma tela. A ordem das
 partidas pode seguir a classificação da liga.
@@ -1121,9 +1142,27 @@ sobrepostas.
 **Definido (rev. 13):** divisões sem usuário não usam a exibição minuto a
 minuto. O resultado sai em instantes.
 
-**Em aberto:** se isso usa o mesmo motor em modo rápido (recomendação do
-agente) ou um motor separado, mais simples e menos inteligente (ideia do
-usuário). Ver a discussão na conversa de 2026-10-27.
+**Definido (rev. 14):**
+- Usa-se o **mesmo motor em modo rápido** (cerca de 0,1 ms por partida;
+  uma temporada de 380 jogos leva cerca de 40 ms). Não há motor separado.
+- **Fluxo da rodada:**
+  1. Todos os treinadores definem a tática e confirmam.
+  2. Abre-se a tela de jogos da rodada, com todas as divisões (§10.2).
+  3. Ordem de processamento: começa pela divisão de **maior número de
+     prioridade** (a mais inferior) e sobe até a 1ª.
+     - Divisões **sem usuário** saem instantaneamente, com todos os jogos
+       simultâneos.
+     - Divisões **com usuário** rodam minuto a minuto, na velocidade
+       configurada.
+  4. Se o país tiver uma única divisão, todos os jogos da rodada (do
+     usuário e da máquina) aparecem nessa tela.
+
+**Em aberto:**
+- Quando há usuários em mais de uma divisão (por exemplo, na 1ª e na 3ª),
+  se essas divisões rodam ao mesmo tempo, como no Elifoot 98, ou uma depois
+  da outra.
+- Se as divisões sem usuário aparecem já com o placar final na mesma tela,
+  ou são mostradas antes.
 
 **Definido:** o processamento segue a prioridade em ordem **decrescente**.
 As divisões de número maior vêm primeiro (por exemplo, 3, depois 2) e a
