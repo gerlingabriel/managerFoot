@@ -13,10 +13,11 @@ import br.com.managerfoot.motor.ResultadoPartida;
  * Amarelos acumulados na temporada e jogos de suspensão a cumprir (SPEC §7.4). Imutável.
  *
  * <ul>
- * <li>Cada {@code CARTAO_AMARELO} soma 1; ao chegar ao limite, suspende 1 jogo e o contador
- * volta a zero.</li>
- * <li>O segundo amarelo na partida ({@code SEGUNDO_AMARELO}) é expulsão: 1 jogo, sem somar ao
- * contador. O primeiro amarelo daquela partida já contou.</li>
+ * <li>Cada amarelo soma 1 ao contador, inclusive o segundo na mesma partida; ao chegar ao
+ * limite, suspende 1 jogo e o contador recomeça (SPEC rev. 23).</li>
+ * <li>O segundo amarelo na partida ({@code SEGUNDO_AMARELO}) também é expulsão: mais 1 jogo. Com 4
+ * amarelos antes, dois na partida dão 1 jogo pelo acumulado, contador em 1, e 1 jogo pela
+ * expulsão.</li>
  * <li>Vermelho direto: sorteio ponderado de {@link ParametrosSuspensao#pesosVermelhoDireto()}.</li>
  * <li>A suspensão é cumprida na próxima partida do clube: quem estava suspenso antes da partida
  * cumpre um jogo, e só depois contam os cartões dela.</li>
@@ -62,15 +63,11 @@ public record Disciplina(Map<Long, Integer> amarelos, Map<Long, Integer> suspens
 		for (EventoPartida evento : resultado.eventos()) {
 			long id = evento.jogador().id();
 			switch (evento.tipo()) {
-				case CARTAO_AMARELO -> {
-					int total = novosAmarelos.getOrDefault(id, 0) + 1;
-					if (total >= parametros.amarelosParaSuspensao()) {
-						novasSuspensoes.merge(id, 1, Integer::sum);
-						total = 0;
-					}
-					novosAmarelos.put(id, total);
+				case CARTAO_AMARELO -> somarAmarelo(id, novosAmarelos, novasSuspensoes, parametros);
+				case SEGUNDO_AMARELO -> {
+					somarAmarelo(id, novosAmarelos, novasSuspensoes, parametros);
+					novasSuspensoes.merge(id, 1, Integer::sum);
 				}
-				case SEGUNDO_AMARELO -> novasSuspensoes.merge(id, 1, Integer::sum);
 				case CARTAO_VERMELHO -> novasSuspensoes.merge(id, sortearJogos(parametros, aleatorio), Integer::sum);
 				default -> {
 				}
@@ -82,6 +79,16 @@ public record Disciplina(Map<Long, Integer> amarelos, Map<Long, Integer> suspens
 	/** Na virada da temporada os amarelos zeram; suspensões pendentes continuam (SPEC §7.4). */
 	public Disciplina novaTemporada() {
 		return new Disciplina(Map.of(), suspensoes);
+	}
+
+	private static void somarAmarelo(long id, Map<Long, Integer> amarelos, Map<Long, Integer> suspensoes,
+			ParametrosSuspensao parametros) {
+		int total = amarelos.getOrDefault(id, 0) + 1;
+		if (total >= parametros.amarelosParaSuspensao()) {
+			suspensoes.merge(id, 1, Integer::sum);
+			total -= parametros.amarelosParaSuspensao();
+		}
+		amarelos.put(id, total);
 	}
 
 	private static int sortearJogos(ParametrosSuspensao parametros, RandomGenerator aleatorio) {

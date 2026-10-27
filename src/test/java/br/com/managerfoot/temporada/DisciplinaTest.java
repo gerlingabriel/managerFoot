@@ -57,13 +57,23 @@ class DisciplinaTest {
 	}
 
 	@Test
-	void segundoAmareloNaoSomaAoContador() {
+	void segundoAmareloSomaAoContadorESuspendePelaExpulsao() {
 		Disciplina d = Disciplina.vazia()
 			.aposPartida(PLANTEIS, partida(TipoEvento.CARTAO_AMARELO, ANA, TipoEvento.SEGUNDO_AMARELO, ANA), PADRAO,
 					new SplittableRandom(1));
 
-		assertThat(d.amarelosDe(1)).isEqualTo(1);
+		assertThat(d.amarelosDe(1)).isEqualTo(2);
 		assertThat(d.suspensaoDe(1)).isEqualTo(1);
+	}
+
+	@Test
+	void comQuatroAmarelosDoisNaPartidaDaoDuasSuspensoesEContadorEmUm() {
+		Disciplina d = new Disciplina(Map.of(1L, 4), Map.of())
+			.aposPartida(PLANTEIS, partida(TipoEvento.CARTAO_AMARELO, ANA, TipoEvento.SEGUNDO_AMARELO, ANA), PADRAO,
+					new SplittableRandom(1));
+
+		assertThat(d.amarelosDe(1)).isEqualTo(1);
+		assertThat(d.suspensaoDe(1)).isEqualTo(2);
 	}
 
 	@Test

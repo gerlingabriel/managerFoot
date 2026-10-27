@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 22 — 2026-10-27)
+-   **Status:** versão inicial para revisão (rev. 23 — 2026-10-27)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 23 (2026-10-27):** o segundo amarelo na mesma partida também conta no acumulado de amarelos.
 -   **rev. 22 (2026-10-27):** escalação e tática da máquina pelo plantel; pesos 70/25/5 do vermelho direto; improvisação com elenco curto; o que a rodada grava.
 -   **rev. 21 (2026-10-27):** nacionalidade do jogador pode ser qualquer país do mundo; bandeira no plantel para estrangeiros, atenuada quando o jogador não conta como estrangeiro.
 -   **rev. 20 (2026-10-27):** save em JSON versionado; banco com ligas de vários países, só a do país escolhido é jogada; molde editável copiado para cada jogo.
@@ -754,6 +755,11 @@ com pesos 1/2/4/7/10 (`docs/referencia-elifoot98.md` §4).
 - A suspensão é cumprida na **próxima partida do clube**, seja liga, copa
   ou competição continental.
 - Depois da suspensão por 5 amarelos, o contador **volta a zero**.
+- **Definido (rev. 23):** os dois amarelos da mesma partida **contam no
+  acumulado**, além da expulsão. Exemplo: com 4 amarelos, o jogador leva
+  dois amarelos (vermelho) no jogo; fica com 6, cumpre 1 jogo pelo
+  acumulado e o contador recomeça em **1**; cumpre mais 1 jogo pela
+  expulsão.
 
 **Definido (rev. 22), pesos provisórios:** vermelho direto suspende **1
 jogo em 70%** dos casos, **2 jogos em 25%** e **3 jogos em 5%**.
