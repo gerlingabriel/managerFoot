@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 25 — 2026-10-27)
+-   **Status:** versão inicial para revisão (rev. 26 — 2026-10-27)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 26 (2026-10-27):** divisões precisam estar completas para o jogo começar e a estrutura não muda durante o jogo; clube começa com a força cadastrada em qualquer divisão e perde força aos poucos até o teto; treinador da máquina com clube rebaixado para a fila segue a demissão por moral.
 -   **rev. 25 (2026-10-27):** todo jogo tem dono; empatados com o 4º mais fraco também entram no sorteio do clube inicial; o administrador pode escolher o clube ou pedir o sorteio; clube só de divisão, nunca da fila; divisão sem clubes suficientes fica em aberto.
 -   **rev. 24 (2026-10-27):** link de cadastro de uso único válido por 7 dias; login por e-mail e senha de 8 ou mais caracteres; recuperação de senha pelo administrador por enquanto.
 -   **rev. 23 (2026-10-27):** o segundo amarelo na mesma partida também conta no acumulado de amarelos.
@@ -292,18 +293,17 @@ decorrem das regras acima.
     carreira.
 - **Clube da máquina rebaixado para a fila:** fica sem liga até ser
   sorteado para subir.
+  - **Definido (rev. 26):** só o usuário é demitido na hora. O treinador
+    da máquina segue as regras de demissão por moral (§5.4); se for
+    demitido, outro treinador do jogo assume o clube.
 - **Rebaixado para outra divisão** (por exemplo, da 1ª para a 2ª): segue
   normalmente na nova divisão, seja de usuário ou da máquina.
 
-**Em aberto (rev. 25):** divisão configurada sem clubes suficientes. O
-usuário propôs que a liga comece **só com as divisões que dá para
-preencher**, em ordem de prioridade, e que os demais clubes fiquem na fila,
-disputando por sorteio as vagas dos rebaixados. Exemplo: Itália com 1ª de
-20 (3 rebaixados) e 2ª de 20, e só 30 clubes, joga apenas a 1ª; com 50
-clubes, joga as duas. Hoje a validação recusa a liga inteira. Falta
-decidir: como os clubes são distribuídos entre as divisões ativas (pela
-divisão cadastrada ou pela força), se uma divisão pode passar a existir
-numa temporada seguinte e como fica a mensagem do editor.
+**Definido (rev. 26) — liga completa e fixa:**
+- Todas as divisões configuradas precisam ter clubes suficientes. Se uma
+  delas não tiver, a liga não pode iniciar e o editor diz o que falta.
+- Depois que o jogo começa, nada é criado: não surgem clubes, jogadores
+  nem divisões novas. Só mudam força, posição nas divisões e fila.
 
 **Em aberto:** se os clubes na fila de espera podem disputar copas
 (possivelmente por sorteio) ou competições continentais.
@@ -322,15 +322,21 @@ Cada divisão deve permitir configurar:
 **Definido — escala de força:** de **1 a 50** (mínimo 1, máximo 50). A
 referência do Elifoot 98 confirma essa escala.
 
-**Definido — limite de força por divisão:**
-- **Primeira divisão:** os clubes usam a força cadastrada e os jogadores
-  podem progredir até 50.
+**Definido — limite de força por divisão (rev. 26):**
+- **Em qualquer divisão, o clube começa com a força cadastrada**, sem
+  adequação ao teto. Exemplo: cadastrados 15 clubes de força 50 e 5 de
+  força 41 na primeira divisão, eles começam com 50 e 41.
+- **Primeira divisão:** os jogadores podem progredir até 50.
 - **Segunda divisão:** limite de **30**.
-  - Um clube cadastrado com força maior (por exemplo, 50) começa nela com
-    no máximo 30.
-  - Um clube rebaixado para a segunda divisão com jogadores acima de 30
-    **nunca os faz subir acima de 30**. Os jogadores só podem cair ou ficar
-    travados no valor atual.
+  - Um clube cadastrado com força maior (por exemplo, 35) começa nela com
+    a força cadastrada. O teto impede que os jogadores cresçam acima de 30;
+    os que estão acima vão **perdendo força** até chegar a 30.
+  - O mesmo vale para um clube rebaixado com força 50: perde força jogo a
+    jogo e pode voltar à primeira divisão antes de todos chegarem a 30.
+  - **Conflito resolvido (rev. 26):** substitui a regra anterior de que o
+    clube começava na divisão com no máximo o teto.
+  - **Em aberto:** o ritmo dessa perda faz parte da mecânica de evolução e
+    perda de força (§6.1), em que vitórias, empates e derrotas influem.
 
 **Definido — configuração dos limites:**
 - A primeira liga criada (prioridade 1) tem limite **50** automaticamente.
