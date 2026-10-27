@@ -1583,7 +1583,10 @@ começa depois que a anterior estiver testada.
     (escalação da máquina e disciplina, só domínio) e 3c.3b (gravação e
     avanço), **ambas concluídas** (migração V7). Quem pede o avanço informa
     a rodada esperada; pedido repetido ou fora de ordem é recusado.
-  - **3c.4:** fim de temporada (promoção e rebaixamento) gravado.
+  - **3c.4 (concluída):** fim de temporada gravado: exige todas as rodadas
+    jogadas, aplica promoção, rebaixamento e fila pela classificação final,
+    zera os amarelos (suspensões continuam) e inicia a temporada seguinte.
+    Moral e força dos jogadores não mudam na virada, até decisão própria.
 - Avanço de rodada idempotente.
 - Script de administrador, link de cadastro e papéis (§3.4).
 - Banco padrão gerado: 23 jogadores por clube (máximo 25), 5 a 7 estrangeiros (§5.2).

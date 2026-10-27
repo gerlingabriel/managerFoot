@@ -9,6 +9,7 @@ import java.util.NoSuchElementException;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import br.com.managerfoot.dominio.Clube;
@@ -63,6 +64,21 @@ public class JogoRepositorio {
 				.forEach(j -> TabelasLiga.JOGO.inserirJogador(jdbc, destino, j));
 		}
 		return jogoId;
+	}
+
+	/**
+	 * Trava a linha do jogo até o fim da transação de quem chama, para serializar operações que
+	 * mudam a temporada.
+	 *
+	 * @throws NoSuchElementException se o jogo não existe
+	 */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void travar(long jogoId) {
+		jdbc.sql("SELECT id FROM jogo WHERE id = :jogo FOR UPDATE")
+			.param("jogo", jogoId)
+			.query(Long.class)
+			.optional()
+			.orElseThrow(() -> new NoSuchElementException("jogo " + jogoId + " não existe"));
 	}
 
 	/** Liga do jogo; clubes em ordem de id dentro de cada divisão e na fila. */

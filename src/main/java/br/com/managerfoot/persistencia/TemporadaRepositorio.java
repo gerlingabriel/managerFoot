@@ -13,6 +13,7 @@ import java.util.TreeMap;
 
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import br.com.managerfoot.dominio.Clube;
@@ -38,8 +39,8 @@ public class TemporadaRepositorio {
 	}
 
 	/**
-	 * Inicia a 1ª temporada do jogo com os sorteios da semente e devolve-a. As temporadas seguintes
-	 * dependem do fim de temporada (Etapa 3c.4).
+	 * Inicia a 1ª temporada do jogo com os sorteios da semente e devolve-a. As seguintes nascem do
+	 * fim de temporada ({@link FimDeTemporadaRepositorio}).
 	 *
 	 * @throws NoSuchElementException se o jogo não existe
 	 * @throws IllegalStateException se o jogo já tem temporada
@@ -47,17 +48,20 @@ public class TemporadaRepositorio {
 	@Transactional
 	public Temporada iniciarPrimeiraTemporada(long jogoId, long semente) {
 		// trava o jogo: duas chamadas simultâneas não sorteiam duas temporadas
-		jdbc.sql("SELECT id FROM jogo WHERE id = :jogo FOR UPDATE")
-			.param("jogo", jogoId)
-			.query(Long.class)
-			.optional()
-			.orElseThrow(() -> new NoSuchElementException("jogo " + jogoId + " não existe"));
+		jogos.travar(jogoId);
 		if (numeroAtual(jogoId).isPresent()) {
 			throw new IllegalStateException("o jogo " + jogoId + " já tem temporada iniciada");
 		}
 		ConfiguracaoLiga liga = jogos.carregarLiga(jogoId);
 		Temporada temporada = Temporada.iniciar(1, liga, jogos.carregarPlanteis(jogoId), semente);
+		gravar(jogoId, temporada);
+		return temporada;
+	}
 
+	/** Grava a temporada e seus sorteios; quem chama abre a transação e trava o jogo. */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void gravar(long jogoId, Temporada temporada) {
+		long semente = temporada.semente();
 		long temporadaId = TabelasLiga.inserir(jdbc,
 				"INSERT INTO jogo_temporada (jogo_id, numero, semente) VALUES (:jogo, :numero, :semente)",
 				Map.of("jogo", jogoId, "numero", temporada.numero(), "semente", semente));
@@ -86,7 +90,6 @@ public class TemporadaRepositorio {
 			inserirBonus(temporadaId, divisaoId, sorteios.bonus().asteriscoTemporario(), false);
 			inserirBonus(temporadaId, divisaoId, sorteios.bonus().bonusExtra(), true);
 		}
-		return temporada;
 	}
 
 	/**

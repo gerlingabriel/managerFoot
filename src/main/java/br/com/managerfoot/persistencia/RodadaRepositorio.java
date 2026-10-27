@@ -66,10 +66,7 @@ public class RodadaRepositorio {
 			throw new IllegalStateException("o jogo " + jogoId + " já processou " + linha.rodadasProcessadas()
 					+ " rodada(s); a próxima é a " + (linha.rodadasProcessadas() + 1) + ", não a " + rodada);
 		}
-		int total = jdbc.sql("SELECT coalesce(max(rodada), 0) FROM jogo_partida WHERE temporada_id = :temporada")
-			.param("temporada", linha.id())
-			.query(Integer.class)
-			.single();
+		int total = totalDeRodadas(linha);
 		if (rodada > total) {
 			throw new IllegalStateException("a temporada do jogo " + jogoId + " já teve as " + total + " rodadas jogadas");
 		}
@@ -112,6 +109,12 @@ public class RodadaRepositorio {
 		return temporadaAtual(jogoId, false).rodadasProcessadas();
 	}
 
+	/** Rodadas da temporada atual: as da divisão com mais rodadas. */
+	@Transactional(readOnly = true)
+	public int totalDeRodadas(long jogoId) {
+		return totalDeRodadas(temporadaAtual(jogoId, false));
+	}
+
 	/** Classificação de cada divisão da temporada atual, por prioridade, com os placares gravados. */
 	@Transactional(readOnly = true)
 	public Map<Integer, Classificacao> classificacao(long jogoId) {
@@ -143,6 +146,13 @@ public class RodadaRepositorio {
 			classificacoes.put(divisao.prioridade(), Classificacao.calcular(clubes, resultados, temporada.semente()));
 		}
 		return classificacoes;
+	}
+
+	private int totalDeRodadas(LinhaTemporada linha) {
+		return jdbc.sql("SELECT coalesce(max(rodada), 0) FROM jogo_partida WHERE temporada_id = :temporada")
+			.param("temporada", linha.id())
+			.query(Integer.class)
+			.single();
 	}
 
 	private void gravarPartida(long temporadaId, ProcessamentoRodada.PartidaJogada partida) {

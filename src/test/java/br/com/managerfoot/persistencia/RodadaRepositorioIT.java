@@ -6,13 +6,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.SplittableRandom;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,14 +20,8 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 import br.com.managerfoot.TestcontainersConfiguration;
-import br.com.managerfoot.dominio.Clube;
-import br.com.managerfoot.dominio.Jogador;
-import br.com.managerfoot.dominio.Posicao;
-import br.com.managerfoot.dominio.Temperamento;
 import br.com.managerfoot.temporada.Classificacao;
-import br.com.managerfoot.temporada.ConfiguracaoLiga;
 import br.com.managerfoot.temporada.Disciplina;
-import br.com.managerfoot.temporada.Divisao;
 import br.com.managerfoot.temporada.LinhaClassificacao;
 import br.com.managerfoot.temporada.ProcessamentoRodada;
 
@@ -57,16 +49,7 @@ class RodadaRepositorioIT {
 
 	@BeforeEach
 	void criaJogoComTemporada() {
-		long pais = moldes.criarPais(moldes.criarMolde("Padrão"), "BRA", "Brasil");
-		// 2ª divisão com número ímpar: há folga e as divisões têm 30 rodadas cada
-		ConfiguracaoLiga liga = moldes.criarLiga(pais, new ConfiguracaoLiga("Nacional",
-				List.of(new Divisao("Série A", 1, 50, 0, 2, clubes("A", 16, 35)),
-						new Divisao("Série B", 2, 30, 2, 2, clubes("B", 15, 22))),
-				clubes("Fila", 2, 15)));
-		SplittableRandom aleatorio = new SplittableRandom(11);
-		liga.divisoes().forEach(d -> d.clubes().forEach(c -> moldes.adicionarJogadores(c.id(), plantel(c, aleatorio))));
-		liga.filaDeEspera().forEach(c -> moldes.adicionarJogadores(c.id(), plantel(c, aleatorio)));
-		jogo = jogos.criarJogo(pais);
+		jogo = LigaDeTeste.criarJogo(moldes, jogos);
 		temporadas.iniciarPrimeiraTemporada(jogo, 2026);
 	}
 
@@ -179,24 +162,5 @@ class RodadaRepositorioIT {
 
 	private long contar(String sql) {
 		return jdbc.sql(sql).param(jogo).query(Long.class).single();
-	}
-
-	private static List<Clube> clubes(String prefixo, int quantidade, int forca) {
-		return IntStream.rangeClosed(1, quantidade).mapToObj(i -> new Clube(0, prefixo + " " + i, forca)).toList();
-	}
-
-	/** Elenco padrão: 3 goleiros, 7 defensores, 7 meias e 6 atacantes, perto da força do clube. */
-	private static List<Jogador> plantel(Clube clube, SplittableRandom aleatorio) {
-		int[] quantidades = { 3, 7, 7, 6 };
-		Temperamento[] temperamentos = Temperamento.values();
-		List<Jogador> plantel = new ArrayList<>();
-		for (Posicao posicao : Posicao.values()) {
-			for (int i = 0; i < quantidades[posicao.ordinal()]; i++) {
-				plantel.add(new Jogador(0, clube.nome() + " " + posicao.name() + " " + i, posicao,
-						Math.clamp(clube.forca() + aleatorio.nextInt(-5, 6), 1, 50),
-						temperamentos[aleatorio.nextInt(temperamentos.length)], aleatorio.nextInt(10) == 0, "BRA"));
-			}
-		}
-		return plantel;
 	}
 }
