@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 17 (2026-10-27):** prêmio de artilharia dividido no empate; calendário do clube; elenco padrão de 23; sorte/azar da temporada; bônus de artilharia; efeito do asterisco (detalhes em aberto).
 -   **rev. 16 (2026-10-27):** histórico de gols do jogador e artilheiros; divisão sem usuário sempre rápida; modelos de escudo; telas aprovadas no modelo (§10.5).
 -   **rev. 15 (2026-10-27):** moral com retorno leve; clube inicial sorteado entre os 4 mais fracos da última divisão; divisões exibidas em sequência.
 -   **rev. 14 (2026-10-27):** mesmo motor em modo rápido; fluxo e ordem de processamento da rodada; referência da tela de jogos.
@@ -335,20 +336,33 @@ rankings de artilheiros e o histórico de cartões de cada jogador (§7.4).
 - **Artilheiros da temporada:** ranking pela soma dos gols de todas as
   competições da temporada. Cada temporada tem sua lista, usada para a
   premiação do artilheiro (§8.1).
+- **Definido (rev. 17):** o prêmio vai para o clube que tem o artilheiro no
+  plantel no fim da temporada. Com empate, o prêmio é **dividido** entre os
+  artilheiros empatados (e seus clubes).
 - **Artilheiros de todos os tempos:** ranking pelos gols na carreira, desde
   o início do jogo salvo.
 
 **Definido — elenco gerado:**
-- Cada clube tem **25 jogadores** cadastrados.
+- Cada clube tem **23 jogadores** cadastrados (composição abaixo; máximo de 25).
 - Nomes e nacionalidades são gerados por padrão, por sorteio.
 - Cada clube tem **de 5 a 7 estrangeiros**, para não distorcer o limite de
   estrangeiros (§8.4).
 
-**Em aberto:**
-- Distribuição de posições entre os 25 jogadores (quantos goleiros,
-  defensores, meias e atacantes).
-- Se 25 é o máximo do elenco ou apenas o tamanho gerado (o mercado pode
-  aumentar ou reduzir o elenco).
+**Definido (rev. 17) — composição padrão:**
+- O cadastro padrão gera **23 jogadores**: 3 goleiros, 7 defensores,
+  7 meias e 6 atacantes.
+- O elenco pode chegar a **25**; as 2 vagas livres servem para compra e
+  venda e dependem das finanças. A máquina também precisa dessa folga para
+  negociar.
+- Os 5 a 7 estrangeiros continuam valendo dentro dos 23.
+
+**Definido (rev. 17) — bônus de artilharia da temporada:**
+- No início de cada temporada, o sistema sorteia cerca de **15 jogadores**
+  que recebem um bônus na finalização, válido só naquela temporada.
+- Podem ser sorteados: meias e atacantes; defensores **somente com
+  asterisco**. Goleiros não.
+- **Em aberto:** abrangência dos 15 (por divisão, por país ou no jogo
+  todo), forma do sorteio, tamanho do bônus e se o bônus é visível.
 
 O temperamento pode assumir:
 - Calmo.
@@ -375,6 +389,29 @@ aparecer com preço fixo para compra direta.
 
 A influência exata do asterisco precisa ser testada para que não se
 torne uma vantagem desproporcional.
+
+**Definido (rev. 17):**
+- Defensor, meia ou atacante com asterisco tem **mais chance de gol nas
+  finalizações**.
+- Goleiro com asterisco tem **mais chance de defender pênaltis**.
+- **Em aberto:** o tamanho de cada efeito, se o asterisco também aumenta a
+  chance de ser escolhido finalizador e a penalidade por escalar mais de
+  três.
+
+### 5.3.1 Sorte e azar da temporada
+
+**Definido (rev. 17):**
+- No início de cada temporada, o sistema sorteia **dois clubes**: um
+  **beneficiado** e um **prejudicado**, válidos só naquela temporada.
+- Representa o fator imprevisível: um clube grande que joga mal num ano e
+  um pequeno que joga bem. Qualquer clube pode ser sorteado, inclusive um
+  forte para o benefício.
+- Beneficiado: **mais chances de gol** por partida. Prejudicado: **menos
+  domínio (posse de bola)**.
+- Efeito pequeno: cerca de **5% a mais de vitórias** para o beneficiado e
+  **5% a mais de derrotas** para o prejudicado, a confirmar por simulação.
+- **Em aberto:** abrangência (por divisão, por país ou no jogo todo), se
+  clubes de usuários entram no sorteio e se o sorteio é visível.
 
 ### 5.4 Treinadores e demissões
 
@@ -1126,8 +1163,9 @@ da mesma divisão seguem na mesma tela.
   metade vertical, metade horizontal, listras verticais, listras
   horizontais, corte diagonal, faixa diagonal, faixa horizontal, quartos,
   cruz e liso com borda.
-- **Em aberto:** se o usuário pode rever os resultados de uma divisão já
-  terminada durante a rodada.
+- **Definido (rev. 17):** os indicadores de divisão no topo **não são
+  clicáveis**; só mostram em que divisão a rodada está. Para ver outra
+  divisão, o usuário usa a classificação no plantel (§10.3).
 
 ### 10.3 Plantel e gestão
 
@@ -1148,6 +1186,9 @@ da mesma divisão seguem na mesma tela.
   carreira.
 - Classificação por divisão, com o clube do usuário destacado e os
   rebaixados marcados.
+- **Definido (rev. 17):** ao clicar num clube da classificação, abre o
+  **calendário do clube** com os jogos e resultados, sem detalhes dos
+  gols. **Em aberto:** se os jogos futuros também aparecem.
 - Contratos, finanças, estádio, copas e competições continentais ganham
   telas próprias nas etapas em que forem implementados, também com modelo
   para aprovação antes.
@@ -1414,7 +1455,7 @@ começa depois que a anterior estiver testada.
 - Migrações e repositórios para o estado da temporada.
 - Avanço de rodada idempotente.
 - Script de administrador, link de cadastro e papéis (§3.4).
-- Banco padrão gerado: 25 jogadores por clube, 5 a 7 estrangeiros (§5.2).
+- Banco padrão gerado: 23 jogadores por clube (máximo 25), 5 a 7 estrangeiros (§5.2).
 - Telas Thymeleaf + HTMX:
   - plantel e tática;
   - partidas simultâneas da divisão (§10.2);
