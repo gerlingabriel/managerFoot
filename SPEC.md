@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 4 — 2026-10-26)
+-   **Status:** versão inicial para revisão (rev. 5 — 2026-10-26)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,11 @@
 
 ### Histórico de revisões
 
+-   **rev. 5 (2026-10-26):**
+    -   papel dos setores (meio decide domínio);
+    -   escalação presa à formação;
+    -   metas de calibração do motor (§7.6);
+    -   pênaltis em cerca de 0,3 por jogo.
 -   **rev. 4 (2026-10-26):**
     -   pesos de cartão 1/2/4/6/8;
     -   regras de suspensão completas;
@@ -406,6 +411,15 @@ em vez de depender apenas de uma distinção simplificada entre defesa e
 ataque. No Elifoot 98, o meio-campo apenas divide a força 50/50 e a
 formação 5-0-5 domina.
 
+**Definido — papel de cada setor (substitui a divisão 50/50 do Elifoot):**
+- **Meio contra meio** decide qual time **domina**, ou seja, qual cria mais
+  chances.
+- **Ataque contra defesa** e o goleiro decidem se a chance vira gol.
+- Formações com **mais meias dominam mais, mas finalizam menos**.
+
+Os coeficientes são **provisórios** e serão calibrados pelas metas da
+§7.6.
+
 **Esclarecimento:** "simulação em lote" (§13, §16.5) é uma **ferramenta de
 desenvolvimento e teste**. Ela simula milhares de partidas para medir
 placares médios, vantagem de mando etc. Não faz parte do jogo. No jogo, as
@@ -448,6 +462,12 @@ Classificação inicial proposta:
 
 A classificação e os nomes podem ser ajustados após avaliar a mecânica.
 
+**Definido:**
+- A escalação deve **respeitar a formação** escolhida: 1 goleiro e o número
+  exato de defensores, meias e atacantes.
+- Não há jogador fora de posição, nem formações fora da lista (como a
+  5-0-5).
+
 A formação deve influenciar: - Equilíbrio entre defesa, meio-campo e
 ataque. - Probabilidade de seleção de um atacante ou meio-campista como
 finalizador. - Chance de criar oportunidades e de sofrer gols. -
@@ -466,6 +486,11 @@ Na rev. 2, o peso de defesa foi ajustado para que cada linha some 100%.
 Esses pesos são hipóteses e não devem ser fixados definitivamente sem
 simulação. As probabilidades precisam variar coerentemente com a
 formação e ser configuráveis.
+
+**Definido:** o agente propõe os pesos das demais formações seguindo a
+mesma lógica (mais atacantes, mais chance do atacante; mais meias, mais
+participação do meio). Os valores são validados na simulação em lote e
+registrados aqui depois.
 
 ### 7.3 Expulsões
 
@@ -545,6 +570,20 @@ ser reiniciado ao fim da temporada.
 **Em aberto:** definir o que conta como lesão por temporada (evento ou
 jogador lesionado), gravidade, duração, recuperação e se o limite de
 cinco é absoluto.
+
+### 7.6 Metas de calibração do motor
+
+São alvos para **times equilibrados** na simulação em lote. Medem médias,
+não impõem resultados (§7.1).
+
+| Métrica | Alvo | Status |
+|---|---|---|
+| Gols por partida (média) | 1,75 a 2,5 | **Definido** |
+| Vitória do mandante | cerca de 45% | **Definido** |
+| Empate / vitória do visitante | cerca de 27% / 28% | **Provisório** (derivado) |
+| Cartões amarelos por partida | cerca de 2 | **Definido** |
+| Expulsões por partida | 0,1 a 0,2 | **Definido** |
+| Pênaltis por partida | cerca de 0,3 | **Definido**; substitui o 1%/minuto do Elifoot, que daria cerca de 0,9 |
 
 ## 8. Calendário, temporadas e competições
 

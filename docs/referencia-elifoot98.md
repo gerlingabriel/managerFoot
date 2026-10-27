@@ -145,7 +145,7 @@ São escolhas a confirmar. A SPEC prevalece sobre a referência (CLAUDE.md §2).
 
 | Tema | Elifoot 98 (fonte) | SPEC atual |
 |---|---|---|
-| Meio-campo | Divide a força 50/50 entre ataque e defesa; 5-0-5 domina | Pede influência explícita do meio-campo; só formações da lista (§7.2), sem 5-0-5 |
+| Meio-campo | Divide a força 50/50 entre ataque e defesa; 5-0-5 domina | **Definido:** meio contra meio decide o domínio; mais meias dominam mais e finalizam menos; 5-0-5 não existe (§7.1, §7.2) |
 | Nacionalidade | +3 por titular do país do clube | **Retirado** (decisão do usuário, rev. 3); há limite de estrangeiros com países equiparados (§8.4) |
 | Disciplina | Pesos 1/2/4/7/10 | **Definido:** pesos menores 1/2/4/6/8, mais um ajuste de frequência pela soma do time (§7.4) |
 | Mando de campo | Divisores fixos 6000 × 7000 | Vantagem configurável, medida por simulação |
