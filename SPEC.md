@@ -435,6 +435,11 @@ torne uma vantagem desproporcional.
     prejudicado.
   - **Qualquer clube** pode ser sorteado, inclusive clubes de usuários.
   - O sorteio é **oculto**: ninguém vê quem foi sorteado.
+- **Provisório (rev. 18, calibrado por simulação):** o beneficiado ganha
+  uma chance extra de finalização por minuto com 9,5% da chance normal; o
+  prejudicado tem o domínio do meio-campo multiplicado por 0,83. Medido:
+  cerca de +5 p.p. de vitórias e +5 p.p. de derrotas
+  (`docs/simulacoes/calibracao-motor.md`).
 
 ### 5.4 Treinadores e demissões
 

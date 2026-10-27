@@ -2,8 +2,10 @@ package br.com.managerfoot.motor;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.random.RandomGenerator;
@@ -12,6 +14,7 @@ import br.com.managerfoot.dominio.Escalacao;
 import br.com.managerfoot.dominio.Formacao;
 import br.com.managerfoot.dominio.Jogador;
 import br.com.managerfoot.dominio.Posicao;
+import br.com.managerfoot.dominio.Sorte;
 import br.com.managerfoot.dominio.Temperamento;
 
 /**
@@ -23,6 +26,8 @@ import br.com.managerfoot.dominio.Temperamento;
  * dele, com peso pela força; ataque contra defesa e finalizador contra goleiro decidem o gol;</li>
  * <li>cada time pode receber um cartão, com o infrator sorteado pela roleta de temperamento.</li>
  * </ol>
+ * A sorte da temporada (SPEC §5.3.1) dá ao beneficiado uma chance extra de finalização por minuto
+ * e tira domínio do prejudicado.
  * Entre os minutos, o treinador do usuário pode substituir ({@link #substituir}); os times da
  * máquina só reagem ao goleiro expulso ({@link TreinadorMaquina}).
  * Toda aleatoriedade vem do {@link RandomGenerator} recebido, para a partida ser reproduzível.
@@ -38,6 +43,7 @@ public final class Partida {
 	private final TimeEmCampo fora;
 	private final RandomGenerator aleatorio;
 	private final Set<Lado> ladosDaMaquina;
+	private final Map<Lado, Sorte> sorte;
 	private final List<EventoPartida> eventos = new ArrayList<>();
 	private int minuto;
 	private int golsCasa;
@@ -45,16 +51,25 @@ public final class Partida {
 
 	/**
 	 * @param ladosDoUsuario times controlados por usuários; os demais seguem o {@link TreinadorMaquina}
+	 * @param sorte sorte da temporada de cada lado; lado ausente é {@link Sorte#NEUTRA}
 	 */
 	public Partida(ParametrosMotor parametros, RegrasPartida regras, Escalacao casa, Escalacao fora,
-			Set<Lado> ladosDoUsuario, RandomGenerator aleatorio) {
+			Set<Lado> ladosDoUsuario, Map<Lado, Sorte> sorte, RandomGenerator aleatorio) {
 		this.parametros = Objects.requireNonNull(parametros);
 		double fatorImprovisado = parametros.penalti().fatorGoleiroImprovisado();
 		this.casa = new TimeEmCampo(Objects.requireNonNull(casa), fatorImprovisado, regras.substituicoes());
 		this.fora = new TimeEmCampo(Objects.requireNonNull(fora), fatorImprovisado, regras.substituicoes());
 		this.ladosDaMaquina = EnumSet.complementOf(
 				ladosDoUsuario.isEmpty() ? EnumSet.noneOf(Lado.class) : EnumSet.copyOf(ladosDoUsuario));
+		this.sorte = new EnumMap<>(Lado.class);
+		this.sorte.putAll(sorte);
 		this.aleatorio = Objects.requireNonNull(aleatorio);
+	}
+
+	/** Partida sem efeito de sorte. */
+	public Partida(ParametrosMotor parametros, RegrasPartida regras, Escalacao casa, Escalacao fora,
+			Set<Lado> ladosDoUsuario, RandomGenerator aleatorio) {
+		this(parametros, regras, casa, fora, ladosDoUsuario, Map.of(), aleatorio);
 	}
 
 	/** Partida só entre times da máquina, com as regras padrão. */
@@ -116,6 +131,12 @@ public final class Partida {
 		} else if (aleatorio.nextDouble() < parametros.chancePorMinuto()) {
 			finalizar(sortearQuemDomina());
 		}
+		// só sorteia quando há beneficiado, para não mudar as partidas neutras de uma mesma semente
+		Lado beneficiado = ladoCom(Sorte.BENEFICIADO);
+		if (beneficiado != null
+				&& aleatorio.nextDouble() < parametros.chancePorMinuto() * parametros.sorte().chancesExtras()) {
+			finalizar(beneficiado);
+		}
 		verificarCartao(Lado.CASA);
 		verificarCartao(Lado.FORA);
 		return List.copyOf(eventos.subList(antes, eventos.size()));
@@ -134,8 +155,9 @@ public final class Partida {
 	}
 
 	private Lado sortearQuemDomina() {
-		double meioCasa = potencia(forcaSetor(casa, Posicao.MEIO_CAMPISTA)) * parametros.fatorMando();
-		double meioFora = potencia(forcaSetor(fora, Posicao.MEIO_CAMPISTA));
+		double meioCasa = potencia(forcaSetor(casa, Posicao.MEIO_CAMPISTA)) * parametros.fatorMando()
+				* fatorDominio(Lado.CASA);
+		double meioFora = potencia(forcaSetor(fora, Posicao.MEIO_CAMPISTA)) * fatorDominio(Lado.FORA);
 		if (meioCasa + meioFora == 0) {
 			return aleatorio.nextBoolean() ? Lado.CASA : Lado.FORA;
 		}
@@ -265,6 +287,19 @@ public final class Partida {
 
 	private double potencia(double forca) {
 		return Math.pow(forca, parametros.sensibilidadeForca());
+	}
+
+	private double fatorDominio(Lado lado) {
+		return sorte.get(lado) == Sorte.PREJUDICADO ? parametros.sorte().fatorDominioPrejudicado() : 1;
+	}
+
+	private Lado ladoCom(Sorte procurada) {
+		for (Lado lado : Lado.values()) {
+			if (sorte.get(lado) == procurada) {
+				return lado;
+			}
+		}
+		return null;
 	}
 
 	private TimeEmCampo time(Lado lado) {

@@ -27,16 +27,18 @@ import br.com.managerfoot.dominio.Formacao;
  * @param pesosFinalizador pesos por formação (SPEC §7.2)
  * @param disciplina cartões e expulsões
  * @param penalti pênaltis e goleiro improvisado
+ * @param sorte efeito da sorte e do azar da temporada
  */
 public record ParametrosMotor(int minutos, double chancePorMinuto, double fatorMando, double conversaoBase,
 		double sensibilidadeForca, double expoenteMeias, double expoenteAtacantes, double expoenteDefensores,
 		double fatorPorGolMarcado, double conversaoMinima, double conversaoMaxima,
 		double proporcaoDefesa, double proporcaoTrave, Map<Formacao, PesosFinalizador> pesosFinalizador,
-		ParametrosDisciplina disciplina, ParametrosPenalti penalti) {
+		ParametrosDisciplina disciplina, ParametrosPenalti penalti, ParametrosSorte sorte) {
 
 	public ParametrosMotor {
 		Objects.requireNonNull(disciplina, "parâmetros de disciplina são obrigatórios");
 		Objects.requireNonNull(penalti, "parâmetros de pênalti são obrigatórios");
+		Objects.requireNonNull(sorte, "parâmetros de sorte são obrigatórios");
 		Objects.requireNonNull(pesosFinalizador, "pesos do finalizador são obrigatórios");
 		pesosFinalizador = Map.copyOf(pesosFinalizador);
 		for (Formacao formacao : Formacao.values()) {
@@ -78,7 +80,14 @@ public record ParametrosMotor(int minutos, double chancePorMinuto, double fatorM
 		pesos.put(Formacao.F_3_6_1, new PesosFinalizador(40, 55, 4.99, 0.01));
 		// calibrado na Etapa 1d: docs/simulacoes/calibracao-motor.md
 		return new ParametrosMotor(90, 0.15, 1.45, 0.23, 0.95, 0.5, 0.55, 1.25, 0.85, 0.10, 0.35, 0.5, 0.1, pesos,
-				ParametrosDisciplina.padrao(), ParametrosPenalti.padrao());
+				ParametrosDisciplina.padrao(), ParametrosPenalti.padrao(), ParametrosSorte.padrao());
+	}
+
+	/** Cópia com outro efeito de sorte (calibração e testes). */
+	public ParametrosMotor comSorte(ParametrosSorte novaSorte) {
+		return new ParametrosMotor(minutos, chancePorMinuto, fatorMando, conversaoBase, sensibilidadeForca,
+				expoenteMeias, expoenteAtacantes, expoenteDefensores, fatorPorGolMarcado, conversaoMinima,
+				conversaoMaxima, proporcaoDefesa, proporcaoTrave, pesosFinalizador, disciplina, penalti, novaSorte);
 	}
 
 	private static void exigirProbabilidade(String nome, double valor) {

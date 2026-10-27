@@ -19,6 +19,7 @@ Todos os titulares de um time têm a mesma força; temperamento normal salvo ind
 | proporcaoVermelhoDireto | 0,05 |
 | penaltisPorMinuto | 0,0033 |
 | conversão do pênalti | 0,75 |
+| sorte: chancesExtras / fatorDominioPrejudicado | 0,095 / 0,83 |
 
 ## Times equilibrados (25 × 25, 4-4-2 × 4-4-2)
 
@@ -97,4 +98,15 @@ Pontos por jogo (vitória 3, empate 1) e contra quantas das outras 7 formações
 | NORMAL | 1,02 | 0,098 |
 | ANSIOSO | 1,13 | 0,113 |
 | VIOLENTO | 1,21 | 0,125 |
+
+## Sorte e azar da temporada (25 × 25, 4-4-2; SPEC §5.3.1)
+
+Meta: cerca de 5 pontos percentuais a mais de vitórias (beneficiado) e de derrotas (prejudicado).
+
+| Cenário | Vitórias do clube sorteado | Empates | Derrotas do clube sorteado | Diferença vs. neutro (V / D) | Gols/partida |
+|---|---|---|---|---|---|
+| BENEFICIADO em casa | 50,2% | 27,7% | 22,1% | +5,1 p.p. / -3,5 p.p. | 2,31 |
+| BENEFICIADO fora | 30,3% | 29,1% | 40,6% | +4,7 p.p. / -4,5 p.p. | 2,32 |
+| PREJUDICADO em casa | 39,6% | 30,0% | 30,4% | -5,5 p.p. / +4,9 p.p. | 2,18 |
+| PREJUDICADO fora | 21,2% | 28,6% | 50,2% | -4,4 p.p. / +5,1 p.p. | 2,17 |
 

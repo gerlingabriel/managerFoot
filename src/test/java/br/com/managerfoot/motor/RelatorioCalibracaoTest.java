@@ -6,12 +6,14 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Locale;
+import java.util.Map;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import br.com.managerfoot.dominio.Escalacao;
 import br.com.managerfoot.dominio.Formacao;
+import br.com.managerfoot.dominio.Sorte;
 import br.com.managerfoot.dominio.Temperamento;
 
 /**
@@ -37,6 +39,7 @@ class RelatorioCalibracaoTest {
 		formacoes();
 		todasContraTodas();
 		temperamento();
+		sorte();
 		Files.createDirectories(SAIDA.getParent());
 		Files.writeString(SAIDA, md.toString());
 		System.out.println(md);
@@ -66,6 +69,8 @@ class RelatorioCalibracaoTest {
 		linha("| proporcaoVermelhoDireto | " + f(parametros.disciplina().proporcaoVermelhoDireto(), 2) + " |");
 		linha("| penaltisPorMinuto | " + f(parametros.penalti().penaltisPorMinuto(), 4) + " |");
 		linha("| conversão do pênalti | " + f(parametros.penalti().conversao(), 2) + " |");
+		linha("| sorte: chancesExtras / fatorDominioPrejudicado | " + f(parametros.sorte().chancesExtras(), 3) + " / "
+				+ f(parametros.sorte().fatorDominioPrejudicado(), 2) + " |");
 		linha("");
 	}
 
@@ -183,6 +188,35 @@ class RelatorioCalibracaoTest {
 			linha("| " + t + " | " + f((double) amarelos / PARTIDAS, 2) + " | " + f((double) expulsoes / PARTIDAS, 3) + " |");
 		}
 		linha("");
+	}
+
+	private void sorte() {
+		Escalacao a = escalacao(Formacao.F_4_4_2, 25, 1);
+		Escalacao b = escalacao(Formacao.F_4_4_2, 25, 100);
+		EstatisticasLote base = medir(a, b);
+		linha("## Sorte e azar da temporada (25 × 25, 4-4-2; SPEC §5.3.1)");
+		linha("");
+		linha("Meta: cerca de 5 pontos percentuais a mais de vitórias (beneficiado) e de derrotas (prejudicado).");
+		linha("");
+		linha("| Cenário | Vitórias do clube sorteado | Empates | Derrotas do clube sorteado | Diferença vs. neutro (V / D) | Gols/partida |");
+		linha("|---|---|---|---|---|---|");
+		for (Sorte sorte : new Sorte[] { Sorte.BENEFICIADO, Sorte.PREJUDICADO }) {
+			for (Lado lado : Lado.values()) {
+				EstatisticasLote e = EstatisticasLote.medir(motor, a, b, Map.of(lado, sorte), 0, PARTIDAS);
+				boolean casa = lado == Lado.CASA;
+				double v = casa ? e.pctCasa() : e.pctFora();
+				double d = casa ? e.pctFora() : e.pctCasa();
+				double v0 = casa ? base.pctCasa() : base.pctFora();
+				double d0 = casa ? base.pctFora() : base.pctCasa();
+				linha("| " + sorte + " " + (casa ? "em casa" : "fora") + " | " + pct(v) + " | " + pct(e.pctEmpate()) + " | "
+						+ pct(d) + " | " + sinal(v - v0) + " / " + sinal(d - d0) + " | " + f(e.mediaGols(), 2) + " |");
+			}
+		}
+		linha("");
+	}
+
+	private static String sinal(double pontos) {
+		return (pontos >= 0 ? "+" : "") + f(pontos, 1) + " p.p.";
 	}
 
 	private EstatisticasLote medir(Escalacao casa, Escalacao fora) {

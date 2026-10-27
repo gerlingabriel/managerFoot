@@ -3,9 +3,13 @@ package br.com.managerfoot.motor;
 import static br.com.managerfoot.motor.EscalacoesDeTeste.escalacao;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Map;
+
 import org.junit.jupiter.api.Test;
 
+import br.com.managerfoot.dominio.Escalacao;
 import br.com.managerfoot.dominio.Formacao;
+import br.com.managerfoot.dominio.Sorte;
 
 /**
  * Regressão da calibração (SPEC §7.6) com sementes fixas: determinístico, não falha ao acaso.
@@ -69,5 +73,32 @@ class CalibracaoMotorTest {
 		double max = java.util.Arrays.stream(pontos).max().orElseThrow() / (2 * fs.length);
 		double min = java.util.Arrays.stream(pontos).min().orElseThrow() / (2 * fs.length);
 		assertThat(max - min).isLessThan(0.25);
+	}
+
+	@Test
+	void sorteNeutraNaoMudaAPartida() {
+		Escalacao a = escalacao(Formacao.F_4_4_2, 25, 1);
+		Escalacao b = escalacao(Formacao.F_4_4_2, 25, 100);
+		for (long s = 0; s < 200; s++) {
+			assertThat(motor.simular(RegrasPartida.padrao(), a, b, Map.of(Lado.CASA, Sorte.NEUTRA, Lado.FORA, Sorte.NEUTRA), s))
+				.isEqualTo(motor.simular(a, b, s));
+		}
+	}
+
+	@Test
+	void sorteMudaCercaDeCincoPontosPercentuais() {
+		// SPEC §5.3.1: ~5 p.p. a mais de vitórias (beneficiado) e de derrotas (prejudicado), média casa/fora
+		Escalacao a = escalacao(Formacao.F_4_4_2, 25, 1);
+		Escalacao b = escalacao(Formacao.F_4_4_2, 25, 100);
+		EstatisticasLote base = EstatisticasLote.medir(motor, a, b, 0, PARTIDAS);
+		EstatisticasLote benCasa = EstatisticasLote.medir(motor, a, b, Map.of(Lado.CASA, Sorte.BENEFICIADO), 0, PARTIDAS);
+		EstatisticasLote benFora = EstatisticasLote.medir(motor, a, b, Map.of(Lado.FORA, Sorte.BENEFICIADO), 0, PARTIDAS);
+		EstatisticasLote preCasa = EstatisticasLote.medir(motor, a, b, Map.of(Lado.CASA, Sorte.PREJUDICADO), 0, PARTIDAS);
+		EstatisticasLote preFora = EstatisticasLote.medir(motor, a, b, Map.of(Lado.FORA, Sorte.PREJUDICADO), 0, PARTIDAS);
+
+		double maisVitorias = (benCasa.pctCasa() - base.pctCasa() + benFora.pctFora() - base.pctFora()) / 2;
+		double maisDerrotas = (preCasa.pctFora() - base.pctFora() + preFora.pctCasa() - base.pctCasa()) / 2;
+		assertThat(maisVitorias).isBetween(3.5, 6.5);
+		assertThat(maisDerrotas).isBetween(3.5, 6.5);
 	}
 }
