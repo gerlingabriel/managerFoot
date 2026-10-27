@@ -33,4 +33,10 @@ class FormacaoTest {
 		assertThat(Formacao.porRotulo("4-3-3")).contains(Formacao.F_4_3_3);
 		assertThat(Formacao.porRotulo("5-0-5")).isEmpty();
 	}
+
+	@Test
+	void buscaPorQuantidades() {
+		assertThat(Formacao.com(3, 4, 3)).contains(Formacao.F_3_4_3);
+		assertThat(Formacao.com(2, 4, 4)).isEmpty();
+	}
 }

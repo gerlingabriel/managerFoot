@@ -49,6 +49,13 @@ public enum Formacao {
 		return defensores + "-" + meioCampistas + "-" + atacantes;
 	}
 
+	/** Formação com exatamente essas quantidades de jogadores de linha, se existir na lista. */
+	public static Optional<Formacao> com(int defensores, int meioCampistas, int atacantes) {
+		return Arrays.stream(values())
+			.filter(f -> f.defensores == defensores && f.meioCampistas == meioCampistas && f.atacantes == atacantes)
+			.findFirst();
+	}
+
 	public static Optional<Formacao> porRotulo(String rotulo) {
 		return Arrays.stream(values()).filter(f -> f.rotulo().equals(rotulo)).findFirst();
 	}

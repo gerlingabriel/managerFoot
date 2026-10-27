@@ -5,34 +5,51 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.random.RandomGenerator;
 
 import br.com.managerfoot.dominio.Escalacao;
+import br.com.managerfoot.dominio.Formacao;
 import br.com.managerfoot.dominio.Jogador;
 import br.com.managerfoot.dominio.Posicao;
 
 /**
- * Situação de um time durante a partida: quem segue em campo, quem está no gol e os amarelos
- * recebidos. Parte da escalação e muda com as expulsões (SPEC §7.3).
+ * Situação de um time durante a partida: quem está em campo, quem está no gol, o banco
+ * disponível, a formação atual e os amarelos. Parte da escalação e muda com expulsões
+ * (SPEC §7.3) e substituições (SPEC §7.4.1).
+ *
+ * <p>A formação representa as vagas da tática. Expulsão não muda a formação (fica o buraco);
+ * substituição muda conforme a posição de quem sai e de quem entra.
  */
 final class TimeEmCampo {
 
 	private final Escalacao escalacao;
 	private final double fatorGoleiroImprovisado;
+	private final int limiteSubstituicoes;
 	private final List<Jogador> linha = new ArrayList<>();
+	private final List<Jogador> banco;
 	private final Map<Long, Integer> amarelos = new HashMap<>();
+	private Formacao formacao;
 	private Jogador goleiro;
 	private boolean goleiroImprovisado;
+	private int substituicoesFeitas;
 
-	TimeEmCampo(Escalacao escalacao, double fatorGoleiroImprovisado) {
+	TimeEmCampo(Escalacao escalacao, double fatorGoleiroImprovisado, int limiteSubstituicoes) {
 		this.escalacao = escalacao;
 		this.fatorGoleiroImprovisado = fatorGoleiroImprovisado;
+		this.limiteSubstituicoes = limiteSubstituicoes;
+		this.formacao = escalacao.formacao();
 		this.goleiro = escalacao.jogadoresNa(Posicao.GOLEIRO).getFirst();
+		this.banco = new ArrayList<>(escalacao.reservas());
 		escalacao.titulares().stream().filter(j -> j != goleiro).forEach(linha::add);
 	}
 
 	Escalacao escalacao() {
 		return escalacao;
+	}
+
+	Formacao formacao() {
+		return formacao;
 	}
 
 	/** Jogadores atuando no setor; o goleiro improvisado deixa de contar no setor de origem. */
@@ -49,8 +66,21 @@ final class TimeEmCampo {
 		return todos;
 	}
 
+	/** Reservas que ainda podem entrar; quem já entrou sai desta lista. */
+	List<Jogador> reservasDisponiveis() {
+		return List.copyOf(banco);
+	}
+
+	int substituicoesRestantes() {
+		return limiteSubstituicoes - substituicoesFeitas;
+	}
+
 	Jogador goleiro() {
 		return goleiro;
+	}
+
+	boolean goleiroImprovisado() {
+		return goleiroImprovisado;
 	}
 
 	double forcaGoleiro() {
@@ -90,6 +120,85 @@ final class TimeEmCampo {
 		linha.remove(substituto);
 		goleiro = substituto;
 		goleiroImprovisado = true;
+	}
+
+	/**
+	 * Troca {@code sai} (em campo) por {@code entra} (do banco), conforme SPEC §7.4.1.
+	 * <ul>
+	 * <li>Goleiro reserva só entra no gol: troca o goleiro ou, se houver goleiro improvisado,
+	 * entra no lugar de um jogador de linha e o improvisado volta ao seu setor.</li>
+	 * <li>Jogador de linha entra no lugar de jogador de linha; a formação muda conforme as
+	 * posições e precisa continuar sendo uma das formações permitidas.</li>
+	 * </ul>
+	 *
+	 * @throws IllegalArgumentException se a troca não for permitida, com o motivo
+	 */
+	void substituir(Jogador sai, Jogador entra) {
+		if (substituicoesRestantes() <= 0) {
+			throw new IllegalArgumentException("sem substituições restantes (limite de " + limiteSubstituicoes + ")");
+		}
+		if (!banco.contains(entra)) {
+			throw new IllegalArgumentException(entra.nome() + " não está disponível no banco");
+		}
+		if (!emCampo().contains(sai)) {
+			throw new IllegalArgumentException(sai.nome() + " não está em campo");
+		}
+
+		if (entra.posicao() == Posicao.GOLEIRO) {
+			substituirComGoleiroReserva(sai, entra);
+		} else {
+			substituirJogadorDeLinha(sai, entra);
+		}
+		banco.remove(entra);
+		substituicoesFeitas++;
+	}
+
+	private void substituirComGoleiroReserva(Jogador sai, Jogador entra) {
+		if (!goleiroImprovisado) {
+			if (sai != goleiro) {
+				throw new IllegalArgumentException("goleiro reserva só pode entrar no lugar do goleiro " + goleiro.nome());
+			}
+			goleiro = entra;
+			return;
+		}
+		// goleiro improvisado volta ao seu setor; a vaga de quem sai fica vazia (formação não muda)
+		Jogador improvisado = goleiro;
+		goleiro = entra;
+		goleiroImprovisado = false;
+		if (sai != improvisado) {
+			linha.remove(sai);
+			linha.add(improvisado);
+		}
+	}
+
+	private void substituirJogadorDeLinha(Jogador sai, Jogador entra) {
+		if (sai == goleiro) {
+			throw new IllegalArgumentException(
+					"só um goleiro pode entrar no lugar de " + sai.nome() + ", que está no gol");
+		}
+		Formacao nova = formacaoApos(sai.posicao(), entra.posicao())
+			.orElseThrow(() -> new IllegalArgumentException("trocar " + sai.posicao().nome(1) + " por "
+					+ entra.posicao().nome(1) + " deixaria a formação fora das permitidas (atual: "
+					+ formacao.rotulo() + ")"));
+		linha.set(linha.indexOf(sai), entra);
+		formacao = nova;
+	}
+
+	private Optional<Formacao> formacaoApos(Posicao sai, Posicao entra) {
+		int[] vagas = { formacao.quantidade(Posicao.DEFENSOR), formacao.quantidade(Posicao.MEIO_CAMPISTA),
+				formacao.quantidade(Posicao.ATACANTE) };
+		vagas[indiceLinha(sai)]--;
+		vagas[indiceLinha(entra)]++;
+		return Formacao.com(vagas[0], vagas[1], vagas[2]);
+	}
+
+	private static int indiceLinha(Posicao posicao) {
+		return switch (posicao) {
+			case DEFENSOR -> 0;
+			case MEIO_CAMPISTA -> 1;
+			case ATACANTE -> 2;
+			case GOLEIRO -> throw new IllegalArgumentException("goleiro não ocupa vaga de linha");
+		};
 	}
 
 	/**

@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 9 — 2026-10-26)
+-   **Status:** versão inicial para revisão (rev. 10 — 2026-10-27)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 10 (2026-10-27):** banco de 7 reservas, substituições com mudança de formação e regra da máquina.
 -   **rev. 9 (2026-10-26):** equilíbrio entre formações, efeito do temperamento reduzido, piso de zebra até 35 pontos, calibração concluída.
 -   **rev. 8 (2026-10-26):** caixa de substituição na expulsão; metas de zebra com piso de 1%.
 -   **rev. 7 (2026-10-26):** efeito da expulsão, goleiro expulso e escolha do batedor de pênalti.
@@ -590,6 +591,30 @@ validados por simulação.
 
 **Definido:** o número de substituições é configurável **por competição**
 (liga, copa, continental e Mundial). O valor padrão é **5**.
+
+**Definido (rev. 10):**
+- **Banco:** até **7 reservas** por partida, igual em todas as competições.
+- **Mudança de tática:** a substituição muda a formação conforme a posição
+  de quem sai e de quem entra.
+  - Exemplo: no 4-4-2, sai um zagueiro e entra um atacante; a formação
+    vira 3-4-3.
+  - Uma troca que resultaria em formação fora das 8 da §7.2 é recusada,
+    com mensagem.
+- **Regras do futebol:**
+  - Quem saiu não volta e não aparece mais na lista de substituições.
+  - O expulso não é substituído. Fica o buraco, e a expulsão fica
+    registrada nos eventos da partida.
+  - Só podem sair jogadores que ainda estão em campo.
+- **Goleiro reserva:** só entra no gol. Se o goleiro titular foi expulso e
+  um defensor está improvisado, o goleiro reserva entra no lugar de um
+  jogador de linha e o defensor volta para a defesa.
+- **Máquina:** só substitui em caso de lesão ou de goleiro expulso. Não
+  avalia o desempenho dos jogadores.
+  - **Provisório:** com goleiro expulso, o goleiro reserva entra no lugar
+    do atacante mais fraco; sem atacantes, sai o meia mais fraco.
+  - Treinadores mais inteligentes ficam para depois.
+- **Pendência:** a substituição por lesão entra junto com as lesões, que
+  continuam **Em aberto** (§7.5).
 
 ### 7.5 Lesões
 

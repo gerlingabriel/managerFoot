@@ -32,7 +32,7 @@ class TimeEmCampoTest {
 
 	@Test
 	void expulsaoDeMeiaReduzOSetor() {
-		TimeEmCampo time = new TimeEmCampo(new Escalacao(Formacao.F_4_4_2, base()), FATOR_IMPROVISADO);
+		TimeEmCampo time = new TimeEmCampo(new Escalacao(Formacao.F_4_4_2, base()), FATOR_IMPROVISADO, 5);
 		Jogador meia = time.jogadoresNa(Posicao.MEIO_CAMPISTA).getFirst();
 
 		time.expulsar(meia);
@@ -47,7 +47,7 @@ class TimeEmCampoTest {
 		List<Jogador> titulares = base();
 		Jogador defensorFraco = com(titulares.get(2), 12, false); // índice 1..4 = defensores
 		titulares.set(2, defensorFraco);
-		TimeEmCampo time = new TimeEmCampo(new Escalacao(Formacao.F_4_4_2, titulares), FATOR_IMPROVISADO);
+		TimeEmCampo time = new TimeEmCampo(new Escalacao(Formacao.F_4_4_2, titulares), FATOR_IMPROVISADO, 5);
 
 		time.expulsar(time.goleiro());
 
@@ -62,7 +62,7 @@ class TimeEmCampoTest {
 		List<Jogador> titulares = base();
 		Jogador atacanteFraco = com(titulares.get(10), 5, false);
 		titulares.set(10, atacanteFraco);
-		TimeEmCampo time = new TimeEmCampo(new Escalacao(Formacao.F_4_4_2, titulares), FATOR_IMPROVISADO);
+		TimeEmCampo time = new TimeEmCampo(new Escalacao(Formacao.F_4_4_2, titulares), FATOR_IMPROVISADO, 5);
 		List.copyOf(time.jogadoresNa(Posicao.DEFENSOR)).forEach(time::expulsar);
 
 		time.expulsar(time.goleiro());
@@ -74,7 +74,7 @@ class TimeEmCampoTest {
 	void batedorEscolhidoCobraEnquantoEstiverEmCampo() {
 		List<Jogador> titulares = base();
 		Jogador escolhido = titulares.get(3); // um defensor
-		TimeEmCampo time = new TimeEmCampo(new Escalacao(Formacao.F_4_4_2, titulares, escolhido), FATOR_IMPROVISADO);
+		TimeEmCampo time = new TimeEmCampo(new Escalacao(Formacao.F_4_4_2, titulares, escolhido), FATOR_IMPROVISADO, 5);
 
 		assertThat(time.batedorPenalti(new SplittableRandom(1))).isEqualTo(escolhido);
 
@@ -88,7 +88,7 @@ class TimeEmCampoTest {
 		titulares.set(0, com(titulares.get(0), 50, false)); // goleiro mais forte de todos
 		Jogador meiaForte = com(titulares.get(6), 35, false);
 		titulares.set(6, meiaForte);
-		TimeEmCampo time = new TimeEmCampo(new Escalacao(Formacao.F_4_4_2, titulares), FATOR_IMPROVISADO);
+		TimeEmCampo time = new TimeEmCampo(new Escalacao(Formacao.F_4_4_2, titulares), FATOR_IMPROVISADO, 5);
 
 		assertThat(time.batedorPenalti(new SplittableRandom(1))).isEqualTo(meiaForte);
 	}
@@ -99,7 +99,7 @@ class TimeEmCampoTest {
 		titulares.set(5, com(titulares.get(5), 30, false));
 		Jogador comAsterisco = com(titulares.get(9), 30, true);
 		titulares.set(9, comAsterisco);
-		TimeEmCampo time = new TimeEmCampo(new Escalacao(Formacao.F_4_4_2, titulares), FATOR_IMPROVISADO);
+		TimeEmCampo time = new TimeEmCampo(new Escalacao(Formacao.F_4_4_2, titulares), FATOR_IMPROVISADO, 5);
 
 		for (long s = 0; s < 50; s++) {
 			assertThat(time.batedorPenalti(new SplittableRandom(s))).isEqualTo(comAsterisco);
@@ -113,7 +113,7 @@ class TimeEmCampoTest {
 		Jogador b = com(titulares.get(9), 30, false);
 		titulares.set(5, a);
 		titulares.set(9, b);
-		TimeEmCampo time = new TimeEmCampo(new Escalacao(Formacao.F_4_4_2, titulares), FATOR_IMPROVISADO);
+		TimeEmCampo time = new TimeEmCampo(new Escalacao(Formacao.F_4_4_2, titulares), FATOR_IMPROVISADO, 5);
 
 		Set<Jogador> sorteados = new HashSet<>();
 		for (long s = 0; s < 50; s++) {

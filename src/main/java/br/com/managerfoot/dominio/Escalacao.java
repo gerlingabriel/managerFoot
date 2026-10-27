@@ -10,28 +10,42 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * Os 11 titulares de um time em uma formação. Só pode ser criada se respeitar a formação
- * (SPEC §7.2): 1 goleiro e o número exato de defensores, meias e atacantes, sem repetição.
+ * Os 11 titulares de um time em uma formação, mais o banco. Só pode ser criada se respeitar a
+ * formação (SPEC §7.2): 1 goleiro e o número exato de defensores, meias e atacantes, sem
+ * repetição de jogadores entre titulares e reservas.
  *
+ * @param reservas banco para a partida, até {@link #MAXIMO_RESERVAS} (SPEC §7.4.1)
  * @param batedorPenalti escolha do treinador (pode ser nula); é uma preferência: se ele não estiver
  *        em campo na hora do pênalti, o motor aplica a regra padrão (SPEC §12)
  */
-public record Escalacao(Formacao formacao, List<Jogador> titulares, Jogador batedorPenalti) {
+public record Escalacao(Formacao formacao, List<Jogador> titulares, List<Jogador> reservas, Jogador batedorPenalti) {
+
+	public static final int MAXIMO_RESERVAS = 7;
 
 	public Escalacao {
 		Objects.requireNonNull(formacao, "formação é obrigatória");
 		Objects.requireNonNull(titulares, "lista de titulares é obrigatória");
+		Objects.requireNonNull(reservas, "lista de reservas é obrigatória (pode ser vazia)");
 		titulares = List.copyOf(titulares);
-		List<String> problemas = problemas(formacao, titulares);
+		reservas = List.copyOf(reservas);
+		List<String> problemas = problemas(formacao, titulares, reservas);
 		if (!problemas.isEmpty()) {
 			throw new IllegalArgumentException(
 					"Escalação inválida para " + formacao.rotulo() + ": " + String.join("; ", problemas) + ".");
 		}
 	}
 
-	/** Escalação sem batedor de pênalti escolhido. */
+	/** Escalação sem reservas e sem batedor de pênalti escolhido. */
 	public Escalacao(Formacao formacao, List<Jogador> titulares) {
-		this(formacao, titulares, null);
+		this(formacao, titulares, List.of(), null);
+	}
+
+	public Escalacao(Formacao formacao, List<Jogador> titulares, Jogador batedorPenalti) {
+		this(formacao, titulares, List.of(), batedorPenalti);
+	}
+
+	public Escalacao(Formacao formacao, List<Jogador> titulares, List<Jogador> reservas) {
+		this(formacao, titulares, reservas, null);
 	}
 
 	public Optional<Jogador> batedorPreferido() {
@@ -42,14 +56,19 @@ public record Escalacao(Formacao formacao, List<Jogador> titulares, Jogador bate
 		return titulares.stream().filter(j -> j.posicao() == posicao).toList();
 	}
 
-	private static List<String> problemas(Formacao formacao, List<Jogador> titulares) {
+	private static List<String> problemas(Formacao formacao, List<Jogador> titulares, List<Jogador> reservas) {
 		List<String> problemas = new ArrayList<>();
 		if (titulares.size() != Formacao.TITULARES) {
 			problemas.add("são necessários " + Formacao.TITULARES + " titulares, mas há " + titulares.size());
 		}
+		if (reservas.size() > MAXIMO_RESERVAS) {
+			problemas.add("o banco aceita até " + MAXIMO_RESERVAS + " reservas, mas há " + reservas.size());
+		}
 
 		Set<Long> ids = new HashSet<>();
-		for (Jogador jogador : titulares) {
+		List<Jogador> todos = new ArrayList<>(titulares);
+		todos.addAll(reservas);
+		for (Jogador jogador : todos) {
 			if (!ids.add(jogador.id())) {
 				problemas.add(jogador.nome() + " aparece mais de uma vez");
 			}

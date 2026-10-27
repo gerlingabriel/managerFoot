@@ -2,8 +2,10 @@ package br.com.managerfoot.motor;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.random.RandomGenerator;
 
 import br.com.managerfoot.dominio.Escalacao;
@@ -21,6 +23,8 @@ import br.com.managerfoot.dominio.Temperamento;
  * dele, com peso pela força; ataque contra defesa e finalizador contra goleiro decidem o gol;</li>
  * <li>cada time pode receber um cartão, com o infrator sorteado pela roleta de temperamento.</li>
  * </ol>
+ * Entre os minutos, o treinador do usuário pode substituir ({@link #substituir}); os times da
+ * máquina só reagem ao goleiro expulso ({@link TreinadorMaquina}).
  * Toda aleatoriedade vem do {@link RandomGenerator} recebido, para a partida ser reproduzível.
  */
 public final class Partida {
@@ -33,17 +37,71 @@ public final class Partida {
 	private final TimeEmCampo casa;
 	private final TimeEmCampo fora;
 	private final RandomGenerator aleatorio;
+	private final Set<Lado> ladosDaMaquina;
 	private final List<EventoPartida> eventos = new ArrayList<>();
 	private int minuto;
 	private int golsCasa;
 	private int golsFora;
 
-	public Partida(ParametrosMotor parametros, Escalacao casa, Escalacao fora, RandomGenerator aleatorio) {
+	/**
+	 * @param ladosDoUsuario times controlados por usuários; os demais seguem o {@link TreinadorMaquina}
+	 */
+	public Partida(ParametrosMotor parametros, RegrasPartida regras, Escalacao casa, Escalacao fora,
+			Set<Lado> ladosDoUsuario, RandomGenerator aleatorio) {
 		this.parametros = Objects.requireNonNull(parametros);
 		double fatorImprovisado = parametros.penalti().fatorGoleiroImprovisado();
-		this.casa = new TimeEmCampo(Objects.requireNonNull(casa), fatorImprovisado);
-		this.fora = new TimeEmCampo(Objects.requireNonNull(fora), fatorImprovisado);
+		this.casa = new TimeEmCampo(Objects.requireNonNull(casa), fatorImprovisado, regras.substituicoes());
+		this.fora = new TimeEmCampo(Objects.requireNonNull(fora), fatorImprovisado, regras.substituicoes());
+		this.ladosDaMaquina = EnumSet.complementOf(
+				ladosDoUsuario.isEmpty() ? EnumSet.noneOf(Lado.class) : EnumSet.copyOf(ladosDoUsuario));
 		this.aleatorio = Objects.requireNonNull(aleatorio);
+	}
+
+	/** Partida só entre times da máquina, com as regras padrão. */
+	public Partida(ParametrosMotor parametros, Escalacao casa, Escalacao fora, RandomGenerator aleatorio) {
+		this(parametros, RegrasPartida.padrao(), casa, fora, Set.of(), aleatorio);
+	}
+
+	/**
+	 * Substitui um jogador em campo por um reserva disponível, entre os minutos (SPEC §7.4.1).
+	 *
+	 * @throws IllegalArgumentException se a troca não for permitida, com o motivo
+	 * @throws IllegalStateException se a partida já terminou
+	 */
+	public EventoPartida substituir(Lado lado, Jogador sai, Jogador entra) {
+		if (terminada()) {
+			throw new IllegalStateException("a partida já terminou");
+		}
+		return registrarSubstituicao(lado, sai, entra);
+	}
+
+	/** Sem checar o fim: a máquina pode reagir a uma expulsão ocorrida no último minuto. */
+	private EventoPartida registrarSubstituicao(Lado lado, Jogador sai, Jogador entra) {
+		time(lado).substituir(sai, entra);
+		EventoPartida evento = EventoPartida.substituicao(minuto, lado, entra, sai);
+		eventos.add(evento);
+		return evento;
+	}
+
+	public List<Jogador> emCampo(Lado lado) {
+		return time(lado).emCampo();
+	}
+
+	public Jogador goleiro(Lado lado) {
+		return time(lado).goleiro();
+	}
+
+	/** Reservas que ainda podem entrar; quem já entrou não aparece mais (SPEC §7.4.1). */
+	public List<Jogador> reservasDisponiveis(Lado lado) {
+		return time(lado).reservasDisponiveis();
+	}
+
+	public int substituicoesRestantes(Lado lado) {
+		return time(lado).substituicoesRestantes();
+	}
+
+	public Formacao formacaoAtual(Lado lado) {
+		return time(lado).formacao();
 	}
 
 	/** Avança um minuto e devolve os eventos ocorridos nele. */
@@ -156,14 +214,18 @@ public final class Partida {
 		if (tipo != TipoEvento.CARTAO_VERMELHO) {
 			time.registrarAmarelo(infrator);
 		}
+		boolean eraGoleiro = infrator == time.goleiro();
 		if (tipo.expulsao()) {
 			time.expulsar(infrator);
 		}
 		eventos.add(new EventoPartida(minuto, lado, tipo, infrator));
+		if (tipo.expulsao() && eraGoleiro && ladosDaMaquina.contains(lado)) {
+			TreinadorMaquina.aposGoleiroExpulso(time).ifPresent(t -> registrarSubstituicao(lado, t.sai(), t.entra()));
+		}
 	}
 
 	private Jogador sortearFinalizador(TimeEmCampo time) {
-		PesosFinalizador pesos = parametros.pesosFinalizador().get(time.escalacao().formacao());
+		PesosFinalizador pesos = parametros.pesosFinalizador().get(time.formacao());
 		// setores sem jogadores (após expulsões) ficam de fora do sorteio
 		List<Posicao> setores = Arrays.stream(Posicao.values())
 			.filter(p -> !time.jogadoresNa(p).isEmpty() && pesos.peso(p) > 0)

@@ -54,6 +54,35 @@ class EscalacaoTest {
 	}
 
 	@Test
+	void aceitaAteSeteReservas() {
+		List<Jogador> reservas = reservas(7);
+		assertThat(new Escalacao(Formacao.F_4_4_2, titularesPara(Formacao.F_4_4_2, 20), reservas).reservas()).hasSize(7);
+	}
+
+	@Test
+	void recusaMaisDeSeteReservas() {
+		assertThatIllegalArgumentException()
+			.isThrownBy(() -> new Escalacao(Formacao.F_4_4_2, titularesPara(Formacao.F_4_4_2, 20), reservas(8)))
+			.withMessageContaining("o banco aceita até 7 reservas, mas há 8");
+	}
+
+	@Test
+	void recusaReservaQueTambemETitular() {
+		List<Jogador> titulares = titularesPara(Formacao.F_4_4_2, 20);
+		assertThatIllegalArgumentException()
+			.isThrownBy(() -> new Escalacao(Formacao.F_4_4_2, titulares, List.of(titulares.get(5))))
+			.withMessageContaining("aparece mais de uma vez");
+	}
+
+	private static List<Jogador> reservas(int quantidade) {
+		List<Jogador> reservas = new ArrayList<>();
+		for (int i = 0; i < quantidade; i++) {
+			reservas.add(new Jogador(100 + i, "Reserva " + i, Posicao.MEIO_CAMPISTA, 15, Temperamento.NORMAL));
+		}
+		return reservas;
+	}
+
+	@Test
 	void titularesNaoPodemSerAlteradosDepoisDeCriada() {
 		List<Jogador> titulares = new ArrayList<>(titularesPara(Formacao.F_4_4_2, 20));
 		Escalacao escalacao = new Escalacao(Formacao.F_4_4_2, titulares);
