@@ -143,6 +143,20 @@ class CalendarioTest {
 	}
 
 	@Test
+	void sorteioMudaAOrdemMasMantemAsRegrasEEReproduzivel() {
+		List<Clube> clubes = clubes(20);
+		Calendario a = Calendario.sorteado(clubes, new java.util.SplittableRandom(1));
+		Calendario b = Calendario.sorteado(clubes, new java.util.SplittableRandom(2));
+
+		assertThat(a).isEqualTo(Calendario.sorteado(clubes, new java.util.SplittableRandom(1)));
+		assertThat(a).isNotEqualTo(b);
+		assertThat(a).isNotEqualTo(Calendario.turnoEReturno(clubes));
+		for (Clube clube : clubes) {
+			assertThat(a.jogos().stream().filter(j -> j.mandante().equals(clube)).count()).isEqualTo(19);
+		}
+	}
+
+	@Test
 	void recusaListaPequenaOuComRepetidos() {
 		assertThatIllegalArgumentException().isThrownBy(() -> Calendario.turnoEReturno(clubes(1)))
 			.withMessageContaining("ao menos 2 clubes");

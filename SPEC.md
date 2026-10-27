@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 11 — 2026-10-27)
+-   **Status:** versão inicial para revisão (rev. 12 — 2026-10-27)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 12 (2026-10-27):** calendário sorteado por temporada; sorteio de desempate fixo na temporada.
 -   **rev. 11 (2026-10-27):** calendário com returno espelhado e mando alternado.
 -   **rev. 10 (2026-10-27):** banco de 7 reservas, substituições com mudança de formação e regra da máquina.
 -   **rev. 9 (2026-10-26):** equilíbrio entre formações, efeito do temperamento reduzido, piso de zebra até 35 pontos, calibração concluída.
@@ -716,6 +717,22 @@ os cartões de um time todo calmo (antes, 2,8 vezes).
         de dois jogos seguidos no mesmo mando.
     -   Com número ímpar de clubes (15, 17 ou 19), um clube folga a cada
         rodada.
+    -   **Definido (rev. 12):** a ordem dos confrontos é **sorteada a cada
+        temporada**, como no Brasileirão. O sorteio usa semente para poder
+        ser reproduzido.
+-   **Definido (rev. 12) — sorteio do desempate:** o último critério
+    (sorteio) é **fixo durante a temporada**. Cada clube recebe um número
+    sorteado a partir da semente da temporada. Assim, clubes empatados não
+    trocam de posição a cada vez que a tabela é recalculada.
+-   **Nota (rev. 12):** como pontos = 3 × vitórias + empates, dois
+    critérios nunca chegam a decidir:
+    -   "menos empates": com mesmos pontos e vitórias, os empates são
+        iguais;
+    -   "menos gols sofridos": com mesmo saldo e mesmos gols marcados, os
+        gols sofridos são iguais.
+
+    Ambos continuam na regra, sem efeito prático. "Menos derrotas" só
+    decide quando o número de jogos difere, por exemplo por folga.
 -   **Definido:** vitória vale **3 pontos**, empate **1** e derrota **0**.
 -   **Definido — desempate na classificação**, nesta ordem:
     1.  Pontos.

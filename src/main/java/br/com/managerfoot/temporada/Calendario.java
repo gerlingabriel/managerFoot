@@ -1,9 +1,11 @@
 package br.com.managerfoot.temporada;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.random.RandomGenerator;
 
 import br.com.managerfoot.dominio.Clube;
 
@@ -23,9 +25,17 @@ public record Calendario(List<Rodada> rodadas) {
 	}
 
 	/**
-	 * Gera o calendário na ordem recebida dos clubes. Sortear a ordem, se desejado, é
-	 * responsabilidade de quem chama.
+	 * Sorteia a ordem dos clubes e gera o calendário, como no Brasileirão (SPEC §8.1). Mesma
+	 * semente, mesmo calendário.
 	 */
+	public static Calendario sorteado(List<Clube> clubes, RandomGenerator aleatorio) {
+		Objects.requireNonNull(clubes, "lista de clubes é obrigatória");
+		List<Clube> ordem = new ArrayList<>(clubes);
+		Collections.shuffle(ordem, aleatorio);
+		return turnoEReturno(ordem);
+	}
+
+	/** Gera o calendário na ordem recebida dos clubes, sem sorteio. */
 	public static Calendario turnoEReturno(List<Clube> clubes) {
 		Objects.requireNonNull(clubes, "lista de clubes é obrigatória");
 		if (clubes.size() < 2) {
