@@ -113,6 +113,32 @@ class MoldeJogadoresIT {
 	}
 
 	@Test
+	void nacionalidadeForaDoCatalogoFifaERecusada() {
+		assertThatThrownBy(() -> repositorio.adicionarJogadores(clube,
+				List.of(new Jogador(0, "Sem país", Posicao.ATACANTE, 20, Temperamento.NORMAL, "XYZ"))))
+			.isInstanceOf(DataIntegrityViolationException.class);
+		// ISO 3166-1 (PRT), e não FIFA (POR)
+		assertThatThrownBy(() -> repositorio.adicionarJogadores(clube,
+				List.of(new Jogador(0, "Português", Posicao.ATACANTE, 20, Temperamento.NORMAL, "PRT"))))
+			.isInstanceOf(DataIntegrityViolationException.class);
+		assertThat(repositorio.carregarPlantel(clube)).isEmpty();
+	}
+
+	@Test
+	void catalogoTemOs211MembrosDaFifa() {
+		assertThat(jdbc.sql("SELECT count(*) FROM pais_fifa").query(Long.class).single()).isEqualTo(211);
+		assertThat(jdbc.sql("SELECT nome FROM pais_fifa WHERE codigo IN ('ENG', 'SCO', 'POR', 'GER') ORDER BY codigo")
+			.query(String.class)
+			.list()).containsExactly("Inglaterra", "Alemanha", "Portugal", "Escócia");
+	}
+
+	@Test
+	void paisDoMoldeForaDoCatalogoERecusado() {
+		assertThatThrownBy(() -> repositorio.criarPais(molde, "XYZ", "Inventado"))
+			.isInstanceOf(DataIntegrityViolationException.class);
+	}
+
+	@Test
 	void clubeInexistenteERecusado() {
 		assertThatThrownBy(() -> repositorio.adicionarJogadores(-1, jogadores(1)))
 			.isInstanceOf(NoSuchElementException.class);

@@ -10,8 +10,9 @@ import java.util.regex.Pattern;
  * @param id identificador único dentro do jogo; distingue jogadores com dados iguais
  * @param asterisco jogador especial (SPEC §5.3): mais chance de finalizar e de marcar, e desempata o
  *        batedor de pênalti; inclui o asterisco temporário do bônus de artilharia (SPEC §5.2)
- * @param nacionalidade código de país com 3 letras maiúsculas, o mesmo usado nos países do molde
- *        (ex.: BRA); pode ser de um país sem liga cadastrada. Quem conta como estrangeiro fica para
+ * @param nacionalidade código FIFA do país, com 3 letras maiúsculas, o mesmo usado nos países do
+ *        molde (ex.: BRA, POR); pode ser de um país sem liga cadastrada. O banco confere se o
+ *        código existe no catálogo. Quem conta como estrangeiro fica para
  *        a regra da SPEC §8.4.
  */
 public record Jogador(long id, String nome, Posicao posicao, int forca, Temperamento temperamento,

@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 20 — 2026-10-27)
+-   **Status:** versão inicial para revisão (rev. 21 — 2026-10-27)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 21 (2026-10-27):** nacionalidade do jogador pode ser qualquer país do mundo; bandeira no plantel para estrangeiros, atenuada quando o jogador não conta como estrangeiro.
 -   **rev. 20 (2026-10-27):** save em JSON versionado; banco com ligas de vários países, só a do país escolhido é jogada; molde editável copiado para cada jogo.
 -   **rev. 19 (2026-10-27):** números do asterisco; bônus de artilharia soma com o asterisco e vale para qualquer defensor; conflito resolvido.
 -   **rev. 18 (2026-10-27):** sorte/azar por divisão e oculto; bônus de artilharia como asterisco temporário, 15 por divisão; regras do asterisco; calendário por ordem e finais depois da liga.
@@ -336,6 +337,13 @@ capacidade inicial. - Outros parâmetros necessários à liga.
 O editor de jogadores deve permitir configurar: - Nome. - Posição. -
 Nacionalidade. - Força. - Presença ou ausência do atributo especial
 representado por asterisco. - Comportamento/temperamento.
+
+**Definido (rev. 21) — nacionalidade:**
+- Ao cadastrar um jogador, é possível escolher **qualquer país do mundo**,
+  inclusive países sem liga no molde.
+- **Definido (rev. 21):** a lista e os códigos são os dos **211 membros da
+  FIFA** (ex.: POR, GER, NED; Inglaterra, Escócia, País de Gales e Irlanda
+  do Norte separadas). Os países do molde usam os mesmos códigos.
 
 Nesta versão, **não haverá idade dos jogadores**. O jogo manterá
 rankings de artilheiros e o histórico de cartões de cada jogador (§7.4).
@@ -1062,6 +1070,8 @@ administrador, sem ficar fixo no código.
   portugueses**.
 - **Países da União Europeia** (exemplo: Itália): jogadores de países da UE
   **não** são estrangeiros.
+- **Definido (rev. 21):** o plantel mostra se o jogador é estrangeiro e se
+  conta no limite (§10.3).
 
 **Em aberto:** a lista padrão de países da UE e se outros casos entram no
 padrão inicial (por exemplo, países fora da UE com acordos semelhantes).
@@ -1247,6 +1257,12 @@ da mesma divisão seguem na mesma tela.
   e gols da temporada. Elenco separado em titulares, banco e fora do banco.
 - Ao clicar no jogador abre a ficha, com gols na temporada e gols na
   carreira.
+- **Definido (rev. 21):** depois do nome, o plantel mostra a **bandeira**
+  do país quando o jogador é estrangeiro no país do clube. Se ele é
+  estrangeiro mas **não conta** no limite (ex.: português no Brasil,
+  jogador da UE em país da UE), a bandeira aparece **atenuada** (mais
+  fosca) ou com outro sinal equivalente. Jogador do próprio país fica sem
+  bandeira. A forma exata vai no modelo da tela, para aprovação.
 - Classificação por divisão, com o clube do usuário destacado e os
   rebaixados marcados.
 - **Definido (rev. 17):** ao clicar num clube da classificação, abre o
