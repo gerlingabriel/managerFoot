@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 24 — 2026-10-27)
+-   **Status:** versão inicial para revisão (rev. 25 — 2026-10-27)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 25 (2026-10-27):** todo jogo tem dono; empatados com o 4º mais fraco também entram no sorteio do clube inicial; o administrador pode escolher o clube ou pedir o sorteio; clube só de divisão, nunca da fila; divisão sem clubes suficientes fica em aberto.
 -   **rev. 24 (2026-10-27):** link de cadastro de uso único válido por 7 dias; login por e-mail e senha de 8 ou mais caracteres; recuperação de senha pelo administrador por enquanto.
 -   **rev. 23 (2026-10-27):** o segundo amarelo na mesma partida também conta no acumulado de amarelos.
 -   **rev. 22 (2026-10-27):** escalação e tática da máquina pelo plantel; pesos 70/25/5 do vermelho direto; improvisação com elenco curto; o que a rodada grava.
@@ -135,6 +136,17 @@ Um participante sem privilégios de administrador:
   - **Provisório:** o número 4 fica configurável.
   - A essência do Elifoot 98 é começar por baixo, assumir outros times e
     ser demitido.
+- **Definido (rev. 25):**
+  - Todo jogo tem um **dono** (quem o criou), que é também o seu treinador
+    humano.
+  - **Empate no grupo:** se outros clubes empatam com o último do grupo dos
+    mais fracos, todos entram no sorteio. Uma divisão com menos clubes que
+    o grupo sorteia entre todos.
+  - O administrador pode **escolher** o clube ou pedir o **sorteio**, como
+    o participante.
+  - O clube inicial, escolhido ou sorteado, é sempre de uma **divisão**;
+    clube da fila de espera não serve.
+  - O sorteio usa uma semente gravada no jogo, para poder ser reproduzido.
 - Não poderá alterar regras globais da liga, salvo permissão explícita do
   administrador.
 - **Definido:** pode jogar no modo individual.
@@ -282,6 +294,16 @@ decorrem das regras acima.
   sorteado para subir.
 - **Rebaixado para outra divisão** (por exemplo, da 1ª para a 2ª): segue
   normalmente na nova divisão, seja de usuário ou da máquina.
+
+**Em aberto (rev. 25):** divisão configurada sem clubes suficientes. O
+usuário propôs que a liga comece **só com as divisões que dá para
+preencher**, em ordem de prioridade, e que os demais clubes fiquem na fila,
+disputando por sorteio as vagas dos rebaixados. Exemplo: Itália com 1ª de
+20 (3 rebaixados) e 2ª de 20, e só 30 clubes, joga apenas a 1ª; com 50
+clubes, joga as duas. Hoje a validação recusa a liga inteira. Falta
+decidir: como os clubes são distribuídos entre as divisões ativas (pela
+divisão cadastrada ou pela força), se uma divisão pode passar a existir
+numa temporada seguinte e como fica a mensagem do editor.
 
 **Em aberto:** se os clubes na fila de espera podem disputar copas
 (possivelmente por sorteio) ou competições continentais.
@@ -1605,6 +1627,13 @@ começa depois que a anterior estiver testada.
     cadastro de participante, verificação de senha e redefinição pelo
     administrador. Login com sessão e telas entram com o Spring Security,
     junto das telas.
+  - **3d.2 (concluída):** dono do jogo e clube inicial (migração V9): o
+    jogo nasce com dono e com o treinador humano no clube sorteado entre os
+    mais fracos da última divisão (grupo configurável em
+    `managerfoot.jogo.candidatos-clube-inicial`) ou escolhido pelo
+    administrador. A demissão do usuário rebaixado para a fila (§4.1) ainda
+    não é aplicada no fim de temporada, porque o destino dele está em
+    aberto.
 - Banco padrão gerado: 23 jogadores por clube (máximo 25), 5 a 7 estrangeiros (§5.2).
 - Telas Thymeleaf + HTMX:
   - plantel e tática;

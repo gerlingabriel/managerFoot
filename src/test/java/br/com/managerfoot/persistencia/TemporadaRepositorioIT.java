@@ -44,6 +44,9 @@ class TemporadaRepositorioIT {
 	MoldeRepositorio moldes;
 
 	@Autowired
+	ContasRepositorio contas;
+
+	@Autowired
 	JdbcClient jdbc;
 
 	long jogo;
@@ -61,7 +64,7 @@ class TemporadaRepositorioIT {
 				moldes.adicionarJogadores(clube.id(), plantel());
 			}
 		}
-		jogo = jogos.criarJogo(pais);
+		jogo = jogos.criarJogoComClubeSorteado(pais, LigaDeTeste.participante(contas).id(), 1);
 	}
 
 	@Test

@@ -43,13 +43,16 @@ class FimDeTemporadaRepositorioIT {
 	MoldeRepositorio moldes;
 
 	@Autowired
+	ContasRepositorio contas;
+
+	@Autowired
 	JdbcClient jdbc;
 
 	long jogo;
 
 	@BeforeEach
 	void criaJogoComTemporada() {
-		jogo = LigaDeTeste.criarJogo(moldes, jogos);
+		jogo = LigaDeTeste.criarJogo(moldes, jogos, contas);
 		temporadas.iniciarPrimeiraTemporada(jogo, 2026);
 	}
 

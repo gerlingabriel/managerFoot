@@ -3,8 +3,10 @@ package br.com.managerfoot.persistencia;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.SplittableRandom;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 
+import br.com.managerfoot.contas.Usuario;
 import br.com.managerfoot.dominio.Clube;
 import br.com.managerfoot.dominio.Jogador;
 import br.com.managerfoot.dominio.Posicao;
@@ -15,14 +17,17 @@ import br.com.managerfoot.temporada.Divisao;
 /** Molde jogável para testes de integração: liga com planteis completos e um jogo criado dele. */
 final class LigaDeTeste {
 
+	static final String SENHA = "senha-forte-1";
+	private static final AtomicInteger SEQUENCIA = new AtomicInteger();
+
 	private LigaDeTeste() {
 	}
 
 	/**
 	 * Cria no molde uma liga com Série A de 16, Série B de 15 (número ímpar: há folga) e fila de 2,
-	 * todos com o elenco padrão de 23, e devolve o id do jogo criado dela.
+	 * todos com o elenco padrão de 23, e devolve o id do jogo criado dela, com dono participante.
 	 */
-	static long criarJogo(MoldeRepositorio moldes, JogoRepositorio jogos) {
+	static long criarJogo(MoldeRepositorio moldes, JogoRepositorio jogos, ContasRepositorio contas) {
 		long pais = moldes.criarPais(moldes.criarMolde("Padrão"), "BRA", "Brasil");
 		ConfiguracaoLiga liga = moldes.criarLiga(pais, new ConfiguracaoLiga("Nacional",
 				List.of(new Divisao("Série A", 1, 50, 0, 2, clubes("A", 16, 35)),
@@ -31,7 +36,21 @@ final class LigaDeTeste {
 		SplittableRandom aleatorio = new SplittableRandom(11);
 		liga.divisoes().forEach(d -> d.clubes().forEach(c -> moldes.adicionarJogadores(c.id(), plantel(c, aleatorio))));
 		liga.filaDeEspera().forEach(c -> moldes.adicionarJogadores(c.id(), plantel(c, aleatorio)));
-		return jogos.criarJogo(pais);
+		return jogos.criarJogoComClubeSorteado(pais, participante(contas).id(), 1);
+	}
+
+	static Usuario administrador(ContasRepositorio contas) {
+		return contas.criarAdministrador(email("admin"), "Admin", SENHA);
+	}
+
+	/** Participante cadastrado por um link de um administrador novo. */
+	static Usuario participante(ContasRepositorio contas) {
+		String token = contas.gerarLinkCadastro(administrador(contas).id());
+		return contas.cadastrar(token, email("participante"), "Participante", SENHA);
+	}
+
+	private static String email(String prefixo) {
+		return prefixo + "-liga-" + SEQUENCIA.incrementAndGet() + "-" + System.nanoTime() + "@exemplo.com";
 	}
 
 	private static List<Clube> clubes(String prefixo, int quantidade, int forca) {
