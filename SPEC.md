@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 18 (2026-10-27):** sorte/azar por divisão e oculto; bônus de artilharia como asterisco temporário, 15 por divisão; regras do asterisco; calendário por ordem e finais depois da liga.
 -   **rev. 17 (2026-10-27):** prêmio de artilharia dividido no empate; calendário do clube; elenco padrão de 23; sorte/azar da temporada; bônus de artilharia; efeito do asterisco (detalhes em aberto).
 -   **rev. 16 (2026-10-27):** histórico de gols do jogador e artilheiros; divisão sem usuário sempre rápida; modelos de escudo; telas aprovadas no modelo (§10.5).
 -   **rev. 15 (2026-10-27):** moral com retorno leve; clube inicial sorteado entre os 4 mais fracos da última divisão; divisões exibidas em sequência.
@@ -361,8 +362,17 @@ rankings de artilheiros e o histórico de cartões de cada jogador (§7.4).
   que recebem um bônus na finalização, válido só naquela temporada.
 - Podem ser sorteados: meias e atacantes; defensores **somente com
   asterisco**. Goleiros não.
-- **Em aberto:** abrangência dos 15 (por divisão, por país ou no jogo
-  todo), forma do sorteio, tamanho do bônus e se o bônus é visível.
+- **Definido (rev. 18):**
+  - São **15 jogadores por divisão**.
+  - Sorteio com peso: jogador com asterisco tem **peso 2**; os demais,
+    peso 1.
+  - O bônus é um **asterisco temporário**: o jogador sem asterisco passa a
+    ter asterisco durante a temporada e o perde no fim, se não for
+    sorteado de novo.
+  - O asterisco temporário tem todos os efeitos do asterisco (§5.3),
+    inclusive contar no limite de 3 em campo.
+- **Em aberto:** o que ganha o jogador que **já tem** asterisco quando é
+  sorteado (ver conflito registrado em §14).
 
 O temperamento pode assumir:
 - Calmo.
@@ -394,9 +404,17 @@ torne uma vantagem desproporcional.
 - Defensor, meia ou atacante com asterisco tem **mais chance de gol nas
   finalizações**.
 - Goleiro com asterisco tem **mais chance de defender pênaltis**.
-- **Em aberto:** o tamanho de cada efeito, se o asterisco também aumenta a
-  chance de ser escolhido finalizador e a penalidade por escalar mais de
-  três.
+- **Definido (rev. 18):**
+  - Goleiro com asterisco: a conversão dos pênaltis contra ele cai de 75%
+    para **65%**.
+  - Jogador de linha com asterisco também tem **mais chance de ser
+    escolhido finalizador**.
+  - Até 3 asteriscos em campo, sem penalidade. **Mais de 3** gera uma
+    penalidade que deve quase equilibrar os bônus dos asteriscos extras.
+- **Provisório:** jogador de linha com asterisco tem cerca de **15% a mais**
+  de chance de gol por finalização.
+- **Em aberto:** o peso na escolha do finalizador, se o bônus de conversão
+  vale no pênalti e a forma e o tamanho da penalidade acima de 3.
 
 ### 5.3.1 Sorte e azar da temporada
 
@@ -408,10 +426,15 @@ torne uma vantagem desproporcional.
   forte para o benefício.
 - Beneficiado: **mais chances de gol** por partida. Prejudicado: **menos
   domínio (posse de bola)**.
-- Efeito pequeno: cerca de **5% a mais de vitórias** para o beneficiado e
-  **5% a mais de derrotas** para o prejudicado, a confirmar por simulação.
-- **Em aberto:** abrangência (por divisão, por país ou no jogo todo), se
-  clubes de usuários entram no sorteio e se o sorteio é visível.
+- Efeito pequeno: cerca de **5 pontos percentuais a mais de vitórias**
+  para o beneficiado (por exemplo, de 45% para 50% contra um adversário de
+  mesma força) e **5 pontos percentuais a mais de derrotas** para o
+  prejudicado, a confirmar por simulação.
+- **Definido (rev. 18):**
+  - O sorteio é **por divisão**: cada divisão tem um beneficiado e um
+    prejudicado.
+  - **Qualquer clube** pode ser sorteado, inclusive clubes de usuários.
+  - O sorteio é **oculto**: ninguém vê quem foi sorteado.
 
 ### 5.4 Treinadores e demissões
 
@@ -886,6 +909,15 @@ continentais e Mundial):**
   de fora. Se houver mais de uma com a mesma força, a excluída é
   sorteada.
 
+**Definido (rev. 18) — ordem dos jogos:**
+- O calendário é só uma **ordem** de jogos, sem datas. Não existe fadiga.
+- As **finais** da copa nacional e da copa continental são disputadas
+  **depois do último jogo da liga**, em partida única.
+- O **Mundial de Clubes** é disputado depois da liga e depois dessas
+  finais.
+- **Em aberto:** se a copa começa junto com a liga e como as rodadas de
+  copa se intercalam com as da liga.
+
 **Em aberto:**
 - No ida e volta, se existe critério de gol fora de casa antes da
   prorrogação. (Não foi mencionado; hipótese: não existe.)
@@ -1188,7 +1220,10 @@ da mesma divisão seguem na mesma tela.
   rebaixados marcados.
 - **Definido (rev. 17):** ao clicar num clube da classificação, abre o
   **calendário do clube** com os jogos e resultados, sem detalhes dos
-  gols. **Em aberto:** se os jogos futuros também aparecem.
+  gols.
+- **Definido (rev. 18):** o calendário mostra os jogos que já existem. Os
+  da liga existem desde o início da temporada. Os de copa, continentais e
+  Mundial aparecem conforme os confrontos são criados (§8.2).
 - Contratos, finanças, estádio, copas e competições continentais ganham
   telas próprias nas etapas em que forem implementados, também com modelo
   para aprovação antes.
@@ -1417,8 +1452,14 @@ Novas questões abertas na rev. 2:
 - Serviço de e-mail (§3.4).
 - Moeda por clube ou liga (§9.1.1).
 - Detalhes das finais únicas (§8.2).
-- Distribuição de posições no elenco (§5.2).
 - Lista de países equiparados a nacionais (§8.4).
+
+Conflito registrado na rev. 18 (aguarda decisão do usuário):
+- Bônus de artilharia × asterisco (§5.2). Uma resposta diz que o bônus e o
+  asterisco **se somam**; outra diz que, para quem já tem asterisco, o
+  bônus **não faz nada**, pois o bônus é virar asterisco. Além disso,
+  defensores só podem ser sorteados se já tiverem asterisco, então, na
+  segunda leitura, o sorteio nunca beneficiaria um defensor.
 
 ## 15. Plano de implementação
 
