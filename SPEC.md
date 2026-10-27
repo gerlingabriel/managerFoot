@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 15 — 2026-10-27)
+-   **Status:** versão inicial para revisão (rev. 20 — 2026-10-27)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 20 (2026-10-27):** save em JSON versionado; banco com ligas de vários países, só a do país escolhido é jogada; molde editável copiado para cada jogo.
 -   **rev. 19 (2026-10-27):** números do asterisco; bônus de artilharia soma com o asterisco e vale para qualquer defensor; conflito resolvido.
 -   **rev. 18 (2026-10-27):** sorte/azar por divisão e oculto; bônus de artilharia como asterisco temporário, 15 por divisão; regras do asterisco; calendário por ordem e finais depois da liga.
 -   **rev. 17 (2026-10-27):** prêmio de artilharia dividido no empate; calendário do clube; elenco padrão de 23; sorte/azar da temporada; bônus de artilharia; efeito do asterisco (detalhes em aberto).
@@ -161,6 +162,18 @@ adicionais e como os arquivos/configurações são compartilhados.
 - O usuário pode **importar** um arquivo com suas modificações. A importação
   deve ser validada antes de uso (§7 do CLAUDE.md).
 
+**Definido (rev. 20) — vários países:**
+- O banco padrão traz as ligas dos **principais países** (Brasil, Argentina,
+  Colômbia e outros), com nomes aleatórios. A lista de países e seus
+  formatos seguem a pendência da §4.1.
+- A pessoa pode **criar ou alterar** países, ligas, divisões e clubes no
+  editor.
+- Quem joga escolhe **um país**. As ligas dos outros países **não são
+  jogadas**; seus clubes servem para copas continentais e Mundial
+  (§8.3.3).
+- O banco editável é um **molde**: ao iniciar um jogo, o servidor faz uma
+  cópia, e o jogo evolui sem alterar o molde (`docs/decisions/0006`).
+
 **Em aberto:**
 - Formato do arquivo de importação/exportação. **Proposta:** JSON com
   versão de formato, para permitir migração futura.
@@ -176,9 +189,10 @@ adicionais e como os arquivos/configurações são compartilhados.
 - No multiplayer, o estado oficial permanece no servidor durante a sessão
   (§6 do CLAUDE.md).
 
+**Definido (rev. 20):** o arquivo de save é **JSON com número de versão do
+formato**, para permitir migração de saves antigos.
+
 **Em aberto:**
-- Formato do arquivo de save. Proposta: o mesmo JSON versionado da
-  importação/exportação.
 - Se um save alterado manualmente é recusado ou aceito após validação.
 
 ### 3.3 Sala multiplayer
@@ -1511,6 +1525,8 @@ começa depois que a anterior estiver testada.
   entraram a sorte e o azar da temporada, os efeitos do asterisco e o
   sorteio do bônus de artilharia.
 - Migrações e repositórios para o estado da temporada.
+  - **3b.1 (concluída):** molde com países, liga nacional, divisões e
+    clubes com escudo (migração V2, `docs/decisions/0006`).
 - Avanço de rodada idempotente.
 - Script de administrador, link de cadastro e papéis (§3.4).
 - Banco padrão gerado: 23 jogadores por clube (máximo 25), 5 a 7 estrangeiros (§5.2).
