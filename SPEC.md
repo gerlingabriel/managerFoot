@@ -1551,7 +1551,10 @@ começa depois que a anterior estiver testada.
   - **3c.1 (concluída):** criar o jogo copiando a liga e os planteis do
     país escolhido no molde, depois de validar a liga (migração V5). Os
     outros países entram na Etapa 6; o jogo fica sem dono até as contas.
-  - **3c.2:** temporada e calendário gravados.
+  - **3c.2 (concluída):** temporada e sorteios do início gravados (migração
+    V6): calendário, sorte e azar por divisão e bônus de artilharia, todos
+    de uma semente, que também é a do desempate da classificação. Por
+    enquanto só a 1ª temporada é iniciada.
   - **3c.3:** avanço de rodada que nunca processa a mesma rodada duas
     vezes, com gols e semente.
   - **3c.4:** fim de temporada (promoção e rebaixamento) gravado.
