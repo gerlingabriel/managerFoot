@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 10 — 2026-10-27)
+-   **Status:** versão inicial para revisão (rev. 11 — 2026-10-27)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 11 (2026-10-27):** calendário com returno espelhado e mando alternado.
 -   **rev. 10 (2026-10-27):** banco de 7 reservas, substituições com mudança de formação e regra da máquina.
 -   **rev. 9 (2026-10-26):** equilíbrio entre formações, efeito do temperamento reduzido, piso de zebra até 35 pontos, calibração concluída.
 -   **rev. 8 (2026-10-26):** caixa de substituição na expulsão; metas de zebra com piso de 1%.
@@ -212,6 +213,16 @@ clubes necessários = Σ (clubes de cada divisão) + rebaixados da última divis
 
 **Pendência:** pesquisar e registrar esses formatos, com fonte e data, ao
 montar o banco padrão. Não preencher de memória.
+
+**Definido (rev. 11) — consistência exigida na validação:** estas regras
+decorrem das regras acima.
+- Os rebaixados de uma divisão são iguais aos promovidos da divisão
+  imediatamente abaixo. Assim, as divisões mantêm o tamanho.
+- A divisão principal não tem promovidos.
+- Promovidos + rebaixados de uma divisão não passam do total de clubes
+  dela.
+- As prioridades são 1, 2, 3..., sem repetir nem pular.
+- Um clube aparece uma única vez, em uma divisão ou na fila de espera.
 
 **Em aberto:** se os clubes na fila de espera podem disputar copas ou
 competições continentais.
@@ -692,6 +703,19 @@ os cartões de um time todo calmo (antes, 2,8 vezes).
 
 -   **Definido:** o calendário é obrigatoriamente em **turno e returno**,
     contemplando todos os clubes da divisão.
+-   **Definido (rev. 11):**
+    -   O returno **repete a ordem do turno com o mando invertido**, como no
+        Brasileirão. Isso vale para qualquer liga.
+    -   Cada par de clubes joga uma vez em cada casa. Com N clubes, cada
+        clube faz N−1 jogos em casa e N−1 fora (20 clubes: 19 e 19; 18
+        clubes: 17 e 17).
+    -   O mando alterna rodada a rodada sempre que possível.
+        **Nota técnica:** a alternância perfeita para todos é
+        matematicamente impossível em pontos corridos. Usa-se o método
+        clássico de rodízio (tabela de Berger), que minimiza as sequências
+        de dois jogos seguidos no mesmo mando.
+    -   Com número ímpar de clubes (15, 17 ou 19), um clube folga a cada
+        rodada.
 -   **Definido:** vitória vale **3 pontos**, empate **1** e derrota **0**.
 -   **Definido — desempate na classificação**, nesta ordem:
     1.  Pontos.
