@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 21 — 2026-10-27)
+-   **Status:** versão inicial para revisão (rev. 22 — 2026-10-27)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 22 (2026-10-27):** escalação e tática da máquina pelo plantel; pesos 70/25/5 do vermelho direto; improvisação com elenco curto; o que a rodada grava.
 -   **rev. 21 (2026-10-27):** nacionalidade do jogador pode ser qualquer país do mundo; bandeira no plantel para estrangeiros, atenuada quando o jogador não conta como estrangeiro.
 -   **rev. 20 (2026-10-27):** save em JSON versionado; banco com ligas de vários países, só a do país escolhido é jogada; molde editável copiado para cada jogo.
 -   **rev. 19 (2026-10-27):** números do asterisco; bônus de artilharia soma com o asterisco e vale para qualquer defensor; conflito resolvido.
@@ -754,8 +755,9 @@ com pesos 1/2/4/7/10 (`docs/referencia-elifoot98.md` §4).
   ou competição continental.
 - Depois da suspensão por 5 amarelos, o contador **volta a zero**.
 
-**Provisório:** os pesos do sorteio de 1 a 3 jogos, configuráveis e
-validados por simulação.
+**Definido (rev. 22), pesos provisórios:** vermelho direto suspende **1
+jogo em 70%** dos casos, **2 jogos em 25%** e **3 jogos em 5%**.
+Configuráveis e validados por simulação.
 
 ### 7.4.1 Substituições
 
@@ -780,6 +782,19 @@ validados por simulação.
   jogador de linha e o defensor volta para a defesa.
 - **Máquina:** só substitui em caso de lesão ou de goleiro expulso. Não
   avalia o desempenho dos jogadores.
+- **Definido (rev. 22) — escalação da máquina:** todo clube sem usuário é
+  escalado pela máquina, com a tática de acordo com o plantel.
+  - Entre as 8 formações, escolhe a de **maior soma de força** dos
+    titulares, usando os melhores jogadores disponíveis de cada posição
+    (suspensos ficam de fora).
+  - No máximo **3 asteriscos** em campo, para não sofrer a penalidade; o
+    asterisco temporário do bônus de artilharia conta.
+  - Banco de 7: um goleiro reserva, se houver, e os mais fortes restantes.
+  - **Elenco curto:** se nenhuma formação puder ser completada, a máquina
+    improvisa. Sem goleiro, o defensor mais fraco (ou, sem defensor, o
+    jogador de linha mais fraco) vai para o gol com metade da força, como
+    no goleiro expulso. Faltando jogador de linha, o mais forte que sobrou
+    de outra posição completa o setor.
   - **Provisório:** com goleiro expulso, o goleiro reserva entra no lugar
     do atacante mais fraco; sem atacantes, sai o meia mais fraco.
   - Treinadores mais inteligentes ficam para depois.
@@ -1556,7 +1571,11 @@ começa depois que a anterior estiver testada.
     de uma semente, que também é a do desempate da classificação. Por
     enquanto só a 1ª temporada é iniciada.
   - **3c.3:** avanço de rodada que nunca processa a mesma rodada duas
-    vezes, com gols e semente.
+    vezes, com semente. **Definido (rev. 22):** a rodada grava placares e
+    gols no calendário, cartões amarelos e vermelhos, suspensões e moral; a
+    classificação é recalculada dos resultados. Dividida em 3c.3a
+    (escalação da máquina e disciplina, só domínio) e 3c.3b (gravação e
+    avanço).
   - **3c.4:** fim de temporada (promoção e rebaixamento) gravado.
 - Avanço de rodada idempotente.
 - Script de administrador, link de cadastro e papéis (§3.4).
