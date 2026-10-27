@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 16 (2026-10-27):** histórico de gols do jogador e artilheiros; divisão sem usuário sempre rápida; modelos de escudo; telas aprovadas no modelo (§10.5).
 -   **rev. 15 (2026-10-27):** moral com retorno leve; clube inicial sorteado entre os 4 mais fracos da última divisão; divisões exibidas em sequência.
 -   **rev. 14 (2026-10-27):** mesmo motor em modo rápido; fluxo e ordem de processamento da rodada; referência da tela de jogos.
 -   **rev. 13 (2026-10-27):** fila de espera, demissão do usuário rebaixado para fora da liga, divisões sem usuário com resultado instantâneo.
@@ -321,6 +322,21 @@ representado por asterisco. - Comportamento/temperamento.
 
 Nesta versão, **não haverá idade dos jogadores**. O jogo manterá
 rankings de artilheiros e o histórico de cartões de cada jogador (§7.4).
+
+**Definido (rev. 16) — gols do jogador:**
+- Cada jogador guarda os **gols na temporada** e os **gols na carreira**.
+- Contam os gols de **todas as competições** (liga, copas, continentais,
+  Mundial), inclusive gols de pênalti durante a partida.
+- **Não contam** os gols da disputa de pênaltis.
+- Todos os jogadores começam com **zero** gols na carreira; o histórico
+  cresce durante o jogo salvo.
+- Os gols na temporada zeram no início de cada temporada; os da carreira,
+  nunca.
+- **Artilheiros da temporada:** ranking pela soma dos gols de todas as
+  competições da temporada. Cada temporada tem sua lista, usada para a
+  premiação do artilheiro (§8.1).
+- **Artilheiros de todos os tempos:** ranking pelos gols na carreira, desde
+  o início do jogo salvo.
 
 **Definido — elenco gerado:**
 - Cada clube tem **25 jogadores** cadastrados.
@@ -1095,9 +1111,23 @@ configurações.
 enviada pelo usuário. Descrição registrada em `docs/referencia-tela-jogos.md`.
 A imagem não fica no repositório.
 
-A tela deve mostrar **todos os jogos da divisão simultaneamente**. Enquanto
-a partida do usuário acontece, as outras seguem na mesma tela. A ordem das
-partidas pode seguir a classificação da liga.
+A tela mostra **todos os jogos de uma divisão simultaneamente**, uma
+divisão por vez (§11.2). Enquanto a partida do usuário acontece, as outras
+da mesma divisão seguem na mesma tela.
+
+**Definido (rev. 16):**
+- O topo da tela lista as divisões da rodada, na ordem em que jogam, com o
+  estado de cada uma (terminada, jogando, aguardando).
+- O controle de velocidade só aparece quando a divisão em jogo tem clube
+  de usuário. Divisão sem usuário roda sempre rápido, sem aviso na tela.
+- Expulsão: marca vermelha ao lado do nome do clube. Jogo do usuário em
+  destaque.
+- Cada clube tem um **escudo simples**: um modelo e duas cores. Modelos:
+  metade vertical, metade horizontal, listras verticais, listras
+  horizontais, corte diagonal, faixa diagonal, faixa horizontal, quartos,
+  cruz e liso com borda.
+- **Em aberto:** se o usuário pode rever os resultados de uma divisão já
+  terminada durante a rodada.
 
 ### 10.3 Plantel e gestão
 
@@ -1109,6 +1139,19 @@ partidas pode seguir a classificação da liga.
     nas condições permitidas.
 -   Não permitir ações de gestão que pertençam a outro participante.
 
+**Definido (rev. 16) — tela do plantel:**
+- Abas: Plantel, Classificação, Artilheiros da temporada e Artilheiros de
+  todos os tempos.
+- Colunas do elenco: posição, nome (com ★), força, temperamento, amarelos
+  e gols da temporada. Elenco separado em titulares, banco e fora do banco.
+- Ao clicar no jogador abre a ficha, com gols na temporada e gols na
+  carreira.
+- Classificação por divisão, com o clube do usuário destacado e os
+  rebaixados marcados.
+- Contratos, finanças, estádio, copas e competições continentais ganham
+  telas próprias nas etapas em que forem implementados, também com modelo
+  para aprovação antes.
+
 ### 10.4 Configurações
 
 **Definido — velocidade das partidas:** no modo individual, o próprio
@@ -1116,10 +1159,16 @@ usuário escolhe. No jogo em rede, somente o administrador define, e ela
 vale para todos.
 
 O jogo deve oferecer: - Velocidade das partidas. - Som dos gols
-ligado/desligado. - Modo de acompanhamento de partidas sem usuários:
-visual minuto a minuto ou resultado/processamento rápido. - Sorteio de
+ligado/desligado. - Sorteio de
 copa passo a passo ou rápido. - Configuração do estádio. - Opções de
 gestão e exibição compatíveis com o modo individual ou multiplayer.
+
+### 10.5 Modelos de tela aprovados
+
+**Definido (rev. 16):** os modelos de jogos da rodada, escudos, plantel,
+ficha do jogador, classificação e artilheiros foram aprovados pelo usuário
+no artefato de design (privado, versão 12). Eles orientam a implementação
+em Thymeleaf + HTMX.
 
 ## 11. Relógio da partida e sincronização multiplayer
 
@@ -1152,13 +1201,15 @@ sobrepostas.
 
 **Definido (rev. 13):** divisões sem usuário não usam a exibição minuto a
 minuto. O resultado sai em instantes.
+Na tela, a divisão sem usuário é exibida sempre em velocidade rápida
+(rev. 16, §10.2); o cálculo continua instantâneo no servidor.
 
 **Definido (rev. 14):**
 - Usa-se o **mesmo motor em modo rápido** (cerca de 0,1 ms por partida;
   uma temporada de 380 jogos leva cerca de 40 ms). Não há motor separado.
 - **Fluxo da rodada:**
   1. Todos os treinadores definem a tática e confirmam.
-  2. Abre-se a tela de jogos da rodada, com todas as divisões (§10.2).
+  2. Abre-se a tela de jogos da rodada, que exibe uma divisão por vez (§10.2).
   3. Ordem de processamento: começa pela divisão de **maior número de
      prioridade** (a mais inferior) e sobe até a 1ª.
      - Divisões **sem usuário** saem instantaneamente, com todos os jogos
@@ -1174,9 +1225,8 @@ minuto. O resultado sai em instantes.
   a 1ª.
 - Quando uma divisão termina, a seguinte começa.
 - Divisão **com usuário:** roda na velocidade configurada.
-- Divisão **sem usuário:** mostra só os resultados, ou roda em velocidade
-  muito rápida, o que for mais rápido e melhor. A escolha final será feita
-  no modelo de tela.
+- Divisão **sem usuário:** roda **sempre rápido**, sem opção de
+  velocidade (decidido no modelo de tela, rev. 16).
 - Ao terminar a 1ª divisão, a tela de jogos fecha e o usuário volta à tela
   do plantel.
 
