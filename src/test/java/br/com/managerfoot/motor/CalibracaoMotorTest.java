@@ -38,6 +38,36 @@ class CalibracaoMotorTest {
 	void zebrasFicamNasFaixasDefinidas() {
 		assertThat(medir(20, 30).pctCasa()).isBetween(15.0, 20.0);
 		assertThat(medir(20, 40).pctCasa()).isBetween(5.0, 10.5);
-		assertThat(medir(10, 45).pctCasa()).isPositive();
+		assertThat(medir(10, 45).pctCasa()).isBetween(1.0, 3.5);
+	}
+
+	@Test
+	void taticaOfensivaFazESofreMaisGolsQueDefensiva() {
+		EstatisticasLote ofensiva = EstatisticasLote.medir(motor, escalacao(Formacao.F_3_4_3, 25, 1),
+				escalacao(Formacao.F_4_4_2, 25, 100), 0, PARTIDAS);
+		EstatisticasLote defensiva = EstatisticasLote.medir(motor, escalacao(Formacao.F_5_4_1, 25, 1),
+				escalacao(Formacao.F_4_4_2, 25, 100), 0, PARTIDAS);
+
+		assertThat(ofensiva.golsCasa).isGreaterThan(defensiva.golsCasa);
+		assertThat(ofensiva.golsFora).isGreaterThan(defensiva.golsFora);
+	}
+
+	@Test
+	void nenhumaFormacaoSeDistanciaDasDemais() {
+		// todas contra todas, ida e volta; diferença máxima de pontos por jogo entre formações
+		Formacao[] fs = Formacao.values();
+		double[] pontos = new double[fs.length];
+		int porConfronto = 400;
+		for (int i = 0; i < fs.length; i++) {
+			for (int j = 0; j < fs.length; j++) {
+				EstatisticasLote e = EstatisticasLote.medir(motor, escalacao(fs[i], 25, 1), escalacao(fs[j], 25, 100), 0,
+						porConfronto);
+				pontos[i] += (3.0 * e.vitoriasCasa + e.empates) / porConfronto;
+				pontos[j] += (3.0 * e.vitoriasFora + e.empates) / porConfronto;
+			}
+		}
+		double max = java.util.Arrays.stream(pontos).max().orElseThrow() / (2 * fs.length);
+		double min = java.util.Arrays.stream(pontos).min().orElseThrow() / (2 * fs.length);
+		assertThat(max - min).isLessThan(0.25);
 	}
 }

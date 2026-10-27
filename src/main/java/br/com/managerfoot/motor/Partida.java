@@ -7,6 +7,7 @@ import java.util.Objects;
 import java.util.random.RandomGenerator;
 
 import br.com.managerfoot.dominio.Escalacao;
+import br.com.managerfoot.dominio.Formacao;
 import br.com.managerfoot.dominio.Jogador;
 import br.com.managerfoot.dominio.Posicao;
 import br.com.managerfoot.dominio.Temperamento;
@@ -17,8 +18,7 @@ import br.com.managerfoot.dominio.Temperamento;
  * <ol>
  * <li>pode haver um pênalti ou uma finalização. Meio contra meio decide qual time tem a jogada (o
  * mandante recebe {@code fatorMando}); o finalizador sai de um setor conforme a formação e, dentro
- * dele, com peso pela força; ataque contra defesa+goleiro e finalizador contra goleiro decidem o
- * gol;</li>
+ * dele, com peso pela força; ataque contra defesa e finalizador contra goleiro decidem o gol;</li>
  * <li>cada time pode receber um cartão, com o infrator sorteado pela roleta de temperamento.</li>
  * </ol>
  * Toda aleatoriedade vem do {@link RandomGenerator} recebido, para a partida ser reproduzível.
@@ -27,6 +27,7 @@ public final class Partida {
 
 	/** Sem jogadores suficientes, o time deixa de receber cartões (proteção técnica, não regra do jogo). */
 	private static final int MINIMO_EM_CAMPO_PARA_CARTAO = 2;
+
 
 	private final ParametrosMotor parametros;
 	private final TimeEmCampo casa;
@@ -75,8 +76,8 @@ public final class Partida {
 	}
 
 	private Lado sortearQuemDomina() {
-		double meioCasa = potencia(casa.soma(Posicao.MEIO_CAMPISTA)) * parametros.fatorMando();
-		double meioFora = potencia(fora.soma(Posicao.MEIO_CAMPISTA));
+		double meioCasa = potencia(forcaSetor(casa, Posicao.MEIO_CAMPISTA)) * parametros.fatorMando();
+		double meioFora = potencia(forcaSetor(fora, Posicao.MEIO_CAMPISTA));
 		if (meioCasa + meioFora == 0) {
 			return aleatorio.nextBoolean() ? Lado.CASA : Lado.FORA;
 		}
@@ -88,8 +89,7 @@ public final class Partida {
 		TimeEmCampo defesa = time(lado.adversario());
 		Jogador finalizador = sortearFinalizador(ataque);
 
-		double pressao = disputa(ataque.soma(Posicao.ATACANTE),
-				defesa.soma(Posicao.DEFENSOR) + defesa.soma(Posicao.GOLEIRO));
+		double pressao = disputa(forcaSetor(ataque, Posicao.ATACANTE), forcaSetor(defesa, Posicao.DEFENSOR));
 		double duelo = disputa(finalizador.forca(), defesa.forcaGoleiro());
 		double antiGoleada = Math.pow(parametros.fatorPorGolMarcado(), gols(lado));
 		double conversao = Math.clamp(parametros.conversaoBase() * pressao * duelo * antiGoleada,
@@ -170,6 +170,28 @@ public final class Partida {
 			.toList();
 		Posicao setor = Sorteio.ponderado(setores, pesos::peso, aleatorio);
 		return Sorteio.ponderado(time.jogadoresNa(setor), Jogador::forca, aleatorio);
+	}
+
+	/**
+	 * Força de um setor: média dos jogadores × referência × (quantidade / referência) ^ expoente.
+	 * Com expoente 1 é a soma simples. O expoente controla quanto um jogador a mais ou a menos no
+	 * setor muda a força; o setor com a quantidade de referência (a do 4-4-2) vale o mesmo em
+	 * qualquer expoente, então o expoente equilibra formações sem mudar a média de gols.
+	 */
+	private double forcaSetor(TimeEmCampo time, Posicao posicao) {
+		int quantidade = time.jogadoresNa(posicao).size();
+		if (quantidade == 0) {
+			return 0;
+		}
+		int referencia = Formacao.F_4_4_2.quantidade(posicao);
+		double expoente = switch (posicao) {
+			case MEIO_CAMPISTA -> parametros.expoenteMeias();
+			case ATACANTE -> parametros.expoenteAtacantes();
+			case DEFENSOR -> parametros.expoenteDefensores();
+			case GOLEIRO -> 1;
+		};
+		double media = time.soma(posicao) / quantidade;
+		return media * referencia * Math.pow((double) quantidade / referencia, expoente);
 	}
 
 	/** Fator em torno de 1: vale 1 quando os lados se equivalem, até 2 quando o primeiro domina. */

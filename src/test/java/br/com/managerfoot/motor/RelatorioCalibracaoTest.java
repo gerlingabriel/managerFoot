@@ -35,6 +35,7 @@ class RelatorioCalibracaoTest {
 		equilibrados();
 		zebras();
 		formacoes();
+		todasContraTodas();
 		temperamento();
 		Files.createDirectories(SAIDA.getParent());
 		Files.writeString(SAIDA, md.toString());
@@ -56,6 +57,8 @@ class RelatorioCalibracaoTest {
 		linha("| fatorMando | " + f(parametros.fatorMando(), 2) + " |");
 		linha("| conversaoBase | " + f(parametros.conversaoBase(), 2) + " |");
 		linha("| sensibilidadeForca | " + f(parametros.sensibilidadeForca(), 2) + " |");
+		linha("| expoentes meias / atacantes / defensores | " + f(parametros.expoenteMeias(), 2) + " / "
+				+ f(parametros.expoenteAtacantes(), 2) + " / " + f(parametros.expoenteDefensores(), 2) + " |");
 		linha("| fatorPorGolMarcado | " + f(parametros.fatorPorGolMarcado(), 2) + " |");
 		linha("| conversaoMinima / Maxima | " + f(parametros.conversaoMinima(), 2) + " / "
 				+ f(parametros.conversaoMaxima(), 2) + " |");
@@ -115,6 +118,41 @@ class RelatorioCalibracaoTest {
 			linha("| " + formacao.rotulo() + " | " + formacao.estilo() + " | " + f(e.porPartida(e.golsCasa), 2) + " | "
 					+ f(e.porPartida(e.golsFora), 2) + " | " + pct(e.pctCasa()) + " | " + pct(e.pctEmpate()) + " | "
 					+ pct(e.pctFora()) + " |");
+		}
+		linha("");
+	}
+
+	/** Cada formação joga em casa e fora contra todas (inclusive ela mesma), força 25 × 25. */
+	private void todasContraTodas() {
+		int porConfronto = 2_000;
+		Formacao[] fs = Formacao.values();
+		double[] pontos = new double[fs.length];
+		int[][] saldo = new int[fs.length][fs.length];
+		for (int i = 0; i < fs.length; i++) {
+			for (int j = 0; j < fs.length; j++) {
+				EstatisticasLote e = EstatisticasLote.medir(motor, escalacao(fs[i], 25, 1), escalacao(fs[j], 25, 100), 0,
+						porConfronto);
+				pontos[i] += (3.0 * e.vitoriasCasa + e.empates) / porConfronto;
+				pontos[j] += (3.0 * e.vitoriasFora + e.empates) / porConfronto;
+				saldo[i][j] += e.vitoriasCasa - e.vitoriasFora;
+				saldo[j][i] += e.vitoriasFora - e.vitoriasCasa;
+			}
+		}
+		linha("## Todas as formações contra todas (força 25 × 25, ida e volta, " + porConfronto + " partidas por jogo)");
+		linha("");
+		linha("Pontos por jogo (vitória 3, empate 1) e contra quantas das outras 7 formações tem saldo positivo de vitórias.");
+		linha("");
+		linha("| Formação | Estilo | Pontos por jogo | Supera |");
+		linha("|---|---|---|---|");
+		for (int i = 0; i < fs.length; i++) {
+			int supera = 0;
+			for (int j = 0; j < fs.length; j++) {
+				if (j != i && saldo[i][j] > 0) {
+					supera++;
+				}
+			}
+			linha("| " + fs[i].rotulo() + " | " + fs[i].estilo() + " | " + f(pontos[i] / (2 * fs.length), 2) + " | "
+					+ supera + " de 7 |");
 		}
 		linha("");
 	}

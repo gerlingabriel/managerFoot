@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 8 — 2026-10-26)
+-   **Status:** versão inicial para revisão (rev. 9 — 2026-10-26)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 9 (2026-10-26):** equilíbrio entre formações, efeito do temperamento reduzido, piso de zebra até 35 pontos, calibração concluída.
 -   **rev. 8 (2026-10-26):** caixa de substituição na expulsão; metas de zebra com piso de 1%.
 -   **rev. 7 (2026-10-26):** efeito da expulsão, goleiro expulso e escolha do batedor de pênalti.
 -   **rev. 6 (2026-10-26):** pesos do finalizador para as 8 formações; finalizador escolhido com peso pela força.
@@ -634,16 +635,31 @@ em casa e formações iguais:
 Por maior que seja a diferença, o fraco **nunca** deve ter 0%. O piso é de
 cerca de **1%**.
 
+**Definido (rev. 9):** o piso de 1% de zebra vale para diferenças de força
+média de **até 35 pontos**. Diferenças maiores não têm meta. O caso 1 × 50
+ficou em cerca de 0,1%, mas não é exigido.
+
 **Resultado da calibração (Etapa 1d):** ver
-`docs/simulacoes/calibracao-motor.md`.
-- As metas de gols, mando, cartões, expulsões, pênaltis e zebras de 10 e 20
-  pontos foram atingidas.
-- **Em aberto:**
-  - 10 × 45: o fraco vence 0,9%, um pouco abaixo de 1%.
-  - 1 × 50: o fraco vence 0%. Os parâmetros sozinhos não atingem o piso
-    nesse caso; seria preciso um mecanismo novo.
-  - Equilíbrio entre formações: a 3-4-3 se sai melhor que a 4-4-2.
-  - Intensidade do efeito do temperamento na frequência de cartões.
+`docs/simulacoes/calibracao-motor.md`. Todas as metas desta seção foram
+atingidas.
+- Gols: 2,18 por jogo.
+- Mando (casa / empate / fora): 45,1% / 29,4% / 25,6%.
+- Amarelos, expulsões e pênaltis: 2,04 / 0,20 / 0,29 por jogo.
+- Zebras: 17,6% / 9,2% / 1,5%.
+
+**Equilíbrio entre formações (rev. 9):**
+- Cada setor tem um expoente de quantidade. A defesa vale mais a cada
+  zagueiro, e meias e atacantes têm retorno decrescente.
+- O goleiro conta só no duelo com o finalizador.
+- No confronto de todas contra todas, os pontos por jogo variam de 1,27
+  (3-6-1) a 1,42 (4-4-2).
+- A 4-4-2 tem leve vantagem sobre todas as outras, por margens pequenas.
+- Ofensivas fazem e sofrem mais gols; defensivas, menos.
+- **Provisório:** reavaliar se essa leve vantagem da 4-4-2 for percebida
+  em jogo.
+
+**Temperamento (rev. 9):** um time todo violento recebe cerca de **1,7 vez**
+os cartões de um time todo calmo (antes, 2,8 vezes).
 
 ## 8. Calendário, temporadas e competições
 

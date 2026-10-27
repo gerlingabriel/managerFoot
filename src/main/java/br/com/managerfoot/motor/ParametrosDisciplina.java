@@ -48,6 +48,6 @@ public record ParametrosDisciplina(double cartoesPorMinuto, double proporcaoVerm
 		pesos.put(Temperamento.NORMAL, 4.0);
 		pesos.put(Temperamento.ANSIOSO, 6.0);
 		pesos.put(Temperamento.VIOLENTO, 8.0);
-		return new ParametrosDisciplina(2.15 / 90 / 2, 0.05, 0.5, pesos);
+		return new ParametrosDisciplina(2.15 / 90 / 2, 0.05, 0.25, pesos);
 	}
 }

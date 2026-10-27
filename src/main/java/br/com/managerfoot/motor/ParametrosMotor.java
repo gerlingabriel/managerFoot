@@ -15,6 +15,10 @@ import br.com.managerfoot.dominio.Formacao;
  * @param fatorMando multiplicador do domínio do mandante (Elifoot 98 usava 7000/6000 ≈ 1,17; recalibrado)
  * @param conversaoBase probabilidade de gol quando ataque × defesa e finalizador × goleiro se equivalem
  * @param sensibilidadeForca expoente aplicado às forças nas disputas; maior = força pesa mais
+ * @param expoenteMeias quanto a quantidade de meias pesa no domínio (1 = soma simples)
+ * @param expoenteAtacantes quanto a quantidade de atacantes pesa no ataque (1 = soma simples)
+ * @param expoenteDefensores quanto a quantidade de defensores pesa na defesa (1 = soma simples).
+ *        Os três expoentes equilibram as formações entre si (SPEC §7.2); ver Partida#forcaSetor
  * @param fatorPorGolMarcado multiplica a conversão do time a cada gol que ele já marcou (anti-goleada)
  * @param conversaoMinima piso da probabilidade de gol, para que o mais fraco sempre tenha chance
  * @param conversaoMaxima teto da probabilidade de gol, para que nenhuma chance seja garantida
@@ -25,7 +29,8 @@ import br.com.managerfoot.dominio.Formacao;
  * @param penalti pênaltis e goleiro improvisado
  */
 public record ParametrosMotor(int minutos, double chancePorMinuto, double fatorMando, double conversaoBase,
-		double sensibilidadeForca, double fatorPorGolMarcado, double conversaoMinima, double conversaoMaxima,
+		double sensibilidadeForca, double expoenteMeias, double expoenteAtacantes, double expoenteDefensores,
+		double fatorPorGolMarcado, double conversaoMinima, double conversaoMaxima,
 		double proporcaoDefesa, double proporcaoTrave, Map<Formacao, PesosFinalizador> pesosFinalizador,
 		ParametrosDisciplina disciplina, ParametrosPenalti penalti) {
 
@@ -48,8 +53,10 @@ public record ParametrosMotor(int minutos, double chancePorMinuto, double fatorM
 		if (minutos <= 0) {
 			throw new IllegalArgumentException("minutos deve ser positivo, mas foi " + minutos);
 		}
-		if (fatorMando <= 0 || sensibilidadeForca <= 0 || fatorPorGolMarcado <= 0) {
-			throw new IllegalArgumentException("fatorMando, sensibilidadeForca e fatorPorGolMarcado devem ser positivos");
+		if (fatorMando <= 0 || sensibilidadeForca <= 0 || expoenteMeias <= 0 || expoenteAtacantes <= 0
+				|| expoenteDefensores <= 0 || fatorPorGolMarcado <= 0) {
+			throw new IllegalArgumentException(
+					"fatorMando, sensibilidadeForca, expoentes dos setores e fatorPorGolMarcado devem ser positivos");
 		}
 		if (conversaoMinima > conversaoMaxima) {
 			throw new IllegalArgumentException("conversaoMinima não pode ser maior que conversaoMaxima");
@@ -70,7 +77,7 @@ public record ParametrosMotor(int minutos, double chancePorMinuto, double fatorM
 		pesos.put(Formacao.F_4_5_1, new PesosFinalizador(43, 51, 5.99, 0.01));
 		pesos.put(Formacao.F_3_6_1, new PesosFinalizador(40, 55, 4.99, 0.01));
 		// calibrado na Etapa 1d: docs/simulacoes/calibracao-motor.md
-		return new ParametrosMotor(90, 0.15, 1.45, 0.24, 0.85, 0.85, 0.09, 0.6, 0.5, 0.1, pesos,
+		return new ParametrosMotor(90, 0.15, 1.45, 0.23, 0.95, 0.5, 0.55, 1.25, 0.85, 0.10, 0.35, 0.5, 0.1, pesos,
 				ParametrosDisciplina.padrao(), ParametrosPenalti.padrao());
 	}
 
