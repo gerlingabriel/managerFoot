@@ -4,6 +4,7 @@ import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.SplittableRandom;
 
@@ -28,13 +29,15 @@ public class JogosDoTreinadorRepositorio {
 	private final JdbcClient jdbc;
 	private final JogoRepositorio jogos;
 	private final TemporadaRepositorio temporadas;
+	private final CaixaRepositorio caixas;
 	private final int candidatosClubeInicial;
 
 	public JogosDoTreinadorRepositorio(JdbcClient jdbc, JogoRepositorio jogos, TemporadaRepositorio temporadas,
-			@Value("${managerfoot.jogo.candidatos-clube-inicial}") int candidatosClubeInicial) {
+			CaixaRepositorio caixas, @Value("${managerfoot.jogo.candidatos-clube-inicial}") int candidatosClubeInicial) {
 		this.jdbc = jdbc;
 		this.jogos = jogos;
 		this.temporadas = temporadas;
+		this.caixas = caixas;
 		this.candidatosClubeInicial = candidatosClubeInicial;
 	}
 
@@ -56,6 +59,7 @@ public class JogosDoTreinadorRepositorio {
 		List<Clube> candidatos = ClubeInicial.candidatos(jogos.carregarLiga(jogoId).divisoes().getLast(),
 				candidatosClubeInicial);
 		temporadas.iniciarPrimeiraTemporada(jogoId, new SplittableRandom(semente).nextLong());
+		caixas.pagarPatrocinio(jogoId, Map.of());
 		return new NovoJogo(jogoId, candidatos);
 	}
 
@@ -69,6 +73,7 @@ public class JogosDoTreinadorRepositorio {
 	public long criarComEscolha(long paisMoldeId, long administradorId, long semente, long clubeMoldeId) {
 		long jogoId = jogos.criarJogoComClubeEscolhido(paisMoldeId, administradorId, semente, clubeMoldeId);
 		temporadas.iniciarPrimeiraTemporada(jogoId, new SplittableRandom(semente).nextLong());
+		caixas.pagarPatrocinio(jogoId, Map.of());
 		return jogoId;
 	}
 

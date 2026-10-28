@@ -19,7 +19,11 @@ import br.com.managerfoot.dominio.Moral;
 import br.com.managerfoot.economia.CaixaDaRodada;
 import br.com.managerfoot.economia.Lancamento;
 import br.com.managerfoot.economia.Moeda;
+import br.com.managerfoot.economia.Premiacao;
 import br.com.managerfoot.economia.TipoLancamento;
+import br.com.managerfoot.temporada.Classificacao;
+import br.com.managerfoot.temporada.ConfiguracaoLiga;
+import br.com.managerfoot.temporada.Divisao;
 import br.com.managerfoot.temporada.Jogo;
 import br.com.managerfoot.temporada.ProcessamentoRodada;
 import br.com.managerfoot.temporada.Rodada;
@@ -39,6 +43,7 @@ public class CaixaRepositorio {
 	private final JogoRepositorio jogos;
 	private final TemporadaRepositorio temporadas;
 	private final CaixaDaRodada caixa = CaixaDaRodada.padrao();
+	private final Premiacao premiacao = Premiacao.padrao();
 
 	public CaixaRepositorio(JdbcClient jdbc, JogoRepositorio jogos, TemporadaRepositorio temporadas) {
 		this.jdbc = jdbc;
@@ -122,7 +127,11 @@ public class CaixaRepositorio {
 			.single();
 
 		Map<Integer, Map<TipoLancamento, Long>> porRodada = new TreeMap<>();
-		jdbc.sql("SELECT rodada, tipo, valor FROM jogo_lancamento WHERE clube_id = :clube AND temporada_id = :temporada")
+		// o extrato mostra o caixa das rodadas; patrocínio e prêmio entram no saldo do início
+		jdbc.sql("""
+				SELECT rodada, tipo, valor FROM jogo_lancamento
+				WHERE clube_id = :clube AND temporada_id = :temporada AND rodada >= 1
+				  AND tipo IN ('BILHETERIA', 'CUSTO_DO_JOGO', 'DESLOCAMENTO', 'SALARIOS')""")
 			.param("clube", clube)
 			.param("temporada", situacao.temporadaId())
 			.query(rs -> {
@@ -189,6 +198,70 @@ public class CaixaRepositorio {
 				}
 			}
 		}
+	}
+
+	/**
+	 * Patrocínio da temporada atual (SPEC §9.6, rev. 45 e 46), lançado na rodada 0 para os clubes das
+	 * divisões, de uma vez. Na primeira temporada todos da divisão recebem o mesmo; nas seguintes, pela
+	 * posição na divisão em que o clube jogou; quem veio da fila recebe como o último da divisão em que
+	 * entra. Abre antes o caixa de quem ainda não tem.
+	 *
+	 * @param anterior classificação final da temporada anterior por prioridade da divisão; vazia na
+	 *        primeira temporada
+	 */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void pagarPatrocinio(long jogoId, Map<Integer, Classificacao> anterior) {
+		abrirCaixas(jogoId, jogos.carregarPlanteis(jogoId));
+		long temporadaId = temporadaAtual(jogoId);
+		ConfiguracaoLiga liga = jogos.carregarLiga(jogoId);
+		Map<Integer, Integer> limites = new HashMap<>();
+		liga.divisoes().forEach(d -> limites.put(d.prioridade(), d.limiteForca()));
+		for (Divisao divisao : liga.divisoes()) {
+			int clubes = divisao.clubes().size();
+			for (Clube clube : divisao.clubes()) {
+				long valor = anterior.isEmpty() ? premiacao.patrocinioInicial(clubes, divisao.limiteForca())
+						: anterior.entrySet().stream()
+							.filter(e -> e.getValue().linhas().stream().anyMatch(l -> l.clube().id() == clube.id()))
+							.findFirst()
+							.map(e -> premiacao.patrocinio(e.getValue().posicao(clube), e.getValue().linhas().size(),
+									limites.get(e.getKey())))
+							.orElse(premiacao.patrocinio(clubes, clubes, divisao.limiteForca()));
+				lancar(temporadaId, 0, clube.id(), List.of(new Lancamento(TipoLancamento.PATROCINIO, valor)));
+			}
+		}
+	}
+
+	/**
+	 * Prêmio da liga da temporada atual, que está terminando (SPEC §8.1, rev. 45 e 46): 1º, 2º e 3º de
+	 * cada divisão, lançado na última rodada.
+	 *
+	 * @param finais classificação final por prioridade da divisão
+	 */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void pagarPremios(long jogoId, Map<Integer, Classificacao> finais) {
+		long temporadaId = temporadaAtual(jogoId);
+		int ultimaRodada = jdbc.sql("SELECT rodadas_processadas FROM jogo_temporada WHERE id = :temporada")
+			.param("temporada", temporadaId)
+			.query(Integer.class)
+			.single();
+		Map<Integer, Integer> limites = new HashMap<>();
+		jogos.carregarLiga(jogoId).divisoes().forEach(d -> limites.put(d.prioridade(), d.limiteForca()));
+		finais.forEach((prioridade, classificacao) -> {
+			for (int posicao = 1; posicao <= classificacao.linhas().size(); posicao++) {
+				long valor = premiacao.premio(posicao, limites.get(prioridade));
+				if (valor > 0) {
+					lancar(temporadaId, ultimaRodada, classificacao.linhas().get(posicao - 1).clube().id(),
+							List.of(new Lancamento(TipoLancamento.PREMIO, valor)));
+				}
+			}
+		});
+	}
+
+	private long temporadaAtual(long jogoId) {
+		return jdbc.sql("SELECT id FROM jogo_temporada WHERE jogo_id = :jogo ORDER BY numero DESC LIMIT 1")
+			.param("jogo", jogoId)
+			.query(Long.class)
+			.single();
 	}
 
 	/** Capacidade inicial do estádio e saldo inicial dos clubes que ainda não têm caixa. */

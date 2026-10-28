@@ -29,8 +29,12 @@
   cálculo. Ela entra com o pedido de aumento, quando a força puder mudar;
   nessa hora, nulo valerá "salário da força" para os jogos já salvos.
 - Patrocínio, prêmio, compras e vendas serão **lançamentos do extrato**
-  (`jogo_lancamento`), com chave única que impede pagar duas vezes; a
-  migração deles vem na parte 2.
+  (`jogo_lancamento`), com chave única que impede pagar duas vezes. V18
+  (parte 2): o patrocínio usa a **rodada 0** da temporada (o início) e o
+  prêmio a última rodada processada. São lançados por quem cria o jogo
+  (`JogosDoTreinadorRepositorio`) e pelo fim de temporada, e não dentro de
+  `TemporadaRepositorio.gravar`, porque `CaixaRepositorio` já depende de
+  `TemporadaRepositorio` (evita dependência circular).
 
 ## Consequências
 

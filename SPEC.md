@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 48 (2026-10-28):** patrocínio lançado no início de cada temporada (rodada 0) e prêmio da liga na última rodada (V18); a tela de finanças mostra o patrocínio dentro do saldo do início.
 -   **rev. 47 (2026-10-28):** jogadores à venda da máquina gravados (V17), completados a cada temporada e rodada; salário gravado adiado até a força poder mudar (ADR 0011).
 -   **rev. 46 (2026-10-28):** prêmio e patrocínio pelo teto de força da divisão; patrocínio cai 10% do 1º para o 2º e 8% a cada posição seguinte; só o título da 1ª divisão conta no ranking de treinadores.
 -   **rev. 45 (2026-10-28):** usuário aprovou a proposta do mercado da máquina (rev. 44) e definiu a premiação da liga (campeão = 2 jogadores de força 50 com asterisco, 2º 30% menos, 3º 10%) e o patrocínio (cerca de 10% do prêmio); proposta de força de referência por divisão.
@@ -1119,7 +1120,8 @@ os cartões de um time todo calmo (antes, 2,8 vezes).
       padrão): 2ª ≈ R$ 988 mil, 3ª ≈ R$ 566 mil. O prêmio do campeão fica
       perto de um quarto da bilheteria da temporada nas três divisões. Simulado em `docs/simulacoes/mercado-maquina.md`; valores
       em `economia.ParametrosPremiacao`, regra em `economia.Premiacao`.
-    - O prêmio é pago no fim da temporada (ainda não gravado).
+    - **Gravado (rev. 48):** o prêmio é lançado no extrato na última rodada
+      da temporada, no fim da temporada, antes da virada.
 
 
 ### 8.1.1 Ano da temporada e histórico
@@ -1586,8 +1588,14 @@ na temporada anterior.
   R$ 329 mil… R$ 80 mil).
 - **Provisório (rev. 46), proposta do agente:** na primeira temporada,
   todos recebem a média das posições (R$ 197 mil na 1ª com 20 clubes); o
-  valor usa a divisão em que o clube jogou a temporada anterior. Ainda
-  não gravado.
+  valor usa a divisão em que o clube jogou a temporada anterior; quem vem
+  da fila de espera recebe como o último da divisão em que entra.
+- **Gravado (rev. 48):** o patrocínio é lançado de uma vez na "rodada 0"
+  da temporada (ao criar o jogo e na virada). A tela de finanças ainda não
+  tem linha própria para patrocínio e prêmio: eles aparecem no saldo do
+  início da temporada (mostrar à parte exige novo modelo da tela). Jogos
+  salvos antes da rev. 48 só recebem patrocínio a partir da próxima
+  temporada.
 
 ## 10. Interface e apresentação
 

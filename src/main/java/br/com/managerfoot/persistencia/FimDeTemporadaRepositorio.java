@@ -40,17 +40,19 @@ public class FimDeTemporadaRepositorio {
 	private final TemporadaRepositorio temporadas;
 	private final RodadaRepositorio rodadas;
 	private final EscalacaoRepositorio escalacoes;
+	private final CaixaRepositorio caixas;
 	private final int candidatosClubeInicial;
 	private final EscalacaoMaquina escalacaoMaquina = new EscalacaoMaquina(ParametrosMotor.padrao());
 
 	public FimDeTemporadaRepositorio(JdbcClient jdbc, JogoRepositorio jogos, TemporadaRepositorio temporadas,
-			RodadaRepositorio rodadas, EscalacaoRepositorio escalacoes,
+			RodadaRepositorio rodadas, EscalacaoRepositorio escalacoes, CaixaRepositorio caixas,
 			@Value("${managerfoot.jogo.candidatos-clube-inicial}") int candidatosClubeInicial) {
 		this.jdbc = jdbc;
 		this.jogos = jogos;
 		this.temporadas = temporadas;
 		this.rodadas = rodadas;
 		this.escalacoes = escalacoes;
+		this.caixas = caixas;
 		this.candidatosClubeInicial = candidatosClubeInicial;
 	}
 
@@ -80,6 +82,7 @@ public class FimDeTemporadaRepositorio {
 
 		Map<Integer, Classificacao> finais = rodadas.classificacao(jogoId);
 		gravarCampeoes(jogoId, numero, finais);
+		caixas.pagarPremios(jogoId, finais);
 		// gerador da fila separado do usado por Temporada.iniciar com a mesma semente
 		TransicaoTemporada transicao = TransicaoTemporada.aplicar(jogos.carregarLiga(jogoId), finais,
 				new SplittableRandom(~semente));
@@ -94,6 +97,7 @@ public class FimDeTemporadaRepositorio {
 
 		Temporada nova = Temporada.iniciar(numero + 1, transicao.proxima(), jogos.carregarPlanteis(jogoId), semente);
 		temporadas.gravar(jogoId, nova);
+		caixas.pagarPatrocinio(jogoId, finais);
 		return new NovaTemporada(transicao, nova, demitidos);
 	}
 

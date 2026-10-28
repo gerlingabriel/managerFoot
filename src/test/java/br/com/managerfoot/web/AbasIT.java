@@ -187,7 +187,8 @@ class AbasIT {
 		assertThat(f.extrato()).allMatch(l -> l.emCasa() == null || l.emCasa() == (l.publico() != null));
 		assertThat(f.saldo()).isEqualTo(saldoGravado);
 		assertThat(f.extrato().getLast().saldo()).isEqualTo(saldoGravado);
-		assertThat(f.saldoInicioTemporada()).isEqualTo(10 * folha);
+		// o saldo do início inclui o patrocínio da temporada, lançado na rodada 0
+		assertThat(f.saldoInicioTemporada()).isEqualTo(10 * folha + patrocinio(clube)).isGreaterThan(10 * folha);
 		assertThat(f.saldoInicioTemporada() + f.resultado()).isEqualTo(saldoGravado);
 
 		mvc.perform(get(base + "/financas").with(como(treinador)))
@@ -200,6 +201,13 @@ class AbasIT {
 			.andExpect(content().string(containsString("Caixa " + Moeda.REAL.formatar(saldoGravado))));
 	}
 
+	private long patrocinio(long clube) {
+		return jdbc.sql("SELECT valor FROM jogo_lancamento WHERE clube_id = :c AND tipo = 'PATROCINIO' AND rodada = 0")
+			.param("c", clube)
+			.query(Long.class)
+			.single();
+	}
+
 	@Test
 	void financasAntesDaPrimeiraRodadaMostramOSaldoInicial() {
 		long novo = jogos.criarComSorteio(brasil, treinador.id(), 21).jogoId();
@@ -208,7 +216,7 @@ class AbasIT {
 		long folha = CaixaDaRodada.padrao().folha(jogo.carregarPlanteis(novo).get(clube));
 
 		assertThat(f.extrato()).isEmpty();
-		assertThat(f.saldo()).isEqualTo(10 * folha).isEqualTo(f.saldoInicioTemporada());
+		assertThat(f.saldo()).isEqualTo(10 * folha + patrocinio(clube)).isEqualTo(f.saldoInicioTemporada());
 		assertThat(f.publicoMedio()).isNull();
 	}
 

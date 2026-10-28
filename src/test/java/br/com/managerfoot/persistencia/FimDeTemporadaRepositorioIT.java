@@ -15,6 +15,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 
 import br.com.managerfoot.TestcontainersConfiguration;
 import br.com.managerfoot.dominio.Clube;
+import br.com.managerfoot.economia.Premiacao;
 import br.com.managerfoot.temporada.ClubeInicial;
 import br.com.managerfoot.temporada.ConfiguracaoLiga;
 import br.com.managerfoot.temporada.Divisao;
@@ -112,9 +113,36 @@ class FimDeTemporadaRepositorioIT {
 			.param(jogo).query(String.class).list()).containsExactlyInAnyOrderElementsOf(lideres);
 		assertThat(jogos.ano(jogo, 2)).isEqualTo(2027);
 
+		// prêmio da liga na última rodada da temporada 1 e patrocínio na rodada 0 da 2 (rev. 45 e 46)
+		Premiacao premiacao = Premiacao.padrao();
+		int limiteA = liga.divisoes().get(0).limiteForca();
+		int limiteB = liga.divisoes().get(1).limiteForca();
+		assertThat(contar("SELECT count(*) FROM jogo_lancamento l JOIN jogo_temporada t ON t.id = l.temporada_id "
+				+ "WHERE t.jogo_id = ? AND t.numero = 1 AND l.tipo = 'PREMIO' AND l.rodada = 30")).isEqualTo(3 + 3);
+		assertThat(lancamento(lideres.get(0), 1, "PREMIO")).isEqualTo(premiacao.premio(1, limiteA));
+		assertThat(lancamento(lideres.get(1), 1, "PREMIO")).isEqualTo(premiacao.premio(1, limiteB));
+		assertThat(contar("SELECT count(*) FROM jogo_lancamento l JOIN jogo_temporada t ON t.id = l.temporada_id "
+				+ "WHERE t.jogo_id = ? AND t.numero = 2 AND l.tipo = 'PATROCINIO' AND l.rodada = 0")).isEqualTo(16 + 15);
+		assertThat(lancamento(lideres.get(0), 2, "PATROCINIO")).isEqualTo(premiacao.patrocinio(1, 16, limiteA));
+		// quem veio da fila recebe como o último da divisão em que entra
+		assertThat(lancamento("Fila 1", 2, "PATROCINIO")).isEqualTo(premiacao.patrocinio(15, 15, limiteB));
+
 		assertThatThrownBy(() -> fim.avancarTemporada(jogo, 1, SEMENTE_NOVA)).isInstanceOf(IllegalStateException.class)
 			.hasMessageContaining("é a 2");
 		assertThat(rodadas.avancar(jogo, 1).numero()).isEqualTo(1);
+	}
+
+	private long lancamento(String clube, int temporada, String tipo) {
+		return jdbc.sql("""
+				SELECT l.valor FROM jogo_lancamento l JOIN jogo_temporada t ON t.id = l.temporada_id
+				JOIN jogo_clube c ON c.id = l.clube_id
+				WHERE t.jogo_id = :jogo AND t.numero = :temporada AND c.nome = :clube AND l.tipo = :tipo""")
+			.param("jogo", jogo)
+			.param("temporada", temporada)
+			.param("clube", clube)
+			.param("tipo", tipo)
+			.query(Long.class)
+			.single();
 	}
 
 	private long contar(String sql) {
