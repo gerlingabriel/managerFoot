@@ -47,20 +47,22 @@ public class RodadaRepositorio {
 	private final TemporadaRepositorio temporadas;
 	private final EscalacaoRepositorio escalacoes;
 	private final CaixaRepositorio caixas;
+	private final MercadoRepositorio mercado;
 	private final ProcessamentoRodada processamento = ProcessamentoRodada.padrao();
 
 	public RodadaRepositorio(JdbcClient jdbc, JogoRepositorio jogos, TemporadaRepositorio temporadas,
-			EscalacaoRepositorio escalacoes, CaixaRepositorio caixas) {
+			EscalacaoRepositorio escalacoes, CaixaRepositorio caixas, MercadoRepositorio mercado) {
 		this.jdbc = jdbc;
 		this.jogos = jogos;
 		this.temporadas = temporadas;
 		this.escalacoes = escalacoes;
 		this.caixas = caixas;
+		this.mercado = mercado;
 	}
 
 	/**
 	 * Joga a rodada da temporada atual e grava placares, gols, cartões, suspensões, moral e o caixa
-	 * dos clubes (SPEC §9.1). Os clubes de treinador humano jogam com a escalação gravada, e quem
+	 * dos clubes (SPEC §9.1), e completa os jogadores à venda da máquina (SPEC §9.4). Os clubes de treinador humano jogam com a escalação gravada, e quem
 	 * ficou suspenso sai dela.
 	 *
 	 * @param rodada a rodada que quem pede espera jogar: a seguinte à última processada
@@ -103,6 +105,7 @@ public class RodadaRepositorio {
 		gravarDisciplina(planteis, antes, resultado.disciplina());
 		escalacoes.retirarSuspensos(jogoId);
 		caixas.lancarRodada(jogoId, linha.id(), temporada, rodada, resultado.partidas(), moralAntes, planteis);
+		mercado.reporAVenda(jogoId, MercadoRepositorio.semente(temporada.semente(), rodada));
 		resultado.moral().forEach((clubeId, moral) -> {
 			if (!moral.equals(moralAntes.get(clubeId))) {
 				jdbc.sql("UPDATE jogo_clube SET moral = :moral WHERE id = :clube")

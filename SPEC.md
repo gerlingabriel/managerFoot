@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 47 (2026-10-28):** jogadores à venda da máquina gravados (V17), completados a cada temporada e rodada; salário gravado adiado até a força poder mudar (ADR 0011).
 -   **rev. 46 (2026-10-28):** prêmio e patrocínio pelo teto de força da divisão; patrocínio cai 10% do 1º para o 2º e 8% a cada posição seguinte; só o título da 1ª divisão conta no ranking de treinadores.
 -   **rev. 45 (2026-10-28):** usuário aprovou a proposta do mercado da máquina (rev. 44) e definiu a premiação da liga (campeão = 2 jogadores de força 50 com asterisco, 2º 30% menos, 3º 10%) e o patrocínio (cerca de 10% do prêmio); proposta de força de referência por divisão.
 -   **rev. 44 (2026-10-28):** proposta simulada do mercado da máquina (lance 10% abaixo mais até 5% pela força, 1 venda e 1 compra por rodada, interesse até 5 pontos abaixo da força em campo, folga de 5 rodadas da folha na compra), aguardando aprovação.
@@ -1477,6 +1478,12 @@ A máquina oferece um pouco abaixo do preço padrão (§9.4).
   - A máquina **sempre renova** os contratos dos seus jogadores e deixa
     sempre **5 ou 6 jogadores à venda** (compra direta pelo usuário),
     **sorteados** sem olhar a posição.
+    - **Gravado (rev. 47):** os anúncios são completados no início de cada
+      temporada e depois de cada rodada; quem tem menos de 5 à venda sorteia
+      até ter 5 ou 6. Proposta do agente: o sorteio não anuncia jogadores
+      demais de uma posição, para a venda de todos não deixar o clube abaixo
+      do elenco mínimo (§9.3); clubes da fila de espera não anunciam
+      (`docs/decisions/0011-mercado-no-banco.md`).
   - **Lance da máquina:** um pouco **abaixo do preço padrão**; um clube da
     máquina com preferência pelo jogador pode dar um pouco mais, de acordo
     com a força do time.

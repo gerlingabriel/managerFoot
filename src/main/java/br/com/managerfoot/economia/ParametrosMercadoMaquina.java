@@ -19,13 +19,17 @@ import br.com.managerfoot.dominio.Posicao;
  *        campo do clube menos este valor (proposta: 5)
  * @param folgaNaCompra rodadas da folha que precisam sobrar acima do limite depois de pagar uma
  *        compra, para o clube não vender logo em seguida (proposta: 5)
+ * @param aVendaMinimo quando o clube tem menos que isto à venda para compra direta, sorteia mais
+ *        (usuário: "uns 5 ou 6")
+ * @param aVendaMaximo até quantos o sorteio completa
  */
 public record ParametrosMercadoMaquina(int rodadasDeFolhaNoLimite, double descontoLance, double acrescimoPelaForca,
-		Map<Posicao, Integer> elencoMinimo, int interesseAbaixoDoTime, int folgaNaCompra) {
+		Map<Posicao, Integer> elencoMinimo, int interesseAbaixoDoTime, int folgaNaCompra,
+		int aVendaMinimo, int aVendaMaximo) {
 
 	public ParametrosMercadoMaquina {
 		if (rodadasDeFolhaNoLimite < 0 || descontoLance < 0 || descontoLance >= 1 || acrescimoPelaForca < 0
-				|| interesseAbaixoDoTime < 0 || folgaNaCompra < 0) {
+				|| interesseAbaixoDoTime < 0 || folgaNaCompra < 0 || aVendaMinimo < 0 || aVendaMaximo < aVendaMinimo) {
 			throw new IllegalArgumentException("parâmetros do mercado da máquina inválidos");
 		}
 		elencoMinimo = Map.copyOf(elencoMinimo);
@@ -37,6 +41,6 @@ public record ParametrosMercadoMaquina(int rodadasDeFolhaNoLimite, double descon
 		minimo.put(Posicao.DEFENSOR, 4);
 		minimo.put(Posicao.MEIO_CAMPISTA, 4);
 		minimo.put(Posicao.ATACANTE, 2);
-		return new ParametrosMercadoMaquina(10, 0.10, 0.05, minimo, 5, 5);
+		return new ParametrosMercadoMaquina(10, 0.10, 0.05, minimo, 5, 5, 5, 6);
 	}
 }

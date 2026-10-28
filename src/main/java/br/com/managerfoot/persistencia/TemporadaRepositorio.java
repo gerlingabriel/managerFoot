@@ -32,10 +32,12 @@ public class TemporadaRepositorio {
 
 	private final JdbcClient jdbc;
 	private final JogoRepositorio jogos;
+	private final MercadoRepositorio mercado;
 
-	public TemporadaRepositorio(JdbcClient jdbc, JogoRepositorio jogos) {
+	public TemporadaRepositorio(JdbcClient jdbc, JogoRepositorio jogos, MercadoRepositorio mercado) {
 		this.jdbc = jdbc;
 		this.jogos = jogos;
+		this.mercado = mercado;
 	}
 
 	/**
@@ -58,7 +60,10 @@ public class TemporadaRepositorio {
 		return temporada;
 	}
 
-	/** Grava a temporada e seus sorteios; quem chama abre a transação e trava o jogo. */
+	/**
+	 * Grava a temporada e seus sorteios e completa os jogadores à venda da máquina; quem chama abre a
+	 * transação, trava o jogo e já pôs os treinadores nos clubes da nova temporada.
+	 */
 	@Transactional(propagation = Propagation.MANDATORY)
 	public void gravar(long jogoId, Temporada temporada) {
 		long semente = temporada.semente();
@@ -90,6 +95,7 @@ public class TemporadaRepositorio {
 			inserirBonus(temporadaId, divisaoId, sorteios.bonus().asteriscoTemporario(), false);
 			inserirBonus(temporadaId, divisaoId, sorteios.bonus().bonusExtra(), true);
 		}
+		mercado.reporAVenda(jogoId, MercadoRepositorio.semente(semente, 0));
 	}
 
 	/**

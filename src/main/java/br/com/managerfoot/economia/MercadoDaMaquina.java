@@ -2,11 +2,16 @@ package br.com.managerfoot.economia;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.random.RandomGenerator;
 
 import br.com.managerfoot.dominio.Clube;
 import br.com.managerfoot.dominio.Jogador;
+import br.com.managerfoot.dominio.Posicao;
 
 /**
  * Decisões de mercado de um clube da máquina (SPEC §9.3 e §9.4, rev. 43): o caixa é comparado a um
@@ -48,6 +53,38 @@ public final class MercadoDaMaquina {
 			.filter(j -> plantel.stream().filter(o -> o.posicao() == j.posicao()).count()
 					> parametros.elencoMinimo().getOrDefault(j.posicao(), 0))
 			.max(Comparator.comparingLong((Jogador j) -> preco.preco(j, paisDaLiga)).thenComparingLong(Jogador::id));
+	}
+
+	/**
+	 * Jogadores que o clube da máquina passa a deixar à venda para compra direta (SPEC §9.4, rev. 43):
+	 * com menos que o mínimo à venda, sorteia até completar entre o mínimo e o máximo, sem olhar a
+	 * posição, mas sem que a venda de todos os anunciados deixe uma posição abaixo do elenco mínimo.
+	 *
+	 * @param jaAVenda ids dos jogadores do plantel que já estão à venda
+	 * @return os novos anunciados, possivelmente nenhum
+	 */
+	public List<Jogador> sortearAVenda(List<Jogador> plantel, Set<Long> jaAVenda, RandomGenerator aleatorio) {
+		if (jaAVenda.size() >= parametros.aVendaMinimo()) {
+			return List.of();
+		}
+		int alvo = parametros.aVendaMinimo() + aleatorio.nextInt(parametros.aVendaMaximo() - parametros.aVendaMinimo() + 1);
+		Map<Posicao, Integer> sobra = new EnumMap<>(Posicao.class);
+		for (Jogador j : plantel) {
+			sobra.merge(j.posicao(), jaAVenda.contains(j.id()) ? 0 : 1, Integer::sum);
+		}
+		sobra.replaceAll((posicao, livres) -> livres - parametros.elencoMinimo().getOrDefault(posicao, 0));
+		// ordem fixa antes do sorteio, para a mesma semente dar os mesmos jogadores
+		List<Jogador> candidatos = new ArrayList<>(plantel.stream().filter(j -> !jaAVenda.contains(j.id()))
+			.sorted(Comparator.comparingLong(Jogador::id)).toList());
+		List<Jogador> novos = new ArrayList<>();
+		while (jaAVenda.size() + novos.size() < alvo && !candidatos.isEmpty()) {
+			Jogador j = candidatos.remove(aleatorio.nextInt(candidatos.size()));
+			if (sobra.get(j.posicao()) > 0) {
+				sobra.merge(j.posicao(), -1, Integer::sum);
+				novos.add(j);
+			}
+		}
+		return List.copyOf(novos);
 	}
 
 	/** Força em campo: média dos 11 jogadores mais fortes do plantel. */

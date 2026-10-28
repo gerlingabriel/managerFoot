@@ -3,7 +3,10 @@ package br.com.managerfoot.economia;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.SplittableRandom;
 
 import org.junit.jupiter.api.Test;
 
@@ -83,6 +86,44 @@ class MercadoDaMaquinaTest {
 		long rico = 100_000_000_00L;
 		assertThat(mercado.lance(clube, rico, plantel, jogador(300, Posicao.ATACANTE, 25), "BRA", 0)).isPresent();
 		assertThat(mercado.lance(clube, rico, plantel, jogador(301, Posicao.ATACANTE, 24), "BRA", 0)).isEmpty();
+	}
+
+	@Test
+	void sorteiaCincoOuSeisAVendaDeFormaReproduzivel() {
+		List<Jogador> plantel = plantel(23, 20);
+		Set<Integer> quantidades = new HashSet<>();
+		for (int semente = 0; semente < 40; semente++) {
+			List<Jogador> novos = mercado.sortearAVenda(plantel, Set.of(), new SplittableRandom(semente));
+			assertThat(novos).hasSizeBetween(5, 6).doesNotHaveDuplicates();
+			assertThat(mercado.sortearAVenda(plantel, Set.of(), new SplittableRandom(semente))).isEqualTo(novos);
+			quantidades.add(novos.size());
+		}
+		assertThat(quantidades).containsExactlyInAnyOrder(5, 6);
+	}
+
+	@Test
+	void completaQuemTemPoucosAVendaENaoMexeEmQuemTemCinco() {
+		List<Jogador> plantel = plantel(23, 20);
+		List<Jogador> novos = mercado.sortearAVenda(plantel, Set.of(1L, 2L, 3L), new SplittableRandom(7));
+		assertThat(novos).hasSizeBetween(2, 3).extracting(Jogador::id).doesNotContain(1L, 2L, 3L);
+		assertThat(mercado.sortearAVenda(plantel, Set.of(1L, 2L, 3L, 4L, 5L), new SplittableRandom(7))).isEmpty();
+	}
+
+	@Test
+	void anunciadosNaoDeixamPosicaoAbaixoDoElencoMinimo() {
+		// 1 goleiro, 4 defensores, 4 meias, 2 atacantes e 3 meias a mais: só os 3 meias extras podem sair
+		List<Jogador> plantel = new ArrayList<>();
+		plantel.add(jogador(1, Posicao.GOLEIRO, 20));
+		for (int i = 0; i < 4; i++) {
+			plantel.add(jogador(10 + i, Posicao.DEFENSOR, 20));
+		}
+		for (int i = 0; i < 7; i++) {
+			plantel.add(jogador(20 + i, Posicao.MEIO_CAMPISTA, 20));
+		}
+		plantel.add(jogador(30, Posicao.ATACANTE, 20));
+		plantel.add(jogador(31, Posicao.ATACANTE, 20));
+		List<Jogador> novos = mercado.sortearAVenda(plantel, Set.of(), new SplittableRandom(3));
+		assertThat(novos).hasSize(3).allMatch(j -> j.posicao() == Posicao.MEIO_CAMPISTA);
 	}
 
 	private static List<Jogador> plantel(int quantidade, int forca) {
