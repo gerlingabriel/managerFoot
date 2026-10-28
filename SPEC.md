@@ -1431,7 +1431,7 @@ da mesma divisão seguem na mesma tela.
   e gols da temporada. Elenco separado em titulares, banco e fora do banco.
 - Ao clicar no jogador abre a ficha, com gols na temporada e gols na
   carreira.
-- **Definido (rev. 21):** depois do nome, o plantel mostra a **bandeira**
+- **Substituído na rev. 31 pela sigla (abaixo).** ~~Definido (rev. 21):~~ depois do nome, o plantel mostra a **bandeira**
   do país quando o jogador é estrangeiro no país do clube. Se ele é
   estrangeiro mas **não conta** no limite (ex.: português no Brasil,
   jogador da UE em país da UE), a bandeira aparece **atenuada** (mais
@@ -1451,11 +1451,11 @@ da mesma divisão seguem na mesma tela.
 - **Definido (rev. 31) — colunas do elenco:** posição, nome (com ★),
   força, temperamento, **gols** da temporada e **amarelos**, nessa ordem:
   os gols vêm antes porque são mais importantes.
-- **Provisório (rev. 31) — estrangeiro:** em vez da bandeira, uma **caixa
+- **Definido (rev. 31) — estrangeiro:** em vez da bandeira, uma **caixa
   com a sigla** do país (ex.: ARG) logo depois do nome, como na escolha do
   campeonato. Estrangeiro que não conta no limite tem a caixa tracejada e
-  mais apagada. Jogador do país do clube fica sem caixa. Se aprovado,
-  substitui a bandeira da rev. 21 (não exige imagens dos 211 países).
+  mais apagada. Jogador do país do clube fica sem caixa. Substitui a
+  bandeira da rev. 21 (não exige imagens dos 211 países).
 - Contratos, finanças, estádio, copas e competições continentais ganham
   telas próprias nas etapas em que forem implementados, também com modelo
   para aprovação antes.
