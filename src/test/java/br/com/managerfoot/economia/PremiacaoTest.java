@@ -27,16 +27,19 @@ class PremiacaoTest {
 
 	@Test
 	void patrocinioCaiComAPosicaoEOPrimeiroAnoEIgual() {
+		// 1º: 10% do prêmio; 2º: 10% menos; 3º: 8% menos que o 2º; e assim até o 20º
 		assertThat(premiacao.patrocinio(1, 20, 50)).isEqualTo(397_000_00L);
-		assertThat(premiacao.patrocinio(20, 20, 50)).isEqualTo(20_000_00L);
+		assertThat(premiacao.patrocinio(2, 20, 50)).isEqualTo(357_000_00L);
+		assertThat(premiacao.patrocinio(3, 20, 50)).isEqualTo(329_000_00L);
+		assertThat(premiacao.patrocinio(20, 20, 50)).isEqualTo(80_000_00L);
 		long anterior = Long.MAX_VALUE;
 		for (int posicao = 1; posicao <= 20; posicao++) {
 			long p = premiacao.patrocinio(posicao, 20, 50);
 			assertThat(p).isLessThan(anterior).isPositive();
 			anterior = p;
 		}
-		// média de 1 a 20: 10,5/20 do cheio
-		assertThat(premiacao.patrocinioInicial(20, 50)).isEqualTo(208_000_00L);
+		// média das 20 posições
+		assertThat(premiacao.patrocinioInicial(20, 50)).isEqualTo(197_000_00L);
 	}
 
 	@Test

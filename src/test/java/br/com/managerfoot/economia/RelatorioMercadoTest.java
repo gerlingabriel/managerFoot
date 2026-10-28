@@ -89,11 +89,10 @@ class RelatorioMercadoTest {
 			.append("O patrocínio da primeira temporada (igual para todos da divisão) entra no saldo inicial. Sem ")
 			.append("premiação (paga no fim) nem compra direta de usuário. Preço: `ParametrosMercado.padrao()`.\n\n");
 		md.append("## Premiação da liga e patrocínio (rev. 45)\n\n");
-		md.append("Prêmio do campeão = preço de 2 jogadores com asterisco da **força de referência** (proposta: a do ")
-			.append("clube mais forte da divisão); 2º = 70%; 3º = 10%; patrocínio do 1º colocado = 10% do prêmio do ")
-			.append("campeão, caindo em proporção até o último; na primeira temporada, a média para todos. Médias por ")
-			.append("temporada simulada.\n\n");
-		md.append("| Divisão | Força de referência | Campeão | 2º | 3º | Patrocínio no 1º ano | Bilheteria média do clube na temporada | Campeão / bilheteria |\n");
+		md.append("Prêmio do campeão = preço de 2 jogadores com asterisco do **teto de força da divisão**; 2º = 70%; ")
+			.append("3º = 10%; patrocínio do 1º colocado = 10% do prêmio do campeão, o 2º 10% menos e cada posição ")
+			.append("seguinte 8% menos que a anterior; na primeira temporada, a média para todos.\n\n");
+		md.append("| Divisão | Teto de força | Campeão | 2º | 3º | Patrocínio no 1º ano | Bilheteria média do clube na temporada | Campeão / bilheteria |\n");
 		md.append("|---|---|---|---|---|---|---|---|\n");
 		porDivisao.forEach((prioridade, a) -> {
 			double clubes = a.clubes[0] + a.clubes[1] + a.clubes[2];
@@ -167,7 +166,7 @@ class RelatorioMercadoTest {
 		liga.divisoes().forEach(d -> d.clubes().forEach(c -> naLiga.add(c.id())));
 		Map<Long, Integer> referencia = new HashMap<>();
 		for (Divisao divisao : liga.divisoes()) {
-			int forca = divisao.clubes().stream().mapToInt(Clube::forca).max().orElseThrow();
+			int forca = divisao.limiteForca();
 			Acumulado a = porDivisao.computeIfAbsent(divisao.prioridade(), k -> new Acumulado());
 			a.temporadas++;
 			a.referencia += forca;

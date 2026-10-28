@@ -10,27 +10,27 @@ O patrocínio da primeira temporada (igual para todos da divisão) entra no sald
 
 ## Premiação da liga e patrocínio (rev. 45)
 
-Prêmio do campeão = preço de 2 jogadores com asterisco da **força de referência** (proposta: a do clube mais forte da divisão); 2º = 70%; 3º = 10%; patrocínio do 1º colocado = 10% do prêmio do campeão, caindo em proporção até o último; na primeira temporada, a média para todos. Médias por temporada simulada.
+Prêmio do campeão = preço de 2 jogadores com asterisco do **teto de força da divisão**; 2º = 70%; 3º = 10%; patrocínio do 1º colocado = 10% do prêmio do campeão, o 2º 10% menos e cada posição seguinte 8% menos que a anterior; na primeira temporada, a média para todos.
 
-| Divisão | Força de referência | Campeão | 2º | 3º | Patrocínio no 1º ano | Bilheteria média do clube na temporada | Campeão / bilheteria |
+| Divisão | Teto de força | Campeão | 2º | 3º | Patrocínio no 1º ano | Bilheteria média do clube na temporada | Campeão / bilheteria |
 |---|---|---|---|---|---|---|---|
-| 1ª | 49,8 | R$ 3.923.333 | R$ 2.746.667 | R$ 392.500 | R$ 205.833 | R$ 15.909.314 | 25% |
-| 2ª | 29,8 | R$ 977.000 | R$ 684.167 | R$ 97.833 | R$ 51.500 | R$ 4.556.318 | 21% |
-| 3ª | 22,0 | R$ 566.000 | R$ 396.000 | R$ 57.000 | R$ 30.000 | R$ 2.595.736 | 22% |
+| 1ª | 50,0 | R$ 3.968.000 | R$ 2.778.000 | R$ 397.000 | R$ 199.167 | R$ 15.913.586 | 25% |
+| 2ª | 30,0 | R$ 988.000 | R$ 692.000 | R$ 99.000 | R$ 49.500 | R$ 4.556.484 | 22% |
+| 3ª | 22,0 | R$ 566.000 | R$ 396.000 | R$ 57.000 | R$ 28.000 | R$ 2.595.573 | 22% |
 
 ## Por posição final na tabela (média por clube e temporada)
 
 | Divisão | Terço da tabela | Vendas | Compras | Força em campo: início → fim | Saldo final (em limites) |
 |---|---|---|---|---|---|
 | 1ª | Topo | 0,0 | 0,5 | 46,3 → 46,3 | 3,3 |
-| 1ª | Meio | 0,1 | 0,4 | 42,4 → 42,4 | 2,1 |
-| 1ª | Fundo | 0,8 | 0,0 | 38,2 → 37,8 | 1,5 |
-| 2ª | Topo | 0,1 | 1,5 | 28,0 → 28,0 | 2,3 |
-| 2ª | Meio | 0,5 | 0,5 | 25,9 → 25,7 | 1,6 |
+| 1ª | Meio | 0,2 | 0,4 | 42,4 → 42,4 | 2,1 |
+| 1ª | Fundo | 0,9 | 0,0 | 38,2 → 37,8 | 1,5 |
+| 2ª | Topo | 0,1 | 1,5 | 27,9 → 28,0 | 2,3 |
+| 2ª | Meio | 0,5 | 0,6 | 25,9 → 25,8 | 1,6 |
 | 2ª | Fundo | 1,7 | 0,1 | 23,9 → 23,1 | 1,3 |
-| 3ª | Topo | 0,0 | 1,8 | 20,5 → 20,6 | 2,4 |
+| 3ª | Topo | 0,0 | 1,8 | 20,4 → 20,5 | 2,4 |
 | 3ª | Meio | 0,6 | 0,6 | 17,9 → 17,7 | 1,6 |
-| 3ª | Fundo | 2,2 | 0,0 | 15,0 → 14,0 | 1,3 |
+| 3ª | Fundo | 2,3 | 0,0 | 15,0 → 14,0 | 1,3 |
 
 *Força em campo*: média dos 11 jogadores mais fortes. *Saldo final em limites*: saldo dividido pelo limite (1,0 = exatamente 10 rodadas da folha).
 
@@ -38,11 +38,11 @@ Prêmio do campeão = preço de 2 jogadores com asterisco da **força de referê
 
 | Medida | Valor |
 |---|---|
-| Leilões por clube e temporada | 2,2 |
+| Leilões por clube e temporada | 2,3 |
 | Sem lance (jogador fica) | 72% |
 | Sem lance mínimo (saldo negativo) | 0% |
 | Valor pago / preço da tabela | 93% |
 | Clubes que ficaram negativos em algum momento | 0% |
 | Compras seguidas de venda em até 3 rodadas | 0% |
 | Vendas nas 3 primeiras rodadas | 0% |
-| Clubes que nunca venderam | 62% |
+| Clubes que nunca venderam | 61% |

@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 46 (2026-10-28):** prêmio e patrocínio pelo teto de força da divisão; patrocínio cai 10% do 1º para o 2º e 8% a cada posição seguinte; só o título da 1ª divisão conta no ranking de treinadores.
 -   **rev. 45 (2026-10-28):** usuário aprovou a proposta do mercado da máquina (rev. 44) e definiu a premiação da liga (campeão = 2 jogadores de força 50 com asterisco, 2º 30% menos, 3º 10%) e o patrocínio (cerca de 10% do prêmio); proposta de força de referência por divisão.
 -   **rev. 44 (2026-10-28):** proposta simulada do mercado da máquina (lance 10% abaixo mais até 5% pela força, 1 venda e 1 compra por rodada, interesse até 5 pontos abaixo da força em campo, folga de 5 rodadas da folha na compra), aguardando aprovação.
 -   **rev. 43 (2026-10-28):** estrangeiro 25% mais barato e asterisco 25% mais caro; a máquina só compra por leilão, renova sempre e deixa 5 ou 6 jogadores sorteados à venda; compra e venda da máquina pelo saldo comparado a 10 rodadas da folha; saldo negativo põe jogador em leilão sem lance mínimo; no início da temporada todos ficam sem contrato e só quem ganha abaixo da força pede aumento (1 por rodada); patrocínio entra de uma vez no início, para todos os clubes.
@@ -1112,12 +1113,10 @@ os cartões de um time todo calmo (antes, 2,8 vezes).
       (R$ 3.968.000 com a tabela de preço atual).
     - **2º:** 30% menos que o campeão (70%). **3º:** 10% do prêmio do
       campeão. Do 4º em diante, nada.
-    - **Provisório (rev. 45), proposta do agente:** nas divisões de baixo
-      o prêmio usa a **força do clube mais forte da divisão** no lugar de
-      50 (2ª ≈ R$ 977 mil, 3ª ≈ R$ 566 mil). Com isso o prêmio do campeão
-      fica entre 21% e 25% da bilheteria da temporada nas três divisões; com
-      força 50 em todas, o campeão da 3ª ganharia cerca de 1,5 temporada de
-      bilheteria. Simulado em `docs/simulacoes/mercado-maquina.md`; valores
+    - **Definido (rev. 46), pelo usuário:** a força dos jogadores do prêmio
+      é o **teto de força da divisão** (1ª 50, 2ª 30, 3ª 22 no banco
+      padrão): 2ª ≈ R$ 988 mil, 3ª ≈ R$ 566 mil. O prêmio do campeão fica
+      perto de um quarto da bilheteria da temporada nas três divisões. Simulado em `docs/simulacoes/mercado-maquina.md`; valores
       em `economia.ParametrosPremiacao`, regra em `economia.Premiacao`.
     - O prêmio é pago no fim da temporada (ainda não gravado).
 
@@ -1135,8 +1134,10 @@ os cartões de um time todo calmo (antes, 2,8 vezes).
   usuário) e o ranking inclui **todos** os treinadores que ganharam
   título. Hoje só os usuários existem como treinadores; é preciso criar
   os treinadores da máquina (§5.4) antes do ranking.
-- **Em aberto:** quais títulos contam (proposta: o campeão de cada
-  divisão conta um título; copas quando existirem).
+- **Definido (rev. 46), pelo usuário:** conta **1 título** quando o
+  treinador ganha a liga da **1ª divisão**. Títulos da 2ª divisão e
+  abaixo não contam. Copas: decidir quando existirem. (O histórico de
+  campeões continua guardando todas as divisões.)
 - **Definido (rev. 42):** a aba "Artilheiros de todos os tempos" continua.
   Se as abas ficarem muitas, agrupar assuntos parecidos.
 
@@ -1571,12 +1572,15 @@ na temporada anterior.
   temporada**, para **todos os clubes** (usuários e máquina).
 - **Definido (rev. 45), pelo usuário:** o patrocínio vale cerca de **10% do
   prêmio do campeão** da divisão.
-- **Provisório (rev. 45), proposta do agente:** o 1º colocado da temporada
-  anterior recebe os 10% cheios e cada posição abaixo recebe em proporção
-  linear, até o último com 1/N (N = clubes da divisão): na 1ª, de
-  R$ 397 mil a R$ 20 mil. Na primeira temporada, todos recebem a média
-  (R$ 208 mil numa divisão de 20 na 1ª). O valor usa a divisão em que o
-  clube jogou a temporada anterior. Ainda não gravado.
+- **Definido (rev. 46), pelo usuário:** o patrocínio usa o mesmo teto de
+  força da divisão; o 1º colocado da temporada anterior recebe os 10%
+  cheios, o **2º recebe 10% menos** e cada posição seguinte **8% menos que
+  a anterior**, até o último (na 1ª com 20 clubes: R$ 397 mil, R$ 357 mil,
+  R$ 329 mil… R$ 80 mil).
+- **Provisório (rev. 46), proposta do agente:** na primeira temporada,
+  todos recebem a média das posições (R$ 197 mil na 1ª com 20 clubes); o
+  valor usa a divisão em que o clube jogou a temporada anterior. Ainda
+  não gravado.
 
 ## 10. Interface e apresentação
 
