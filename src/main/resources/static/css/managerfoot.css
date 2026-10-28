@@ -1205,6 +1205,12 @@ a.jogador-nome:hover { color: var(--destaque); text-decoration: underline; }
 .ficha-dados { padding: 12px 20px 18px; }
 .ficha-dados div { padding: 8px 0; border-bottom: 1px solid rgba(31, 90, 58, 0.6); }
 a.janela-fechar { text-decoration: none; }
+.ficha-venda {
+	display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: end;
+	padding: 14px 20px 18px; border-top: 1px solid var(--borda);
+}
+.ficha-venda .botao { min-height: 40px; padding: 0 16px; }
+.ficha-venda-nota { grid-column: 1 / -1; margin: 0; font-size: 13px; }
 
 /* Calendário do clube (modelo 3b, rev. 36). */
 a.link-clube { color: var(--texto); text-decoration: none; }

@@ -64,6 +64,17 @@ public final class LeiloesDaRodada {
 	 */
 	public List<Desfecho> resolver(List<Oferta> ofertas, List<ClubeNoMercado> daMaquina, List<ClubeNoMercado> humanos,
 			Map<Long, List<Lance>> lancesHumanos, String paisDaLiga, RandomGenerator aleatorio) {
+		return resolver(ofertas, daMaquina, humanos, lancesHumanos, Set.of(), paisDaLiga, aleatorio);
+	}
+
+	/**
+	 * Como {@link #resolver(List, List, List, Map, String, RandomGenerator)}, sem lance dos clubes da
+	 * máquina que já compraram antes da mesma rodada.
+	 *
+	 * @param jaCompraram ids dos clubes da máquina que já levaram um jogador antes desta rodada
+	 */
+	public List<Desfecho> resolver(List<Oferta> ofertas, List<ClubeNoMercado> daMaquina, List<ClubeNoMercado> humanos,
+			Map<Long, List<Lance>> lancesHumanos, Set<Long> jaCompraram, String paisDaLiga, RandomGenerator aleatorio) {
 		Map<Long, Estado> estados = new HashMap<>();
 		for (ClubeNoMercado c : daMaquina) {
 			estados.put(c.clube().id(), new Estado(c.clube(), c.saldo(), new ArrayList<>(c.plantel())));
@@ -74,7 +85,7 @@ public final class LeiloesDaRodada {
 		Set<Long> idsHumanos = new HashSet<>();
 		humanos.forEach(c -> idsHumanos.add(c.clube().id()));
 		List<Long> compradoresDaMaquina = ordenados(daMaquina).stream().map(c -> c.clube().id()).toList();
-		Set<Long> compraram = new HashSet<>();
+		Set<Long> compraram = new HashSet<>(jaCompraram);
 		List<Desfecho> desfechos = new ArrayList<>();
 		for (Oferta oferta : ofertas) {
 			Jogador jogador = oferta.jogador();

@@ -38,8 +38,9 @@
 <a th:href="@{/jogos/{id}/financas(id=${jogoId})}" class="aba" th:classappend="${atual == 'financas'} ? 'atual'" th:attr="aria-current=${atual == 'financas' ? 'page' : null}">Finanças</a>
 </nav>
 
-<!-- Ficha do jogador (modelo aprovado): por cima da aba; fechar volta à aba sem a ficha. -->
-<div th:fragment="ficha(f, fechar)" class="janela-fundo">
+<!-- Ficha do jogador (modelo aprovado): por cima da aba; fechar volta à aba sem a ficha. Com a ação
+     "vender" (só no plantel), o jogador do usuário pode ir a leilão com o lance mínimo dele (rev. 53). -->
+<div th:fragment="ficha(f, fechar, vender)" class="janela-fundo">
 <div role="dialog" aria-modal="true" aria-labelledby="ficha-nome" class="janela ficha">
 <div class="ficha-topo">
 <div class="ficha-identidade">
@@ -62,6 +63,16 @@
 <div><dt>Temperamento</dt><dd th:text="${#strings.capitalize(#strings.toLowerCase(f.jogador.temperamento.name()))}">Normal</dd></div>
 <div><dt>Amarelos na temporada</dt><dd th:text="${f.amarelos}">0</dd></div>
 </dl>
+<form th:if="${vender != null and f.doUsuario}" th:action="${vender}" method="post" class="ficha-venda">
+<input type="hidden" name="jogador" th:value="${f.jogador.id}">
+<label class="leilao-lance">
+<span th:text="|Lance mínimo (${f.moeda.simbolo()})|">Lance mínimo (R$)</span>
+<input type="text" inputmode="numeric" autocomplete="off" name="minimo" required
+	th:placeholder="${#numbers.formatInteger(f.moeda.unidadesAcima(f.preco), 1, 'POINT')}">
+</label>
+<button type="submit" class="botao">Vender por leilão</button>
+<p class="suave ficha-venda-nota" th:text="|Preço de tabela: ${f.moeda.formatar(f.preco)}. O leilão é na hora: a máquina dá os lances e leva quem der mais, a partir do seu mínimo (0 = sem mínimo).|">nota</p>
+</form>
 </div>
 </div>
 

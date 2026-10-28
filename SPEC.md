@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 52 — 2026-10-28)
+-   **Status:** versão inicial para revisão (rev. 53 — 2026-10-28)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 53 (2026-10-28):** venda do usuário por leilão: o usuário define o lance mínimo na ficha do jogador e o resultado aparece na tela do 7b; com caixa negativo o jogo escolhe um jogador sem contrato renovado e, se todos estiverem renovados, a venda fica para o início da temporada seguinte, antes de tudo. Gravada a venda pela ficha (V21).
 -   **rev. 52 (2026-10-28):** leilões da máquina antes da rodada gravados (V20, modelo 7b, ADR 0012): abertos ao confirmar a tática, lances do usuário e depois da máquina, resultado e "Ir para a rodada"; compra direta de jogador em leilão aberto cancela o leilão (proposta do agente).
 -   **rev. 51 (2026-10-28):** janela do clube na classificação com as abas Calendário e Plantel (modelo 7a aprovado com a coluna de gols pedida pelo usuário): plantel inteiro, gols na temporada e botão Comprar nos jogadores à venda.
 -   **rev. 50 (2026-10-28):** finanças pelo modelo 6b (aprovado): linha do patrocínio, coluna "Mercado e prêmios" com o jogador comprado ou vendido; usuário quer ver o plantel inteiro ao clicar no clube (modelo 7a revisado para aprovação).
@@ -1515,6 +1516,25 @@ A máquina oferece um pouco abaixo do preço padrão (§9.4).
     aberto e resolvido uma vez só. **Proposta do agente:** se o usuário
     comprar direto um jogador que está em leilão aberto, o leilão é
     cancelado.
+  - **Definido (rev. 53), pelo usuário — venda do usuário por leilão:**
+    - Ao pôr um jogador à venda, **o usuário define o lance mínimo**. O
+      resultado aparece na mesma tela do modelo 7b.
+    - **Caixa negativo:** o **jogo escolhe** o jogador que vai a leilão sem
+      lance mínimo, entre os que estão **sem contrato renovado**. Se todos
+      estiverem renovados, ninguém é vendido; quando virar a temporada,
+      logo no início e **antes de qualquer coisa**, um jogador é vendido.
+  - **Gravado (rev. 53, V21):** "Vender por leilão" na ficha do jogador
+    aberta pelo plantel (não pelos artilheiros), com o campo do lance
+    mínimo (0 = sem mínimo) e o preço de tabela como referência. O leilão é
+    resolvido na hora com os lances da máquina e a tela mostra o resultado
+    com "Voltar ao plantel". Recusado com rodada ao vivo, temporada
+    terminada, mínimo negativo ou jogador que já foi a leilão antes da
+    mesma rodada. Essas vendas não contam como os leilões da rodada (não
+    impedem que eles abram). **Propostas do agente:** a venda respeita o
+    elenco mínimo do §9.3, como a da máquina; o clube da máquina que já
+    comprou antes da rodada (num leilão ou numa venda do usuário) não dá
+    lance de novo (1 compra por rodada); o jogador comprado de um usuário
+    não vai a leilão de novo antes da mesma rodada.
   - **Lance da máquina:** um pouco **abaixo do preço padrão**; um clube da
     máquina com preferência pelo jogador pode dar um pouco mais, de acordo
     com a força do time.

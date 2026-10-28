@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.SplittableRandom;
 
 import org.junit.jupiter.api.Test;
@@ -114,6 +115,18 @@ class LeiloesDaRodadaTest {
 		assertThat(desfechos.get(0).vencedor()).map(Lance::clubeId).contains(3L);
 		assertThat(desfechos.get(1).vencedor()).isEmpty();
 		assertThat(desfechos.get(1).lances()).isEmpty();
+	}
+
+	@Test
+	void clubeDaMaquinaQueJaComprouAntesDaRodadaNaoDaLance() {
+		ClubeNoMercado a = clube(1, 100, 100_000_00L);
+		ClubeNoMercado comprador = clube(3, 300, RICO);
+		List<Oferta> ofertas = leiloes.abrir(List.of(a), "BRA");
+
+		List<Desfecho> desfechos = leiloes.resolver(ofertas, List.of(a, comprador), List.of(), Map.of(), Set.of(3L), "BRA",
+				new SplittableRandom(1));
+
+		assertThat(desfechos.get(0).vencedor()).isEmpty();
 	}
 
 	private List<Desfecho> resolver(Oferta oferta, List<ClubeNoMercado> daMaquina, ClubeNoMercado humano, long lance) {

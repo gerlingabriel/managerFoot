@@ -23,7 +23,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * Leilões da máquina antes da rodada (SPEC §9.4, rev. 41 e 42; modelo 7b): os lances do treinador
- * e o resultado. "Ir para a rodada" volta a {@link RodadaController}, que começa a rodada.
+ * e o resultado; e a venda de um jogador do treinador por leilão, pela ficha (rev. 53). "Ir para a rodada" volta a {@link RodadaController}, que começa a rodada.
  */
 @Controller
 class LeilaoController {
@@ -45,7 +45,44 @@ class LeilaoController {
 		model.addAttribute("usuario", usuario);
 		model.addAttribute("jogoId", jogoId);
 		model.addAttribute("v", v);
+		model.addAttribute("venda", false);
 		return "leiloes";
+	}
+
+	/** Resultado de um jogador do treinador posto em leilão pela ficha (mesma tela do modelo 7b). */
+	@GetMapping("/jogos/{jogoId}/leiloes/{leilaoId}")
+	String venda(@AuthenticationPrincipal Usuario usuario, @PathVariable long jogoId, @PathVariable long leilaoId, Model model) {
+		VisaoLeiloes v = leiloes.venda(jogoId, usuario.id(), leilaoId).orElseThrow(NoSuchElementException::new);
+		model.addAttribute("usuario", usuario);
+		model.addAttribute("jogoId", jogoId);
+		model.addAttribute("v", v);
+		model.addAttribute("venda", true);
+		return "leiloes";
+	}
+
+	/**
+	 * "Vender por leilão" na ficha do jogador (SPEC §9.4, rev. 53): o lance mínimo é inteiro na moeda
+	 * da liga. O leilão é resolvido na hora; recusado, volta à ficha com o motivo.
+	 */
+	@PostMapping("/jogos/{jogoId}/mercado/vender")
+	String vender(@AuthenticationPrincipal Usuario usuario, @PathVariable long jogoId, @RequestParam long jogador,
+			@RequestParam String minimo, RedirectAttributes redirect) {
+		String ficha = "redirect:/jogos/" + jogoId + "/plantel?ficha=" + jogador;
+		long valor;
+		try {
+			valor = Long.parseLong(minimo.replaceAll("[\\s.]", ""));
+		}
+		catch (NumberFormatException e) {
+			redirect.addFlashAttribute("erro", "Digite o lance mínimo só com números.");
+			return ficha;
+		}
+		try {
+			return "redirect:/jogos/" + jogoId + "/leiloes/" + leiloes.venderPorLeilao(jogoId, usuario.id(), jogador, valor);
+		}
+		catch (IllegalArgumentException e) {
+			redirect.addFlashAttribute("erro", e.getMessage());
+			return ficha;
+		}
 	}
 
 	/**

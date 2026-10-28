@@ -14,6 +14,8 @@ import org.springframework.transaction.annotation.Transactional;
 import br.com.managerfoot.dominio.Clube;
 import br.com.managerfoot.dominio.Jogador;
 import br.com.managerfoot.dominio.Posicao;
+import br.com.managerfoot.economia.Moeda;
+import br.com.managerfoot.economia.PrecoJogador;
 import br.com.managerfoot.temporada.Artilharia;
 import br.com.managerfoot.temporada.Classificacao;
 import br.com.managerfoot.temporada.ConfiguracaoLiga;
@@ -86,7 +88,7 @@ public class ConsultasRepositorio {
 	/** Ficha de um jogador do jogo (SPEC §10.3): gols na temporada e na carreira, força e amarelos. */
 	@Transactional(readOnly = true)
 	public Optional<Ficha> ficha(long jogoId, long usuarioId, long jogadorId) {
-		exigirClube(jogoId, usuarioId);
+		long doUsuario = exigirClube(jogoId, usuarioId);
 		Optional<Long> clube = jdbc.sql("""
 				SELECT j.clube_id FROM jogo_jogador j JOIN jogo_clube c ON c.id = j.clube_id
 				WHERE j.id = :jogador AND c.jogo_id = :jogo""")
@@ -100,8 +102,10 @@ public class ConsultasRepositorio {
 			.query(String.class).single();
 		int amarelos = jdbc.sql("SELECT amarelos FROM jogo_jogador WHERE id = :j").param("j", jogadorId)
 			.query(Integer.class).single();
+		String pais = jdbc.sql("SELECT pais_codigo FROM jogo WHERE id = :jogo").param("jogo", jogoId).query(String.class).single();
 		return Optional.of(new Ficha(jogador, nomeClube, gols(jogoId, true).getOrDefault(jogadorId, 0),
-				gols(jogoId, false).getOrDefault(jogadorId, 0), amarelos));
+				gols(jogoId, false).getOrDefault(jogadorId, 0), amarelos, clube.get() == doUsuario, Moeda.doPais(pais),
+				PrecoJogador.padrao().preco(jogador, pais)));
 	}
 
 	/**
@@ -267,6 +271,11 @@ public class ConsultasRepositorio {
 			List<JogoNoCalendario> jogos) {
 	}
 
-	public record Ficha(Jogador jogador, String clube, int golsTemporada, int golsCarreira, int amarelos) {
+	/**
+	 * @param doUsuario o jogador é do clube do treinador: a ficha oferece a venda por leilão
+	 * @param preco preço da compra direta pela tabela, em centavos de Real (referência para o lance mínimo)
+	 */
+	public record Ficha(Jogador jogador, String clube, int golsTemporada, int golsCarreira, int amarelos,
+			boolean doUsuario, Moeda moeda, long preco) {
 	}
 }

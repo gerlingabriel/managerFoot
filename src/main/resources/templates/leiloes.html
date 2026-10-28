@@ -44,25 +44,31 @@
 
 <section th:unless="${v.aguardandoLances}" aria-labelledby="t-resultado" class="leiloes">
 <div class="leiloes-topo">
-<span class="leiloes-etapa">2 · Resultado</span>
-<h1 id="t-resultado" class="leiloes-titulo">Resultado dos leilões</h1>
+<span class="leiloes-etapa" th:text="${venda} ? 'Venda por leilão' : '2 · Resultado'">2 · Resultado</span>
+<h1 id="t-resultado" class="leiloes-titulo" th:text="${venda} ? 'Resultado do leilão' : 'Resultado dos leilões'">Resultado dos leilões</h1>
 <span class="suave" th:text="|Antes da rodada ${v.rodada} · seu caixa: ${v.moeda.formatar(v.saldo)}|">Antes da rodada</span>
 </div>
-<div th:each="l : ${v.leiloes}" class="leilao-resultado" th:classappend="${l.seu} ? 'seu'">
+<div th:each="l : ${v.leiloes}" class="leilao-resultado" th:classappend="${l.seu or (l.vendidoPorVoce and l.valor != null)} ? 'seu'">
 <span class="leilao-nome" th:text="${l.jogador.nome}">Nome</span>
 <span class="leilao-texto" th:switch="${l.situacao.name()}">
 <span th:case="'VENDIDO'" th:text="${l.seu} ? 'Comprado por você · contrato até o fim da temporada'
-	: |${l.comprador.nome} levou${l.seuLance != null ? ' (você deu ' + v.moeda.formatar(l.seuLance) + ')' : ''}${l.empate ? ' (empate decidido por sorteio)' : ''}|">levou</span>
-<span th:case="'SEM_LANCE'" th:text="|Sem lance: fica no ${l.vendedor.nome}|">Sem lance</span>
+	: (${l.vendidoPorVoce} ? |Vendido por você para o ${l.comprador.nome}${l.empate ? ' (empate decidido por sorteio)' : ''}|
+	: |${l.comprador.nome} levou${l.seuLance != null ? ' (você deu ' + v.moeda.formatar(l.seuLance) + ')' : ''}${l.empate ? ' (empate decidido por sorteio)' : ''}|)">levou</span>
+<span th:case="'SEM_LANCE'" th:text="${l.vendidoPorVoce} ? (${l.lanceMinimo > 0} ? |Ninguém deu o mínimo de ${v.moeda.formatar(l.lanceMinimo)}: fica no seu plantel| : 'Ninguém deu lance: fica no seu plantel')
+	: |Sem lance: fica no ${l.vendedor.nome}|">Sem lance</span>
 <span th:case="*" th:text="|Cancelado: o jogador já tinha saído do ${l.vendedor.nome}|">Cancelado</span>
 </span>
-<span class="leilao-valor" th:classappend="${l.seu} ? 'seu' : (${l.valor == null} ? 'nada')" th:text="${l.valor != null} ? ${v.moeda.formatar(l.valor)} : '—'">—</span>
+<span class="leilao-valor" th:classappend="${l.seu or (l.vendidoPorVoce and l.valor != null)} ? 'seu' : (${l.valor == null} ? 'nada')" th:text="${l.valor != null} ? ${v.moeda.formatar(l.valor)} : '—'">—</span>
 </div>
-<form th:action="@{/jogos/{id}/rodada(id=${jogoId})}" method="post" class="leiloes-acoes">
+<div th:if="${venda}" class="leiloes-acoes">
+<a th:href="@{/jogos/{id}/plantel(id=${jogoId})}" class="botao">Voltar ao plantel</a>
+</div>
+<form th:unless="${venda}" th:action="@{/jogos/{id}/rodada(id=${jogoId})}" method="post" class="leiloes-acoes">
 <input type="hidden" name="rodada" th:value="${v.rodada}">
 <button type="submit" class="botao">Ir para a rodada</button>
 </form>
-<p class="suave leiloes-nota">Empate de lances: decidido por sorteio. Sem lance: o jogador fica no clube e só volta a leilão depois desta rodada. Quem você comprou está no seu plantel, fora do banco.</p>
+<p th:if="${venda}" class="suave leiloes-nota">Empate de lances: decidido por sorteio. Sem lance: o jogador fica e só pode ir a leilão de novo depois da próxima rodada. O valor da venda já está no seu caixa e nas finanças.</p>
+<p th:unless="${venda}" class="suave leiloes-nota">Empate de lances: decidido por sorteio. Sem lance: o jogador fica no clube e só volta a leilão depois desta rodada. Quem você comprou está no seu plantel, fora do banco.</p>
 </section>
 </div>
 </div>

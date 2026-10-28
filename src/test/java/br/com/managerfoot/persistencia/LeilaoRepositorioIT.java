@@ -4,8 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,12 +18,13 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 
 import br.com.managerfoot.TestcontainersConfiguration;
 import br.com.managerfoot.dominio.Jogador;
+import br.com.managerfoot.dominio.Posicao;
 import br.com.managerfoot.economia.PrecoJogador;
 import br.com.managerfoot.persistencia.LeilaoRepositorio.Etapa;
 import br.com.managerfoot.persistencia.LeilaoRepositorio.LeilaoNaTela;
 import br.com.managerfoot.persistencia.LeilaoRepositorio.Situacao;
 
-/** Migração V20 e leilões da máquina antes da rodada ({@link LeilaoRepositorio}) contra PostgreSQL real. */
+/** Migrações V20 e V21, leilões da máquina antes da rodada e venda do treinador por leilão ({@link LeilaoRepositorio}) contra PostgreSQL real. */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
 class LeilaoRepositorioIT {
@@ -155,6 +158,67 @@ class LeilaoRepositorioIT {
 		leiloes.darLances(jogo, usuario, 1, Map.of());
 
 		assertThat(unico().situacao()).isEqualTo(Situacao.CANCELADO);
+	}
+
+	@Test
+	void treinadorVendeOJogadorPorLeilaoNaHoraSemFecharOsLeiloesDaRodada() {
+		Jogador jogador = maisForteDoUsuario();
+
+		long leilaoId = leiloes.venderPorLeilao(jogo, usuario, jogador.id(), 0);
+
+		LeilaoNaTela venda = leiloes.venda(jogo, usuario, leilaoId).orElseThrow().leiloes().get(0);
+		assertThat(venda.situacao()).isEqualTo(Situacao.VENDIDO);
+		assertThat(venda.vendidoPorVoce()).isTrue();
+		assertThat(venda.lanceMinimo()).isZero();
+		long comprador = venda.comprador().id();
+		assertThat(comprador).isNotEqualTo(clubeDoUsuario);
+		assertThat(clubeDe(jogador.id())).isEqualTo(comprador);
+		assertThat(saldo(clubeDoUsuario)).isEqualTo(RICO + venda.valor());
+		assertThat(lancamento(clubeDoUsuario, "VENDA", jogador.id())).isEqualTo(venda.valor());
+		// a máquina dá um pouco abaixo do preço
+		assertThat(venda.valor()).isLessThan(PrecoJogador.padrao().preco(jogador, "BRA"));
+
+		// a venda não aparece entre os leilões da rodada nem impede que eles abram
+		assertThat(leiloes.preparar(jogo, usuario, 1)).isEqualTo(Etapa.LANCES);
+		assertThat(unico().vendedor().id()).isEqualTo(vendedor);
+		// outro jogo ou outro leilão: não é uma venda do treinador
+		assertThat(leiloes.venda(jogo, usuario, unico().id())).isEmpty();
+	}
+
+	@Test
+	void semLanceNoMinimoOJogadorFicaESoVoltaDepoisDaRodada() {
+		Jogador jogador = maisForteDoUsuario();
+		long acima = PrecoJogador.padrao().preco(jogador, "BRA") / 100 * 2;
+
+		long leilaoId = leiloes.venderPorLeilao(jogo, usuario, jogador.id(), acima);
+
+		LeilaoNaTela venda = leiloes.venda(jogo, usuario, leilaoId).orElseThrow().leiloes().get(0);
+		assertThat(venda.situacao()).isEqualTo(Situacao.SEM_LANCE);
+		assertThat(clubeDe(jogador.id())).isEqualTo(clubeDoUsuario);
+		assertThatThrownBy(() -> leiloes.venderPorLeilao(jogo, usuario, jogador.id(), 0))
+			.isInstanceOf(IllegalArgumentException.class).hasMessageContaining("já foi a leilão");
+	}
+
+	@Test
+	void vendaRecusadaComMinimoNegativoJogadorDeOutroClubeOuRodadaAoVivo() {
+		Jogador jogador = maisForteDoUsuario();
+		long deOutro = jdbc.sql("SELECT id FROM jogo_jogador WHERE clube_id = :c LIMIT 1").param("c", vendedor)
+			.query(Long.class).single();
+
+		assertThatThrownBy(() -> leiloes.venderPorLeilao(jogo, usuario, jogador.id(), -1))
+			.isInstanceOf(IllegalArgumentException.class).hasMessageContaining("negativo");
+		assertThatThrownBy(() -> leiloes.venderPorLeilao(jogo, usuario, deOutro, 0)).isInstanceOf(NoSuchElementException.class);
+		saldo(vendedor, RICO);
+		aoVivo.iniciar(jogo, usuario, 1, Instant.now());
+		assertThatThrownBy(() -> leiloes.venderPorLeilao(jogo, usuario, jogador.id(), 0))
+			.isInstanceOf(IllegalArgumentException.class).hasMessageContaining("em andamento");
+		assertThat(clubeDe(jogador.id())).isEqualTo(clubeDoUsuario);
+	}
+
+	private Jogador maisForteDoUsuario() {
+		return jogos.carregarPlanteis(jogo).get(clubeDoUsuario).stream()
+			.filter(j -> j.posicao() != Posicao.GOLEIRO)
+			.max(Comparator.comparingInt(Jogador::forca)).orElseThrow();
 	}
 
 	private LeilaoNaTela unico() {

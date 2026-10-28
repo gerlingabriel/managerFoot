@@ -50,9 +50,14 @@ public final class MercadoDaMaquina {
 	public Optional<Jogador> jogadorParaVender(List<Jogador> plantel, String paisDaLiga) {
 		return plantel.stream()
 			.filter(j -> !j.asterisco())
-			.filter(j -> plantel.stream().filter(o -> o.posicao() == j.posicao()).count()
-					> parametros.elencoMinimo().getOrDefault(j.posicao(), 0))
+			.filter(j -> podeSair(plantel, j))
 			.max(Comparator.comparingLong((Jogador j) -> preco.preco(j, paisDaLiga)).thenComparingLong(Jogador::id));
+	}
+
+	/** A saída do jogador não deixa a posição dele abaixo do elenco mínimo (SPEC §9.3). */
+	public boolean podeSair(List<Jogador> plantel, Jogador jogador) {
+		return plantel.stream().filter(o -> o.posicao() == jogador.posicao()).count()
+				> parametros.elencoMinimo().getOrDefault(jogador.posicao(), 0);
 	}
 
 	/**

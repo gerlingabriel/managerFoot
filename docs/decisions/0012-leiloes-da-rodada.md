@@ -47,3 +47,14 @@
 - O relatório da simulação (`RelatorioMercadoTest`) ainda tem a própria cópia do laço; ele abre e
   resolve cada leilão em seguida, e o jogo abre todos e depois resolve. A diferença só aparece se
   um comprador ficar abaixo do limite depois de comprar, o que a folga de 5 rodadas impede.
+
+## Adendo (rev. 53) — venda do treinador por leilão
+
+- O treinador põe um jogador do seu plantel em leilão pela ficha, com o lance mínimo que ele
+  define; `LeilaoRepositorio.venderPorLeilao` grava o leilão e o resolve na mesma transação, com os
+  lances da máquina. A tela é a de resultado do modelo 7b (`/jogos/{id}/leiloes/{leilão}`).
+- **V21:** `jogo_leilao.tipo` (`RODADA` ou `VENDA`). Só os do tipo `RODADA` contam para "os leilões
+  da rodada já abriram" e aparecem na tela antes da rodada. A chave única (temporada, rodada,
+  jogador) continua para os dois tipos: sem lance, o jogador só volta depois da rodada.
+- Cada resolução lê quem da máquina já comprou antes da mesma rodada (1 compra por rodada) e usa o
+  id do primeiro leilão na semente do sorteio de empates, porque a rodada pode ter várias.

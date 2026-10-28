@@ -154,9 +154,45 @@ class AbasIT {
 		mvc.perform(get(base + "/plantel").param("ficha", String.valueOf(doClube)).with(como(treinador)))
 			.andExpect(content().string(containsString("Amarelos na temporada")))
 			.andExpect(content().string(containsString("aria-current=\"page\">Plantel")));
+		// a venda por leilão só aparece na ficha do plantel, para jogador do próprio clube
+		mvc.perform(get(base + "/plantel").param("ficha", String.valueOf(doClube)).with(como(treinador)))
+			.andExpect(content().string(containsString("Vender por leilão")))
+			.andExpect(content().string(containsString("Preço de tabela")));
+		mvc.perform(get(base + "/artilheiros/todos-os-tempos").param("ficha", String.valueOf(artilheiro.jogadorId()))
+				.with(como(treinador)))
+			.andExpect(content().string(not(containsString("Vender por leilão"))));
 		// jogador de fora deste jogo: a aba abre sem ficha
 		mvc.perform(get(base + "/plantel").param("ficha", "-1").with(como(treinador)))
 			.andExpect(content().string(not(containsString("Gols na carreira"))));
+	}
+
+	@Test
+	void vendaPorLeilaoPelaFichaMostraOResultadoNaTelaDosLeiloes() throws Exception {
+		long clube = jogo.clubeDoTreinador(jogoId, treinador.id()).orElseThrow();
+		long atacante = jdbc.sql("SELECT id FROM jogo_jogador WHERE clube_id = :c AND posicao = 'ATACANTE' ORDER BY forca DESC LIMIT 1")
+			.param("c", clube).query(Long.class).single();
+
+		mvc.perform(post(base + "/mercado/vender").param("jogador", String.valueOf(atacante)).param("minimo", "dez")
+				.with(como(treinador)).with(csrf()))
+			.andExpect(status().is3xxRedirection())
+			.andExpect(flash().attribute("erro", "Digite o lance mínimo só com números."));
+
+		// mínimo acima de qualquer lance da máquina: ninguém leva
+		String destino = mvc.perform(post(base + "/mercado/vender").param("jogador", String.valueOf(atacante)).param("minimo", "999.999.999")
+				.with(como(treinador)).with(csrf()))
+			.andExpect(status().is3xxRedirection())
+			.andReturn().getResponse().getRedirectedUrl();
+		assertThat(destino).startsWith(base + "/leiloes/");
+		mvc.perform(get(destino).with(como(treinador)))
+			.andExpect(content().string(containsString("Resultado do leilão")))
+			.andExpect(content().string(containsString("fica no seu plantel")))
+			.andExpect(content().string(containsString("Voltar ao plantel")))
+			.andExpect(content().string(not(containsString("Ir para a rodada"))));
+
+		// de novo antes da rodada: recusado, com o motivo
+		mvc.perform(post(base + "/mercado/vender").param("jogador", String.valueOf(atacante)).param("minimo", "0")
+				.with(como(treinador)).with(csrf()))
+			.andExpect(flash().attribute("erro", containsString("já foi a leilão")));
 	}
 
 	@Test

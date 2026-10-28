@@ -145,7 +145,7 @@
 <p class="suave legenda"><span class="sigla-pais">ARG</span> estrangeiro. Jogador do país do clube fica sem sigla.</p>
 </main>
 </div>
-<th:block th:if="${ficha != null}"><div th:replace="~{fragmentos :: ficha(${ficha}, @{/jogos/{id}/plantel(id=${v.jogoId})})}"></div></th:block>
+<th:block th:if="${ficha != null}"><div th:replace="~{fragmentos :: ficha(${ficha}, @{/jogos/{id}/plantel(id=${v.jogoId})}, @{/jogos/{id}/mercado/vender(id=${v.jogoId})})}"></div></th:block>
 </div>
 </div>
 </div>

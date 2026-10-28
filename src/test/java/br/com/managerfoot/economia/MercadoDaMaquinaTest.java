@@ -53,6 +53,10 @@ class MercadoDaMaquinaTest {
 		minimo.add(jogador(30, Posicao.ATACANTE, 20));
 		minimo.add(jogador(31, Posicao.ATACANTE, 20));
 		assertThat(mercado.jogadorParaVender(minimo, "BRA")).isEmpty();
+		assertThat(minimo).noneMatch(j -> mercado.podeSair(minimo, j));
+		minimo.add(jogador(32, Posicao.ATACANTE, 20));
+		assertThat(mercado.podeSair(minimo, minimo.get(0))).isFalse();
+		assertThat(mercado.podeSair(minimo, minimo.get(minimo.size() - 1))).isTrue();
 	}
 
 	@Test
