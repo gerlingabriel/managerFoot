@@ -1,0 +1,124 @@
+package br.com.managerfoot.web;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
+
+import br.com.managerfoot.TestcontainersConfiguration;
+import br.com.managerfoot.bancopadrao.GeradorBancoPadrao;
+import br.com.managerfoot.bancopadrao.PaisPadrao;
+import br.com.managerfoot.bancopadrao.ParametrosBancoPadrao;
+import br.com.managerfoot.contas.Usuario;
+import br.com.managerfoot.motor.ParametrosMotor;
+import br.com.managerfoot.persistencia.BancoPadraoRepositorio;
+import br.com.managerfoot.persistencia.ContasRepositorio;
+import br.com.managerfoot.persistencia.JogoRepositorio;
+import br.com.managerfoot.persistencia.JogosDoTreinadorRepositorio;
+import br.com.managerfoot.persistencia.MoldeRepositorio;
+import br.com.managerfoot.persistencia.RodadaRepositorio;
+
+/** Fim de temporada na tela: o usuário só confirma (SPEC §15, 3c.4), com o banco padrão. */
+@Import(TestcontainersConfiguration.class)
+@SpringBootTest
+@AutoConfigureMockMvc
+class FimDeTemporadaIT {
+
+	@Autowired
+	MockMvc mvc;
+
+	@Autowired
+	ContasRepositorio contas;
+
+	@Autowired
+	BancoPadraoRepositorio bancoPadrao;
+
+	@Autowired
+	MoldeRepositorio moldes;
+
+	@Autowired
+	JogosDoTreinadorRepositorio jogos;
+
+	@Autowired
+	JogoRepositorio jogo;
+
+	@Autowired
+	RodadaRepositorio rodadas;
+
+	@Autowired
+	JdbcClient jdbc;
+
+	Usuario treinador;
+	long jogoId;
+	String plantel;
+
+	@BeforeEach
+	void temporadaInteiraJogada() {
+		bancoPadrao.carregar(new GeradorBancoPadrao(ParametrosBancoPadrao.padrao(), ParametrosMotor.padrao())
+			.gerar(PaisPadrao.TODOS));
+		long portugal = moldes.campeonatosDisponiveis(bancoPadrao.moldeId().orElseThrow()).stream()
+			.filter(c -> c.codigoPais().equals("POR")).findFirst().orElseThrow().paisId();
+		treinador = contas.criarAdministrador("f" + System.nanoTime() + "@exemplo.com", "Gabriel", "senha-boa-1");
+		jogoId = jogos.criarComSorteio(portugal, treinador.id(), 5).jogoId();
+		plantel = "/jogos/" + jogoId + "/plantel";
+		// a máquina escala o clube do treinador: suspensões não param a temporada do teste
+		jdbc.sql("DELETE FROM jogo_escalacao e USING jogo_clube c WHERE c.id = e.clube_id AND c.jogo_id = :j")
+			.param("j", jogoId).update();
+		for (int rodada = 1; rodada <= rodadas.totalDeRodadas(jogoId); rodada++) {
+			rodadas.avancar(jogoId, rodada);
+		}
+	}
+
+	@Test
+	void okComecaAProximaTemporadaUmaVezSo() throws Exception {
+		mvc.perform(get(plantel).with(como(treinador)))
+			.andExpect(content().string(containsString("Temporada 1 encerrada")))
+			.andExpect(content().string(containsString("OK, começar a próxima")));
+
+		mvc.perform(post("/jogos/" + jogoId + "/temporada").param("temporada", "1").with(como(treinador)).with(csrf()))
+			.andExpect(redirectedUrl(plantel))
+			.andExpect(flash().attribute("resultado", containsString("Começou a temporada 2.")));
+		mvc.perform(post("/jogos/" + jogoId + "/temporada").param("temporada", "1").with(como(treinador)).with(csrf()))
+			.andExpect(flash().attribute("erro", "A temporada 1 já foi encerrada."));
+
+		assertThat(jdbc.sql("SELECT max(numero) FROM jogo_temporada WHERE jogo_id = :j").param("j", jogoId)
+			.query(Integer.class).single()).isEqualTo(2);
+		boolean naFila = jdbc.sql("""
+				SELECT c.divisao_id IS NULL FROM jogo_treinador t JOIN jogo_clube c ON c.id = t.clube_id
+				WHERE t.jogo_id = :j""").param("j", jogoId).query(Boolean.class).single();
+		mvc.perform(get(plantel).with(como(treinador)))
+			.andExpect(status().isOk())
+			.andExpect(content().string(containsString(naFila ? "fila de espera" : "Próximo jogo · Rodada 1")));
+	}
+
+	@Test
+	void clubeNaFilaMostraUmAvisoEmVezDeErro() throws Exception {
+		mvc.perform(post("/jogos/" + jogoId + "/temporada").param("temporada", "1").with(como(treinador)).with(csrf()));
+		long clube = jogo.clubeDoTreinador(jogoId, treinador.id()).orElseThrow();
+		jdbc.sql("UPDATE jogo_clube SET divisao_id = NULL WHERE id = :c").param("c", clube).update();
+
+		mvc.perform(get(plantel).with(como(treinador)))
+			.andExpect(status().isOk())
+			.andExpect(content().string(containsString("Seu clube caiu para a fila de espera")));
+	}
+
+	private static RequestPostProcessor como(Usuario usuario) {
+		return authentication(AutenticacaoContas.autenticado(usuario));
+	}
+}

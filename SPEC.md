@@ -1903,6 +1903,14 @@ começa depois que a anterior estiver testada.
     rodadas (migração V14). Fica fora o cabeçalho com estádio e público
     (sem estádio no domínio). As caixas "Cartões vermelhos" e "Lesões"
     continuam em aberto.
+  - **3f.5 (parcial):** abas Classificação (por divisão, clube do usuário
+    em destaque, rebaixados marcados), Artilheiros da temporada (por
+    divisão) e de todos os tempos (empatados dividem a posição, 20 linhas),
+    ficha do jogador por cima do plantel e dos artilheiros, e fim de
+    temporada na tela (o usuário só confirma; a tela envia o número da
+    temporada e o clique repetido é recusado). Clube do usuário na fila
+    mostra um aviso, porque o destino do treinador está em aberto (§4.1).
+    Falta o calendário do clube, com modelo enviado para aprovação.
   - plantel e tática;
   - partidas simultâneas da divisão (§10.2);
   - classificação;

@@ -1,6 +1,7 @@
 package br.com.managerfoot.web;
 
 import java.io.IOException;
+import java.security.SecureRandom;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
@@ -24,6 +25,11 @@ import br.com.managerfoot.dominio.Lugar;
 import br.com.managerfoot.dominio.Posicao;
 import br.com.managerfoot.motor.ParametrosMotor;
 import br.com.managerfoot.motor.RegrasPartida;
+import br.com.managerfoot.persistencia.ClubeNaFilaException;
+import br.com.managerfoot.persistencia.ConsultasRepositorio;
+import br.com.managerfoot.persistencia.FimDeTemporadaRepositorio;
+import br.com.managerfoot.persistencia.FimDeTemporadaRepositorio.NovaTemporada;
+import br.com.managerfoot.persistencia.JogoRepositorio;
 import br.com.managerfoot.persistencia.JogosDoTreinadorRepositorio;
 import br.com.managerfoot.persistencia.PlantelRepositorio;
 import br.com.managerfoot.persistencia.PlantelRepositorio.LinhaJogador;
@@ -39,18 +45,28 @@ import jakarta.servlet.http.HttpServletResponse;
 @Controller
 class PlantelController {
 
+	private static final SecureRandom SEMENTES = new SecureRandom();
+
 	private final PlantelRepositorio plantel;
 	private final JogosDoTreinadorRepositorio jogos;
 	private final RodadaAoVivoRepositorio aoVivo;
+	private final ConsultasRepositorio consultas;
+	private final FimDeTemporadaRepositorio fimDeTemporada;
+	private final JogoRepositorio jogo;
 
-	PlantelController(PlantelRepositorio plantel, JogosDoTreinadorRepositorio jogos, RodadaAoVivoRepositorio aoVivo) {
+	PlantelController(PlantelRepositorio plantel, JogosDoTreinadorRepositorio jogos, RodadaAoVivoRepositorio aoVivo,
+			ConsultasRepositorio consultas, FimDeTemporadaRepositorio fimDeTemporada, JogoRepositorio jogo) {
 		this.plantel = plantel;
 		this.jogos = jogos;
 		this.aoVivo = aoVivo;
+		this.consultas = consultas;
+		this.fimDeTemporada = fimDeTemporada;
+		this.jogo = jogo;
 	}
 
 	@GetMapping("/jogos/{jogoId}/plantel")
-	String plantel(@AuthenticationPrincipal Usuario usuario, @PathVariable long jogoId, Model model) {
+	String plantel(@AuthenticationPrincipal Usuario usuario, @PathVariable long jogoId,
+			@RequestParam(name = "ficha", required = false) Long ficha, Model model) {
 		jogos.abrir(jogoId, usuario.id()).orElseThrow(NoSuchElementException::new);
 		if (aoVivo.emAndamento(jogoId)) {
 			// rodada ao vivo: o plantel fica fechado até ela terminar (docs/decisions/0010)
@@ -77,6 +93,9 @@ class PlantelController {
 		model.addAttribute("asteriscosEmCampo", titulares.stream().filter(l -> l.jogador().asterisco()).count());
 		model.addAttribute("limiteAsteriscos", ParametrosMotor.padrao().asterisco().limiteSemPenalidade());
 		model.addAttribute("substituicoes", RegrasPartida.padrao().substituicoes());
+		if (ficha != null) {
+			consultas.ficha(jogoId, usuario.id(), ficha).ifPresent(dados -> model.addAttribute("ficha", dados));
+		}
 		return "plantel";
 	}
 
@@ -101,6 +120,36 @@ class PlantelController {
 		return voltar(jogoId);
 	}
 
+	/**
+	 * Fim de temporada na tela: o usuário só confirma (SPEC §15, 3c.4). O número da temporada vem da
+	 * tela, e um segundo clique é recusado pelo servidor.
+	 */
+	@PostMapping("/jogos/{jogoId}/temporada")
+	String encerrarTemporada(@AuthenticationPrincipal Usuario usuario, @PathVariable long jogoId,
+			@RequestParam("temporada") int temporada, RedirectAttributes redirect) {
+		long clube = jogo.clubeDoTreinador(jogoId, usuario.id()).orElseThrow(NoSuchElementException::new);
+		try {
+			NovaTemporada nova = fimDeTemporada.avancarTemporada(jogoId, temporada, SEMENTES.nextLong());
+			String destino = nova.transicao().promovidos().stream().anyMatch(c -> c.id() == clube)
+					? " Seu clube subiu de divisão!"
+					: nova.transicao().rebaixados().stream().anyMatch(c -> c.id() == clube) ? " Seu clube foi rebaixado." : "";
+			redirect.addFlashAttribute("resultado", "Começou a temporada " + nova.temporada().numero() + "." + destino);
+		}
+		catch (IllegalStateException e) {
+			redirect.addFlashAttribute("erro", "A temporada " + temporada + " já foi encerrada.");
+		}
+		return voltar(jogoId);
+	}
+
+	/** Clube na fila de espera: a regra do treinador nesse caso está em aberto (SPEC §4.1). */
+	@ExceptionHandler(ClubeNaFilaException.class)
+	String naFila(Model model) {
+		model.addAttribute("mensagem", "Seu clube caiu para a fila de espera e não joga esta temporada. "
+				+ "O que acontece com o treinador nesse caso ainda não foi decidido.");
+		return "aviso";
+	}
+
+	/** Jogo de outro usuário ou inexistente: para quem pede, ele não existe. */
 	@ExceptionHandler(NoSuchElementException.class)
 	void naoEncontrado(HttpServletResponse response) throws IOException {
 		response.sendError(HttpStatus.NOT_FOUND.value());

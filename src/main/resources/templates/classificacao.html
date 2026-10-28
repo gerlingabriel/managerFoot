@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: cabeca('Classificação')}"></head>
+<body>
+<div class="campo campo-pagina">
+<div class="pagina">
+<header th:replace="~{fragmentos :: topo}"></header>
+<nav th:replace="~{fragmentos :: abas(${jogoId}, 'classificacao')}"></nav>
+
+<section th:attr="aria-label=|Classificação da ${c.divisao}|" class="painel grupo">
+<div class="painel-titulo painel-cabecalho">
+<h1 class="titulo-secao pequeno" th:text="${c.rodadas == 0} ? |Classificação · ${c.divisao} · antes da 1ª rodada| : |Classificação · ${c.divisao} · após a rodada ${c.rodadas}|">Classificação</h1>
+<nav aria-label="Divisão" class="divisoes">
+<a th:each="d : ${c.divisoes}" th:href="@{/jogos/{id}/classificacao(id=${jogoId},divisao=${d.prioridade})}" class="divisao-botao"
+	th:classappend="${d.prioridade == c.prioridade} ? 'atual'" th:attr="aria-current=${d.prioridade == c.prioridade ? 'page' : null}"
+	th:text="${d.nome}">1ª</a>
+</nav>
+</div>
+<div class="tabela-rolagem">
+<table class="tabela-classificacao">
+<thead>
+<tr>
+<th scope="col" class="num">#</th><th scope="col">Clube</th>
+<th scope="col" class="num" title="Pontos">P</th><th scope="col" class="num" title="Jogos">J</th>
+<th scope="col" class="num" title="Vitórias">V</th><th scope="col" class="num" title="Empates">E</th>
+<th scope="col" class="num" title="Derrotas">D</th><th scope="col" class="num" title="Gols pró">GP</th>
+<th scope="col" class="num" title="Gols contra">GC</th><th scope="col" class="num" title="Saldo de gols">SG</th>
+</tr>
+</thead>
+<tbody>
+<tr th:each="l, i : ${c.linhas}"
+	th:classappend="${l.clube.id == c.clubeDoUsuario} ? 'do-usuario' : (${i.count > c.linhas.size() - c.rebaixados} ? 'rebaixado')">
+<td class="num" th:text="${i.count}">1</td>
+<td><span class="clube-celula"><span aria-hidden="true" th:style="${@escudos.estilo(l.clube.escudo, 20, 24)}"></span><span class="jogo-nome pequeno" th:text="${l.clube.nome}">Clube</span>
+<span th:if="${i.count > c.linhas.size() - c.rebaixados}" class="oculto">(zona de rebaixamento)</span></span></td>
+<td class="num pontos" th:text="${l.pontos()}">0</td>
+<td class="num" th:text="${l.jogos}">0</td><td class="num" th:text="${l.vitorias}">0</td>
+<td class="num" th:text="${l.empates}">0</td><td class="num" th:text="${l.derrotas}">0</td>
+<td class="num" th:text="${l.golsPro}">0</td><td class="num" th:text="${l.golsContra}">0</td>
+<td class="num" th:text="${l.saldo() > 0 ? '+' + l.saldo() : l.saldo()}">0</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="legenda-classificacao suave">
+<span th:if="${c.rebaixados > 0}" class="legenda"><span class="marca-rebaixado" aria-hidden="true"></span><span th:text="|Rebaixados (${c.rebaixados}, conforme a configuração da liga)|">Rebaixados</span></span>
+<span>Desempate: pontos, vitórias, menos derrotas, menos empates, saldo, gols pró, menos gols sofridos, sorteio.</span>
+</div>
+</section>
+</div>
+</div>
+</body>
+</html>

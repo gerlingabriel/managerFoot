@@ -49,7 +49,11 @@ public class PlantelRepositorio {
 		this.escalacoes = escalacoes;
 	}
 
-	/** O plantel do clube do usuário no jogo; vazio se ele não é treinador nesse jogo. */
+	/**
+	 * O plantel do clube do usuário no jogo; vazio se ele não é treinador nesse jogo.
+	 *
+	 * @throws ClubeNaFilaException se o clube dele está na fila de espera
+	 */
 	@Transactional
 	public Optional<VisaoPlantel> visao(long jogoId, long usuarioId) {
 		Optional<Long> clubeId = jogos.clubeDoTreinador(jogoId, usuarioId);
@@ -57,6 +61,10 @@ public class PlantelRepositorio {
 			return Optional.empty();
 		}
 		long clube = clubeId.get();
+		if (jdbc.sql("SELECT divisao_id IS NULL FROM jogo_clube WHERE id = :clube").param("clube", clube)
+			.query(Boolean.class).single()) {
+			throw new ClubeNaFilaException("o clube " + clube + " está na fila de espera");
+		}
 		List<Jogador> plantel = jogos.carregarPlanteis(jogoId).getOrDefault(clube, List.of());
 		Map<Long, Situacao> situacoes = situacoes(clube);
 		EscalacaoDoTreinador escalacao = escalacao(clube, plantel);
@@ -76,7 +84,7 @@ public class PlantelRepositorio {
 		Temporada.SorteiosDivisao divisao = temporada.divisoes().stream()
 			.filter(d -> d.calendario().jogos().stream().anyMatch(j -> envolve(j, clube)))
 			.findFirst()
-			.orElseThrow(() -> new NoSuchElementException("o clube " + clube + " não joga nesta temporada"));
+			.orElseThrow(() -> new ClubeNaFilaException("o clube " + clube + " está na fila de espera"));
 		Classificacao classificacao = rodadas.classificacao(jogoId).get(divisao.prioridade());
 		LinhaClassificacao linha = classificacao.linhas().stream().filter(l -> l.clube().id() == clube).findFirst()
 			.orElseThrow();
@@ -91,7 +99,7 @@ public class PlantelRepositorio {
 				: divisao.calendario().jogos().stream().filter(j -> j.rodada() == processadas + 1 && envolve(j, clube))
 					.findFirst();
 
-		return Optional.of(new VisaoPlantel(jogoId, oClube, nomeDivisao, classificacao.linhas().indexOf(linha) + 1,
+		return Optional.of(new VisaoPlantel(jogoId, temporada.numero(), oClube, nomeDivisao, classificacao.linhas().indexOf(linha) + 1,
 				linha.pontos(), linha.jogos(), moral.valor(), parametrosMoral.maximo(), moral.faixa(parametrosMoral),
 				processadas + 1, processadas >= total, proximo.map(j -> j.mandante().id() == clube).orElse(null),
 				proximo.map(j -> j.mandante().id() == clube ? j.visitante() : j.mandante()).orElse(null), escalacao,
@@ -196,7 +204,7 @@ public class PlantelRepositorio {
 	 * @param emCasa nulo quando não há próximo jogo (folga ou temporada encerrada)
 	 * @param adversario nulo quando não há próximo jogo
 	 */
-	public record VisaoPlantel(long jogoId, Clube clube, String divisao, int posicao, int pontos, int jogos,
+	public record VisaoPlantel(long jogoId, int temporada, Clube clube, String divisao, int posicao, int pontos, int jogos,
 			int moral, int moralMaxima, Moral.Faixa faixaMoral, int rodada, boolean temporadaEncerrada, Boolean emCasa,
 			Clube adversario, EscalacaoDoTreinador escalacao, List<LinhaJogador> jogadores, List<String> problemas) {
 	}

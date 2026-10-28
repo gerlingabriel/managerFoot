@@ -30,6 +30,40 @@
 </div>
 </header>
 
+<nav th:fragment="abas(jogoId, atual)" aria-label="Telas do treinador" class="abas">
+<a th:href="@{/jogos/{id}/plantel(id=${jogoId})}" class="aba" th:classappend="${atual == 'plantel'} ? 'atual'" th:attr="aria-current=${atual == 'plantel' ? 'page' : null}">Plantel</a>
+<a th:href="@{/jogos/{id}/classificacao(id=${jogoId})}" class="aba" th:classappend="${atual == 'classificacao'} ? 'atual'" th:attr="aria-current=${atual == 'classificacao' ? 'page' : null}">Classificação</a>
+<a th:href="@{/jogos/{id}/artilheiros(id=${jogoId})}" class="aba" th:classappend="${atual == 'temporada'} ? 'atual'" th:attr="aria-current=${atual == 'temporada' ? 'page' : null}">Artilheiros da temporada</a>
+<a th:href="@{/jogos/{id}/artilheiros/todos-os-tempos(id=${jogoId})}" class="aba" th:classappend="${atual == 'todos'} ? 'atual'" th:attr="aria-current=${atual == 'todos' ? 'page' : null}">Artilheiros de todos os tempos</a>
+</nav>
+
+<!-- Ficha do jogador (modelo aprovado): por cima da aba; fechar volta à aba sem a ficha. -->
+<div th:fragment="ficha(f, fechar)" class="janela-fundo">
+<div role="dialog" aria-modal="true" aria-labelledby="ficha-nome" class="janela ficha">
+<div class="ficha-topo">
+<div class="ficha-identidade">
+<span class="pos grande" th:classappend="|pos-${f.jogador.posicao}|" th:text="${f.jogador.posicao.name().substring(0, 1)}">A</span>
+<div>
+<h2 id="ficha-nome" class="ficha-nome"><span th:text="${f.jogador.nome}">Nome</span> <span th:if="${f.jogador.asterisco}" class="asterisco">★</span></h2>
+<span class="suave" th:text="|${#strings.capitalize(f.jogador.posicao.nome(1))} · ${f.clube}|">Atacante · Clube</span>
+</div>
+</div>
+<a th:href="${fechar}" class="janela-fechar" aria-label="Fechar" autofocus>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12"></path><path d="M18 6 6 18"></path></svg>
+</a>
+</div>
+<div class="ficha-destaques">
+<div><span class="rotulo">Gols na temporada</span><span class="ficha-numero" th:text="${f.golsTemporada}">0</span></div>
+<div><span class="rotulo">Gols na carreira</span><span class="ficha-numero" th:text="${f.golsCarreira}">0</span></div>
+</div>
+<dl class="resumo ficha-dados">
+<div><dt>Força</dt><dd th:text="${f.jogador.forca}">0</dd></div>
+<div><dt>Temperamento</dt><dd th:text="${#strings.capitalize(#strings.toLowerCase(f.jogador.temperamento.name()))}">Normal</dd></div>
+<div><dt>Amarelos na temporada</dt><dd th:text="${f.amarelos}">0</dd></div>
+</dl>
+</div>
+</div>
+
 <section th:fragment="entrar" aria-labelledby="t-entrar" class="cartao">
 <h2 id="t-entrar">Entrar</h2>
 <div th:if="${param.erro != null}" role="alert" class="alerta">E-mail ou senha incorretos.</div>

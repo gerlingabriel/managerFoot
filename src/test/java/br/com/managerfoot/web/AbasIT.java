@@ -1,0 +1,156 @@
+package br.com.managerfoot.web;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
+
+import br.com.managerfoot.TestcontainersConfiguration;
+import br.com.managerfoot.bancopadrao.GeradorBancoPadrao;
+import br.com.managerfoot.bancopadrao.PaisPadrao;
+import br.com.managerfoot.bancopadrao.ParametrosBancoPadrao;
+import br.com.managerfoot.contas.Usuario;
+import br.com.managerfoot.motor.ParametrosMotor;
+import br.com.managerfoot.persistencia.BancoPadraoRepositorio;
+import br.com.managerfoot.persistencia.ConsultasRepositorio;
+import br.com.managerfoot.persistencia.ConsultasRepositorio.LinhaArtilheiro;
+import br.com.managerfoot.persistencia.ConsultasRepositorio.VisaoArtilheiros;
+import br.com.managerfoot.persistencia.ContasRepositorio;
+import br.com.managerfoot.persistencia.JogoRepositorio;
+import br.com.managerfoot.persistencia.JogosDoTreinadorRepositorio;
+import br.com.managerfoot.persistencia.MoldeRepositorio;
+import br.com.managerfoot.persistencia.RodadaRepositorio;
+
+/** Abas Classificação e Artilheiros e a ficha do jogador (SPEC §10.3, rev. 16), com o banco padrão. */
+@Import(TestcontainersConfiguration.class)
+@SpringBootTest
+@AutoConfigureMockMvc
+class AbasIT {
+
+	@Autowired
+	MockMvc mvc;
+
+	@Autowired
+	ContasRepositorio contas;
+
+	@Autowired
+	BancoPadraoRepositorio bancoPadrao;
+
+	@Autowired
+	MoldeRepositorio moldes;
+
+	@Autowired
+	JogosDoTreinadorRepositorio jogos;
+
+	@Autowired
+	JogoRepositorio jogo;
+
+	@Autowired
+	RodadaRepositorio rodadas;
+
+	@Autowired
+	ConsultasRepositorio consultas;
+
+	@Autowired
+	JdbcClient jdbc;
+
+	Usuario treinador;
+	long jogoId;
+	String base;
+
+	@BeforeEach
+	void jogoComTresRodadas() {
+		bancoPadrao.carregar(new GeradorBancoPadrao(ParametrosBancoPadrao.padrao(), ParametrosMotor.padrao())
+			.gerar(PaisPadrao.TODOS));
+		long brasil = moldes.campeonatosDisponiveis(bancoPadrao.moldeId().orElseThrow()).stream()
+			.filter(c -> c.codigoPais().equals("BRA")).findFirst().orElseThrow().paisId();
+		treinador = contas.criarAdministrador("a" + System.nanoTime() + "@exemplo.com", "Gabriel", "senha-boa-1");
+		jogoId = jogos.criarComSorteio(brasil, treinador.id(), 13).jogoId();
+		// sem suspensos na escalação do treinador: a máquina escala todos para as rodadas do teste
+		jdbc.sql("DELETE FROM jogo_escalacao e USING jogo_clube c WHERE c.id = e.clube_id AND c.jogo_id = :j")
+			.param("j", jogoId).update();
+		for (int rodada = 1; rodada <= 3; rodada++) {
+			rodadas.avancar(jogoId, rodada);
+		}
+		base = "/jogos/" + jogoId;
+	}
+
+	@Test
+	void classificacaoDaDivisaoDoUsuarioComODestaqueERebaixados() throws Exception {
+		mvc.perform(get(base + "/classificacao").with(como(treinador)))
+			.andExpect(status().isOk())
+			.andExpect(content().string(containsString("após a rodada 3")))
+			.andExpect(content().string(containsString("do-usuario")))
+			.andExpect(content().string(containsString("Desempate: pontos")))
+			.andExpect(content().string(containsString("aria-current=\"page\">Classificação")));
+		mvc.perform(get(base + "/classificacao").param("divisao", "1").with(como(treinador)))
+			.andExpect(content().string(not(containsString("do-usuario"))))
+			.andExpect(content().string(containsString("Rebaixados (")));
+	}
+
+	@Test
+	void artilheirosDaTemporadaEDeTodosOsTemposBatemComOsGolsGravados() throws Exception {
+		VisaoArtilheiros temporada = consultas.artilheirosDaTemporada(jogoId, treinador.id(), 1);
+		VisaoArtilheiros todos = consultas.artilheirosDeTodosOsTempos(jogoId, treinador.id());
+		LinhaArtilheiro primeiro = todos.linhas().getFirst();
+		int golsGravados = jdbc.sql("SELECT count(*) FROM jogo_evento WHERE tipo = 'GOL' AND jogador_id = :j")
+			.param("j", primeiro.jogadorId()).query(Integer.class).single();
+
+		assertThat(primeiro.gols()).isEqualTo(golsGravados);
+		assertThat(primeiro.posicao()).isEqualTo(1);
+		assertThat(todos.linhas()).isSortedAccordingTo((a, b) -> Integer.compare(b.gols(), a.gols()));
+		assertThat(temporada.linhas()).isNotEmpty().allMatch(l -> l.gols() > 0);
+
+		mvc.perform(get(base + "/artilheiros").param("divisao", "1").with(como(treinador)))
+			.andExpect(content().string(containsString("Temporada 1 · ")))
+			.andExpect(content().string(containsString(temporada.linhas().getFirst().nome())));
+		mvc.perform(get(base + "/artilheiros/todos-os-tempos").with(como(treinador)))
+			.andExpect(content().string(containsString("Clube atual")))
+			.andExpect(content().string(containsString(primeiro.nome())));
+	}
+
+	@Test
+	void fichaAbrePorCimaDoPlantelEDosArtilheiros() throws Exception {
+		LinhaArtilheiro artilheiro = consultas.artilheirosDeTodosOsTempos(jogoId, treinador.id()).linhas().getFirst();
+
+		mvc.perform(get(base + "/artilheiros/todos-os-tempos").param("ficha", String.valueOf(artilheiro.jogadorId()))
+				.with(como(treinador)))
+			.andExpect(content().string(containsString("Gols na carreira")))
+			.andExpect(content().string(containsString("ficha-numero\">" + artilheiro.gols() + "<")));
+
+		long doClube = jdbc.sql("SELECT id FROM jogo_jogador WHERE clube_id = :c LIMIT 1")
+			.param("c", jogo.clubeDoTreinador(jogoId, treinador.id()).orElseThrow()).query(Long.class).single();
+		mvc.perform(get(base + "/plantel").param("ficha", String.valueOf(doClube)).with(como(treinador)))
+			.andExpect(content().string(containsString("Amarelos na temporada")))
+			.andExpect(content().string(containsString("aria-current=\"page\">Plantel")));
+		// jogador de fora deste jogo: a aba abre sem ficha
+		mvc.perform(get(base + "/plantel").param("ficha", "-1").with(como(treinador)))
+			.andExpect(content().string(not(containsString("Gols na carreira"))));
+	}
+
+	@Test
+	void outroUsuarioNaoVeAsAbas() throws Exception {
+		Usuario outro = contas.criarAdministrador("o" + System.nanoTime() + "@exemplo.com", "Outro", "senha-boa-1");
+
+		mvc.perform(get(base + "/classificacao").with(como(outro))).andExpect(status().isNotFound());
+		mvc.perform(get(base + "/artilheiros").with(como(outro))).andExpect(status().isNotFound());
+		mvc.perform(get(base + "/artilheiros/todos-os-tempos").with(como(outro))).andExpect(status().isNotFound());
+	}
+
+	private static RequestPostProcessor como(Usuario usuario) {
+		return authentication(AutenticacaoContas.autenticado(usuario));
+	}
+}

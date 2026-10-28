@@ -38,12 +38,7 @@
 <div th:if="${resultado}" role="status" class="aviso-resultado" th:text="${resultado}">Rodada 1: A 1 x 0 B</div>
 <div th:if="${erro}" role="alert" class="alerta" th:text="${erro}">erro</div>
 
-<nav aria-label="Telas do treinador" class="abas">
-<span class="aba atual" aria-current="page">Plantel</span>
-<span class="aba" aria-disabled="true" title="Chega na próxima etapa">Classificação</span>
-<span class="aba" aria-disabled="true" title="Chega na próxima etapa">Artilheiros da temporada</span>
-<span class="aba" aria-disabled="true" title="Chega na próxima etapa">Artilheiros de todos os tempos</span>
-</nav>
+<nav th:replace="~{fragmentos :: abas(${v.jogoId}, 'plantel')}"></nav>
 
 <div class="plantel-corpo">
 
@@ -86,12 +81,17 @@
 </dl>
 </section>
 
-<form th:action="@{/jogos/{id}/rodada(id=${v.jogoId})}" method="post" class="pilha-curta" data-envio-unico>
+<form th:if="${v.temporadaEncerrada}" th:action="@{/jogos/{id}/temporada(id=${v.jogoId})}" method="post" class="pilha-curta" data-envio-unico>
+<input type="hidden" name="temporada" th:value="${v.temporada}">
+<span class="texto" th:text="|Temporada ${v.temporada} encerrada: seu clube terminou em ${v.posicao}º.|">Temporada encerrada</span>
+<button type="submit" class="botao botao-largo">OK, começar a próxima</button>
+</form>
+<form th:unless="${v.temporadaEncerrada}" th:action="@{/jogos/{id}/rodada(id=${v.jogoId})}" method="post" class="pilha-curta" data-envio-unico>
 <input type="hidden" name="rodada" th:value="${v.rodada}">
-<button type="submit" class="botao botao-largo" th:disabled="${v.temporadaEncerrada or !v.problemas.isEmpty()}"
+<button type="submit" class="botao botao-largo" th:disabled="${!v.problemas.isEmpty()}"
 	aria-describedby="jogar-ajuda">Confirmar e jogar rodada</button>
 <span id="jogar-ajuda" class="suave centro"
-	th:text="${v.temporadaEncerrada} ? 'O fim de temporada chega numa próxima etapa.' : (${v.problemas.isEmpty()} ? |Joga a rodada ${v.rodada} inteira de uma vez.| : 'Complete a escalação para jogar.')">ajuda</span>
+	th:text="${v.problemas.isEmpty()} ? |Rodada ${v.rodada}.| : 'Complete a escalação para jogar.'">ajuda</span>
 </form>
 </aside>
 
@@ -115,7 +115,7 @@
 <tr th:each="l : ${g.jogadores}" th:with="j=${l.jogador}">
 <td><span class="pos" th:classappend="|pos-${j.posicao}|" th:text="${j.posicao.name().substring(0, 1)}" th:title="${j.posicao.nome(1)}">G</span></td>
 <td class="jogador-celula">
-<span class="jogador-nome" th:text="${j.nome}">Nome</span>
+<a class="jogador-nome" th:href="@{/jogos/{id}/plantel(id=${v.jogoId},ficha=${j.id})}" th:text="${j.nome}" th:attr="aria-label=|Ver ficha de ${j.nome}|">Nome</a>
 <span th:if="${j.asterisco}" class="asterisco" title="jogador com asterisco">★</span>
 <span th:if="${l.estrangeiro}" class="sigla-pais" th:text="${l.estrangeiro}" th:title="|estrangeiro (${l.estrangeiro})|">ARG</span>
 <span th:if="${l.suspenso}" class="suspenso">suspenso</span>
@@ -140,6 +140,7 @@
 <p class="suave legenda"><span class="sigla-pais">ARG</span> estrangeiro. Jogador do país do clube fica sem sigla.</p>
 </main>
 </div>
+<th:block th:if="${ficha != null}"><div th:replace="~{fragmentos :: ficha(${ficha}, @{/jogos/{id}/plantel(id=${v.jogoId})})}"></div></th:block>
 </div>
 </div>
 </div>

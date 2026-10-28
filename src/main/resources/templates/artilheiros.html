@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: cabeca(${aba == 'todos'} ? 'Artilheiros de todos os tempos' : 'Artilheiros da temporada')}"></head>
+<body>
+<div class="campo campo-pagina">
+<div class="pagina">
+<header th:replace="~{fragmentos :: topo}"></header>
+<nav th:replace="~{fragmentos :: abas(${jogoId}, ${aba})}"></nav>
+
+<section class="painel grupo" th:attr="aria-label=${aba == 'todos'} ? 'Artilheiros de todos os tempos' : 'Artilheiros da temporada'"
+	th:with="url=${aba == 'todos'} ? @{/jogos/{id}/artilheiros/todos-os-tempos(id=${jogoId})} : @{/jogos/{id}/artilheiros(id=${jogoId},divisao=${a.prioridade})}">
+<div class="painel-titulo painel-cabecalho">
+<div class="pilha-curta">
+<h1 class="titulo-secao pequeno" th:text="${aba == 'todos'} ? 'Artilheiros de todos os tempos' : 'Artilheiros da temporada'">Artilheiros</h1>
+<span class="suave" th:text="${aba == 'todos'} ? 'Gols na carreira, desde o início do jogo salvo' : |Temporada ${a.temporada} · ${a.divisao}|">nota</span>
+</div>
+<nav th:if="${aba != 'todos'}" aria-label="Divisão" class="divisoes">
+<a th:each="d : ${a.divisoes}" th:href="@{/jogos/{id}/artilheiros(id=${jogoId},divisao=${d.prioridade})}" class="divisao-botao"
+	th:classappend="${d.prioridade == a.prioridade} ? 'atual'" th:attr="aria-current=${d.prioridade == a.prioridade ? 'page' : null}"
+	th:text="${d.nome}">1ª</a>
+</nav>
+</div>
+<p th:if="${a.linhas.isEmpty()}" class="texto linha-jogo">Ninguém marcou ainda.</p>
+<table th:unless="${a.linhas.isEmpty()}" class="tabela-classificacao">
+<thead>
+<tr><th scope="col" class="num">#</th><th scope="col">Jogador</th><th scope="col" th:text="${aba == 'todos'} ? 'Clube atual' : 'Clube'">Clube</th><th scope="col" class="num">Gols</th></tr>
+</thead>
+<tbody>
+<tr th:each="l : ${a.linhas}" th:classappend="${l.clubeId == a.clubeDoUsuario} ? 'do-usuario'">
+<td class="num suave" th:text="${l.posicao}">1</td>
+<td><span class="clube-celula"><span class="pos" th:classappend="|pos-${l.posicaoEmCampo}|" th:text="${l.posicaoEmCampo.name().substring(0, 1)}">A</span>
+<a class="jogador-nome" th:href="|${url}${url.contains('?') ? '&' : '?'}ficha=${l.jogadorId}|" th:text="${l.nome}" th:attr="aria-label=|Ver ficha de ${l.nome}|">Nome</a></span></td>
+<td class="temperamento" th:text="${l.clube}">Clube</td>
+<td class="num pontos" th:text="${l.gols}">0</td>
+</tr>
+</tbody>
+</table>
+<th:block th:if="${ficha != null}"><div th:replace="~{fragmentos :: ficha(${ficha}, ${url})}"></div></th:block>
+</section>
+</div>
+</div>
+</body>
+</html>
