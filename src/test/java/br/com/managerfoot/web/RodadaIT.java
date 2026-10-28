@@ -121,6 +121,36 @@ class RodadaIT {
 	}
 
 	@Test
+	void leiloesDaMaquinaVemAntesDaRodada() throws Exception {
+		String leiloes = "/jogos/" + jogoId + "/leiloes";
+		long doUsuario = jogo.clubeDoTreinador(jogoId, treinador.id()).orElseThrow();
+		// um clube da máquina sem caixa precisa vender (SPEC §9.4, rev. 43)
+		jdbc.sql("""
+				UPDATE jogo_clube SET estadio_capacidade = 10000, saldo = 0
+				WHERE id = (SELECT id FROM jogo_clube WHERE jogo_id = :j AND divisao_id IS NOT NULL AND id <> :u
+				            ORDER BY id LIMIT 1)""")
+			.param("j", jogoId).param("u", doUsuario).update();
+		// e o usuário tem caixa para dar lance
+		jdbc.sql("UPDATE jogo_clube SET estadio_capacidade = 10000, saldo = 100000000000 WHERE id = :u")
+			.param("u", doUsuario).update();
+
+		mvc.perform(post(rodada).param("rodada", "1").with(como(treinador)).with(csrf())).andExpect(redirectedUrl(leiloes));
+		mvc.perform(get(leiloes).with(como(treinador)))
+			.andExpect(status().isOk())
+			.andExpect(content().string(containsString("Leilões antes da rodada 1")))
+			.andExpect(content().string(containsString("Confirmar lances")));
+
+		mvc.perform(post(leiloes).param("rodada", "1").param("nenhum", "sim").with(como(treinador)).with(csrf()))
+			.andExpect(redirectedUrl(leiloes));
+		mvc.perform(get(leiloes).with(como(treinador)))
+			.andExpect(content().string(containsString("Resultado dos leilões")))
+			.andExpect(content().string(containsString("Ir para a rodada")))
+			.andExpect(content().string(not(containsString("Confirmar lances"))));
+
+		mvc.perform(post(rodada).param("rodada", "1").with(como(treinador)).with(csrf())).andExpect(redirectedUrl(rodada));
+	}
+
+	@Test
 	void trocarVelocidadeGuardaAEscolha() throws Exception {
 		mvc.perform(post(rodada).param("rodada", "1").with(como(treinador)).with(csrf()));
 

@@ -17,7 +17,6 @@ import br.com.managerfoot.dominio.Clube;
 import br.com.managerfoot.dominio.Jogador;
 import br.com.managerfoot.economia.Moeda;
 import br.com.managerfoot.economia.PrecoJogador;
-import br.com.managerfoot.economia.TipoLancamento;
 
 /**
  * Compra direta do treinador humano (SPEC §9.4, rev. 40 a 43): paga o preço da tabela ao clube da
@@ -29,12 +28,14 @@ public class CompraRepositorio {
 	private final JdbcClient jdbc;
 	private final JogoRepositorio jogos;
 	private final CaixaRepositorio caixas;
+	private final TransferenciaRepositorio transferencias;
 	private final PrecoJogador preco = PrecoJogador.padrao();
 
-	public CompraRepositorio(JdbcClient jdbc, JogoRepositorio jogos, CaixaRepositorio caixas) {
+	public CompraRepositorio(JdbcClient jdbc, JogoRepositorio jogos, CaixaRepositorio caixas, TransferenciaRepositorio transferencias) {
 		this.jdbc = jdbc;
 		this.jogos = jogos;
 		this.caixas = caixas;
+		this.transferencias = transferencias;
 	}
 
 	/**
@@ -80,21 +81,7 @@ public class CompraRepositorio {
 			throw new CompraRecusadaException("Caixa insuficiente para comprar " + jogador.nome() + ".");
 		}
 
-		// o jogador sai da escalação do vendedor antes de mudar de clube (chave composta clube + jogador)
-		jdbc.sql("DELETE FROM jogo_escalacao_jogador WHERE clube_id = :clube AND jogador_id = :jogador")
-			.param("clube", vendedor)
-			.param("jogador", jogadorId)
-			.update();
-		jdbc.sql("UPDATE jogo_escalacao SET batedor_id = NULL WHERE clube_id = :clube AND batedor_id = :jogador")
-			.param("clube", vendedor)
-			.param("jogador", jogadorId)
-			.update();
-		jdbc.sql("UPDATE jogo_jogador SET clube_id = :comprador, a_venda = false WHERE id = :jogador")
-			.param("comprador", comprador)
-			.param("jogador", jogadorId)
-			.update();
-		caixas.lancarMercado(jogoId, comprador, TipoLancamento.COMPRA, -valor, jogadorId);
-		caixas.lancarMercado(jogoId, vendedor, TipoLancamento.VENDA, valor, jogadorId);
+		transferencias.transferir(jogoId, jogadorId, vendedor, comprador, valor);
 		return valor;
 	}
 

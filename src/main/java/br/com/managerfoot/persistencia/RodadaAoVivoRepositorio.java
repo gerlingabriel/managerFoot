@@ -66,7 +66,8 @@ public class RodadaAoVivoRepositorio {
 	/**
 	 * Começa a rodada ao vivo. Pedido repetido da mesma rodada não faz nada.
 	 *
-	 * @throws IllegalStateException se a rodada não é a próxima, ou se a escalação não pode jogar
+	 * @throws IllegalStateException se a rodada não é a próxima, se há leilão aberto antes dela ou se a
+	 *         escalação não pode jogar
 	 */
 	@Transactional
 	public void iniciar(long jogoId, long usuarioId, int rodada, Instant agora) {
@@ -82,6 +83,17 @@ public class RodadaAoVivoRepositorio {
 		int processadas = rodadas.rodadasProcessadas(jogoId);
 		if (rodada != processadas + 1 || rodada > rodadas.totalDeRodadas(jogoId)) {
 			throw new IllegalStateException("a rodada " + rodada + " não é a próxima do jogo " + jogoId);
+		}
+		boolean leilaoAberto = jdbc.sql("""
+				SELECT EXISTS (SELECT 1 FROM jogo_leilao l JOIN jogo_temporada t ON t.id = l.temporada_id
+				               WHERE t.jogo_id = :jogo AND l.rodada = :rodada AND l.situacao = 'ABERTO')""")
+			.param("jogo", jogoId)
+			.param("rodada", rodada)
+			.query(Boolean.class)
+			.single();
+		if (leilaoAberto) {
+			// os leilões da máquina são resolvidos antes do minuto a minuto (SPEC §9.4, rev. 41)
+			throw new IllegalStateException("há leilões abertos antes da rodada " + rodada);
 		}
 		rodadas.preparar(jogoId, rodada, List.of());
 		jdbc.sql("""

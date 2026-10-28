@@ -39,6 +39,21 @@ public enum Moeda {
 		return simbolo + " " + NumberFormat.getIntegerInstance(Locale.forLanguageTag("pt-BR")).format(unidades);
 	}
 
+	/**
+	 * Centavos de Real de um valor inteiro nesta moeda, como o treinador digita um lance.
+	 *
+	 * @throws ArithmeticException se o valor é grande demais
+	 */
+	public long centavos(long unidades) {
+		return Math.multiplyExact(unidades, reaisPorUnidade * 100L);
+	}
+
+	/** O menor valor inteiro nesta moeda que cobre os centavos: o lance mínimo que a tela aceita. */
+	public long unidadesAcima(long centavosDeReal) {
+		long porUnidade = reaisPorUnidade * 100L;
+		return Math.floorDiv(centavosDeReal + porUnidade - 1, porUnidade);
+	}
+
 	/** Resultado com sinal à frente, para extratos: "+ R$ 129.204", "− R$ 227.634"; zero sem sinal. */
 	public String formatarComSinal(long centavosDeReal) {
 		String valor = formatar(Math.abs(centavosDeReal));

@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 33 — 2026-10-28)
+-   **Status:** versão inicial para revisão (rev. 52 — 2026-10-28)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 52 (2026-10-28):** leilões da máquina antes da rodada gravados (V20, modelo 7b, ADR 0012): abertos ao confirmar a tática, lances do usuário e depois da máquina, resultado e "Ir para a rodada"; compra direta de jogador em leilão aberto cancela o leilão (proposta do agente).
 -   **rev. 51 (2026-10-28):** janela do clube na classificação com as abas Calendário e Plantel (modelo 7a aprovado com a coluna de gols pedida pelo usuário): plantel inteiro, gols na temporada e botão Comprar nos jogadores à venda.
 -   **rev. 50 (2026-10-28):** finanças pelo modelo 6b (aprovado): linha do patrocínio, coluna "Mercado e prêmios" com o jogador comprado ou vendido; usuário quer ver o plantel inteiro ao clicar no clube (modelo 7a revisado para aprovação).
 -   **rev. 49 (2026-10-28):** compra direta no servidor (V19): paga o preço da tabela ao clube da máquina, recusa sem caixa, com 25 jogadores ou durante a rodada; lançamentos de compra e venda no extrato. Tela ainda não ligada.
@@ -1503,6 +1504,17 @@ A máquina oferece um pouco abaixo do preço padrão (§9.4).
       demais de uma posição, para a venda de todos não deixar o clube abaixo
       do elenco mínimo (§9.3); clubes da fila de espera não anunciam
       (`docs/decisions/0011-mercado-no-banco.md`).
+  - **Gravado (rev. 52; docs/decisions/0012):** ao confirmar a tática, os
+    clubes da máquina abaixo do limite põem 1 jogador em leilão cada. Se o
+    caixa do usuário alcança algum lance inicial (e o plantel tem menos de
+    25), a tela "Seus lances" espera os lances dele (em branco = sem lance;
+    "Não quero nenhum"); senão os leilões são resolvidos na hora. Depois a
+    máquina dá os lances e a tela mostra o resultado, com "Ir para a
+    rodada". Os lances do usuário que valem: pelo menos o lance inicial e
+    no máximo o caixa que sobrou dos leilões que ele já levou. Cada leilão é
+    aberto e resolvido uma vez só. **Proposta do agente:** se o usuário
+    comprar direto um jogador que está em leilão aberto, o leilão é
+    cancelado.
   - **Lance da máquina:** um pouco **abaixo do preço padrão**; um clube da
     máquina com preferência pelo jogador pode dar um pouco mais, de acordo
     com a força do time.

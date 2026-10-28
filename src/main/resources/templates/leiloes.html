@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: cabeca('Leilões')}"></head>
+<body>
+<div class="campo campo-pagina">
+<div class="pagina">
+<header th:replace="~{fragmentos :: topo}"></header>
+
+<!-- Leilões da máquina antes da rodada (modelo 7b, rev. 41 a 43): 1 · seus lances; 2 · resultado. -->
+<section th:if="${v.aguardandoLances}" aria-labelledby="t-leiloes" class="leiloes">
+<div class="leiloes-topo">
+<span class="leiloes-etapa">1 · Seus lances</span>
+<h1 id="t-leiloes" class="leiloes-titulo" th:text="|Leilões antes da rodada ${v.rodada}|">Leilões antes da rodada 5</h1>
+<span class="suave">Seu caixa: <strong class="caixa-valor" th:classappend="${v.saldo < 0} ? 'negativo'" th:text="${v.moeda.formatar(v.saldo)}">R$ 0</strong> · cada um dá um preço; leva o maior</span>
+</div>
+<div th:if="${erro}" role="alert" class="alerta leiloes-aviso" th:text="${erro}">erro</div>
+<form th:action="@{/jogos/{id}/leiloes(id=${jogoId})}" method="post">
+<input type="hidden" name="rodada" th:value="${v.rodada}">
+<div th:each="l : ${v.leiloes}" th:with="j=${l.jogador}" class="leilao-linha">
+<div class="leilao-jogador">
+<span class="leilao-nome-linha">
+<span class="pos" th:classappend="|pos-${j.posicao}|" th:text="${j.posicao.name().substring(0, 1)}" th:title="${j.posicao.nome(1)}">G</span>
+<span class="leilao-nome" th:text="${j.nome}">Nome</span>
+<span th:if="${j.asterisco}" class="asterisco" title="jogador com asterisco">★</span>
+<span class="leilao-forca" th:text="${j.forca}">0</span>
+</span>
+<span class="suave" th:text="|${l.vendedor.nome} · ${#strings.capitalize(#strings.toLowerCase(j.temperamento.name()))}${l.estrangeiro != null ? ' · ' + l.estrangeiro : ''} · ${l.lanceMinimo == 0 ? 'sem lance mínimo' : 'lance inicial ' + v.moeda.formatar(v.moeda.centavos(l.minimoNaMoeda))}|">Clube · Normal · lance inicial</span>
+</div>
+<label th:if="${l.impedimento == null}" class="leilao-lance">
+<span th:text="|Seu lance (${v.moeda.simbolo()})|">Seu lance (R$)</span>
+<input type="text" inputmode="numeric" autocomplete="off" th:name="|lance-${l.id}|"
+	th:placeholder="${#numbers.formatInteger(l.minimoNaMoeda > 0 ? l.minimoNaMoeda : 1, 1, 'POINT')}"
+	th:attr="aria-label=|Seu lance por ${j.nome}|">
+</label>
+<span th:if="${l.impedimento != null}" class="leilao-sem-lance" th:text="|${l.impedimento}: sem lance|">Caixa insuficiente: sem lance</span>
+</div>
+<div class="leiloes-acoes">
+<button type="submit" name="nenhum" value="sim" class="botao-contorno">Não quero nenhum</button>
+<button type="submit" class="botao">Confirmar lances</button>
+</div>
+</form>
+<p class="suave leiloes-nota">Deixe em branco o leilão em que não quer dar lance. Lance mínimo é o lance inicial (preço com 20% de desconto). Depois do seu OK, a máquina dá os lances dela. Se todos os leilões estiverem acima do seu caixa, esta etapa é pulada e você vê só o resultado.</p>
+</section>
+
+<section th:unless="${v.aguardandoLances}" aria-labelledby="t-resultado" class="leiloes">
+<div class="leiloes-topo">
+<span class="leiloes-etapa">2 · Resultado</span>
+<h1 id="t-resultado" class="leiloes-titulo">Resultado dos leilões</h1>
+<span class="suave" th:text="|Antes da rodada ${v.rodada} · seu caixa: ${v.moeda.formatar(v.saldo)}|">Antes da rodada</span>
+</div>
+<div th:each="l : ${v.leiloes}" class="leilao-resultado" th:classappend="${l.seu} ? 'seu'">
+<span class="leilao-nome" th:text="${l.jogador.nome}">Nome</span>
+<span class="leilao-texto" th:switch="${l.situacao.name()}">
+<span th:case="'VENDIDO'" th:text="${l.seu} ? 'Comprado por você · contrato até o fim da temporada'
+	: |${l.comprador.nome} levou${l.seuLance != null ? ' (você deu ' + v.moeda.formatar(l.seuLance) + ')' : ''}${l.empate ? ' (empate decidido por sorteio)' : ''}|">levou</span>
+<span th:case="'SEM_LANCE'" th:text="|Sem lance: fica no ${l.vendedor.nome}|">Sem lance</span>
+<span th:case="*" th:text="|Cancelado: o jogador já tinha saído do ${l.vendedor.nome}|">Cancelado</span>
+</span>
+<span class="leilao-valor" th:classappend="${l.seu} ? 'seu' : (${l.valor == null} ? 'nada')" th:text="${l.valor != null} ? ${v.moeda.formatar(l.valor)} : '—'">—</span>
+</div>
+<form th:action="@{/jogos/{id}/rodada(id=${jogoId})}" method="post" class="leiloes-acoes">
+<input type="hidden" name="rodada" th:value="${v.rodada}">
+<button type="submit" class="botao">Ir para a rodada</button>
+</form>
+<p class="suave leiloes-nota">Empate de lances: decidido por sorteio. Sem lance: o jogador fica no clube e só volta a leilão depois desta rodada. Quem você comprou está no seu plantel, fora do banco.</p>
+</section>
+</div>
+</div>
+</body>
+</html>

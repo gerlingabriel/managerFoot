@@ -21,6 +21,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.support.RequestContextUtils;
 
 import br.com.managerfoot.contas.Usuario;
+import br.com.managerfoot.persistencia.LeilaoRepositorio;
+import br.com.managerfoot.persistencia.LeilaoRepositorio.Etapa;
 import br.com.managerfoot.persistencia.PlantelRepositorio;
 import br.com.managerfoot.persistencia.RodadaAoVivoRepositorio;
 import br.com.managerfoot.persistencia.RodadaAoVivoRepositorio.EstadoRodada;
@@ -39,15 +41,20 @@ class RodadaController {
 
 	private final RodadaAoVivoRepositorio aoVivo;
 	private final PlantelRepositorio plantel;
+	private final LeilaoRepositorio leiloes;
 	private final Clock relogio;
 
-	RodadaController(RodadaAoVivoRepositorio aoVivo, PlantelRepositorio plantel, Clock relogio) {
+	RodadaController(RodadaAoVivoRepositorio aoVivo, PlantelRepositorio plantel, LeilaoRepositorio leiloes, Clock relogio) {
 		this.aoVivo = aoVivo;
 		this.plantel = plantel;
+		this.leiloes = leiloes;
 		this.relogio = relogio;
 	}
 
-	/** "Confirmar e jogar rodada" (SPEC §10.3): começa a rodada ao vivo. Repetir não começa outra. */
+	/**
+	 * "Confirmar e jogar rodada" (SPEC §10.3): antes, os leilões da máquina (SPEC §9.4, rev. 41;
+	 * modelo 7b); sem leilão pendente, começa a rodada ao vivo. Repetir não começa outra.
+	 */
 	@PostMapping("/jogos/{jogoId}/rodada")
 	String iniciar(@AuthenticationPrincipal Usuario usuario, @PathVariable long jogoId, @RequestParam("rodada") int rodada,
 			RedirectAttributes redirect) {
@@ -56,6 +63,9 @@ class RodadaController {
 			return "redirect:/jogos/" + jogoId + "/plantel";
 		}
 		try {
+			if (leiloes.preparar(jogoId, usuario.id(), rodada) != Etapa.RODADA) {
+				return "redirect:/jogos/" + jogoId + "/leiloes";
+			}
 			aoVivo.iniciar(jogoId, usuario.id(), rodada, relogio.instant());
 		}
 		catch (IllegalStateException e) {
