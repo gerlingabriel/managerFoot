@@ -53,6 +53,29 @@ public final class LeiloesDaRodada {
 	}
 
 	/**
+	 * Leilão do clube de um treinador com caixa negativo (SPEC §9.3 e §9.4, rev. 43 e 53): sem lance
+	 * mínimo, de um jogador sorteado entre os sem contrato renovado, para que qualquer um deles possa
+	 * sair. Proposta do agente: a saída não deixa a posição abaixo do elenco mínimo. Vazio com caixa
+	 * zero ou positivo, ou sem candidato (todos renovados).
+	 *
+	 * @param renovados ids dos jogadores com contrato renovado nesta temporada
+	 */
+	public Optional<Oferta> abrirPorCaixaNegativo(ClubeNoMercado clube, Set<Long> renovados, RandomGenerator aleatorio) {
+		if (clube.saldo() >= 0) {
+			return Optional.empty();
+		}
+		// ordem fixa antes do sorteio, para a mesma semente dar o mesmo jogador
+		List<Jogador> candidatos = clube.plantel().stream()
+			.filter(j -> !renovados.contains(j.id()) && mercado.podeSair(clube.plantel(), j))
+			.sorted(Comparator.comparingLong(Jogador::id))
+			.toList();
+		if (candidatos.isEmpty()) {
+			return Optional.empty();
+		}
+		return Optional.of(new Oferta(candidatos.get(aleatorio.nextInt(candidatos.size())), clube.clube().id(), 0));
+	}
+
+	/**
 	 * Resolve os leilões na ordem dada. O lance de um humano só vale se for pelo menos o mínimo, maior
 	 * que zero, e se o caixa e o plantel ainda comportarem a compra depois dos leilões que ele já
 	 * levou. Cada clube da máquina compra no máximo 1 por rodada e não dá lance no próprio jogador.

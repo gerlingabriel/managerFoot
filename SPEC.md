@@ -15,7 +15,7 @@
 
 ### Histórico de revisões
 
--   **rev. 53 (2026-10-28):** venda do usuário por leilão: o usuário define o lance mínimo na ficha do jogador e o resultado aparece na tela do 7b; com caixa negativo o jogo escolhe um jogador sem contrato renovado e, se todos estiverem renovados, a venda fica para o início da temporada seguinte, antes de tudo. Gravada a venda pela ficha (V21).
+-   **rev. 53 (2026-10-28):** venda do usuário por leilão: o usuário define o lance mínimo na ficha do jogador e o resultado aparece na tela do 7b; com caixa negativo o jogo escolhe um jogador sem contrato renovado e, se todos estiverem renovados, a venda fica para o início da temporada seguinte, antes de tudo. Gravada a venda pela ficha (V21). Caixa negativo: o jogador é sorteado entre os sem contrato renovado (decisão do usuário, para que qualquer um possa sair) e gravado (V22).
 -   **rev. 52 (2026-10-28):** leilões da máquina antes da rodada gravados (V20, modelo 7b, ADR 0012): abertos ao confirmar a tática, lances do usuário e depois da máquina, resultado e "Ir para a rodada"; compra direta de jogador em leilão aberto cancela o leilão (proposta do agente).
 -   **rev. 51 (2026-10-28):** janela do clube na classificação com as abas Calendário e Plantel (modelo 7a aprovado com a coluna de gols pedida pelo usuário): plantel inteiro, gols na temporada e botão Comprar nos jogadores à venda.
 -   **rev. 50 (2026-10-28):** finanças pelo modelo 6b (aprovado): linha do patrocínio, coluna "Mercado e prêmios" com o jogador comprado ou vendido; usuário quer ver o plantel inteiro ao clicar no clube (modelo 7a revisado para aprovação).
@@ -1535,6 +1535,19 @@ A máquina oferece um pouco abaixo do preço padrão (§9.4).
     comprou antes da rodada (num leilão ou numa venda do usuário) não dá
     lance de novo (1 compra por rodada); o jogador comprado de um usuário
     não vai a leilão de novo antes da mesma rodada.
+  - **Definido (rev. 53):** com caixa negativo, o jogador é **sorteado**
+    entre os sem contrato renovado, para que o clube possa perder qualquer
+    um deles.
+  - **Gravado (rev. 53, V22):** `jogo_jogador.contrato_temporada` guarda a
+    temporada em que o contrato foi renovado; por enquanto só a compra (direta
+    ou por leilão) renova. Ao confirmar a tática, o clube do usuário com
+    caixa abaixo de zero põe 1 jogador sorteado em leilão sem lance mínimo,
+    junto com os da máquina, na tela do 7b ("Seu jogador": ele não dá lance
+    no próprio). Na virada da temporada, depois de gravar a nova e antes do
+    patrocínio, o mesmo leilão acontece na rodada 0, com todos sem contrato,
+    e o aviso do início da temporada diz quem foi vendido e por quanto (ou
+    que ninguém deu lance). **Proposta do agente:** o sorteio respeita o
+    elenco mínimo do §9.3 (asterisco pode sair).
   - **Lance da máquina:** um pouco **abaixo do preço padrão**; um clube da
     máquina com preferência pelo jogador pode dar um pouco mais, de acordo
     com a força do time.

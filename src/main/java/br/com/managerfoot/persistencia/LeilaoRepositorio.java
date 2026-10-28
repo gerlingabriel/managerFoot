@@ -12,6 +12,7 @@ import java.util.SplittableRandom;
 
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import br.com.managerfoot.dominio.Clube;
@@ -83,29 +84,16 @@ public class LeilaoRepositorio {
 		caixas.abrirCaixas(jogoId);
 		Contexto c = contexto(jogoId);
 		if (!existemLeiloes(t.id(), rodada)) {
-			List<Oferta> ofertas = leiloes.abrir(c.daMaquina(), c.pais());
-			for (Oferta o : ofertas) {
-				if (jaFoiALeilao(t.id(), rodada, o.jogador().id())) {
-					// comprado de um treinador nesta rodada: só volta a leilão depois dela
-					continue;
-				}
-				jdbc.sql("""
-						INSERT INTO jogo_leilao (temporada_id, rodada, jogador_id, vendedor_id, lance_minimo)
-						VALUES (:temporada, :rodada, :jogador, :vendedor, :minimo)""")
-					.param("temporada", t.id())
-					.param("rodada", rodada)
-					.param("jogador", o.jogador().id())
-					.param("vendedor", o.vendedorId())
-					.param("minimo", o.lanceMinimo())
-					.update();
-			}
+			List<Oferta> ofertas = new ArrayList<>(leiloes.abrir(c.daMaquina(), c.pais()));
+			ofertas.addAll(porCaixaNegativo(jogoId, t, rodada, c));
+			inserir(t, rodada, ofertas);
 		}
 		List<LinhaLeilao> abertos = abertos(t.id(), rodada);
 		if (abertos.isEmpty()) {
 			return Etapa.RODADA;
 		}
 		ClubeNoMercado meu = c.humanos().stream().filter(h -> h.clube().id() == clube).findFirst().orElseThrow();
-		if (abertos.stream().anyMatch(l -> impedimento(l.lanceMinimo(), meu, c.moeda()) == null)) {
+		if (abertos.stream().anyMatch(l -> impedimento(l, meu, c.moeda()) == null)) {
 			return Etapa.LANCES;
 		}
 		resolver(jogoId, t, rodada, c, abertos, Map.of());
@@ -138,7 +126,7 @@ public class LeilaoRepositorio {
 			LinhaLeilao leilao = abertos.stream().filter(l -> l.id() == e.getKey()).findFirst()
 				.orElseThrow(() -> new IllegalArgumentException("Este leilão não está mais aberto."));
 			String nome = c.jogador(leilao.jogadorId()).nome();
-			if (impedimento(leilao.lanceMinimo(), meu, c.moeda()) != null) {
+			if (impedimento(leilao, meu, c.moeda()) != null) {
 				throw new IllegalArgumentException("Você não pode dar lance por " + nome + ".");
 			}
 			long valor;
@@ -251,6 +239,78 @@ public class LeilaoRepositorio {
 		return leilaoId;
 	}
 
+	/**
+	 * Início da temporada (SPEC §9.4, rev. 53): antes de qualquer coisa, inclusive do patrocínio, cada
+	 * clube de treinador com caixa negativo põe em leilão sem lance mínimo um jogador sorteado (todos
+	 * estão sem contrato), resolvido na hora com os lances da máquina. Fica na rodada 0 da temporada
+	 * nova; quem chama já gravou a temporada e abre a transação.
+	 *
+	 * @return como terminou cada leilão, para avisar o treinador
+	 */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public List<VendaPorCaixa> venderNoInicioDaTemporada(long jogoId) {
+		LinhaTemporada t = temporadaAtual(jogoId);
+		caixas.abrirCaixas(jogoId);
+		Contexto c = contexto(jogoId);
+		inserir(t, 0, porCaixaNegativo(jogoId, t, 0, c));
+		List<LinhaLeilao> abertos = abertos(t.id(), 0);
+		if (abertos.isEmpty()) {
+			return List.of();
+		}
+		resolver(jogoId, t, 0, c, abertos, Map.of());
+		return linhas("""
+				SELECT id, jogador_id, vendedor_id, lance_minimo, situacao, comprador_id, valor, empate
+				FROM jogo_leilao WHERE temporada_id = :temporada AND rodada = 0 ORDER BY id""", Map.of("temporada", t.id()))
+			.stream()
+			.map(l -> new VendaPorCaixa(l.vendedorId(), c.jogador(l.jogadorId()),
+					l.compradorId() == null ? null : c.clube(l.compradorId()), l.valor(), c.moeda()))
+			.toList();
+	}
+
+	/**
+	 * Os leilões dos clubes de treinador com caixa negativo: um jogador sorteado entre os sem contrato
+	 * renovado. O que já foi a leilão antes desta rodada fica de fora do sorteio.
+	 */
+	private List<Oferta> porCaixaNegativo(long jogoId, LinhaTemporada t, int rodada, Contexto c) {
+		Set<Long> foraDoSorteio = new HashSet<>(jdbc.sql("""
+				SELECT j.id FROM jogo_jogador j JOIN jogo_clube c ON c.id = j.clube_id
+				WHERE c.jogo_id = :jogo AND j.contrato_temporada = :numero""")
+			.param("jogo", jogoId)
+			.param("numero", t.numero())
+			.query(Long.class)
+			.list());
+		foraDoSorteio.addAll(jdbc.sql("SELECT jogador_id FROM jogo_leilao WHERE temporada_id = :temporada AND rodada = :rodada")
+			.param("temporada", t.id())
+			.param("rodada", rodada)
+			.query(Long.class)
+			.list());
+		List<Oferta> ofertas = new ArrayList<>();
+		for (ClubeNoMercado h : c.humanos()) {
+			leiloes.abrirPorCaixaNegativo(h, foraDoSorteio, new SplittableRandom(semente(t.semente(), rodada) ^ h.clube().id()))
+				.ifPresent(ofertas::add);
+		}
+		return ofertas;
+	}
+
+	/** Grava os leilões abertos; o jogador que já foi a leilão antes desta rodada fica de fora. */
+	private void inserir(LinhaTemporada t, int rodada, List<Oferta> ofertas) {
+		for (Oferta o : ofertas) {
+			if (jaFoiALeilao(t.id(), rodada, o.jogador().id())) {
+				// comprado de um treinador nesta rodada: só volta a leilão depois dela
+				continue;
+			}
+			jdbc.sql("""
+					INSERT INTO jogo_leilao (temporada_id, rodada, jogador_id, vendedor_id, lance_minimo)
+					VALUES (:temporada, :rodada, :jogador, :vendedor, :minimo)""")
+				.param("temporada", t.id())
+				.param("rodada", rodada)
+				.param("jogador", o.jogador().id())
+				.param("vendedor", o.vendedorId())
+				.param("minimo", o.lanceMinimo())
+				.update();
+		}
+	}
+
 	private Optional<VisaoLeiloes> visao(long jogoId, long clube, int rodada, List<LinhaLeilao> linhas) {
 		if (linhas.isEmpty()) {
 			return Optional.empty();
@@ -269,7 +329,7 @@ public class LeilaoRepositorio {
 			Jogador j = c.jogador(l.jogadorId());
 			naTela.add(new LeilaoNaTela(l.id(), j, j.nacionalidade().equals(c.pais()) ? null : j.nacionalidade(),
 					c.clube(l.vendedorId()), l.lanceMinimo(), c.moeda().unidadesAcima(l.lanceMinimo()),
-					l.situacao() == Situacao.ABERTO ? impedimento(l.lanceMinimo(), meu, c.moeda()) : null, l.situacao(),
+					l.situacao() == Situacao.ABERTO ? impedimento(l, meu, c.moeda()) : null, l.situacao(),
 					l.compradorId() == null ? null : c.clube(l.compradorId()), l.valor(), l.empate(),
 					meusLances.get(l.id()), l.compradorId() != null && l.compradorId() == clube, l.vendedorId() == clube));
 		}
@@ -338,7 +398,11 @@ public class LeilaoRepositorio {
 	}
 
 	/** Por que o treinador não pode dar lance; nulo se pode. */
-	private static String impedimento(long lanceMinimo, ClubeNoMercado meu, Moeda moeda) {
+	private static String impedimento(LinhaLeilao leilao, ClubeNoMercado meu, Moeda moeda) {
+		long lanceMinimo = leilao.lanceMinimo();
+		if (leilao.vendedorId() == meu.clube().id()) {
+			return "Seu jogador";
+		}
 		if (meu.plantel().size() >= Clube.MAXIMO_JOGADORES) {
 			return "Plantel cheio";
 		}
@@ -438,10 +502,11 @@ public class LeilaoRepositorio {
 
 	private LinhaTemporada temporadaAtual(long jogoId) {
 		return jdbc.sql("""
-				SELECT id, semente, rodadas_processadas FROM jogo_temporada WHERE jogo_id = :jogo
+				SELECT id, numero, semente, rodadas_processadas FROM jogo_temporada WHERE jogo_id = :jogo
 				ORDER BY numero DESC LIMIT 1""")
 			.param("jogo", jogoId)
-			.query((rs, n) -> new LinhaTemporada(rs.getLong("id"), rs.getLong("semente"), rs.getInt("rodadas_processadas")))
+			.query((rs, n) -> new LinhaTemporada(rs.getLong("id"), rs.getInt("numero"), rs.getLong("semente"),
+					rs.getInt("rodadas_processadas")))
 			.optional()
 			.orElseThrow(() -> new NoSuchElementException("o jogo " + jogoId + " não existe ou não tem temporada"));
 	}
@@ -478,11 +543,20 @@ public class LeilaoRepositorio {
 			Long seuLance, boolean seu, boolean vendidoPorVoce) {
 	}
 
+	/**
+	 * Leilão por caixa negativo no início da temporada.
+	 *
+	 * @param comprador quem levou; nulo se ninguém deu lance
+	 * @param valor nulo sem venda
+	 */
+	public record VendaPorCaixa(long vendedorId, Jogador jogador, Clube comprador, Long valor, Moeda moeda) {
+	}
+
 	private record LinhaLeilao(long id, long jogadorId, long vendedorId, long lanceMinimo, Situacao situacao,
 			Long compradorId, Long valor, boolean empate) {
 	}
 
-	private record LinhaTemporada(long id, long semente, int processadas) {
+	private record LinhaTemporada(long id, int numero, long semente, int processadas) {
 	}
 
 	private record Contexto(String pais, Moeda moeda, Map<Long, Clube> clubes, Map<Long, List<Jogador>> planteis,

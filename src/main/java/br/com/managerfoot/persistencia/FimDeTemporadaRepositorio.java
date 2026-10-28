@@ -20,6 +20,7 @@ import br.com.managerfoot.dominio.Formacao;
 import br.com.managerfoot.dominio.Jogador;
 import br.com.managerfoot.motor.EscalacaoMaquina;
 import br.com.managerfoot.motor.ParametrosMotor;
+import br.com.managerfoot.persistencia.LeilaoRepositorio.VendaPorCaixa;
 import br.com.managerfoot.temporada.Classificacao;
 import br.com.managerfoot.temporada.ClubeInicial;
 import br.com.managerfoot.temporada.ConfiguracaoLiga;
@@ -41,11 +42,12 @@ public class FimDeTemporadaRepositorio {
 	private final RodadaRepositorio rodadas;
 	private final EscalacaoRepositorio escalacoes;
 	private final CaixaRepositorio caixas;
+	private final LeilaoRepositorio leiloes;
 	private final int candidatosClubeInicial;
 	private final EscalacaoMaquina escalacaoMaquina = new EscalacaoMaquina(ParametrosMotor.padrao());
 
 	public FimDeTemporadaRepositorio(JdbcClient jdbc, JogoRepositorio jogos, TemporadaRepositorio temporadas,
-			RodadaRepositorio rodadas, EscalacaoRepositorio escalacoes, CaixaRepositorio caixas,
+			RodadaRepositorio rodadas, EscalacaoRepositorio escalacoes, CaixaRepositorio caixas, LeilaoRepositorio leiloes,
 			@Value("${managerfoot.jogo.candidatos-clube-inicial}") int candidatosClubeInicial) {
 		this.jdbc = jdbc;
 		this.jogos = jogos;
@@ -53,6 +55,7 @@ public class FimDeTemporadaRepositorio {
 		this.rodadas = rodadas;
 		this.escalacoes = escalacoes;
 		this.caixas = caixas;
+		this.leiloes = leiloes;
 		this.candidatosClubeInicial = candidatosClubeInicial;
 	}
 
@@ -97,8 +100,10 @@ public class FimDeTemporadaRepositorio {
 
 		Temporada nova = Temporada.iniciar(numero + 1, transicao.proxima(), jogos.carregarPlanteis(jogoId), semente);
 		temporadas.gravar(jogoId, nova);
+		// caixa negativo: a venda vem antes de qualquer coisa da temporada nova, inclusive do patrocínio
+		List<VendaPorCaixa> vendas = leiloes.venderNoInicioDaTemporada(jogoId);
 		caixas.pagarPatrocinio(jogoId, finais);
-		return new NovaTemporada(transicao, nova, demitidos);
+		return new NovaTemporada(transicao, nova, demitidos, vendas);
 	}
 
 	/**
@@ -203,7 +208,9 @@ public class FimDeTemporadaRepositorio {
 	 * Resultado do fim de temporada.
 	 *
 	 * @param demitidos clube novo de cada usuário cujo clube caiu para a fila
+	 * @param vendas leilões dos clubes de treinador com caixa negativo no início da temporada nova
 	 */
-	public record NovaTemporada(TransicaoTemporada transicao, Temporada temporada, Map<Long, Clube> demitidos) {
+	public record NovaTemporada(TransicaoTemporada transicao, Temporada temporada, Map<Long, Clube> demitidos,
+			List<VendaPorCaixa> vendas) {
 	}
 }

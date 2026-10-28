@@ -72,6 +72,30 @@ class FimDeTemporadaRepositorioIT {
 	}
 
 	@Test
+	void caixaNegativoVendeUmJogadorNoInicioDaTemporadaMesmoComTodosRenovados() {
+		for (int rodada = 1; rodada <= 30; rodada++) {
+			rodadas.avancar(jogo, rodada);
+		}
+		long clube = jdbc.sql("SELECT clube_id FROM jogo_treinador WHERE jogo_id = ?").param(jogo).query(Long.class).single();
+		// renovados na temporada 1: na 2 ficam sem contrato e qualquer um pode ir a leilão
+		jdbc.sql("UPDATE jogo_jogador SET contrato_temporada = 1 WHERE clube_id = ?").param(clube).update();
+		jdbc.sql("UPDATE jogo_clube SET saldo = -1000000000 WHERE id = ?").param(clube).update();
+
+		FimDeTemporadaRepositorio.NovaTemporada nova = fim.avancarTemporada(jogo, 1, SEMENTE_NOVA);
+
+		assertThat(nova.vendas()).hasSize(1);
+		LeilaoRepositorio.VendaPorCaixa venda = nova.vendas().get(0);
+		assertThat(venda.vendedorId()).isEqualTo(clube);
+		assertThat(jdbc.sql("""
+				SELECT count(*) FROM jogo_leilao l JOIN jogo_temporada t ON t.id = l.temporada_id
+				WHERE t.jogo_id = ? AND t.numero = 2 AND l.rodada = 0 AND l.lance_minimo = 0 AND l.jogador_id = ?""")
+			.param(jogo).param(venda.jogador().id()).query(Long.class).single()).isEqualTo(1);
+		// o patrocínio vem depois, na mesma rodada 0
+		assertThat(contar("SELECT count(*) FROM jogo_lancamento l JOIN jogo_temporada t ON t.id = l.temporada_id "
+				+ "WHERE t.jogo_id = ? AND t.numero = 2 AND l.tipo = 'PATROCINIO'")).isPositive();
+	}
+
+	@Test
 	void fimDaTemporadaPromoveRebaixaZeraAmarelosEIniciaASeguinte() {
 		for (int rodada = 1; rodada <= 30; rodada++) {
 			rodadas.avancar(jogo, rodada);

@@ -58,3 +58,13 @@
   jogador) continua para os dois tipos: sem lance, o jogador só volta depois da rodada.
 - Cada resolução lê quem da máquina já comprou antes da mesma rodada (1 compra por rodada) e usa o
   id do primeiro leilão na semente do sorteio de empates, porque a rodada pode ter várias.
+
+### Caixa negativo do treinador (rev. 53, V22)
+
+- `jogo_jogador.contrato_temporada` (número da temporada) marca o contrato renovado; a
+  `TransferenciaRepositorio` grava a temporada atual na compra. Usar o número, e não um booleano,
+  evita zerar todos os jogadores na virada: na temporada seguinte o contrato simplesmente não vale.
+- `LeiloesDaRodada.abrirPorCaixaNegativo` sorteia o jogador (semente da temporada, rodada e clube).
+  O leilão entra com os da rodada (tipo `RODADA`) em `preparar`; na virada,
+  `LeilaoRepositorio.venderNoInicioDaTemporada` abre e resolve na rodada 0 (V22 relaxa o CHECK de
+  `rodada` para `>= 0`), chamado por `FimDeTemporadaRepositorio` antes de `pagarPatrocinio`.

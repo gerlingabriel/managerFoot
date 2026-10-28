@@ -21,7 +21,7 @@ public class TransferenciaRepositorio {
 
 	/**
 	 * Passa o jogador ao comprador: sai da escalação do vendedor e do anúncio, entra fora do banco do
-	 * comprador, e os dois ganham os lançamentos de compra e venda. Quem chama confere o negócio e
+	 * comprador com contrato renovado, e os dois ganham os lançamentos de compra e venda. Quem chama confere o negócio e
 	 * abre a transação.
 	 */
 	@Transactional(propagation = Propagation.MANDATORY)
@@ -35,8 +35,13 @@ public class TransferenciaRepositorio {
 			.param("clube", vendedor)
 			.param("jogador", jogadorId)
 			.update();
-		jdbc.sql("UPDATE jogo_jogador SET clube_id = :comprador, a_venda = false WHERE id = :jogador")
+		// comprado, o contrato vale até o fim da temporada atual (SPEC §9.5, rev. 42)
+		jdbc.sql("""
+				UPDATE jogo_jogador SET clube_id = :comprador, a_venda = false,
+				       contrato_temporada = (SELECT max(numero) FROM jogo_temporada WHERE jogo_id = :jogo)
+				WHERE id = :jogador""")
 			.param("comprador", comprador)
+			.param("jogo", jogoId)
 			.param("jogador", jogadorId)
 			.update();
 		caixas.lancarMercado(jogoId, comprador, TipoLancamento.COMPRA, -valor, jogadorId);

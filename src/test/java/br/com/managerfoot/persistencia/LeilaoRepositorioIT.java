@@ -24,7 +24,7 @@ import br.com.managerfoot.persistencia.LeilaoRepositorio.Etapa;
 import br.com.managerfoot.persistencia.LeilaoRepositorio.LeilaoNaTela;
 import br.com.managerfoot.persistencia.LeilaoRepositorio.Situacao;
 
-/** Migrações V20 e V21, leilões da máquina antes da rodada e venda do treinador por leilão ({@link LeilaoRepositorio}) contra PostgreSQL real. */
+/** Migrações V20 a V22, leilões da máquina antes da rodada e venda do treinador por leilão ({@link LeilaoRepositorio}) contra PostgreSQL real. */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
 class LeilaoRepositorioIT {
@@ -213,6 +213,45 @@ class LeilaoRepositorioIT {
 		assertThatThrownBy(() -> leiloes.venderPorLeilao(jogo, usuario, jogador.id(), 0))
 			.isInstanceOf(IllegalArgumentException.class).hasMessageContaining("em andamento");
 		assertThat(clubeDe(jogador.id())).isEqualTo(clubeDoUsuario);
+	}
+
+	@Test
+	void caixaNegativoPoeEmLeilaoSemMinimoUmJogadorSemContratoRenovado() {
+		saldo(clubeDoUsuario, -1);
+		// comprado nesta temporada: contrato renovado, fica fora do sorteio
+		long renovado = jdbc.sql("SELECT id FROM jogo_jogador WHERE clube_id = :c ORDER BY id LIMIT 1")
+			.param("c", clubeDoUsuario).query(Long.class).single();
+		jdbc.sql("UPDATE jogo_jogador SET contrato_temporada = 1 WHERE id = :j").param("j", renovado).update();
+
+		// o caixa do treinador não alcança o leilão do vendedor e ele não dá lance no próprio jogador
+		assertThat(leiloes.preparar(jogo, usuario, 1)).isEqualTo(Etapa.RESULTADO);
+
+		List<LeilaoNaTela> lista = leiloes.visao(jogo, usuario).orElseThrow().leiloes();
+		LeilaoNaTela doUsuario = lista.stream().filter(LeilaoNaTela::vendidoPorVoce).findFirst().orElseThrow();
+		assertThat(lista).hasSize(2);
+		assertThat(doUsuario.lanceMinimo()).isZero();
+		assertThat(doUsuario.jogador().id()).isNotEqualTo(renovado);
+		assertThat(doUsuario.situacao()).isIn(Situacao.VENDIDO, Situacao.SEM_LANCE);
+	}
+
+	@Test
+	void caixaNegativoComTodosRenovadosNaoVendeNinguemDuranteATemporada() {
+		saldo(clubeDoUsuario, -1);
+		saldo(vendedor, RICO);
+		jdbc.sql("UPDATE jogo_jogador SET contrato_temporada = 1 WHERE clube_id = :c").param("c", clubeDoUsuario).update();
+
+		assertThat(leiloes.preparar(jogo, usuario, 1)).isEqualTo(Etapa.RODADA);
+		assertThat(leiloes.visao(jogo, usuario)).isEmpty();
+	}
+
+	@Test
+	void compraRenovaOContratoAteOFimDaTemporada() {
+		leiloes.preparar(jogo, usuario, 1);
+		LeilaoNaTela leilao = unico();
+		leiloes.darLances(jogo, usuario, 1, Map.of(leilao.id(), PrecoJogador.padrao().preco(leilao.jogador(), "BRA") / 100));
+
+		assertThat(jdbc.sql("SELECT contrato_temporada FROM jogo_jogador WHERE id = :j").param("j", leilao.jogador().id())
+			.query(Integer.class).single()).isEqualTo(1);
 	}
 
 	private Jogador maisForteDoUsuario() {

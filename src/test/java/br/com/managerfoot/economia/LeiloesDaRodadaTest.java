@@ -3,6 +3,7 @@ package br.com.managerfoot.economia;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -127,6 +128,34 @@ class LeiloesDaRodadaTest {
 				new SplittableRandom(1));
 
 		assertThat(desfechos.get(0).vencedor()).isEmpty();
+	}
+
+	@Test
+	void caixaNegativoSorteiaUmSemContratoRenovadoSemLanceMinimo() {
+		ClubeNoMercado negativo = clube(9, 900, -1);
+		Set<Long> renovados = Set.of(900L, 901L);
+
+		Oferta oferta = leiloes.abrirPorCaixaNegativo(negativo, renovados, new SplittableRandom(3)).orElseThrow();
+
+		assertThat(oferta.lanceMinimo()).isZero();
+		assertThat(oferta.vendedorId()).isEqualTo(9L);
+		assertThat(renovados).doesNotContain(oferta.jogador().id());
+		assertThat(leiloes.abrirPorCaixaNegativo(negativo, renovados, new SplittableRandom(3))).contains(oferta);
+		// sorteio: sementes diferentes escolhem jogadores diferentes
+		assertThat(new SplittableRandom(0).ints(0, 50).limit(20).mapToObj(s -> leiloes
+			.abrirPorCaixaNegativo(negativo, renovados, new SplittableRandom(s)).orElseThrow().jogador().id()).distinct().count())
+			.isGreaterThan(1);
+	}
+
+	@Test
+	void semCaixaNegativoOuComTodosRenovadosNinguemVaiALeilao() {
+		ClubeNoMercado zerado = clube(9, 900, 0);
+		ClubeNoMercado negativo = clube(9, 900, -1);
+		Set<Long> todos = new HashSet<>();
+		negativo.plantel().forEach(j -> todos.add(j.id()));
+
+		assertThat(leiloes.abrirPorCaixaNegativo(zerado, Set.of(), new SplittableRandom(1))).isEmpty();
+		assertThat(leiloes.abrirPorCaixaNegativo(negativo, todos, new SplittableRandom(1))).isEmpty();
 	}
 
 	private List<Desfecho> resolver(Oferta oferta, List<ClubeNoMercado> daMaquina, ClubeNoMercado humano, long lance) {

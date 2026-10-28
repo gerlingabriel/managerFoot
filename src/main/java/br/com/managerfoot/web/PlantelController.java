@@ -137,7 +137,15 @@ class PlantelController {
 					: nova.transicao().promovidos().stream().anyMatch(c -> c.id() == clube)
 					? " Seu clube subiu de divisão!"
 					: nova.transicao().rebaixados().stream().anyMatch(c -> c.id() == clube) ? " Seu clube foi rebaixado." : "";
-			redirect.addFlashAttribute("resultado", "Começou a temporada " + jogo.ano(jogoId, nova.temporada().numero()) + "." + destino);
+			String venda = nova.vendas().stream().filter(v -> v.vendedorId() == (novoClube != null ? novoClube.id() : clube))
+				.findFirst()
+				.map(v -> v.comprador() != null
+						? " Caixa negativo: " + v.jogador().nome() + " foi vendido em leilão para o " + v.comprador().nome()
+								+ " por " + v.moeda().formatar(v.valor()) + "."
+						: " Caixa negativo: " + v.jogador().nome() + " foi a leilão, mas ninguém deu lance.")
+				.orElse("");
+			redirect.addFlashAttribute("resultado", "Começou a temporada " + jogo.ano(jogoId, nova.temporada().numero()) + "."
+					+ destino + venda);
 		}
 		catch (IllegalStateException e) {
 			redirect.addFlashAttribute("erro", "A temporada " + jogo.ano(jogoId, temporada) + " já foi encerrada.");
