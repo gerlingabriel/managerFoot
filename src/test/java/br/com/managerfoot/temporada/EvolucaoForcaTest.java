@@ -22,12 +22,22 @@ class EvolucaoForcaTest {
 	private final EvolucaoForca evolucao = EvolucaoForca.padrao();
 
 	@Test
-	void quemJogouPerdeMaisNaDerrotaEQuemNaoJogouCresceMaisNaVitoria() {
-		assertThat(perdaMedia(Desfecho.VITORIA)).isBetween(0.8, 1.2);
-		assertThat(perdaMedia(Desfecho.EMPATE)).isBetween(2.7, 3.3);
-		assertThat(perdaMedia(Desfecho.DERROTA)).isBetween(4.6, 5.4);
-		assertThat(crescimentoMedio(Desfecho.VITORIA)).isGreaterThan(crescimentoMedio(Desfecho.EMPATE));
-		assertThat(crescimentoMedio(Desfecho.EMPATE)).isGreaterThan(crescimentoMedio(Desfecho.DERROTA));
+	void naDerrotaCincoDosQueJogaramPerdemUmPontoCadaEQuemNaoJogouQuaseNaoCresce() {
+		List<Jogador> depois = evolucao.aposPartida(plantel(30), JOGARAM, BANCO, Desfecho.DERROTA, 50, 30, new SplittableRandom(1));
+
+		assertThat(depois).filteredOn(j -> JOGARAM.contains(j.id())).filteredOn(j -> j.forca() == 29).hasSize(5);
+		assertThat(depois).allMatch(j -> j.forca() >= 29 && j.forca() <= 31);
+		assertThat(depois).filteredOn(j -> !JOGARAM.contains(j.id())).filteredOn(j -> j.forca() == 31).hasSizeLessThanOrEqualTo(1);
+	}
+
+	@Test
+	void naVitoriaUmPerdeENoEmpateTres() {
+		for (int s = 0; s < 50; s++) {
+			assertThat(perderam(Desfecho.VITORIA, s)).isEqualTo(1);
+			assertThat(perderam(Desfecho.EMPATE, s)).isEqualTo(3);
+			assertThat(cresceram(Desfecho.VITORIA, s)).isEqualTo(4);
+			assertThat(cresceram(Desfecho.EMPATE, s)).isEqualTo(2);
+		}
 	}
 
 	@Test
@@ -62,22 +72,14 @@ class EvolucaoForcaTest {
 		assertThat(media).isBetween(30.0, 38.0);
 	}
 
-	private double perdaMedia(Desfecho desfecho) {
-		double total = 0;
-		for (int s = 0; s < 2000; s++) {
-			List<Jogador> depois = evolucao.aposPartida(plantel(30), JOGARAM, BANCO, desfecho, 50, 30, new SplittableRandom(s));
-			total += depois.stream().filter(j -> JOGARAM.contains(j.id())).mapToInt(j -> 30 - j.forca()).sum();
-		}
-		return total / 2000;
+	private long perderam(Desfecho desfecho, long semente) {
+		return evolucao.aposPartida(plantel(30), JOGARAM, BANCO, desfecho, 50, 30, new SplittableRandom(semente)).stream()
+			.filter(j -> j.forca() == 29).count();
 	}
 
-	private double crescimentoMedio(Desfecho desfecho) {
-		double total = 0;
-		for (int s = 0; s < 2000; s++) {
-			List<Jogador> depois = evolucao.aposPartida(plantel(30), JOGARAM, BANCO, desfecho, 50, 30, new SplittableRandom(s));
-			total += depois.stream().filter(j -> !JOGARAM.contains(j.id())).mapToInt(j -> j.forca() - 30).sum();
-		}
-		return total / 2000;
+	private long cresceram(Desfecho desfecho, long semente) {
+		return evolucao.aposPartida(plantel(30), JOGARAM, BANCO, desfecho, 50, 30, new SplittableRandom(semente)).stream()
+			.filter(j -> j.forca() == 31).count();
 	}
 
 	/** 23 jogadores com a mesma força, ids 1 a 23. */

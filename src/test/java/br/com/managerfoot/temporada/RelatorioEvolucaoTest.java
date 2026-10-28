@@ -47,11 +47,11 @@ class RelatorioEvolucaoTest {
 	@Test
 	void gerarRelatorio() throws IOException {
 		Map<String, ParametrosEvolucao> variantes = new LinkedHashMap<>();
-		variantes.put("A · literal (perde 1/3/5; cresce 15%/8%/1,5%)", ParametrosEvolucao.literal());
-		variantes.put("B · triplo do crescimento (45%/24%/4,5%), sem piso", variante(0.45, 0.24, 0.045, ParametrosEvolucao.SEM_PISO));
-		variantes.put("C · dobro do crescimento (30%/16%/3%), piso força do clube − 5", variante(0.30, 0.16, 0.03, 5));
-		variantes.put("D · triplo do crescimento, piso força do clube − 5", variante(0.45, 0.24, 0.045, 5));
-		variantes.put("E · proposta: 2,5× o crescimento (37,5%/20%/3,75%), piso força do clube − 5", ParametrosEvolucao.padrao());
+		variantes.put("A · literal: perdem 1/3/5 jogadores; crescem 2/1/0, sem piso", ParametrosEvolucao.literal());
+		variantes.put("B · literal com piso (força do clube − 5)", variante(2, 1, 0, 5));
+		variantes.put("C · proposta: crescem 4/2/0,5, com piso", ParametrosEvolucao.padrao());
+		variantes.put("D · crescem 5/3/1, com piso", variante(5, 3, 1, 5));
+		variantes.put("E · crescem 5/3/1, sem piso", variante(5, 3, 1, ParametrosEvolucao.SEM_PISO));
 
 		GeradorBancoPadrao gerador = new GeradorBancoPadrao(ParametrosBancoPadrao.padrao(), ParametrosMotor.padrao());
 		Map<PaisPadrao, GeradorBancoPadrao.PaisGerado> paises = new LinkedHashMap<>();
@@ -62,11 +62,15 @@ class RelatorioEvolucaoTest {
 			.append("Gerado por `RelatorioEvolucaoTest` (ferramenta de desenvolvimento). As 6 ligas do banco padrão, ")
 			.append(SEMENTES).append(" sementes cada, ").append(TEMPORADAS).append(" temporadas seguidas com promoção, ")
 			.append("rebaixamento e fila. Só clubes da máquina, que escalam sempre os mais fortes. Depois de cada partida:\n\n")
-			.append("- cada um dos que jogaram (titulares e quem entrou) perde 1 com chance = perda média ÷ 11;\n")
-			.append("- cada reserva que não entrou e cada jogador fora da escalação ganha 1 com a chance do resultado, ")
-			.append("se estiver abaixo do teto da divisão;\n")
-			.append("- quem está acima do teto não cresce e perde 1 com 25% de chance por partida, além do resto;\n")
-			.append("- com piso, o desgaste de quem jogou não leva abaixo da força cadastrada do clube − 5 (como o ")
+			.append("- cada jogador muda no máximo 1 ponto por partida;\n")
+			.append("- entre os que jogaram (titulares e quem entrou), um número de jogadores sorteados perde 1: 1 na ")
+			.append("vitória, 3 no empate, 5 na derrota (rev. 55);\n")
+			.append("- entre os que não jogaram (reserva que não entrou e quem ficou fora da escalação), um número de ")
+			.append("jogadores sorteados ganha 1, se estiver abaixo do teto da divisão (quantos: em cada variante; parte ")
+			.append("fracionária = chance de mais um);\n")
+			.append("- quem está acima do teto não cresce e perde 1 com 25% de chance por partida, se não perdeu pelo ")
+			.append("resultado;\n")
+			.append("- com piso, o desgaste não leva abaixo da força cadastrada do clube − 5 (como o ")
 			.append("\"nível base do clube\" do Elifoot 98);\n")
 			.append("- a força fica entre 1 e 50. Sem mercado e sem caixa.\n\n")
 			.append("*Em campo*: média dos 11 mais fortes de cada clube. *Plantel*: média dos 23. *Faixa*: o clube mais fraco ")
@@ -94,7 +98,7 @@ class RelatorioEvolucaoTest {
 
 	private static ParametrosEvolucao variante(double vitoria, double empate, double derrota, int piso) {
 		return new ParametrosEvolucao(ParametrosEvolucao.porDesfecho(1, 3, 5), ParametrosEvolucao.porDesfecho(vitoria, empate, derrota),
-				ParametrosEvolucao.porDesfecho(vitoria, empate, derrota), 0.25, piso);
+				0.25, piso);
 	}
 
 	private void simular(PaisPadrao pais, GeradorBancoPadrao.PaisGerado gerado, long semente, EvolucaoForca evolucao,

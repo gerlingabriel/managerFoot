@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 54 — 2026-10-28)
+-   **Status:** versão inicial para revisão (rev. 55 — 2026-10-28)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 55 (2026-10-28):** evolução corrigida pelo usuário: cada jogador perde no máximo 1 ponto por partida e o resultado decide quantos perdem (1, 3 ou 5); simulação refeita, nova proposta do agente (crescem 4, 2 ou 0,5 dos que não jogaram, com piso); modelos 6c (estádio) e 9a (patrocínio) aprovados.
 -   **rev. 54 (2026-10-28):** modelo 8a (histórico) aprovado; um treinador por clube, obrigatório ao criar ou editar clube; patrocínio volta à caixa de escolha da rev. 40; estádio até 120.000 lugares para todos, com janela nas finanças (capacidade, ingresso fixo por clube e divisão, ampliação de 5.000 lugares pelo preço de um jogador de força 50); regra de evolução de força descrita pelo usuário e simulada (`docs/simulacoes/evolucao-forca.md`), proposta do agente aguardando aprovação. Gravados os treinadores da máquina e a aba Histórico (V23).
 -   **rev. 53 (2026-10-28):** venda do usuário por leilão: o usuário define o lance mínimo na ficha do jogador e o resultado aparece na tela do 7b; com caixa negativo o jogo escolhe um jogador sem contrato renovado e, se todos estiverem renovados, a venda fica para o início da temporada seguinte, antes de tudo. Gravada a venda pela ficha (V21). Caixa negativo: o jogador é sorteado entre os sem contrato renovado (decisão do usuário, para que qualquer um possa sair) e gravado (V22).
 -   **rev. 52 (2026-10-28):** leilões da máquina antes da rodada gravados (V20, modelo 7b, ADR 0012): abertos ao confirmar a tática, lances do usuário e depois da máquina, resultado e "Ir para a rodada"; compra direta de jogador em leilão aberto cancela o leilão (proposta do agente).
@@ -715,28 +716,39 @@ reparei ao certo"; pediu para analisar e simular):**
   escalado. Na vitória às vezes crescem (cerca de 2 pontos); no empate,
   mais devagar; na derrota, quase nada.
 
-**Provisório (rev. 54) — proposta do agente, aguardando aprovação**
+**Definido (rev. 55), correção do usuário:** cada jogador perde **no
+máximo 1 ponto por partida**; o resultado decide **quantos** jogadores
+perdem: 1 na vitória, 3 no empate e 5 na derrota. ("3" eram 3 jogadores, não
+3 pontos.)
+
+~~Proposta da rev. 54 (chances individuais de crescer de 37,5%, 20% e
+3,75%).~~ **Substituída na rev. 55.**
+
+**Provisório (rev. 55) — proposta do agente, aguardando aprovação**
 (`temporada.EvolucaoForca`, valores em `temporada.ParametrosEvolucao`,
 simulação em `docs/simulacoes/evolucao-forca.md`, 6 ligas × 3 sementes × 6
 temporadas com promoção e rebaixamento, só máquina):
-- Depois de cada partida, cada um dos que jogaram perde 1 com chance de
-  1/11 (vitória), 3/11 (empate) ou 5/11 (derrota): em média 1, 3 e 5.
-- Cada um que não jogou (banco ou fora) ganha 1 com chance de **37,5%**
-  (vitória), **20%** (empate) ou **3,75%** (derrota), sem passar do teto.
+- Depois de cada partida, entre os que jogaram (os 11 e quem entrou),
+  **1, 3 ou 5 sorteados** perdem 1 ponto (vitória, empate, derrota).
+- Entre os que não jogaram (reserva que não entrou e quem ficou fora),
+  **4, 2 ou 0,5 sorteados** ganham 1 ponto (0,5 = 50% de chance de um), sem
+  passar do teto.
 - **Piso:** o desgaste não leva abaixo da **força do clube − 5** (como o
   "nível base do clube" − 5 do Elifoot 98, `docs/referencia-elifoot98.md`
   §5).
 - **Acima do teto** da divisão ninguém cresce, e cada um perde 1 com 25% de
-  chance por partida (o rebaixado de força 45 numa divisão de teto 30 fica
-  perto de 34 em 60 jogos).
-- **Por que esses números:** a leitura literal (crescimento de 15%, 8% e
-  1,5%) faz as divisões derreterem (a 1ª vai de 42,5 a 24 de força em campo
-  em 6 temporadas, a 3ª chega a 3). Com crescimento maior e sem piso, as
-  médias ficam estáveis, mas o clube que perde entra em espiral até força 1.
-  Com a proposta, cada divisão cai 1 a 2 pontos na 1ª temporada (os
-  titulares se desgastam e os reservas sobem) e depois fica estável, com a
-  mesma distância entre o mais fraco e o mais forte, e 11 a 13% dos
-  jogadores no teto.
+  chance por partida (se não perdeu pelo resultado).
+- **Por que esses números:**
+  - Leitura literal (crescem 2, 1 e 0) sem piso: as divisões derretem (a 2ª
+    vai de 26 a 8,6 de força em campo em 6 temporadas, a 3ª chega a 2,8).
+  - Literal com piso: fica estável, mas todos descem cerca de 5 pontos
+    (até o piso) e quase ninguém chega ao teto.
+  - Crescendo 5, 3 e 1: a força se mantém, mas um terço dos jogadores
+    encosta no teto em 6 temporadas.
+  - **Proposta (4, 2 e 0,5, com piso):** cada divisão cai 3 a 4 pontos na
+    1ª temporada (os titulares se desgastam e os reservas sobem) e depois
+    fica estável; a distância entre o mais fraco e o mais forte se mantém e
+    7 a 12% dos jogadores ficam no teto.
 - **Ainda não gravado:** o salário segue a força atual; com a evolução, o
   pedido de aumento (§9.5) passa a ter efeito.
 
@@ -1439,6 +1451,10 @@ reajustados por nova simulação (`docs/simulacoes/economia-caixa.md`):
     por enquanto**, com valores por clube e por divisão definidos pelo
     agente (a simular; na rev. 37, preços diferentes por divisão deixavam
     uma divisão rica e outra quebrada).
+-   **Definido (rev. 55):** modelo **6c** aprovado (janela do estádio com
+    capacidade, limite de 120.000, ingresso de R$ 40 e "Ampliar 5.000
+    lugares" pelo preço de um jogador de força 50; desligado sem caixa, no
+    limite ou com rodada ao vivo).
 -   Referência inicial: capacidade de 5.000 para clubes pequenos e
     limite configurável de até 120.000.
 -   Clubes grandes tendem a começar com estádios maiores.
@@ -1701,6 +1717,11 @@ na temporada anterior.
   ano aparece a caixa com opções de patrocínio para o usuário escolher,
   porque cria uma interação. O dinheiro continua entrando de uma vez (rev.
   43); a máquina recebe sem escolher. As opções ainda precisam de proposta.
+- **Definido (rev. 55):** modelo **9a** aprovado: três propostas no início
+  do ano (fixa à vista pelo valor da tabela; menor à vista mais um valor por
+  vitória; menor à vista mais um bônus se subir de divisão). A caixa abre no
+  plantel e a rodada 1 só começa depois da escolha. Os valores das propostas
+  ainda serão simulados.
 - **Definido (rev. 45), pelo usuário:** o patrocínio vale cerca de **10% do
   prêmio do campeão** da divisão.
 - **Definido (rev. 46), pelo usuário:** o patrocínio usa o mesmo teto de
