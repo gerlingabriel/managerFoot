@@ -1,9 +1,10 @@
 package br.com.managerfoot.contas;
 
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 /** Regras de cadastro (SPEC §3.4, rev. 24). Devolve todos os problemas de uma vez, para a tela. */
@@ -26,17 +27,22 @@ public final class RegrasConta {
 	}
 
 	public static List<String> problemas(String email, String nome, String senha) {
-		List<String> problemas = new ArrayList<>();
+		return List.copyOf(problemasPorCampo(email, nome, senha).values());
+	}
+
+	/** Os mesmos problemas de {@link #problemas}, por campo ({@code email}, {@code nome}, {@code senha}), para a tela. */
+	public static Map<String, String> problemasPorCampo(String email, String nome, String senha) {
+		Map<String, String> problemas = new LinkedHashMap<>();
 		String normalizado = normalizarEmail(email);
 		if (!EMAIL.matcher(normalizado).matches() || normalizado.length() > EMAIL_MAXIMO) {
-			problemas.add("Informe um e-mail válido.");
+			problemas.put("email", "Informe um e-mail válido.");
 		}
 		if (nome == null || nome.isBlank()) {
-			problemas.add("Informe o nome.");
+			problemas.put("nome", "Informe o nome.");
 		} else if (nome.strip().length() > NOME_MAXIMO) {
-			problemas.add("O nome pode ter até " + NOME_MAXIMO + " caracteres.");
+			problemas.put("nome", "O nome pode ter até " + NOME_MAXIMO + " caracteres.");
 		}
-		problemas.addAll(problemasSenha(senha));
+		problemasSenha(senha).forEach(p -> problemas.put("senha", p));
 		return problemas;
 	}
 

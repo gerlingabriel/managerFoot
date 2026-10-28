@@ -47,6 +47,22 @@ unset ADMIN_SENHA
 Sem `--spring.main.web-application-type=none`, a aplicação cria o administrador
 e continua rodando normalmente.
 
+## Entrar e convidar participantes
+
+Com a aplicação rodando, abra `http://localhost:8080` e entre com o e-mail e a
+senha do administrador.
+
+Para cadastrar um participante, gere um link de uso único (válido por 7 dias).
+Ele aparece no terminal, não no log:
+
+```bash
+set -a && . ./.env && set +a
+./mvnw spring-boot:run -Dspring-boot.run.arguments="--gerar-link-cadastro=admin@exemplo.com --spring.main.web-application-type=none"
+```
+
+O endereço do link usa `URL_BASE` (padrão `http://localhost:8080`). Ver
+[ADR 0009](docs/decisions/0009-login-com-sessao.md).
+
 ## Banco padrão
 
 Gera e grava os 6 países do banco padrão (Brasil, Argentina, Inglaterra,

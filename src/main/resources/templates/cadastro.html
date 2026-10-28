@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: cabeca('Criar conta')}"></head>
+<body>
+<div class="campo">
+<main class="conteudo">
+<header th:replace="~{fragmentos :: marca}"></header>
+<div class="cartoes">
+<section th:replace="~{fragmentos :: entrar}"></section>
+
+<section aria-labelledby="t-cadastro" class="cartao" th:with="erros=${erros ?: {:}}">
+<div class="cabecalho-cartao">
+<h2 id="t-cadastro">Criar conta</h2>
+<p th:if="${conviteValido}" class="suave"
+	th:text="|Aberta só pelo link de convite · válido até ${validoAte} · uso único|">Aberta só pelo link de convite</p>
+</div>
+<div th:unless="${conviteValido}" role="alert" class="alerta">Este convite não vale mais. Peça um novo ao administrador.</div>
+<form th:if="${conviteValido}" th:action="@{/cadastro}" method="post" novalidate>
+<input type="hidden" name="convite" th:value="${convite}">
+<div class="campo-form">
+<label for="c-nome">Nome do treinador</label>
+<input id="c-nome" name="nome" type="text" autocomplete="nickname" maxlength="60" th:value="${nome}"
+	th:attr="aria-invalid=${erros.containsKey('nome')},aria-describedby=${erros.containsKey('nome')} ? 'c-nome-erro' : null">
+<span th:if="${erros.containsKey('nome')}" id="c-nome-erro" class="erro-campo" th:text="${erros['nome']}"></span>
+</div>
+<div class="campo-form">
+<label for="c-email">E-mail</label>
+<input id="c-email" name="email" type="email" autocomplete="email" th:value="${email}"
+	th:attr="aria-invalid=${erros.containsKey('email')},aria-describedby=${erros.containsKey('email')} ? 'c-email-erro' : null">
+<span th:if="${erros.containsKey('email')}" id="c-email-erro" class="erro-campo" th:text="${erros['email']}"></span>
+</div>
+<div class="campo-form">
+<label for="c-senha">Senha</label>
+<input id="c-senha" name="senha" type="password" autocomplete="new-password"
+	th:attr="aria-invalid=${erros.containsKey('senha')},aria-describedby=${erros.containsKey('senha')} ? 'c-senha-erro' : null">
+<span th:if="${erros.containsKey('senha')}" id="c-senha-erro" class="erro-campo" th:text="${erros['senha']}"></span>
+</div>
+<div class="campo-form">
+<label for="c-senha2">Repita a senha</label>
+<input id="c-senha2" name="senhaRepetida" type="password" autocomplete="new-password"
+	th:attr="aria-invalid=${erros.containsKey('senhaRepetida')},aria-describedby=${erros.containsKey('senhaRepetida')} ? 'c-senha2-erro' : null">
+<span th:if="${erros.containsKey('senhaRepetida')}" id="c-senha2-erro" class="erro-campo" th:text="${erros['senhaRepetida']}"></span>
+</div>
+<button type="submit" class="botao">Criar conta e entrar</button>
+</form>
+</section>
+</div>
+</main>
+</div>
+</body>
+</html>

@@ -1832,6 +1832,9 @@ começa depois que a anterior estiver testada.
   do clube igual à média dos 11 em campo; gerado por código e carregado com
   `--carregar-banco-padrao` (`docs/decisions/0008`).
 - Telas Thymeleaf + HTMX:
+  - **3f.1 (concluída):** entrar, cadastro pelo link e sair, com sessão e
+    CSRF (`docs/decisions/0009`); link de cadastro gerado pelo terminal até
+    existir a tela do administrador; início provisório.
   - plantel e tática;
   - partidas simultâneas da divisão (§10.2);
   - classificação;

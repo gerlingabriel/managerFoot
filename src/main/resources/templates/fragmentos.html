@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:fragment="cabeca(titulo)">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title th:text="${titulo} + ' · managerFoot'">managerFoot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&amp;family=Barlow:wght@400;500;600&amp;display=swap">
+<link rel="stylesheet" th:href="@{/css/managerfoot.css}">
+<script th:src="@{/webjars/htmx.org/dist/htmx.min.js}" defer></script>
+</head>
+<body>
+
+<header th:fragment="marca" class="marca">
+<div class="marca-linha">
+<span aria-hidden="true" class="escudo-marca"></span>
+<h1 class="titulo">managerFoot</h1>
+</div>
+<p class="suave lema">Comece por baixo, suba de divisão e não seja demitido.</p>
+</header>
+
+<section th:fragment="entrar" aria-labelledby="t-entrar" class="cartao">
+<h2 id="t-entrar">Entrar</h2>
+<div th:if="${param.erro != null}" role="alert" class="alerta">E-mail ou senha incorretos.</div>
+<div th:if="${param.saiu != null}" role="status" class="aviso">Você saiu.</div>
+<form th:action="@{/entrar}" method="post">
+<div class="campo-form">
+<label for="l-email">E-mail</label>
+<input id="l-email" name="email" type="email" autocomplete="username" required>
+</div>
+<div class="campo-form">
+<label for="l-senha">Senha</label>
+<input id="l-senha" name="senha" type="password" autocomplete="current-password" required>
+</div>
+<button type="submit" class="botao">Entrar</button>
+</form>
+<p class="suave">Esqueceu a senha? Peça ao administrador para redefinir.</p>
+</section>
+
+</body>
+</html>

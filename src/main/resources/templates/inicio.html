@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: cabeca('Início')}"></head>
+<body>
+<div class="campo">
+<main class="conteudo">
+<header th:replace="~{fragmentos :: marca}"></header>
+<div class="cartoes">
+<section aria-labelledby="t-inicio" class="cartao">
+<h2 id="t-inicio" th:text="|Olá, ${usuario.nome}|">Olá</h2>
+<p class="suave">Novo jogo e jogos gravados chegam na próxima etapa.</p>
+<form th:action="@{/sair}" method="post">
+<button type="submit" class="botao-discreto">Sair</button>
+</form>
+</section>
+</div>
+</main>
+</div>
+</body>
+</html>

@@ -2,6 +2,7 @@ package br.com.managerfoot.contas;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.assertj.core.api.Assertions.entry;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -38,5 +39,13 @@ class RegrasContaTest {
 			.containsExactly("O nome pode ter até 60 caracteres.");
 		assertThatIllegalArgumentException().isThrownBy(() -> RegrasConta.exigirValidos("x", "Ana", "12345678"))
 			.withMessageContaining("e-mail");
+	}
+
+	@Test
+	void problemasPorCampoParaATela() {
+		assertThat(RegrasConta.problemasPorCampo("x", " ", "123")).containsOnlyKeys("email", "nome", "senha");
+		assertThat(RegrasConta.problemasPorCampo("ana@exemplo.com", "Ana", "1234"))
+			.containsExactly(entry("senha", "A senha precisa ter pelo menos 8 caracteres."));
+		assertThat(RegrasConta.problemasPorCampo("ana@exemplo.com", "Ana", "12345678")).isEmpty();
 	}
 }

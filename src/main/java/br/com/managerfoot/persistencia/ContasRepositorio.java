@@ -1,6 +1,8 @@
 package br.com.managerfoot.persistencia;
 
 import java.time.Duration;
+import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -12,6 +14,8 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import br.com.managerfoot.contas.AcessoNegadoException;
+import br.com.managerfoot.contas.EmailEmUsoException;
+import br.com.managerfoot.contas.LinkInvalidoException;
 import br.com.managerfoot.contas.Papel;
 import br.com.managerfoot.contas.RegrasConta;
 import br.com.managerfoot.contas.Senhas;
@@ -82,7 +86,7 @@ public class ContasRepositorio {
 			.optional()
 			.orElse(null);
 		if (linkId == null) {
-			throw new IllegalArgumentException("Este link de cadastro não vale mais: já foi usado, expirou ou não existe.");
+			throw new LinkInvalidoException("Este link de cadastro não vale mais: já foi usado, expirou ou não existe.");
 		}
 		Usuario usuario = inserir(email, nome, senha, Papel.PARTICIPANTE);
 		jdbc.sql("UPDATE link_cadastro SET usado_por = :usuario, usado_em = now() WHERE id = :link")
@@ -90,6 +94,18 @@ public class ContasRepositorio {
 			.param("link", linkId)
 			.update();
 		return usuario;
+	}
+
+	/** Até quando o link vale, se ainda não foi usado nem expirou. */
+	@Transactional(readOnly = true)
+	public Optional<Instant> validadeDoLink(String token) {
+		if (token == null || token.isBlank()) {
+			return Optional.empty();
+		}
+		return jdbc.sql("SELECT expira_em FROM link_cadastro WHERE token_hash = :hash AND usado_em IS NULL AND expira_em > now()")
+			.param("hash", TokenCadastro.hash(token))
+			.query((rs, n) -> rs.getObject("expira_em", OffsetDateTime.class).toInstant())
+			.optional();
 	}
 
 	/** O usuário, se o e-mail e a senha conferem. Não revela se o e-mail existe. */
@@ -131,6 +147,15 @@ public class ContasRepositorio {
 			.optional();
 	}
 
+	@Transactional(readOnly = true)
+	public Optional<Usuario> buscarPorEmail(String email) {
+		return jdbc.sql("SELECT id, email, nome, papel FROM usuario WHERE email = :email")
+			.param("email", RegrasConta.normalizarEmail(email))
+			.query((rs, n) -> new Usuario(rs.getLong("id"), rs.getString("email"), rs.getString("nome"),
+					Papel.valueOf(rs.getString("papel"))))
+			.optional();
+	}
+
 	private Usuario inserir(String email, String nome, String senha, Papel papel) {
 		RegrasConta.exigirValidos(email, nome, senha);
 		String normalizado = RegrasConta.normalizarEmail(email);
@@ -142,7 +167,7 @@ public class ContasRepositorio {
 			return new Usuario(id, normalizado, nome.strip(), papel);
 		}
 		catch (DuplicateKeyException e) {
-			throw new IllegalArgumentException("Já existe uma conta com este e-mail.", e);
+			throw new EmailEmUsoException("Já existe uma conta com este e-mail.", e);
 		}
 	}
 

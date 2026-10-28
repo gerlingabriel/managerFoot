@@ -1,0 +1,189 @@
+/* Identidade aprovada nos modelos (SPEC §10.5): campo verde em faixas, amarelo de destaque. */
+:root {
+	--campo: #0B3320;
+	--campo-faixa: #0E3B23;
+	--cartao: #082717;
+	--borda: #1F5A3A;
+	--texto: #F4F1E6;
+	--texto-suave: #B9CBB9;
+	--destaque: #F2C94C;
+	--destaque-claro: #FFE08A;
+	--erro: #E5484D;
+	--erro-texto: #FFB4B6;
+	--erro-alerta: #FFD7D8;
+}
+
+body {
+	margin: 0;
+	background: var(--campo);
+}
+
+a { color: var(--destaque); }
+a:hover { color: var(--destaque-claro); }
+
+.campo {
+	min-height: 100vh;
+	box-sizing: border-box;
+	font-family: Barlow, system-ui, sans-serif;
+	color: var(--texto);
+	background: repeating-linear-gradient(180deg, var(--campo-faixa) 0px, var(--campo-faixa) 64px, var(--campo) 64px, var(--campo) 128px);
+	padding: 48px 16px;
+}
+
+.conteudo {
+	max-width: 980px;
+	margin: 0 auto;
+	display: flex;
+	flex-direction: column;
+	gap: 32px;
+}
+
+.marca {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 6px;
+	text-align: center;
+}
+
+.marca-linha {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+.escudo-marca {
+	width: 36px;
+	height: 44px;
+	border-radius: 6px 6px 18px 18px;
+	background: linear-gradient(180deg, var(--destaque) 36%, var(--campo) 36% 64%, var(--destaque) 64%);
+	box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35);
+}
+
+.titulo {
+	margin: 0;
+	font-family: 'Barlow Condensed', sans-serif;
+	font-weight: 700;
+	font-size: 48px;
+	line-height: 1;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: var(--destaque);
+}
+
+.suave {
+	margin: 0;
+	font-size: 14px;
+	color: var(--texto-suave);
+}
+
+.lema { font-size: 16px; }
+
+.cartoes {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 24px;
+	align-items: flex-start;
+	justify-content: center;
+}
+
+.cartao {
+	flex: 1 1 340px;
+	max-width: 440px;
+	box-sizing: border-box;
+	background: var(--cartao);
+	border: 1px solid var(--borda);
+	border-radius: 12px;
+	padding: 24px;
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+}
+
+.cartao h2 {
+	margin: 0;
+	font-family: 'Barlow Condensed', sans-serif;
+	font-weight: 700;
+	font-size: 24px;
+	text-transform: uppercase;
+	color: var(--destaque);
+}
+
+.cabecalho-cartao {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.alerta {
+	padding: 10px 12px;
+	border-radius: 8px;
+	background: rgba(229, 72, 77, 0.14);
+	border: 1px solid var(--erro);
+	font-size: 14px;
+	color: var(--erro-alerta);
+}
+
+.aviso {
+	padding: 10px 12px;
+	border-radius: 8px;
+	border: 1px solid var(--borda);
+	font-size: 14px;
+	color: var(--texto-suave);
+}
+
+.campo-form {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.campo-form label {
+	font-size: 14px;
+	color: var(--texto-suave);
+}
+
+.campo-form input {
+	min-height: 44px;
+	box-sizing: border-box;
+	padding: 0 12px;
+	background: var(--campo);
+	color: var(--texto);
+	border: 1px solid var(--borda);
+	border-radius: 8px;
+	font: 500 16px Barlow, sans-serif;
+}
+
+.campo-form input[aria-invalid="true"] { border-color: var(--erro); }
+
+.erro-campo {
+	font-size: 14px;
+	color: var(--erro-texto);
+}
+
+.botao {
+	min-height: 48px;
+	background: var(--destaque);
+	color: #1A1A12;
+	border: 0;
+	border-radius: 10px;
+	font: 700 18px 'Barlow Condensed', sans-serif;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	cursor: pointer;
+}
+
+.botao:hover { background: var(--destaque-claro); }
+
+.botao-discreto {
+	min-height: 44px;
+	padding: 0 16px;
+	background: transparent;
+	color: var(--destaque);
+	border: 1px solid var(--borda);
+	border-radius: 10px;
+	font: 600 16px Barlow, sans-serif;
+	cursor: pointer;
+}
+
+form { display: contents; }
