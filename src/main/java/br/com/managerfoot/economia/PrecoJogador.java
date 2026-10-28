@@ -3,7 +3,7 @@ package br.com.managerfoot.economia;
 import br.com.managerfoot.dominio.Jogador;
 
 /**
- * Preço do jogador pela força (SPEC §9.4, rev. 40 e 41): a compra direta paga o preço; o leilão começa
+ * Preço do jogador pela força (SPEC §9.4, rev. 40 a 42): a compra direta paga o preço; o leilão começa
  * com o desconto. Em centavos de Real.
  */
 public final class PrecoJogador {
@@ -20,14 +20,22 @@ public final class PrecoJogador {
 		return new PrecoJogador(ParametrosMercado.padrao(), CaixaDaRodada.padrao());
 	}
 
-	/** Preço da compra direta. */
-	public long preco(Jogador jogador) {
-		return redondo(caixa.salario(jogador) * parametros.rodadasDeSalarioNoPreco());
+	/**
+	 * Preço da compra direta; o estrangeiro (de país diferente do da liga) sai com desconto.
+	 *
+	 * @param paisDaLiga código do país da liga em que o jogador está
+	 */
+	public long preco(Jogador jogador, String paisDaLiga) {
+		double preco = caixa.salario(jogador) * parametros.rodadasDeSalarioNoPreco();
+		if (!jogador.nacionalidade().equals(paisDaLiga)) {
+			preco *= 1 - parametros.descontoEstrangeiro();
+		}
+		return redondo(Math.round(preco));
 	}
 
-	/** Lance inicial do leilão: o preço com o desconto. */
-	public long lanceInicialLeilao(Jogador jogador) {
-		return redondo(Math.round(preco(jogador) * (1 - parametros.descontoLeilao())));
+	/** Lance inicial do leilão: o preço com o desconto do leilão. */
+	public long lanceInicialLeilao(Jogador jogador, String paisDaLiga) {
+		return redondo(Math.round(preco(jogador, paisDaLiga) * (1 - parametros.descontoLeilao())));
 	}
 
 	private long redondo(long centavos) {

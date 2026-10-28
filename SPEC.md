@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 42 (2026-10-28):** leilão: empate por sorteio, sem lance não vende até o fim da rodada, máquina dá lance depois do OK dos usuários, usuário sem caixa não precisa ser esperado; estrangeiro 10% mais barato; empréstimo retirado; todo clube tem treinador e o ranking inclui todos; patrocínio proporcional à posição anterior (igual no 1º ano) e por temporada; contrato só até o fim da temporada.
 -   **rev. 41 (2026-10-28):** tabela de preço proposta (80 rodadas de salário, provisória); leilão resolvido na hora: os da máquina depois do OK da tática e antes do minuto a minuto; o do usuário quando ele põe o jogador à venda.
 -   **rev. 40 (2026-10-28):** ano da temporada (começa em 2026, configurável, +1 por temporada); histórico só de campeões e ranking de títulos dos treinadores; regras do usuário para mercado (compra direta pelo preço da força, leilão 20% mais barato com lance de cada um), contrato em temporadas, pedido de aumento, empréstimo em blocos de 500 mil a 1% por rodada e patrocínio escolhido a cada início de ano.
 -   **rev. 39 (2026-10-28):** modelo da aba Finanças aprovado (só o clube do usuário); saldo do caixa no plantel; público no quadro da rodada e na janela; estádio com nome geral, sem nome próprio por clube; jogadores à venda no clique do clube ficam para o mercado.
@@ -1117,15 +1118,14 @@ os cartões de um time todo calmo (antes, 2,8 vezes).
   de artilheiros por ano.
 - **Ranking de treinadores:** quantos títulos cada treinador tem (só a
   quantidade).
-- **Em aberto:** quais títulos contam no ranking (só a 1ª divisão ou
-  todas as divisões; copas quando existirem) e se treinadores da máquina
-  aparecem (hoje eles não existem no domínio, §5.4). Proposta: o
-  histórico grava o campeão de **todas** as divisões, com o treinador
-  humano quando houver; a decisão do ranking fica para a tela.
-- **Conflito a confirmar:** o usuário disse que não haverá histórico de
-  artilheiros; a aba "Artilheiros de todos os tempos" (rev. 16) continua
-  até o usuário dizer o contrário, porque é um ranking acumulado e não um
-  histórico por ano.
+- **Definido (rev. 42):** **todo clube tem treinador** (da máquina ou
+  usuário) e o ranking inclui **todos** os treinadores que ganharam
+  título. Hoje só os usuários existem como treinadores; é preciso criar
+  os treinadores da máquina (§5.4) antes do ranking.
+- **Em aberto:** quais títulos contam (proposta: o campeão de cada
+  divisão conta um título; copas quando existirem).
+- **Definido (rev. 42):** a aba "Artilheiros de todos os tempos" continua.
+  Se as abas ficarem muitas, agrupar assuntos parecidos.
 
 ### 8.2 Copas nacionais
 
@@ -1427,10 +1427,20 @@ Quando o clube estiver no elenco mínimo e um jogador estiver suspenso ou lesion
   - **Jogador posto à venda pelo usuário** ("vender por leilão"): resolve
     no momento; a máquina pode comprar e, em rede (depois), os outros
     usuários podem ofertar.
-- **Em aberto:** empate de lances, regra de lance da máquina (orçamento,
-  posição que falta, força), o que acontece se ninguém der lance, como o
-  usuário dá lance nos leilões da máquina nesse intervalo, e o desconto do
-  estrangeiro.
+- **Definido (rev. 42):**
+  - Os usuários dão seus lances e confirmam (OK); **depois** a máquina, se
+    quiser, dá o lance dela. Leva quem ofereceu mais.
+  - **Empate:** decidido por sorteio.
+  - **Ninguém deu lance:** o jogador não é vendido e só pode ser posto à
+    venda de novo (pela máquina ou pelo usuário) depois que aquela rodada
+    terminar.
+  - O usuário **não pode dar lance** se o lance inicial for maior que o
+    caixa dele; nesse caso não é preciso esperar por ele, e a tela já
+    mostra o resultado (por exemplo, que outro treinador levou).
+  - **Estrangeiro:** 10% mais barato que o nacional da mesma força.
+- **Em aberto:** regra de lance da máquina (proposta: saldo, posição que
+  falta no elenco e força do jogador, com variação sorteada) e quais
+  jogadores a máquina põe à venda e quando.
 
 ### 9.5 Contratos, salários e empréstimos
 
@@ -1457,12 +1467,14 @@ Quando o clube estiver no elenco mínimo e um jogador estiver suspenso ou lesion
 - **Dependência:** hoje a força dos jogadores não muda (§6.1 em aberto) e
   o salário segue a força atual; o pedido de aumento só tem efeito depois
   da evolução de força e do salário gravado no contrato.
-- **Empréstimo:** em blocos de **500 mil** (Real; convertido na moeda da
-  liga); cada bloco paga **1% de juros por rodada**. O usuário pega
-  quando quiser, pode pagar e pegar de novo.
-- **Em aberto:** limite de blocos, pagamento parcial, o que acontece com
-  saldo negativo e com quem não paga (§9.3); contratos de quantas
-  temporadas podem ser escolhidos.
+- **Retirado (rev. 42):** o usuário decidiu **não ter empréstimo**, para
+  simplificar. A regra de blocos de 500 mil a 1% por rodada (rev. 40) fica
+  só como registro.
+- **Definido (rev. 42):** compra e renovação valem **só até o fim da
+  temporada** em curso (sem escolher número de temporadas).
+- **Em aberto:** o que acontece no início da temporada seguinte com os
+  jogadores cujo contrato acabou (renovação automática, pedido de
+  aumento ou leilão) e o saldo negativo sem empréstimo (§9.3).
 -   Definir limites, prazos, taxas e consequências de inadimplência
     antes da implementação final.
 
@@ -1486,12 +1498,13 @@ Quando o clube estiver no elenco mínimo e um jogador estiver suspenso ou lesion
 caixa com opções de patrocínio, acessível pelo plantel; o usuário escolhe
 uma e o dinheiro entra no caixa do clube. As opções dependem da posição
 na temporada anterior.
-- **Conflito a confirmar:** acima, contratos de 2 a 4 anos; a regra nova
-  é uma escolha por ano. Proposta: vale a regra nova (um patrocínio por
-  temporada) e os contratos longos saem.
-- **Em aberto:** valores por posição, na primeira temporada (o usuário
-  sugeriu todos iguais), se o dinheiro entra de uma vez ou por rodada, e
-  patrocínio dos clubes da máquina.
+- **Definido (rev. 42):** um patrocínio **por temporada** (substitui os
+  contratos de 2 a 4 anos; pode mudar depois). O valor é **proporcional à
+  posição na liga na temporada anterior**; na **primeira temporada**, todos
+  recebem o mesmo valor.
+- **Em aberto:** a tabela de valores (proposta do agente com simulação), se
+  o dinheiro entra de uma vez ou por rodada e se os clubes da máquina
+  também recebem.
 
 ## 10. Interface e apresentação
 

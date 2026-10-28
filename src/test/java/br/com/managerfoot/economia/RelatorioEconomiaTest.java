@@ -212,12 +212,13 @@ class RelatorioEconomiaTest {
 		md.append("\n## Mercado: preço do jogador (proposta da rev. 41)\n\n");
 		md.append("Preço da compra direta = ").append(mercado.rodadasDeSalarioNoPreco())
 			.append(" rodadas do salário do jogador (cerca de duas temporadas de 38 rodadas), arredondado em R$ 1.000. ")
-			.append("O leilão começa ").append(pct(mercado.descontoLeilao())).append(" abaixo (regra do usuário).\n\n");
+			.append("O leilão começa ").append(pct(mercado.descontoLeilao())).append(" abaixo e o estrangeiro custa ")
+			.append(pct(mercado.descontoEstrangeiro())).append(" menos (regras do usuário). A tabela é do jogador nacional.\n\n");
 		md.append("| Força | Salário por rodada | Preço (compra direta) | Lance inicial do leilão |\n|---|---|---|---|\n");
 		for (int forca : new int[] { 5, 12, 17, 22, 26, 30, 35, 40, 45, 50 }) {
 			Jogador j = jogador(forca);
 			md.append("| ").append(forca).append(" | ").append(real(caixa.salario(j))).append(" | ")
-				.append(real(preco.preco(j))).append(" | ").append(real(preco.lanceInicialLeilao(j))).append(" |\n");
+				.append(real(preco.preco(j, "BRA"))).append(" | ").append(real(preco.lanceInicialLeilao(j, "BRA"))).append(" |\n");
 		}
 		md.append("\n### Quantos jogadores da própria força o clube compra\n\n");
 		md.append("Por terço de força dentro da divisão: força média do terço, preço de um jogador dessa força, quantos ")
@@ -228,7 +229,7 @@ class RelatorioEconomiaTest {
 		porDivisao.forEach((prioridade, a) -> {
 			for (int t = 0; t < 3; t++) {
 				double forca = a.forcaPorTerco[t] / a.clubesPorTerco[t];
-				long p = preco.preco(jogador((int) Math.round(forca)));
+				long p = preco.preco(jogador((int) Math.round(forca)), "BRA");
 				md.append("| ").append(prioridade).append("ª | ").append(nomes[t]).append(" | ")
 					.append(String.format(Locale.forLanguageTag("pt-BR"), "%.1f", forca)).append(" | ").append(real(p))
 					.append(" | ").append(vezes(a.saldoInicialPorTerco[t] / a.clubesPorTerco[t] / p)).append(" | ")
@@ -236,7 +237,7 @@ class RelatorioEconomiaTest {
 			}
 		});
 		md.append("\nVender um jogador rende o preço (ou o lance do leilão) e tira o salário dele da folha. ")
-			.append("Ainda fora: patrocínio, premiação, empréstimo, desconto do estrangeiro e regra de lance da máquina.\n");
+			.append("Ainda fora: patrocínio, premiação e regra de lance da máquina.\n");
 	}
 
 	private static Jogador jogador(int forca) {
