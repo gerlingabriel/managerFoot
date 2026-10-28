@@ -41,6 +41,7 @@ public class BancoPadraoRepositorio {
 		jdbc.sql("SELECT 1 FROM pg_advisory_xact_lock(hashtext('managerfoot.banco-padrao'))").query(Integer.class).single();
 		Optional<Long> existente = moldeId();
 		if (existente.isPresent()) {
+			completarTreinadores(existente.get(), paises);
 			return new Carga(existente.get(), false);
 		}
 		long molde = moldes.criarMolde(NOME_MOLDE);
@@ -52,11 +53,35 @@ public class BancoPadraoRepositorio {
 						divisao.rebaixados());
 			}
 			for (ClubeGerado clube : gerado.clubes()) {
-				Clube gravado = moldes.adicionarClube(pais, clube.clube());
+				Clube gravado = moldes.adicionarClube(pais, clube.clube(), clube.treinador());
 				moldes.adicionarJogadores(gravado.id(), clube.jogadores());
 			}
 		}
 		return new Carga(molde, true);
+	}
+
+	/**
+	 * Banco padrão carregado antes dos treinadores (V23): troca o nome provisório pelo gerado. O gerador
+	 * tem semente fixa, então os clubes de cada país vêm na mesma ordem em que foram gravados.
+	 */
+	private void completarTreinadores(long moldeId, List<PaisGerado> paises) {
+		for (PaisGerado gerado : paises) {
+			Optional<Long> pais = jdbc.sql("SELECT id FROM molde_pais WHERE molde_id = :molde AND codigo = :codigo")
+				.param("molde", moldeId)
+				.param("codigo", gerado.pais().codigo())
+				.query(Long.class)
+				.optional();
+			if (pais.isEmpty()) {
+				continue;
+			}
+			List<Long> clubes = List.copyOf(moldes.treinadores(pais.get()).keySet());
+			for (int i = 0; i < Math.min(clubes.size(), gerado.clubes().size()); i++) {
+				jdbc.sql("UPDATE molde_clube SET treinador = :treinador WHERE id = :clube AND treinador = 'Treinador do ' || nome")
+					.param("treinador", gerado.clubes().get(i).treinador())
+					.param("clube", clubes.get(i))
+					.update();
+			}
+		}
 	}
 
 	/** Id do molde do banco padrão, se já foi carregado. */

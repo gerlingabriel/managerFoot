@@ -36,6 +36,7 @@
 <a th:href="@{/jogos/{id}/artilheiros(id=${jogoId})}" class="aba" th:classappend="${atual == 'temporada'} ? 'atual'" th:attr="aria-current=${atual == 'temporada' ? 'page' : null}">Artilheiros da temporada</a>
 <a th:href="@{/jogos/{id}/artilheiros/todos-os-tempos(id=${jogoId})}" class="aba" th:classappend="${atual == 'todos'} ? 'atual'" th:attr="aria-current=${atual == 'todos' ? 'page' : null}">Artilheiros de todos os tempos</a>
 <a th:href="@{/jogos/{id}/financas(id=${jogoId})}" class="aba" th:classappend="${atual == 'financas'} ? 'atual'" th:attr="aria-current=${atual == 'financas' ? 'page' : null}">Finanças</a>
+<a th:href="@{/jogos/{id}/historico(id=${jogoId})}" class="aba" th:classappend="${atual == 'historico'} ? 'atual'" th:attr="aria-current=${atual == 'historico' ? 'page' : null}">Histórico</a>
 </nav>
 
 <!-- Ficha do jogador (modelo aprovado): por cima da aba; fechar volta à aba sem a ficha. Com a ação

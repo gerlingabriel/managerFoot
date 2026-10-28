@@ -146,6 +146,14 @@ class GeradorBancoPadraoTest {
 	}
 
 	@Test
+	void cadaClubeTemUmTreinadorComNomeESobrenomeSemRepetirNoPais() {
+		for (PaisGerado pais : BANCO) {
+			assertThat(pais.clubes()).extracting(ClubeGerado::treinador).doesNotHaveDuplicates()
+				.allMatch(t -> t != null && t.contains(" "));
+		}
+	}
+
+	@Test
 	void mesmaSementeGeraOMesmoBanco() {
 		List<PaisGerado> outro = new GeradorBancoPadrao(PARAMETROS, ParametrosMotor.padrao()).gerar(PaisPadrao.TODOS);
 		assertThat(outro).isEqualTo(BANCO);

@@ -77,6 +77,14 @@ class JogoRepositorioIT {
 		assertThat(planteis.get(copia.divisoes().get(1).clubes().getFirst().id())).isEmpty();
 		assertThat(jdbc.sql("SELECT pais_codigo FROM jogo WHERE id = ?").param(jogo).query(String.class).single())
 			.isEqualTo("BRA");
+		// um treinador da máquina por clube, copiado do molde (rev. 54)
+		assertThat(jdbc.sql("""
+				SELECT m.nome FROM jogo_treinador_maquina m WHERE m.jogo_id = ? AND m.clube_id = ?""")
+			.param(jogo).param(primeiroClube(copia).id()).query(String.class).single())
+			.isEqualTo(moldes.treinadores(brasil).get(primeiroClube(ligaMolde).id()));
+		assertThat(jdbc.sql("SELECT count(*) FROM jogo_treinador_maquina WHERE jogo_id = ?").param(jogo).query(Long.class)
+			.single()).isEqualTo(jdbc.sql("SELECT count(*) FROM jogo_clube WHERE jogo_id = ?").param(jogo).query(Long.class)
+			.single());
 	}
 
 	@Test
@@ -188,7 +196,7 @@ class JogoRepositorioIT {
 	@Test
 	void quadroDoAdministradorMostraADistribuicaoQueOJogoUsa() {
 		// empate de força 40 entre a Série A e um clube cadastrado a mais: a semente decide
-		moldes.adicionarClube(brasil, new Clube(0, "BR Empatado", 40));
+		moldes.adicionarClube(brasil, new Clube(0, "BR Empatado", 40), "Treinador BR");
 		Usuario admin = LigaDeTeste.administrador(contas);
 
 		for (long semente = 0; semente < 6; semente++) {

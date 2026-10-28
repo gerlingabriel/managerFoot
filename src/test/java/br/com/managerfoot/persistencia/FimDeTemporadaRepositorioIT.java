@@ -53,6 +53,9 @@ class FimDeTemporadaRepositorioIT {
 	@Autowired
 	EscalacaoRepositorio escalacoes;
 
+	@Autowired
+	ConsultasRepositorio consultas;
+
 	long jogo;
 
 	@BeforeEach
@@ -136,6 +139,18 @@ class FimDeTemporadaRepositorioIT {
 		assertThat(jdbc.sql("SELECT clube_nome FROM jogo_campeao WHERE jogo_id = ? AND temporada = 1 AND ano = 2026")
 			.param(jogo).query(String.class).list()).containsExactlyInAnyOrderElementsOf(lideres);
 		assertThat(jogos.ano(jogo, 2)).isEqualTo(2027);
+		// cada campeão tem treinador: o usuário ou o da máquina (rev. 54)
+		assertThat(contar("SELECT count(*) FROM jogo_campeao WHERE jogo_id = ? "
+				+ "AND (usuario_id IS NULL) = (treinador_maquina_id IS NULL)")).isZero();
+		long usuario = jdbc.sql("SELECT usuario_id FROM jogo_treinador WHERE jogo_id = ?").param(jogo).query(Long.class).single();
+		ConsultasRepositorio.VisaoHistorico historico = consultas.historico(jogo, usuario);
+		assertThat(historico.anos()).hasSize(1);
+		assertThat(historico.anos().get(0).ano()).isEqualTo(2026);
+		assertThat(historico.anos().get(0).campeoes()).extracting(ConsultasRepositorio.CampeaoNoAno::clube)
+			.containsExactlyInAnyOrderElementsOf(lideres);
+		assertThat(historico.ranking()).hasSize(1);
+		assertThat(historico.ranking().get(0).posicao()).isEqualTo(1);
+		assertThat(historico.ranking().get(0).titulos()).isEqualTo(1);
 
 		// prêmio da liga na última rodada da temporada 1 e patrocínio na rodada 0 da 2 (rev. 45 e 46)
 		Premiacao premiacao = Premiacao.padrao();

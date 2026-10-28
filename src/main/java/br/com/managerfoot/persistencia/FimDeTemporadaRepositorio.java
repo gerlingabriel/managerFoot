@@ -107,17 +107,20 @@ public class FimDeTemporadaRepositorio {
 	}
 
 	/**
-	 * Histórico de campeões (SPEC §8.1.1, rev. 40): o primeiro da classificação final de cada
-	 * divisão, com o ano da temporada e o usuário que dirigia o clube (nulo para a máquina).
+	 * Histórico de campeões (SPEC §8.1.1, rev. 40 e 54): o primeiro da classificação final de cada
+	 * divisão, com o ano da temporada e o treinador: o usuário que dirigia o clube ou, sem usuário, o
+	 * treinador da máquina.
 	 */
 	private void gravarCampeoes(long jogoId, int temporada, Map<Integer, Classificacao> finais) {
 		finais.forEach((prioridade, classificacao) -> {
 			Clube campeao = classificacao.linhas().getFirst().clube();
 			jdbc.sql("""
 					INSERT INTO jogo_campeao (jogo_id, temporada, ano, divisao_prioridade, divisao_nome, clube_id,
-					                          clube_nome, usuario_id)
+					                          clube_nome, usuario_id, treinador_maquina_id)
 					SELECT j.id, :temporada, j.ano_inicial + :temporada - 1, d.prioridade, d.nome, c.id, c.nome,
-					       (SELECT t.usuario_id FROM jogo_treinador t WHERE t.clube_id = c.id)
+					       (SELECT t.usuario_id FROM jogo_treinador t WHERE t.clube_id = c.id),
+					       CASE WHEN NOT EXISTS (SELECT 1 FROM jogo_treinador t WHERE t.clube_id = c.id)
+					            THEN (SELECT m.id FROM jogo_treinador_maquina m WHERE m.clube_id = c.id) END
 					FROM jogo j JOIN jogo_divisao d ON d.jogo_id = j.id AND d.prioridade = :prioridade
 					JOIN jogo_clube c ON c.id = :clube
 					WHERE j.id = :jogo""")

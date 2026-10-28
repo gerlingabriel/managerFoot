@@ -1,6 +1,7 @@
 package br.com.managerfoot.persistencia;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.entry;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.NoSuchElementException;
@@ -49,13 +50,30 @@ class MoldeRepositorioIT {
 	}
 
 	@Test
+	void clubeSemTreinadorERecusado() {
+		long pais = repositorio.criarPais(repositorio.criarMolde("Padrão"), "BRA", "Brasil");
+
+		assertThatThrownBy(() -> repositorio.adicionarClube(pais, new Clube(0, "Sem", 20), " "))
+			.isInstanceOf(IllegalArgumentException.class).hasMessage("O clube Sem precisa de um treinador.");
+		Clube clube = repositorio.adicionarClube(pais, new Clube(0, "Com", 20), "Rui");
+		assertThatThrownBy(() -> repositorio.trocarTreinador(clube.id(), null))
+			.isInstanceOf(IllegalArgumentException.class).hasMessage("O clube Com precisa de um treinador.");
+		assertThatThrownBy(() -> repositorio.trocarTreinador(clube.id(), "x".repeat(61)))
+			.isInstanceOf(IllegalArgumentException.class).hasMessageContaining("60 caracteres");
+	}
+
+	@Test
 	void clubesDoPaisVoltamEmOrdemComIdsEEscudo() {
 		long pais = repositorio.criarPais(repositorio.criarMolde("Padrão"), "BRA", "Brasil");
 		Clube listrado = repositorio.adicionarClube(pais,
-				new Clube(0, "Listrado", 40, new Escudo(ModeloEscudo.LISTRAS_VERTICAIS, "#111827", "#f4f1e6")));
-		Clube liso = repositorio.adicionarClube(pais, new Clube(0, "Liso", 12));
+				new Clube(0, "Listrado", 40, new Escudo(ModeloEscudo.LISTRAS_VERTICAIS, "#111827", "#f4f1e6")), "Ana Ribeiro");
+		Clube liso = repositorio.adicionarClube(pais, new Clube(0, "Liso", 12), "Treinador Liso");
 
 		assertThat(repositorio.carregarClubes(pais)).containsExactly(listrado, liso);
+		assertThat(repositorio.treinadores(pais)).containsExactly(entry(listrado.id(), "Ana Ribeiro"),
+				entry(liso.id(), "Treinador Liso"));
+		repositorio.trocarTreinador(liso.id(), "  Caio Nunes ");
+		assertThat(repositorio.treinadores(pais)).containsEntry(liso.id(), "Caio Nunes");
 		assertThat(listrado.escudo().corSecundaria()).isEqualTo("#F4F1E6");
 	}
 
@@ -166,6 +184,6 @@ class MoldeRepositorioIT {
 	}
 
 	private void clubes(long pais, int quantidade) {
-		IntStream.rangeClosed(1, quantidade).forEach(i -> repositorio.adicionarClube(pais, new Clube(0, "Clube " + i, 20)));
+		IntStream.rangeClosed(1, quantidade).forEach(i -> repositorio.adicionarClube(pais, new Clube(0, "Clube " + i, 20), "Treinador " + i));
 	}
 }

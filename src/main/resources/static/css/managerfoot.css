@@ -1403,3 +1403,17 @@ a.link-clube:hover { color: var(--destaque); text-decoration: underline; }
 @media (max-width: 480px) {
 	.leilao-linha { grid-template-columns: minmax(0, 1fr); row-gap: 8px; }
 }
+
+/* Histórico (modelo 8a, rev. 54). */
+.historico { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
+.historico > .painel { flex: 1 1 420px; min-width: 0; }
+.historico > .painel:first-child { flex-basis: 640px; }
+.rolagem { overflow-x: auto; }
+.tabela-historico, .tabela-ranking { min-width: 0; }
+.tabela-historico td { vertical-align: top; }
+.tabela-historico td.seu { background: rgba(242, 201, 76, 0.12); box-shadow: inset 4px 0 0 var(--destaque); }
+.historico-ano { text-align: left; font: 700 20px 'Barlow Condensed', sans-serif; color: var(--destaque); padding: 7px 10px; }
+.historico-clube { display: block; font: 600 18px 'Barlow Condensed', sans-serif; text-transform: uppercase; }
+.historico-treinador { display: block; font-size: 13px; color: var(--texto-suave); }
+.tabela-historico td.seu .historico-treinador { color: var(--destaque); }
+.historico-nota { margin: 0; padding: 12px 16px 14px; font-size: 14px; border-top: 1px solid var(--borda); }

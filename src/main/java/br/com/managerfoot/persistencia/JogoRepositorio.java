@@ -147,9 +147,15 @@ public class JogoRepositorio {
 		List<Clube> origens = clubes(liga);
 		List<Clube> destinos = clubes(copia);
 		Map<Long, Long> clubesPorOrigem = new HashMap<>();
+		Map<Long, String> treinadores = moldes.treinadores(paisMoldeId);
 		for (int i = 0; i < origens.size(); i++) {
 			long destino = destinos.get(i).id();
 			clubesPorOrigem.put(origens.get(i).id(), destino);
+			jdbc.sql("INSERT INTO jogo_treinador_maquina (jogo_id, nome, clube_id) VALUES (:jogo, :nome, :clube)")
+				.param("jogo", jogoId)
+				.param("nome", treinadores.get(origens.get(i).id()))
+				.param("clube", destino)
+				.update();
 			TabelasLiga.MOLDE.carregarPlantel(jdbc, origens.get(i).id())
 				.forEach(j -> TabelasLiga.JOGO.inserirJogador(jdbc, destino, j));
 		}

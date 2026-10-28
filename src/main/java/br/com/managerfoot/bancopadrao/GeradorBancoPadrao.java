@@ -41,8 +41,8 @@ public final class GeradorBancoPadrao {
 		this.escalacao = new EscalacaoMaquina(parametrosMotor);
 	}
 
-	/** Clube gerado com o seu plantel; os ids são provisórios, o banco dá os definitivos. */
-	public record ClubeGerado(Clube clube, List<Jogador> jogadores) {
+	/** Clube gerado com o treinador e o plantel; os ids são provisórios, o banco dá os definitivos. */
+	public record ClubeGerado(Clube clube, String treinador, List<Jogador> jogadores) {
 	}
 
 	/** País com todos os clubes necessários, do mais forte ao mais fraco. */
@@ -70,10 +70,16 @@ public final class GeradorBancoPadrao {
 				int forca = forcaNaFaixa(faixa, k, quantidade, aleatorio);
 				Clube clube = new Clube(clubes.size() + 1, nomeDoClube(pais, nomesUsados, aleatorio), forca,
 						escudo(aleatorio));
-				clubes.add(new ClubeGerado(clube, plantel(pais, forca, faixa.maxima(), aleatorio)));
+				clubes.add(new ClubeGerado(clube, null, plantel(pais, forca, faixa.maxima(), aleatorio)));
 			}
 		}
-		return new PaisGerado(pais, List.copyOf(clubes));
+		// gerador próprio: os treinadores (rev. 54) não mudam os clubes e planteis já gerados
+		SplittableRandom paraTreinadores = new SplittableRandom(~aleatorio.nextLong());
+		Set<String> treinadores = new HashSet<>();
+		List<ClubeGerado> comTreinador = clubes.stream()
+			.map(c -> new ClubeGerado(c.clube(), nomeDoTreinador(pais.idioma(), treinadores, paraTreinadores), c.jogadores()))
+			.toList();
+		return new PaisGerado(pais, comTreinador);
 	}
 
 	/** Do topo ao pé da faixa, em passos iguais, com ±1 de sorteio para não ficar uma escada perfeita. */
@@ -185,6 +191,17 @@ public final class GeradorBancoPadrao {
 			}
 		}
 		throw new IllegalStateException("não foi possível sortear nomes diferentes para o plantel em " + idioma);
+	}
+
+	/** Treinador com nome e sobrenome, diferente dos outros do país. */
+	private static String nomeDoTreinador(Idioma idioma, Set<String> usados, SplittableRandom aleatorio) {
+		for (int tentativa = 0; tentativa < 1000; tentativa++) {
+			String nome = sortear(idioma.nomes(), aleatorio) + " " + sortear(idioma.sobrenomes(), aleatorio);
+			if (usados.add(nome)) {
+				return nome;
+			}
+		}
+		throw new IllegalStateException("não foi possível sortear nomes diferentes de treinador em " + idioma);
 	}
 
 	private String nomeQualquer(Idioma idioma, SplittableRandom aleatorio) {

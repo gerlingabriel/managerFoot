@@ -15,7 +15,7 @@
 
 ### Histórico de revisões
 
--   **rev. 54 (2026-10-28):** modelo 8a (histórico) aprovado; um treinador por clube, obrigatório ao criar ou editar clube; patrocínio volta à caixa de escolha da rev. 40; estádio até 120.000 lugares para todos, com janela nas finanças (capacidade, ingresso fixo por clube e divisão, ampliação de 5.000 lugares pelo preço de um jogador de força 50); regra de evolução de força descrita pelo usuário e simulada (`docs/simulacoes/evolucao-forca.md`), proposta do agente aguardando aprovação.
+-   **rev. 54 (2026-10-28):** modelo 8a (histórico) aprovado; um treinador por clube, obrigatório ao criar ou editar clube; patrocínio volta à caixa de escolha da rev. 40; estádio até 120.000 lugares para todos, com janela nas finanças (capacidade, ingresso fixo por clube e divisão, ampliação de 5.000 lugares pelo preço de um jogador de força 50); regra de evolução de força descrita pelo usuário e simulada (`docs/simulacoes/evolucao-forca.md`), proposta do agente aguardando aprovação. Gravados os treinadores da máquina e a aba Histórico (V23).
 -   **rev. 53 (2026-10-28):** venda do usuário por leilão: o usuário define o lance mínimo na ficha do jogador e o resultado aparece na tela do 7b; com caixa negativo o jogo escolhe um jogador sem contrato renovado e, se todos estiverem renovados, a venda fica para o início da temporada seguinte, antes de tudo. Gravada a venda pela ficha (V21). Caixa negativo: o jogador é sorteado entre os sem contrato renovado (decisão do usuário, para que qualquer um possa sair) e gravado (V22).
 -   **rev. 52 (2026-10-28):** leilões da máquina antes da rodada gravados (V20, modelo 7b, ADR 0012): abertos ao confirmar a tática, lances do usuário e depois da máquina, resultado e "Ir para a rodada"; compra direta de jogador em leilão aberto cancela o leilão (proposta do agente).
 -   **rev. 51 (2026-10-28):** janela do clube na classificação com as abas Calendário e Plantel (modelo 7a aprovado com a coluna de gols pedida pelo usuário): plantel inteiro, gols na temporada e botão Comprar nos jogadores à venda.
@@ -1185,6 +1185,10 @@ os cartões de um time todo calmo (antes, 2,8 vezes).
   obrigatório ao criar ou editar um clube. Proposta do agente: o banco
   padrão gera um nome fictício para cada um; o treinador da máquina fica no
   clube até existir a regra de demissão (§5.4).
+- **Gravado (rev. 54, V23, `docs/decisions/0013`):** treinador obrigatório
+  no clube do molde (nome e sobrenome gerados no banco padrão), copiado para
+  o jogo; o campeão guarda o usuário ou o treinador da máquina; aba
+  Histórico pelo modelo 8a.
 - **Definido (rev. 46), pelo usuário:** conta **1 título** quando o
   treinador ganha a liga da **1ª divisão**. Títulos da 2ª divisão e
   abaixo não contam. Copas: decidir quando existirem. (O histórico de

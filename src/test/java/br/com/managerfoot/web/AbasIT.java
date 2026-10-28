@@ -167,6 +167,15 @@ class AbasIT {
 	}
 
 	@Test
+	void historicoAbreSemCampeoesNaPrimeiraTemporada() throws Exception {
+		mvc.perform(get(base + "/historico").with(como(treinador)))
+			.andExpect(status().isOk())
+			.andExpect(content().string(containsString("aria-current=\"page\">Histórico")))
+			.andExpect(content().string(containsString("Nenhuma temporada terminou ainda.")))
+			.andExpect(content().string(containsString("Ninguém foi campeão ainda.")));
+	}
+
+	@Test
 	void vendaPorLeilaoPelaFichaMostraOResultadoNaTelaDosLeiloes() throws Exception {
 		long clube = jogo.clubeDoTreinador(jogoId, treinador.id()).orElseThrow();
 		long atacante = jdbc.sql("SELECT id FROM jogo_jogador WHERE clube_id = :c AND posicao = 'ATACANTE' ORDER BY forca DESC LIMIT 1")

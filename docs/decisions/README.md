@@ -24,3 +24,4 @@ consideradas, decisão e consequências.
 | [0010](0010-rodada-ao-vivo.md) | Rodada ao vivo: relógio, pausa e substituições | Aceita |
 | [0011](0011-mercado-no-banco.md) | Mercado no banco: anúncios, salário e lançamentos | Aceita |
 | [0012](0012-leiloes-da-rodada.md) | Leilões da máquina antes da rodada | Aceita |
+| [0013](0013-treinadores-da-maquina.md) | Treinadores da máquina e histórico | Aceita |

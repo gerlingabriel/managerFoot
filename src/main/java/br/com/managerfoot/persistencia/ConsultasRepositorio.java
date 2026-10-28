@@ -1,11 +1,13 @@
 package br.com.managerfoot.persistencia;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.TreeMap;
 
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
@@ -202,6 +204,57 @@ public class ConsultasRepositorio {
 			.query(Integer.class).single();
 	}
 
+	/**
+	 * Histórico (SPEC §8.1.1, rev. 40 a 54; modelo 8a): os campeões de cada ano, com o treinador, e o
+	 * ranking de treinadores pelos títulos da 1ª divisão, em que empatados dividem a posição.
+	 */
+	@Transactional(readOnly = true)
+	public VisaoHistorico historico(long jogoId, long usuarioId) {
+		exigirClube(jogoId, usuarioId);
+		Map<Integer, Map<Integer, CampeaoNoAno>> porAno = new TreeMap<>(Comparator.reverseOrder());
+		jdbc.sql("""
+				SELECT c.ano, c.divisao_prioridade, c.clube_nome, c.usuario_id, coalesce(u.nome, m.nome) AS treinador
+				FROM jogo_campeao c
+				LEFT JOIN usuario u ON u.id = c.usuario_id
+				LEFT JOIN jogo_treinador_maquina m ON m.id = c.treinador_maquina_id
+				WHERE c.jogo_id = :jogo""")
+			.param("jogo", jogoId)
+			.query(rs -> {
+				Long usuario = (Long) rs.getObject("usuario_id");
+				porAno.computeIfAbsent(rs.getInt("ano"), a -> new HashMap<>()).put(rs.getInt("divisao_prioridade"),
+						new CampeaoNoAno(rs.getString("clube_nome"), rs.getString("treinador"),
+								usuario != null && usuario == usuarioId));
+			});
+		List<AbaDivisao> divisoes = abas(jogos.carregarLiga(jogoId));
+		List<AnoNoHistorico> anos = new ArrayList<>();
+		porAno.forEach((ano, campeoes) -> anos.add(new AnoNoHistorico(ano,
+				divisoes.stream().map(d -> campeoes.get(d.prioridade())).toList())));
+		List<TreinadorNoRanking> ranking = new ArrayList<>();
+		jdbc.sql("""
+				SELECT c.usuario_id, coalesce(u.nome, m.nome) AS nome, coalesce(cu.nome, cm.nome) AS clube, count(*) AS titulos
+				FROM jogo_campeao c
+				LEFT JOIN usuario u ON u.id = c.usuario_id
+				LEFT JOIN jogo_treinador t ON t.jogo_id = c.jogo_id AND t.usuario_id = c.usuario_id
+				LEFT JOIN jogo_clube cu ON cu.id = t.clube_id
+				LEFT JOIN jogo_treinador_maquina m ON m.id = c.treinador_maquina_id
+				LEFT JOIN jogo_clube cm ON cm.id = m.clube_id
+				WHERE c.jogo_id = :jogo AND c.divisao_prioridade = 1
+				  AND (c.usuario_id IS NOT NULL OR c.treinador_maquina_id IS NOT NULL)
+				GROUP BY c.usuario_id, c.treinador_maquina_id, u.nome, m.nome, cu.nome, cm.nome
+				ORDER BY titulos DESC, nome""")
+			.param("jogo", jogoId)
+			.query(rs -> {
+				int titulos = rs.getInt("titulos");
+				// empatados dividem a posição
+				int posicao = ranking.isEmpty() || ranking.getLast().titulos() != titulos ? ranking.size() + 1
+						: ranking.getLast().posicao();
+				Long usuario = (Long) rs.getObject("usuario_id");
+				ranking.add(new TreinadorNoRanking(posicao, rs.getString("nome"), rs.getString("clube"), titulos,
+						usuario != null && usuario == usuarioId));
+			});
+		return new VisaoHistorico(divisoes, anos, ranking);
+	}
+
 	/** A divisão pedida, ou a do clube do usuário (a última, se ele está na fila). */
 	private static Divisao escolher(ConfiguracaoLiga liga, long clube, Integer prioridade) {
 		if (prioridade != null) {
@@ -222,6 +275,25 @@ public class ConsultasRepositorio {
 	}
 
 	public record AbaDivisao(int prioridade, String nome) {
+	}
+
+	/**
+	 * @param divisoes colunas dos campeões, na ordem das divisões
+	 * @param anos do mais recente ao mais antigo
+	 */
+	public record VisaoHistorico(List<AbaDivisao> divisoes, List<AnoNoHistorico> anos, List<TreinadorNoRanking> ranking) {
+	}
+
+	/** @param campeoes um por divisão, na ordem de {@link VisaoHistorico#divisoes()}; nulo se não houve */
+	public record AnoNoHistorico(int ano, List<CampeaoNoAno> campeoes) {
+	}
+
+	/** @param seu o treinador era o usuário que vê a tela */
+	public record CampeaoNoAno(String clube, String treinador, boolean seu) {
+	}
+
+	/** @param clube clube atual do treinador; nulo se ele está sem clube */
+	public record TreinadorNoRanking(int posicao, String nome, String clube, int titulos, boolean voce) {
 	}
 
 	/**

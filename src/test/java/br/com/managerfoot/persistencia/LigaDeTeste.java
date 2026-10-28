@@ -67,10 +67,10 @@ final class LigaDeTeste {
 		for (Divisao d : liga.divisoes()) {
 			moldes.adicionarDivisao(pais, d.nome(), d.clubes().size(), d.limiteForca(), d.rebaixados());
 			divisoes.add(new Divisao(d.nome(), d.prioridade(), d.limiteForca(), d.promovidos(), d.rebaixados(),
-					d.clubes().stream().map(c -> moldes.adicionarClube(pais, c)).toList()));
+					d.clubes().stream().map(c -> moldes.adicionarClube(pais, c, "Treinador " + c.nome())).toList()));
 		}
 		return new ConfiguracaoLiga(liga.nome(), divisoes,
-				liga.filaDeEspera().stream().map(c -> moldes.adicionarClube(pais, c)).toList());
+				liga.filaDeEspera().stream().map(c -> moldes.adicionarClube(pais, c, "Treinador " + c.nome())).toList());
 	}
 
 	static Usuario administrador(ContasRepositorio contas) {

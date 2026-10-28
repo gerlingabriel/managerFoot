@@ -2,6 +2,7 @@ package br.com.managerfoot.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -99,6 +100,15 @@ class FimDeTemporadaIT {
 
 		assertThat(jdbc.sql("SELECT max(numero) FROM jogo_temporada WHERE jogo_id = :j").param("j", jogoId)
 			.query(Integer.class).single()).isEqualTo(2);
+		// o campeão de 2026 da 1ª divisão aparece no histórico com o treinador (modelo 8a)
+		String campeao = jdbc.sql("""
+				SELECT clube_nome FROM jogo_campeao WHERE jogo_id = :j AND divisao_prioridade = 1""")
+			.param("j", jogoId).query(String.class).single();
+		mvc.perform(get("/jogos/" + jogoId + "/historico").with(como(treinador)))
+			.andExpect(status().isOk())
+			.andExpect(content().string(containsString(">2026<")))
+			.andExpect(content().string(containsString(campeao)))
+			.andExpect(content().string(not(containsString("Ninguém foi campeão ainda."))));
 		boolean naFila = jdbc.sql("""
 				SELECT c.divisao_id IS NULL FROM jogo_treinador t JOIN jogo_clube c ON c.id = t.clube_id
 				WHERE t.jogo_id = :j""").param("j", jogoId).query(Boolean.class).single();

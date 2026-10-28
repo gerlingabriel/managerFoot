@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: cabeca('Histórico')}"></head>
+<body>
+<div class="campo campo-pagina">
+<div class="pagina">
+<header th:replace="~{fragmentos :: topo}"></header>
+<nav th:replace="~{fragmentos :: abas(${jogoId}, 'historico')}"></nav>
+
+<!-- Histórico (modelo 8a, rev. 54): campeões por ano e ranking de treinadores. -->
+<div class="historico">
+<section class="painel grupo" aria-labelledby="t-campeoes">
+<div class="painel-titulo painel-cabecalho">
+<div class="pilha-curta">
+<h1 id="t-campeoes" class="titulo-secao pequeno">Campeões</h1>
+<span class="suave">Por ano, mais recente primeiro · treinador embaixo do clube</span>
+</div>
+</div>
+<p th:if="${h.anos.isEmpty()}" class="texto linha-jogo">Nenhuma temporada terminou ainda.</p>
+<div th:unless="${h.anos.isEmpty()}" class="rolagem">
+<table class="tabela-classificacao tabela-historico">
+<thead>
+<tr><th scope="col">Ano</th><th scope="col" th:each="d : ${h.divisoes}" th:text="${d.nome}">Série A</th></tr>
+</thead>
+<tbody>
+<tr th:each="a : ${h.anos}">
+<th scope="row" class="historico-ano" th:text="${a.ano}">2026</th>
+<td th:each="c : ${a.campeoes}" th:classappend="${c != null and c.seu} ? 'seu'">
+<th:block th:if="${c != null}">
+<span class="historico-clube" th:text="${c.clube}">Clube</span>
+<span class="historico-treinador" th:text="${c.seu} ? |${c.treinador} (você)| : ${c.treinador}">Treinador</span>
+</th:block>
+<span th:if="${c == null}" class="suave">—</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+
+<section class="painel grupo" aria-labelledby="t-ranking">
+<div class="painel-titulo painel-cabecalho">
+<div class="pilha-curta">
+<h2 id="t-ranking" class="titulo-secao pequeno">Ranking de treinadores</h2>
+<span class="suave" th:text="|Títulos da ${h.divisoes[0].nome} · empatados dividem a posição|">Títulos</span>
+</div>
+</div>
+<p th:if="${h.ranking.isEmpty()}" class="texto linha-jogo">Ninguém foi campeão ainda.</p>
+<table th:unless="${h.ranking.isEmpty()}" class="tabela-classificacao tabela-ranking">
+<thead>
+<tr><th scope="col" class="num">#</th><th scope="col">Treinador</th><th scope="col" class="num">Títulos</th></tr>
+</thead>
+<tbody>
+<tr th:each="r : ${h.ranking}" th:classappend="${r.voce} ? 'do-usuario'">
+<td class="num suave" th:text="|${r.posicao}º|">1º</td>
+<td><span class="historico-clube" th:text="${r.voce} ? |${r.nome} (você)| : ${r.nome}">Nome</span>
+<span class="historico-treinador" th:text="${r.clube != null} ? ${r.clube} : 'Sem clube'">Clube</span></td>
+<td class="num pontos" th:text="${r.titulos}">1</td>
+</tr>
+</tbody>
+</table>
+<p class="suave historico-nota" th:text="|Só aparece quem já ganhou a ${h.divisoes[0].nome}. Títulos das outras divisões ficam só na lista de campeões.|">nota</p>
+</section>
+</div>
+</div>
+</div>
+</body>
+</html>

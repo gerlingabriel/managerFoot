@@ -1,5 +1,6 @@
 package br.com.managerfoot.persistencia;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -123,16 +124,61 @@ public class MoldeRepositorio {
 		return new FormatoLiga(nomeLiga, divisoes);
 	}
 
-	/** Cadastra um clube do país e devolve-o com o id gerado. */
+	/**
+	 * Cadastra um clube do país, com o treinador, e devolve-o com o id gerado.
+	 *
+	 * @param treinador nome do treinador do clube, obrigatório (SPEC §5.4, rev. 54)
+	 * @throws IllegalArgumentException se o treinador está em branco ou passa de 60 caracteres
+	 */
 	@Transactional
-	public Clube adicionarClube(long paisId, Clube clube) {
+	public Clube adicionarClube(long paisId, Clube clube, String treinador) {
 		long id = TabelasLiga.inserir(jdbc, """
-				INSERT INTO molde_clube (pais_id, nome, forca, escudo_modelo, escudo_cor_1, escudo_cor_2)
-				VALUES (:pais, :nome, :forca, :modelo, :cor1, :cor2)""",
+				INSERT INTO molde_clube (pais_id, nome, forca, escudo_modelo, escudo_cor_1, escudo_cor_2, treinador)
+				VALUES (:pais, :nome, :forca, :modelo, :cor1, :cor2, :treinador)""",
 				Map.of("pais", paisId, "nome", clube.nome(), "forca", clube.forca(), "modelo",
 						clube.escudo().modelo().name(), "cor1", clube.escudo().corPrimaria(), "cor2",
-						clube.escudo().corSecundaria()));
+						clube.escudo().corSecundaria(), "treinador", exigirTreinador(clube, treinador)));
 		return new Clube(id, clube.nome(), clube.forca(), clube.escudo());
+	}
+
+	/**
+	 * Troca o treinador de um clube do molde.
+	 *
+	 * @throws IllegalArgumentException se o treinador está em branco ou passa de 60 caracteres
+	 * @throws NoSuchElementException se o clube não existe
+	 */
+	@Transactional
+	public void trocarTreinador(long clubeId, String treinador) {
+		String nome = jdbc.sql("SELECT nome FROM molde_clube WHERE id = :clube FOR UPDATE").param("clube", clubeId)
+			.query(String.class).optional()
+			.orElseThrow(() -> new NoSuchElementException("clube " + clubeId + " não existe no molde"));
+		jdbc.sql("UPDATE molde_clube SET treinador = :treinador WHERE id = :clube")
+			.param("treinador", exigirTreinador(new Clube(clubeId, nome, Jogador.FORCA_MINIMA), treinador))
+			.param("clube", clubeId)
+			.update();
+	}
+
+	/** Treinador de cada clube do país, por id do clube. */
+	@Transactional(readOnly = true)
+	public Map<Long, String> treinadores(long paisId) {
+		Map<Long, String> treinadores = new LinkedHashMap<>();
+		jdbc.sql("SELECT id, treinador FROM molde_clube WHERE pais_id = :pais ORDER BY id")
+			.param("pais", paisId)
+			.query(rs -> {
+				treinadores.put(rs.getLong("id"), rs.getString("treinador"));
+			});
+		return treinadores;
+	}
+
+	private static String exigirTreinador(Clube clube, String treinador) {
+		if (treinador == null || treinador.isBlank()) {
+			throw new IllegalArgumentException("O clube " + clube.nome() + " precisa de um treinador.");
+		}
+		String nome = treinador.strip();
+		if (nome.length() > 60) {
+			throw new IllegalArgumentException("O nome do treinador do " + clube.nome() + " passa de 60 caracteres.");
+		}
+		return nome;
 	}
 
 	/** Clubes do país em ordem de id. */

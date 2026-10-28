@@ -24,7 +24,8 @@ import jakarta.servlet.http.HttpServletResponse;
  * 16; modelos aprovados). Com {@code ficha=<id>}, a aba abre a ficha do jogador por cima; na
  * classificação, {@code calendario=<clube>} abre o calendário do clube (rev. 17 e 36). A aba
  * Finanças mostra só o clube do usuário (modelo 6a, rev. 39). A janela do clube tem também a aba
- * Plantel, com os jogadores à venda ({@code aba=plantel}, modelo 7a, rev. 51).
+ * Plantel, com os jogadores à venda ({@code aba=plantel}, modelo 7a, rev. 51). A aba Histórico tem os
+ * campeões e o ranking de treinadores (modelo 8a, rev. 54).
  */
 @Controller
 class AbasController {
@@ -90,6 +91,15 @@ class AbasController {
 		model.addAttribute("jogoId", jogoId);
 		model.addAttribute("f", caixas.financas(jogoId, usuario.id()));
 		return "financas";
+	}
+
+	/** Histórico de campeões e ranking de treinadores (SPEC §8.1.1, modelo 8a, rev. 54). */
+	@GetMapping("/jogos/{jogoId}/historico")
+	String historico(@AuthenticationPrincipal Usuario usuario, @PathVariable long jogoId, Model model) {
+		model.addAttribute("usuario", usuario);
+		model.addAttribute("jogoId", jogoId);
+		model.addAttribute("h", consultas.historico(jogoId, usuario.id()));
+		return "historico";
 	}
 
 	/** Clube na fila de espera: não joga a temporada e não tem extrato (SPEC §4.1). */
