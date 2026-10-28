@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import br.com.managerfoot.contas.Usuario;
+import br.com.managerfoot.dominio.Clube;
 import br.com.managerfoot.dominio.Escalacao;
 import br.com.managerfoot.dominio.Formacao;
 import br.com.managerfoot.dominio.Lugar;
@@ -130,7 +131,10 @@ class PlantelController {
 		long clube = jogo.clubeDoTreinador(jogoId, usuario.id()).orElseThrow(NoSuchElementException::new);
 		try {
 			NovaTemporada nova = fimDeTemporada.avancarTemporada(jogoId, temporada, SEMENTES.nextLong());
-			String destino = nova.transicao().promovidos().stream().anyMatch(c -> c.id() == clube)
+			Clube novoClube = nova.demitidos().get(usuario.id());
+			String destino = novoClube != null
+					? " Seu clube caiu para a fila de espera: você foi demitido e assumiu o " + novoClube.nome() + "."
+					: nova.transicao().promovidos().stream().anyMatch(c -> c.id() == clube)
 					? " Seu clube subiu de divisão!"
 					: nova.transicao().rebaixados().stream().anyMatch(c -> c.id() == clube) ? " Seu clube foi rebaixado." : "";
 			redirect.addFlashAttribute("resultado", "Começou a temporada " + nova.temporada().numero() + "." + destino);

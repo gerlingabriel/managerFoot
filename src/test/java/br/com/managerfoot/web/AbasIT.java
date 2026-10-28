@@ -26,8 +26,10 @@ import br.com.managerfoot.contas.Usuario;
 import br.com.managerfoot.motor.ParametrosMotor;
 import br.com.managerfoot.persistencia.BancoPadraoRepositorio;
 import br.com.managerfoot.persistencia.ConsultasRepositorio;
+import br.com.managerfoot.persistencia.ConsultasRepositorio.JogoNoCalendario;
 import br.com.managerfoot.persistencia.ConsultasRepositorio.LinhaArtilheiro;
 import br.com.managerfoot.persistencia.ConsultasRepositorio.VisaoArtilheiros;
+import br.com.managerfoot.persistencia.ConsultasRepositorio.VisaoCalendario;
 import br.com.managerfoot.persistencia.ContasRepositorio;
 import br.com.managerfoot.persistencia.JogoRepositorio;
 import br.com.managerfoot.persistencia.JogosDoTreinadorRepositorio;
@@ -139,6 +141,26 @@ class AbasIT {
 		// jogador de fora deste jogo: a aba abre sem ficha
 		mvc.perform(get(base + "/plantel").param("ficha", "-1").with(como(treinador)))
 			.andExpect(content().string(not(containsString("Gols na carreira"))));
+	}
+
+	@Test
+	void calendarioDoClubeComResultadosEProximoJogo() throws Exception {
+		long clube = jogo.clubeDoTreinador(jogoId, treinador.id()).orElseThrow();
+		VisaoCalendario calendario = consultas.calendario(jogoId, treinador.id(), clube).orElseThrow();
+
+		assertThat(calendario.jogos()).hasSize(rodadas.totalDeRodadas(jogoId));
+		assertThat(calendario.jogos().subList(0, 3)).allMatch(j -> j.adversario() == null || j.resultado() != null);
+		assertThat(calendario.jogos().get(3).proximo()).isTrue();
+		assertThat(calendario.jogos().subList(3, calendario.jogos().size())).allMatch(j -> j.resultado() == null);
+		int pontos = calendario.jogos().stream().map(JogoNoCalendario::resultado)
+			.mapToInt(r -> r == null ? 0 : r.equals("V") ? 3 : r.equals("E") ? 1 : 0).sum();
+		assertThat(pontos).isEqualTo(calendario.linha().pontos());
+
+		mvc.perform(get(base + "/classificacao").param("calendario", String.valueOf(clube)).with(como(treinador)))
+			.andExpect(content().string(containsString("Calendário · Temporada 1")))
+			.andExpect(content().string(containsString("Placar com os gols do clube primeiro")));
+		mvc.perform(get(base + "/classificacao").param("calendario", "-1").with(como(treinador)))
+			.andExpect(content().string(not(containsString("Calendário · Temporada"))));
 	}
 
 	@Test

@@ -15,6 +15,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 
 import br.com.managerfoot.TestcontainersConfiguration;
 import br.com.managerfoot.dominio.Clube;
+import br.com.managerfoot.temporada.ClubeInicial;
 import br.com.managerfoot.temporada.ConfiguracaoLiga;
 import br.com.managerfoot.temporada.Divisao;
 import br.com.managerfoot.temporada.Temporada;
@@ -47,6 +48,9 @@ class FimDeTemporadaRepositorioIT {
 
 	@Autowired
 	JdbcClient jdbc;
+
+	@Autowired
+	EscalacaoRepositorio escalacoes;
 
 	long jogo;
 
@@ -112,5 +116,33 @@ class FimDeTemporadaRepositorioIT {
 
 	private static List<String> nomes(Divisao divisao) {
 		return divisao.clubes().stream().map(Clube::nome).toList();
+	}
+
+	@Test
+	void treinadorComClubeNaFilaEhDemitidoEAssumeUmDosMaisFracosDaUltimaDivisao() {
+		for (int rodada = 1; rodada <= 30; rodada++) {
+			rodadas.avancar(jogo, rodada);
+		}
+		long usuario = jdbc.sql("SELECT usuario_id FROM jogo_treinador WHERE jogo_id = :j").param("j", jogo)
+			.query(Long.class).single();
+		long antigo = jogos.clubeDoTreinador(jogo, usuario).orElseThrow();
+		// o clube do treinador perde todos os jogos: termina em último e cai para a fila
+		jdbc.sql("UPDATE jogo_partida SET gols_mandante = 0, gols_visitante = 9 WHERE mandante_id = :c").param("c", antigo)
+			.update();
+		jdbc.sql("UPDATE jogo_partida SET gols_mandante = 9, gols_visitante = 0 WHERE visitante_id = :c").param("c", antigo)
+			.update();
+		jdbc.sql("INSERT INTO jogo_escalacao (clube_id, formacao) VALUES (:c, 'F_4_4_2')").param("c", antigo).update();
+
+		FimDeTemporadaRepositorio.NovaTemporada nova = fim.avancarTemporada(jogo, 1, SEMENTE_NOVA);
+
+		assertThat(nova.transicao().proxima().filaDeEspera()).extracting(Clube::id).contains(antigo);
+		Clube novo = nova.demitidos().get(usuario);
+		assertThat(novo).isNotNull();
+		assertThat(jogos.clubeDoTreinador(jogo, usuario)).hasValue(novo.id());
+		assertThat(ClubeInicial.candidatos(nova.transicao().proxima().divisoes().getLast(), 4)).contains(novo);
+		assertThat(escalacoes.carregar(novo.id())).isPresent();
+		assertThat(escalacoes.carregar(antigo)).isEmpty();
+		assertThat(nova.temporada().divisoes().getLast().calendario().jogos())
+			.anyMatch(j -> j.mandante().id() == novo.id() || j.visitante().id() == novo.id());
 	}
 }

@@ -18,7 +18,8 @@ import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * Abas Classificação, Artilheiros da temporada e Artilheiros de todos os tempos (SPEC §10.3, rev.
- * 16; modelos aprovados). Com {@code ficha=<id>}, a aba abre a ficha do jogador por cima.
+ * 16; modelos aprovados). Com {@code ficha=<id>}, a aba abre a ficha do jogador por cima; na
+ * classificação, {@code calendario=<clube>} abre o calendário do clube (rev. 17 e 36).
  */
 @Controller
 class AbasController {
@@ -31,10 +32,14 @@ class AbasController {
 
 	@GetMapping("/jogos/{jogoId}/classificacao")
 	String classificacao(@AuthenticationPrincipal Usuario usuario, @PathVariable long jogoId,
-			@RequestParam(name = "divisao", required = false) Integer divisao, Model model) {
+			@RequestParam(name = "divisao", required = false) Integer divisao,
+			@RequestParam(name = "calendario", required = false) Long calendario, Model model) {
 		model.addAttribute("usuario", usuario);
 		model.addAttribute("jogoId", jogoId);
 		model.addAttribute("c", consultas.classificacao(jogoId, usuario.id(), divisao));
+		if (calendario != null) {
+			consultas.calendario(jogoId, usuario.id(), calendario).ifPresent(cal -> model.addAttribute("calendario", cal));
+		}
 		return "classificacao";
 	}
 

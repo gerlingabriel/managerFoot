@@ -1205,3 +1205,44 @@ a.jogador-nome:hover { color: var(--destaque); text-decoration: underline; }
 .ficha-dados { padding: 12px 20px 18px; }
 .ficha-dados div { padding: 8px 0; border-bottom: 1px solid rgba(31, 90, 58, 0.6); }
 a.janela-fechar { text-decoration: none; }
+
+/* Calendário do clube (modelo 3b, rev. 36). */
+a.link-clube { color: var(--texto); text-decoration: none; }
+a.link-clube:hover { color: var(--destaque); text-decoration: underline; }
+
+.janela.calendario { max-width: 600px; }
+.calendario-topo { flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; }
+.calendario-resumo { display: flex; flex-wrap: wrap; gap: 16px; padding: 10px 16px; border-bottom: 1px solid var(--borda); font-size: 14px; color: var(--texto-claro); }
+.calendario-resumo strong { color: var(--texto); }
+.calendario-resumo .cor-v { color: #3FB37F; }
+.calendario-resumo .cor-e { color: var(--destaque); }
+.calendario-resumo .cor-d { color: var(--erro); }
+.calendario-lista { max-height: 640px; overflow-y: auto; }
+.tabela-calendario { width: 100%; border-collapse: collapse; font-size: 15px; font-variant-numeric: tabular-nums; }
+
+.tabela-calendario th {
+	position: sticky;
+	top: 0;
+	background: var(--cartao);
+	padding: 8px 12px;
+	font-size: 12px;
+	font-weight: 400;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	text-align: left;
+	color: var(--texto-suave);
+}
+
+.tabela-calendario td { padding: 6px 12px; border-top: 1px solid rgba(31, 90, 58, 0.6); height: 28px; }
+.tabela-calendario .num { text-align: right; }
+.tabela-calendario tr.do-usuario td { background: rgba(242, 201, 76, 0.12); }
+.tabela-calendario tr.do-usuario td:first-child { box-shadow: inset 4px 0 0 var(--destaque); }
+.tabela-calendario tr.folga td { color: var(--texto-suave); }
+.calendario-nome { font-size: 18px; }
+.calendario-resultado { display: inline-flex; justify-content: flex-end; align-items: center; gap: 8px; }
+.calendario-placar { font: 700 18px 'Barlow Condensed', sans-serif; }
+.marca-resultado { display: inline-flex; justify-content: center; width: 24px; padding: 1px 0; border-radius: 5px; font: 700 13px Barlow, sans-serif; }
+.marca-resultado.resultado-V { background: #3FB37F; color: #062014; }
+.marca-resultado.resultado-E { background: var(--destaque); color: #1A1A12; }
+.marca-resultado.resultado-D { background: var(--erro); color: #FFF5F5; }
+.calendario-nota { margin: 0; padding: 10px 16px 14px; border-top: 1px solid var(--borda); font-size: 14px; }

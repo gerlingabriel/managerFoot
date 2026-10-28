@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 36 (2026-10-28):** usuário com clube rebaixado para a fila é demitido e assume um clube sorteado entre os mais fracos da última divisão (provisório até os convites); modelo do calendário do clube aprovado.
 -   **rev. 35 (2026-10-28):** rodada ao vivo com relógio no servidor (ADR 0010); velocidades lenta, normal e rápida; divisão sem usuário em cerca de 5 s; sair da tela não pausa a partida.
 -   **rev. 34 (2026-10-28):** no plantel, botões Titular/Banco/Fora em cada linha; suspenso sai sozinho para fora do banco e o treinador completa o time; escalação inicial da máquina (provisório); até o minuto a minuto, "Confirmar e jogar rodada" joga a rodada inteira e mostra o placar.
 -   **rev. 33 (2026-10-28):** quadro da rodada mostra o último lance com ícone; clicar num clube abre uma janela pequena sobre o quadro, como no Elifoot 98, com lances em ordem e, no próprio clube, substituição; clube da máquina mostra a prévia dos 11 de cada lado em vez do 11 x 11 com detalhes; modelos aprovados.
@@ -361,9 +362,12 @@ decorrem das regras acima.
   usuário é **demitido na hora**.
   - **Conflito resolvido:** é uma exceção explícita à §5.4, que proíbe
     demissão automática de usuário.
-  - **Em aberto:** o que acontece com o usuário demitido. Opções: escolher
-    outro clube, assumir um clube que ofereça vaga, ou encerrar a
-    carreira.
+  - ~~Em aberto: o que acontece com o usuário demitido.~~ **Provisório
+    (rev. 36, decidido pelo usuário):** no fim da temporada ele assume um
+    clube **sorteado entre os mais fracos da última divisão**, como no
+    início do jogo; clube de outro treinador não entra no sorteio. O clube
+    novo começa com a escalação da máquina. Vale até existirem os convites
+    de clubes (depois da regra de moral, §6.2, e de demissão, §5.4).
 - **Clube da máquina rebaixado para a fila:** fica sem liga até ser
   sorteado para subir.
   - **Definido (rev. 26):** só o usuário é demitido na hora. O treinador
@@ -1540,6 +1544,13 @@ usuário:
 - Convite de outro clube ao usuário: modelo depois da regra de moral
   (§6.2) e demissão (§5.4).
 
+**Definido (rev. 36) — calendário do clube:** janela sobre a classificação,
+aberta ao clicar no clube: cabeçalho com escudo, temporada, divisão e
+posição; resumo de jogos, vitórias, empates, derrotas e gols; uma linha
+por rodada com local (casa ou fora), adversário com escudo e resultado com
+os gols do clube primeiro e a marca V, E ou D colorida; o próximo jogo em
+destaque; folgas marcadas; jogos futuros com "—".
+
 **Definido (rev. 29):**
 - **Início**, logo depois de entrar, com **só duas opções**: "Novo jogo" e
   "Voltar a um jogo gravado" (lista com clube, país, divisão, temporada,
@@ -1853,9 +1864,9 @@ começa depois que a anterior estiver testada.
     jogo nasce com dono e com o treinador humano no clube sorteado entre os
     mais fracos da última divisão (grupo configurável em
     `managerfoot.jogo.candidatos-clube-inicial`) ou escolhido pelo
-    administrador. A demissão do usuário rebaixado para a fila (§4.1) ainda
-    não é aplicada no fim de temporada, porque o destino dele está em
-    aberto.
+    administrador. A demissão do usuário rebaixado para a fila (§4.1) passou
+    a ser aplicada na rev. 36: ele assume um clube sorteado da última
+    divisão.
 - **Banco padrão (concluído, rev. 32):** 6 países com formatos adaptados
   (`docs/banco-padrao-formatos.md`), 23 jogadores nacionais por clube, força
   do clube igual à média dos 11 em campo; gerado por código e carregado com
@@ -1903,14 +1914,13 @@ começa depois que a anterior estiver testada.
     rodadas (migração V14). Fica fora o cabeçalho com estádio e público
     (sem estádio no domínio). As caixas "Cartões vermelhos" e "Lesões"
     continuam em aberto.
-  - **3f.5 (parcial):** abas Classificação (por divisão, clube do usuário
-    em destaque, rebaixados marcados), Artilheiros da temporada (por
-    divisão) e de todos os tempos (empatados dividem a posição, 20 linhas),
-    ficha do jogador por cima do plantel e dos artilheiros, e fim de
+  - **3f.5 (concluída):** abas Classificação (por divisão, clube do
+    usuário em destaque, rebaixados marcados), Artilheiros da temporada
+    (por divisão) e de todos os tempos (empatados dividem a posição, 20
+    linhas), ficha do jogador, calendário do clube (rev. 36) e fim de
     temporada na tela (o usuário só confirma; a tela envia o número da
-    temporada e o clique repetido é recusado). Clube do usuário na fila
-    mostra um aviso, porque o destino do treinador está em aberto (§4.1).
-    Falta o calendário do clube, com modelo enviado para aprovação.
+    temporada e o clique repetido é recusado). Usuário com clube na fila é
+    demitido e assume outro clube (rev. 36).
   - plantel e tática;
   - partidas simultâneas da divisão (§10.2);
   - classificação;

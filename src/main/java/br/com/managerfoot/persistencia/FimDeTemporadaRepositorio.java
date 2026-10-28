@@ -1,15 +1,27 @@
 package br.com.managerfoot.persistencia;
 
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.SplittableRandom;
+import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import br.com.managerfoot.dominio.Clube;
+import br.com.managerfoot.dominio.EscalacaoDoTreinador;
+import br.com.managerfoot.dominio.Formacao;
+import br.com.managerfoot.dominio.Jogador;
+import br.com.managerfoot.motor.EscalacaoMaquina;
+import br.com.managerfoot.motor.ParametrosMotor;
 import br.com.managerfoot.temporada.Classificacao;
+import br.com.managerfoot.temporada.ClubeInicial;
 import br.com.managerfoot.temporada.ConfiguracaoLiga;
 import br.com.managerfoot.temporada.Divisao;
 import br.com.managerfoot.temporada.Temporada;
@@ -27,13 +39,19 @@ public class FimDeTemporadaRepositorio {
 	private final JogoRepositorio jogos;
 	private final TemporadaRepositorio temporadas;
 	private final RodadaRepositorio rodadas;
+	private final EscalacaoRepositorio escalacoes;
+	private final int candidatosClubeInicial;
+	private final EscalacaoMaquina escalacaoMaquina = new EscalacaoMaquina(ParametrosMotor.padrao());
 
 	public FimDeTemporadaRepositorio(JdbcClient jdbc, JogoRepositorio jogos, TemporadaRepositorio temporadas,
-			RodadaRepositorio rodadas) {
+			RodadaRepositorio rodadas, EscalacaoRepositorio escalacoes,
+			@Value("${managerfoot.jogo.candidatos-clube-inicial}") int candidatosClubeInicial) {
 		this.jdbc = jdbc;
 		this.jogos = jogos;
 		this.temporadas = temporadas;
 		this.rodadas = rodadas;
+		this.escalacoes = escalacoes;
+		this.candidatosClubeInicial = candidatosClubeInicial;
 	}
 
 	/**
@@ -71,9 +89,62 @@ public class FimDeTemporadaRepositorio {
 			.param("jogo", jogoId)
 			.update();
 
+		Map<Long, Clube> demitidos = demitirDaFila(jogoId, transicao.proxima(), new SplittableRandom(semente ^ MISTURA_FILA));
+
 		Temporada nova = Temporada.iniciar(numero + 1, transicao.proxima(), jogos.carregarPlanteis(jogoId), semente);
 		temporadas.gravar(jogoId, nova);
-		return new NovaTemporada(transicao, nova);
+		return new NovaTemporada(transicao, nova, demitidos);
+	}
+
+	/**
+	 * Treinador humano cujo clube caiu para a fila é demitido e assume um clube sorteado entre os mais
+	 * fracos da última divisão, como no início do jogo (SPEC §4.1, rev. 36, provisório até existirem
+	 * os convites). Clube de outro treinador não entra no sorteio (rev. 29). O clube novo começa com
+	 * a escalação da máquina; o antigo volta a ser escalado pela máquina.
+	 *
+	 * @return o clube novo de cada usuário demitido
+	 */
+	private Map<Long, Clube> demitirDaFila(long jogoId, ConfiguracaoLiga proxima, SplittableRandom aleatorio) {
+		Set<Long> naFila = proxima.filaDeEspera().stream().map(Clube::id).collect(Collectors.toSet());
+		Map<Long, Long> treinadores = new LinkedHashMap<>();
+		jdbc.sql("SELECT usuario_id, clube_id FROM jogo_treinador WHERE jogo_id = :jogo ORDER BY id")
+			.param("jogo", jogoId)
+			.query(rs -> {
+				treinadores.put(rs.getLong("usuario_id"), rs.getLong("clube_id"));
+			});
+		Map<Long, Clube> demitidos = new LinkedHashMap<>();
+		Divisao ultima = proxima.divisoes().getLast();
+		for (Map.Entry<Long, Long> treinador : treinadores.entrySet()) {
+			if (!naFila.contains(treinador.getValue())) {
+				continue;
+			}
+			Set<Long> ocupados = new HashSet<>(treinadores.values());
+			List<Clube> livres = ClubeInicial.candidatos(ultima, candidatosClubeInicial).stream()
+				.filter(c -> !ocupados.contains(c.id())).toList();
+			if (livres.isEmpty()) {
+				livres = ultima.clubes().stream().filter(c -> !ocupados.contains(c.id())).toList();
+			}
+			if (livres.isEmpty()) {
+				continue;
+			}
+			Clube novo = livres.get(aleatorio.nextInt(livres.size()));
+			jdbc.sql("DELETE FROM jogo_escalacao WHERE clube_id = :clube").param("clube", treinador.getValue()).update();
+			jdbc.sql("UPDATE jogo_treinador SET clube_id = :novo WHERE jogo_id = :jogo AND usuario_id = :usuario")
+				.param("novo", novo.id())
+				.param("jogo", jogoId)
+				.param("usuario", treinador.getKey())
+				.update();
+			Set<Long> suspensos = new HashSet<>(jdbc.sql("SELECT id FROM jogo_jogador WHERE clube_id = :c AND suspensao > 0")
+				.param("c", novo.id()).query(Long.class).list());
+			List<Jogador> disponiveis = jogos.carregarPlanteis(jogoId).get(novo.id()).stream()
+				.filter(j -> !suspensos.contains(j.id())).toList();
+			if (disponiveis.size() >= Formacao.TITULARES) {
+				escalacoes.gravar(novo.id(), EscalacaoDoTreinador.de(escalacaoMaquina.escalar(disponiveis)));
+			}
+			treinadores.put(treinador.getKey(), novo.id());
+			demitidos.put(treinador.getKey(), novo);
+		}
+		return demitidos;
 	}
 
 	private void gravarDivisoes(long jogoId, ConfiguracaoLiga proxima) {
@@ -97,7 +168,14 @@ public class FimDeTemporadaRepositorio {
 		}
 	}
 
-	/** Resultado do fim de temporada. */
-	public record NovaTemporada(TransicaoTemporada transicao, Temporada temporada) {
+	/** Mistura a semente para o sorteio do clube do treinador demitido. */
+	private static final long MISTURA_FILA = 0x5DEECE66DL;
+
+	/**
+	 * Resultado do fim de temporada.
+	 *
+	 * @param demitidos clube novo de cada usuário cujo clube caiu para a fila
+	 */
+	public record NovaTemporada(TransicaoTemporada transicao, Temporada temporada, Map<Long, Clube> demitidos) {
 	}
 }
