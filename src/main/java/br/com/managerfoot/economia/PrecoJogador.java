@@ -3,7 +3,7 @@ package br.com.managerfoot.economia;
 import br.com.managerfoot.dominio.Jogador;
 
 /**
- * Preço do jogador pela força (SPEC §9.4, rev. 40 a 42): a compra direta paga o preço; o leilão começa
+ * Preço do jogador pela força (SPEC §9.4, rev. 40 a 43): a compra direta paga o preço; o leilão começa
  * com o desconto. Em centavos de Real.
  */
 public final class PrecoJogador {
@@ -21,7 +21,8 @@ public final class PrecoJogador {
 	}
 
 	/**
-	 * Preço da compra direta; o estrangeiro (de país diferente do da liga) sai com desconto.
+	 * Preço da compra direta; o estrangeiro (de país diferente do da liga) sai com desconto e o
+	 * asterisco, com acréscimo.
 	 *
 	 * @param paisDaLiga código do país da liga em que o jogador está
 	 */
@@ -29,6 +30,9 @@ public final class PrecoJogador {
 		double preco = caixa.salario(jogador) * parametros.rodadasDeSalarioNoPreco();
 		if (!jogador.nacionalidade().equals(paisDaLiga)) {
 			preco *= 1 - parametros.descontoEstrangeiro();
+		}
+		if (jogador.asterisco()) {
+			preco *= 1 + parametros.acrescimoAsterisco();
 		}
 		return redondo(Math.round(preco));
 	}

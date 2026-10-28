@@ -32,10 +32,18 @@ class PrecoJogadorTest {
 	}
 
 	@Test
-	void estrangeiroSaiDezPorCentoMaisBarato() {
-		// R$ 160.000 do nacional menos 10%; no leilão, mais 20% abaixo
-		assertThat(preco.preco(jogador(17), "ARG")).isEqualTo(144_000_00L);
-		assertThat(preco.lanceInicialLeilao(jogador(17), "ARG")).isEqualTo(115_000_00L);
+	void estrangeiroSaiVinteECincoPorCentoMaisBarato() {
+		// R$ 160.000 do nacional menos 25%; no leilão, mais 20% abaixo
+		assertThat(preco.preco(jogador(17), "ARG")).isEqualTo(120_000_00L);
+		assertThat(preco.lanceInicialLeilao(jogador(17), "ARG")).isEqualTo(96_000_00L);
+	}
+
+	@Test
+	void asteriscoSaiVinteECincoPorCentoMaisCaroEOLeilaoComecaAbaixo() {
+		assertThat(preco.preco(jogador(17).comAsterisco(true), "BRA")).isEqualTo(200_000_00L);
+		assertThat(preco.lanceInicialLeilao(jogador(17).comAsterisco(true), "BRA")).isEqualTo(160_000_00L);
+		// estrangeiro com asterisco: os dois ajustes se combinam (160.000 × 0,75 × 1,25)
+		assertThat(preco.preco(jogador(17).comAsterisco(true), "ARG")).isEqualTo(150_000_00L);
 	}
 
 	private static Jogador jogador(int forca) {

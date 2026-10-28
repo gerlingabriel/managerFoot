@@ -46,7 +46,7 @@ Ocupação: 45% com moral inicial e adversário de mesma força; moral máxima s
 
 ## Mercado: preço do jogador (proposta da rev. 41)
 
-Preço da compra direta = 80 rodadas do salário do jogador (cerca de duas temporadas de 38 rodadas), arredondado em R$ 1.000. O leilão começa 20% abaixo e o estrangeiro custa 10% menos (regras do usuário). A tabela é do jogador nacional.
+Preço da compra direta = 80 rodadas do salário do jogador (cerca de duas temporadas de 38 rodadas), arredondado em R$ 1.000. O leilão começa 20% abaixo e o estrangeiro custa 25% menos; o jogador com asterisco custa 25% mais (regras do usuário). A tabela é do jogador nacional sem asterisco.
 
 | Força | Salário por rodada | Preço (compra direta) | Lance inicial do leilão |
 |---|---|---|---|

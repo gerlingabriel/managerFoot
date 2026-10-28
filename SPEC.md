@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 43 (2026-10-28):** estrangeiro 25% mais barato e asterisco 25% mais caro; a máquina só compra por leilão, renova sempre e deixa 5 ou 6 jogadores sorteados à venda; compra e venda da máquina pelo saldo comparado a 10 rodadas da folha; saldo negativo põe jogador em leilão sem lance mínimo; no início da temporada todos ficam sem contrato e só quem ganha abaixo da força pede aumento (1 por rodada); patrocínio entra de uma vez no início, para todos os clubes.
 -   **rev. 42 (2026-10-28):** leilão: empate por sorteio, sem lance não vende até o fim da rodada, máquina dá lance depois do OK dos usuários, usuário sem caixa não precisa ser esperado; estrangeiro 10% mais barato; empréstimo retirado; todo clube tem treinador e o ranking inclui todos; patrocínio proporcional à posição anterior (igual no 1º ano) e por temporada; contrato só até o fim da temporada.
 -   **rev. 41 (2026-10-28):** tabela de preço proposta (80 rodadas de salário, provisória); leilão resolvido na hora: os da máquina depois do OK da tática e antes do minuto a minuto; o do usuário quando ele põe o jogador à venda.
 -   **rev. 40 (2026-10-28):** ano da temporada (começa em 2026, configurável, +1 por temporada); histórico só de campeões e ranking de títulos dos treinadores; regras do usuário para mercado (compra direta pelo preço da força, leilão 20% mais barato com lance de cada um), contrato em temporadas, pedido de aumento, empréstimo em blocos de 500 mil a 1% por rodada e patrocínio escolhido a cada início de ano.
@@ -1386,6 +1387,10 @@ posições secundárias.
 
 Quando o clube estiver no elenco mínimo e um jogador estiver suspenso ou lesionado, poderá escalar com um jogador a menos. Nesse caso, a partida é simulada como se o time já começasse com um expulso.
 
+**Definido (rev. 43), pelo usuário:** sem empréstimo, sempre que o caixa
+ficar **negativo** um jogador do clube vai a **leilão sem lance mínimo**.
+A máquina oferece um pouco abaixo do preço padrão (§9.4).
+
 ### 9.4 Mercado e leilões
 
 -   A máquina compra jogadores por meio de leilões.
@@ -1437,10 +1442,40 @@ Quando o clube estiver no elenco mínimo e um jogador estiver suspenso ou lesion
   - O usuário **não pode dar lance** se o lance inicial for maior que o
     caixa dele; nesse caso não é preciso esperar por ele, e a tela já
     mostra o resultado (por exemplo, que outro treinador levou).
-  - **Estrangeiro:** 10% mais barato que o nacional da mesma força.
-- **Em aberto:** regra de lance da máquina (proposta: saldo, posição que
-  falta no elenco e força do jogador, com variação sorteada) e quais
-  jogadores a máquina põe à venda e quando.
+  - ~~**Estrangeiro:** 10% mais barato que o nacional da mesma força.~~
+    **Substituído na rev. 43.**
+- **Definido (rev. 43), pelo usuário:**
+  - **Estrangeiro:** **25% mais barato** que o nacional da mesma força (no
+    Elifoot 98, comprar estrangeiros baratos é a tática dos times fracos).
+  - **Asterisco:** **25% mais caro** na compra direta. No leilão o lance
+    inicial continua 20% abaixo do preço (já com o acréscimo).
+  - A **máquina só compra por leilão**; a compra direta é do usuário.
+  - **Finanças importam:** clube forte que perde fica com estádio mais
+    vazio e precisa vender os jogadores caros; clube fraco que sobe ganha
+    caixa para comprar. Com o tempo o clube tende à força média do que o
+    caixa sustenta (ex.: vende um de força 44 numa fase ruim e, recuperado,
+    compra um de força 20).
+  - **Compra e venda da máquina pelo saldo:** o **limite** é **10 rodadas
+    da folha** do clube. Saldo acima do limite: a máquina pode comprar
+    (até o máximo de **25 jogadores**; o banco padrão cadastra 23). Saldo
+    abaixo: precisa vender. Clubes ricos ficam quase sempre com o plantel
+    cheio; uma sequência de derrotas derruba a bilheteria e o clube vende
+    um, depois outro, e volta a comprar quando se recupera.
+  - A máquina **sempre renova** os contratos dos seus jogadores e deixa
+    sempre **5 ou 6 jogadores à venda** (compra direta pelo usuário),
+    **sorteados** sem olhar a posição.
+  - **Lance da máquina:** um pouco **abaixo do preço padrão**; um clube da
+    máquina com preferência pelo jogador pode dar um pouco mais, de acordo
+    com a força do time.
+- **Provisório (rev. 43):** a tabela de preço (80 rodadas de salário) segue
+  como proposta; o usuário ainda não tem noção do valor. Será recalibrada
+  pela simulação de temporadas com o mercado da máquina, para que as
+  finanças produzam o ciclo acima.
+- **Em aberto:** quanto abaixo do padrão a máquina oferece, o que é
+  "preferência" (proposta: o clube mais forte entre os que podem comprar
+  dá mais, e a posição do jogador não pesa), quantos jogadores a máquina
+  vende ou compra por rodada e se o leilão por falta de caixa respeita o
+  elenco mínimo (§9.3).
 
 ### 9.5 Contratos, salários e empréstimos
 
@@ -1472,9 +1507,14 @@ Quando o clube estiver no elenco mínimo e um jogador estiver suspenso ou lesion
   só como registro.
 - **Definido (rev. 42):** compra e renovação valem **só até o fim da
   temporada** em curso (sem escolher número de temporadas).
-- **Em aberto:** o que acontece no início da temporada seguinte com os
-  jogadores cujo contrato acabou (renovação automática, pedido de
-  aumento ou leilão) e o saldo negativo sem empréstimo (§9.3).
+- ~~**Em aberto:** o que acontece no início da temporada seguinte com os
+  jogadores cujo contrato acabou e o saldo negativo sem empréstimo.~~
+  **Resolvido na rev. 43:**
+  - No início de cada temporada **todos ficam sem contrato**, mas isso não
+    obriga a renovar: o jogador continua no clube com o salário que tem.
+  - Quem tem **salário abaixo da força** pede aumento: **um jogador por
+    rodada** no clube (a regra do pedido de aumento acima).
+  - A máquina sempre renova (§9.4). O saldo negativo vai para o §9.3.
 -   Definir limites, prazos, taxas e consequências de inadimplência
     antes da implementação final.
 
@@ -1502,9 +1542,9 @@ na temporada anterior.
   contratos de 2 a 4 anos; pode mudar depois). O valor é **proporcional à
   posição na liga na temporada anterior**; na **primeira temporada**, todos
   recebem o mesmo valor.
-- **Em aberto:** a tabela de valores (proposta do agente com simulação), se
-  o dinheiro entra de uma vez ou por rodada e se os clubes da máquina
-  também recebem.
+- **Definido (rev. 43):** o dinheiro entra **de uma vez, no início da
+  temporada**, para **todos os clubes** (usuários e máquina).
+- **Em aberto:** a tabela de valores (proposta do agente com simulação).
 
 ## 10. Interface e apresentação
 

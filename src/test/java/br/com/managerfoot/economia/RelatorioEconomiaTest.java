@@ -213,7 +213,8 @@ class RelatorioEconomiaTest {
 		md.append("Preço da compra direta = ").append(mercado.rodadasDeSalarioNoPreco())
 			.append(" rodadas do salário do jogador (cerca de duas temporadas de 38 rodadas), arredondado em R$ 1.000. ")
 			.append("O leilão começa ").append(pct(mercado.descontoLeilao())).append(" abaixo e o estrangeiro custa ")
-			.append(pct(mercado.descontoEstrangeiro())).append(" menos (regras do usuário). A tabela é do jogador nacional.\n\n");
+			.append(pct(mercado.descontoEstrangeiro())).append(" menos; o jogador com asterisco custa ")
+			.append(pct(mercado.acrescimoAsterisco())).append(" mais (regras do usuário). A tabela é do jogador nacional sem asterisco.\n\n");
 		md.append("| Força | Salário por rodada | Preço (compra direta) | Lance inicial do leilão |\n|---|---|---|---|\n");
 		for (int forca : new int[] { 5, 12, 17, 22, 26, 30, 35, 40, 45, 50 }) {
 			Jogador j = jogador(forca);
