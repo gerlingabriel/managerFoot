@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import br.com.managerfoot.contas.Usuario;
 import br.com.managerfoot.persistencia.CaixaRepositorio;
 import br.com.managerfoot.persistencia.ClubeNaFilaException;
+import br.com.managerfoot.persistencia.CompraRepositorio;
 import br.com.managerfoot.persistencia.ConsultasRepositorio;
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -22,28 +23,38 @@ import jakarta.servlet.http.HttpServletResponse;
  * Abas Classificação, Artilheiros da temporada e Artilheiros de todos os tempos (SPEC §10.3, rev.
  * 16; modelos aprovados). Com {@code ficha=<id>}, a aba abre a ficha do jogador por cima; na
  * classificação, {@code calendario=<clube>} abre o calendário do clube (rev. 17 e 36). A aba
- * Finanças mostra só o clube do usuário (modelo 6a, rev. 39).
+ * Finanças mostra só o clube do usuário (modelo 6a, rev. 39). A janela do clube tem também a aba
+ * Plantel, com os jogadores à venda ({@code aba=plantel}, modelo 7a, rev. 51).
  */
 @Controller
 class AbasController {
 
 	private final ConsultasRepositorio consultas;
 	private final CaixaRepositorio caixas;
+	private final CompraRepositorio compras;
 
-	AbasController(ConsultasRepositorio consultas, CaixaRepositorio caixas) {
+	AbasController(ConsultasRepositorio consultas, CaixaRepositorio caixas, CompraRepositorio compras) {
 		this.consultas = consultas;
 		this.caixas = caixas;
+		this.compras = compras;
 	}
 
 	@GetMapping("/jogos/{jogoId}/classificacao")
 	String classificacao(@AuthenticationPrincipal Usuario usuario, @PathVariable long jogoId,
 			@RequestParam(name = "divisao", required = false) Integer divisao,
-			@RequestParam(name = "calendario", required = false) Long calendario, Model model) {
+			@RequestParam(name = "calendario", required = false) Long calendario,
+			@RequestParam(name = "aba", required = false) String aba, Model model) {
 		model.addAttribute("usuario", usuario);
 		model.addAttribute("jogoId", jogoId);
 		model.addAttribute("c", consultas.classificacao(jogoId, usuario.id(), divisao));
 		if (calendario != null) {
-			consultas.calendario(jogoId, usuario.id(), calendario).ifPresent(cal -> model.addAttribute("calendario", cal));
+			consultas.calendario(jogoId, usuario.id(), calendario).ifPresent(cal -> {
+				model.addAttribute("calendario", cal);
+				// a janela do clube tem as abas Calendário e Plantel (modelo 7a, rev. 51)
+				if ("plantel".equals(aba)) {
+					model.addAttribute("vitrine", compras.vitrine(jogoId, usuario.id(), calendario));
+				}
+			});
 		}
 		return "classificacao";
 	}

@@ -1312,3 +1312,40 @@ a.link-clube:hover { color: var(--destaque); text-decoration: underline; }
 	color: var(--texto-suave);
 	white-space: nowrap;
 }
+
+/* Janela do clube (modelo 7a): abas Calendário e Plantel e compra direta. */
+.janela-abas { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 16px; border-bottom: 1px solid var(--borda); }
+.janela-abas a {
+	display: inline-flex; align-items: center; min-height: 40px; padding: 0 14px; border-radius: 8px;
+	border: 1px solid var(--borda); color: var(--texto-claro); font-weight: 600; text-decoration: none;
+}
+.janela-abas a.ativa { background: var(--destaque); border-color: var(--destaque); color: #1A1A12; }
+.janela-aviso { margin: 10px 16px 0; }
+.vitrine-caixa {
+	display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; padding: 10px 16px;
+	border-bottom: 1px solid var(--borda); font-size: 14px;
+}
+.tabela-vitrine { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 15px; font-variant-numeric: tabular-nums; }
+.tabela-vitrine th {
+	padding: 8px 10px; text-align: left; font-size: 12px; font-weight: 600; letter-spacing: 0.1em;
+	text-transform: uppercase; color: var(--texto-suave);
+}
+.tabela-vitrine td { padding: 4px 10px; border-top: 1px solid rgba(31, 90, 58, 0.6); white-space: nowrap; }
+.tabela-vitrine .num { text-align: right; }
+.tabela-vitrine .vazio { color: #6F8A77; }
+.tabela-vitrine .preco { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 18px; }
+.tabela-vitrine tr.a-venda td { background: rgba(242, 201, 76, 0.08); }
+.tabela-vitrine tr.a-venda td:first-child { box-shadow: inset 4px 0 0 var(--destaque); }
+.tabela-vitrine .acao { text-align: right; }
+.etiqueta-venda {
+	padding: 1px 6px; border-radius: 4px; background: var(--destaque); color: #1A1A12;
+	font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+}
+.botao-comprar {
+	min-height: 40px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--destaque);
+	background: var(--destaque); color: #1A1A12; font: 600 15px Barlow, sans-serif; cursor: pointer;
+}
+.sem-compra {
+	display: inline-flex; align-items: center; min-height: 40px; padding: 0 12px; border-radius: 8px;
+	border: 1px dashed #3C7A57; color: var(--texto-suave); font-size: 14px;
+}

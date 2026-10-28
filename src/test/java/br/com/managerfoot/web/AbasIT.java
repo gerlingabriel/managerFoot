@@ -4,8 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -170,10 +173,52 @@ class AbasIT {
 		assertThat(pontos).isEqualTo(calendario.linha().pontos());
 
 		mvc.perform(get(base + "/classificacao").param("calendario", String.valueOf(clube)).with(como(treinador)))
-			.andExpect(content().string(containsString("Calendário · Temporada 2026")))
+			.andExpect(content().string(containsString("aria-label=\"Janela do clube\"")))
+			.andExpect(content().string(containsString("Temporada 2026 · ")))
 			.andExpect(content().string(containsString("Placar com os gols do clube primeiro")));
 		mvc.perform(get(base + "/classificacao").param("calendario", "-1").with(como(treinador)))
-			.andExpect(content().string(not(containsString("Calendário · Temporada"))));
+			.andExpect(content().string(not(containsString("aria-label=\"Janela do clube\""))));
+	}
+
+	@Test
+	void plantelDoClubeMostraTodosComGolsEOBotaoDeComprarSoNosAVenda() throws Exception {
+		long meu = jogo.clubeDoTreinador(jogoId, treinador.id()).orElseThrow();
+		long outro = jdbc.sql("""
+				SELECT c.id FROM jogo_clube c JOIN jogo_jogador jj ON jj.clube_id = c.id
+				WHERE c.jogo_id = :j AND jj.a_venda AND c.id <> :meu AND c.divisao_id =
+				      (SELECT divisao_id FROM jogo_clube WHERE id = :meu) LIMIT 1""")
+			.param("j", jogoId).param("meu", meu).query(Long.class).single();
+		CompraRepositorio.Vitrine v = compras.vitrine(jogoId, treinador.id(), outro);
+		assertThat(v.doUsuario()).isFalse();
+		assertThat(v.jogadores()).hasSize(jogo.carregarPlanteis(jogoId).get(outro).size());
+		assertThat(v.aVenda()).isBetween(5L, 6L);
+		assertThat(v.jogadores()).filteredOn(l -> !l.aVenda()).allMatch(l -> l.preco() == null && l.impedimento() == null);
+		long golsNaTemporada = jdbc.sql("""
+				SELECT count(*) FROM jogo_evento e JOIN jogo_jogador jj ON jj.id = e.jogador_id
+				WHERE jj.clube_id = :c AND e.tipo = 'GOL'""").param("c", outro).query(Long.class).single();
+		assertThat(v.jogadores().stream().mapToInt(CompraRepositorio.JogadorNaVitrine::gols).sum()).isEqualTo(golsNaTemporada);
+		assertThat(compras.vitrine(jogoId, treinador.id(), meu).jogadores()).noneMatch(CompraRepositorio.JogadorNaVitrine::aVenda);
+
+		CompraRepositorio.JogadorNaVitrine alvo = v.jogadores().stream().filter(l -> l.aVenda() && l.impedimento() == null)
+			.findFirst().orElseThrow();
+		mvc.perform(get(base + "/classificacao").param("calendario", String.valueOf(outro)).param("aba", "plantel")
+				.with(como(treinador)))
+			.andExpect(status().isOk())
+			.andExpect(content().string(containsString("à venda)")))
+			.andExpect(content().string(containsString("Comprar " + alvo.jogador().nome())));
+
+		mvc.perform(post(base + "/mercado/comprar").param("jogador", String.valueOf(alvo.jogador().id()))
+				.param("clube", String.valueOf(outro)).with(como(treinador)).with(csrf()))
+			.andExpect(status().is3xxRedirection())
+			.andExpect(flash().attributeExists("resultado"));
+		assertThat(jdbc.sql("SELECT clube_id FROM jogo_jogador WHERE id = :id").param("id", alvo.jogador().id())
+			.query(Long.class).single()).isEqualTo(meu);
+
+		// segunda compra do mesmo jogador: recusada com aviso, sem erro
+		mvc.perform(post(base + "/mercado/comprar").param("jogador", String.valueOf(alvo.jogador().id()))
+				.param("clube", String.valueOf(outro)).with(como(treinador)).with(csrf()))
+			.andExpect(status().is3xxRedirection())
+			.andExpect(flash().attribute("erro", "Este jogador não está mais à venda."));
 	}
 
 	@Test

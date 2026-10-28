@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 51 (2026-10-28):** janela do clube na classificação com as abas Calendário e Plantel (modelo 7a aprovado com a coluna de gols pedida pelo usuário): plantel inteiro, gols na temporada e botão Comprar nos jogadores à venda.
 -   **rev. 50 (2026-10-28):** finanças pelo modelo 6b (aprovado): linha do patrocínio, coluna "Mercado e prêmios" com o jogador comprado ou vendido; usuário quer ver o plantel inteiro ao clicar no clube (modelo 7a revisado para aprovação).
 -   **rev. 49 (2026-10-28):** compra direta no servidor (V19): paga o preço da tabela ao clube da máquina, recusa sem caixa, com 25 jogadores ou durante a rodada; lançamentos de compra e venda no extrato. Tela ainda não ligada.
 -   **rev. 48 (2026-10-28):** patrocínio lançado no início de cada temporada (rodada 0) e prêmio da liga na última rodada (V18); a tela de finanças mostra o patrocínio dentro do saldo do início.
@@ -1468,6 +1469,14 @@ A máquina oferece um pouco abaixo do preço padrão (§9.4).
   - **Asterisco:** **25% mais caro** na compra direta. No leilão o lance
     inicial continua 20% abaixo do preço (já com o acréscimo).
   - A **máquina só compra por leilão**; a compra direta é do usuário.
+  - **Definido (rev. 51), modelo 7a aprovado:** ao clicar num clube na
+    classificação, a janela tem as abas **Calendário** e **Plantel**. O
+    plantel mostra **todos** os jogadores, com os **gols na temporada**
+    (pedido do usuário, para despertar interesse), força, temperamento e
+    sigla do estrangeiro; os anunciados ficam destacados com "à venda",
+    preço e botão **Comprar** (ou "Caixa insuficiente" / "Plantel
+    cheio"). O caixa do usuário aparece no topo. No próprio clube não há
+    botão.
   - **Gravado (rev. 49):** a compra direta confere no servidor que o
     jogador está anunciado num clube da máquina, que o plantel do
     comprador tem menos de 25, que o caixa paga o preço e que não há

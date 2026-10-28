@@ -32,7 +32,7 @@
 	th:classappend="${l.clube.id == c.clubeDoUsuario} ? 'do-usuario' : (${i.count > c.linhas.size() - c.rebaixados} ? 'rebaixado')">
 <td class="num" th:text="${i.count}">1</td>
 <td><span class="clube-celula"><span aria-hidden="true" th:style="${@escudos.estilo(l.clube.escudo, 20, 24)}"></span><a class="jogo-nome pequeno link-clube" th:href="@{/jogos/{id}/classificacao(id=${jogoId},divisao=${c.prioridade},calendario=${l.clube.id})}"
-	th:text="${l.clube.nome}" th:attr="aria-label=|Calendário do ${l.clube.nome}|">Clube</a>
+	th:text="${l.clube.nome}" th:attr="aria-label=|Calendário e plantel do ${l.clube.nome}|">Clube</a>
 <span th:if="${i.count > c.linhas.size() - c.rebaixados}" class="oculto">(zona de rebaixamento)</span></span></td>
 <td class="num pontos" th:text="${l.pontos()}">0</td>
 <td class="num" th:text="${l.jogos}">0</td><td class="num" th:text="${l.vitorias}">0</td>
@@ -49,7 +49,7 @@
 </div>
 </section>
 
-<!-- Calendário do clube (modelo 3b, rev. 36). -->
+<!-- Janela do clube: Calendário (modelo 3b, rev. 36) e Plantel com compra direta (modelo 7a, rev. 51). -->
 <div th:if="${calendario != null}" class="janela-fundo" th:with="k=${calendario}">
 <div role="dialog" aria-modal="true" aria-labelledby="t-cal" class="janela calendario">
 <div class="janela-topo calendario-topo">
@@ -57,13 +57,23 @@
 <span aria-hidden="true" th:style="${@escudos.estilo(k.clube.escudo, 32, 38)}"></span>
 <div class="pilha-curta">
 <h2 id="t-cal" class="ficha-nome" th:text="${k.clube.nome}">Clube</h2>
-<span class="suave" th:text="|Calendário · Temporada ${k.temporada} · ${k.divisao} · ${k.posicao}º lugar|">Calendário</span>
+<span class="suave" th:text="|Temporada ${k.temporada} · ${k.divisao} · ${k.posicao}º lugar|">Temporada</span>
 </div>
 </div>
 <a th:href="@{/jogos/{id}/classificacao(id=${jogoId},divisao=${c.prioridade})}" class="janela-fechar" aria-label="Fechar" autofocus>
 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12"></path><path d="M18 6 6 18"></path></svg>
 </a>
 </div>
+<nav class="janela-abas" aria-label="Janela do clube">
+<a th:href="@{/jogos/{id}/classificacao(id=${jogoId},divisao=${c.prioridade},calendario=${k.clube.id})}"
+	th:attr="aria-current=${vitrine == null} ? 'page'" th:classappend="${vitrine == null} ? 'ativa'">Calendário</a>
+<a th:href="@{/jogos/{id}/classificacao(id=${jogoId},divisao=${c.prioridade},calendario=${k.clube.id},aba='plantel')}"
+	th:attr="aria-current=${vitrine != null} ? 'page'" th:classappend="${vitrine != null} ? 'ativa'"
+	th:text="${vitrine == null} ? 'Plantel' : (${vitrine.doUsuario} ? |Plantel (${vitrine.jogadores.size()})| : |Plantel (${vitrine.jogadores.size()} · ${vitrine.aVenda()} à venda)|)">Plantel</a>
+</nav>
+<div th:if="${resultado}" role="status" class="aviso-resultado janela-aviso" th:text="${resultado}">Jogador comprado.</div>
+<div th:if="${erro}" role="alert" class="alerta janela-aviso" th:text="${erro}">erro</div>
+<th:block th:if="${vitrine == null}">
 <div class="calendario-resumo">
 <span><strong th:text="${k.linha.jogos}">0</strong> <span th:text="${k.linha.jogos == 1} ? 'jogo' : 'jogos'">jogos</span></span>
 <span><strong class="cor-v" th:text="${k.linha.vitorias}">0</strong> <span th:text="${k.linha.vitorias == 1} ? 'vitória' : 'vitórias'">vitórias</span></span>
@@ -94,6 +104,47 @@
 </table>
 </div>
 <p class="suave calendario-nota">Placar com os gols do clube primeiro. Mostra só os jogos que já existem: a liga inteira desde o início da temporada; copas e continentais conforme os confrontos forem criados.</p>
+</th:block>
+<th:block th:if="${vitrine != null}" th:with="v=${vitrine}">
+<div class="vitrine-caixa">
+<span>Seu caixa: <strong class="caixa-valor" th:classappend="${v.saldo < 0} ? 'negativo'" th:text="${v.moeda.formatar(v.saldo)}">R$ 0</strong></span>
+<span class="suave" th:text="${v.doUsuario} ? 'Este é o seu clube.' : 'Os marcados “à venda” podem ser comprados pelo preço, com contrato até o fim da temporada.'">nota</span>
+</div>
+<div class="calendario-lista">
+<table class="tabela-vitrine">
+<thead><tr>
+<th scope="col">Pos</th><th scope="col">Jogador</th><th scope="col" class="num">Força</th>
+<th scope="col" class="num" title="Gols na temporada">Gols</th><th scope="col">Temperamento</th>
+<th scope="col" class="num">Preço</th><th scope="col"><span class="oculto">Comprar</span></th>
+</tr></thead>
+<tbody>
+<tr th:each="l : ${v.jogadores}" th:with="j=${l.jogador}" th:classappend="${l.aVenda()} ? 'a-venda'">
+<td><span class="pos" th:classappend="|pos-${j.posicao}|" th:text="${j.posicao.name().substring(0, 1)}" th:title="${j.posicao.nome(1)}">G</span></td>
+<td class="jogador-celula">
+<span class="jogador-nome" th:text="${j.nome}">Nome</span>
+<span th:if="${j.asterisco}" class="asterisco" title="jogador com asterisco">★</span>
+<span th:if="${l.estrangeiro}" class="sigla-pais" th:text="${l.estrangeiro}" th:title="|estrangeiro (${l.estrangeiro})|">ARG</span>
+<span th:if="${l.aVenda()}" class="etiqueta-venda">à venda</span>
+</td>
+<td class="num forca" th:text="${j.forca}">0</td>
+<td class="num gols" th:classappend="${l.gols == 0} ? 'vazio'" th:text="${l.gols == 0} ? '—' : ${l.gols}">0</td>
+<td class="temperamento" th:text="${#strings.capitalize(#strings.toLowerCase(j.temperamento.name()))}">Normal</td>
+<td class="num preco" th:classappend="${!l.aVenda()} ? 'vazio'" th:text="${l.aVenda()} ? ${v.moeda.formatar(l.preco)} : '—'">—</td>
+<td class="acao">
+<form th:if="${l.aVenda() and l.impedimento == null}" th:action="@{/jogos/{id}/mercado/comprar(id=${jogoId})}" method="post">
+<input type="hidden" name="jogador" th:value="${j.id}">
+<input type="hidden" name="clube" th:value="${k.clube.id}">
+<input type="hidden" name="divisao" th:value="${c.prioridade}">
+<button type="submit" class="botao-comprar" th:attr="aria-label=|Comprar ${j.nome} por ${v.moeda.formatar(l.preco)}|">Comprar</button>
+</form>
+<span th:if="${l.aVenda() and l.impedimento != null}" class="sem-compra" th:text="${l.impedimento}">Caixa insuficiente</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p class="suave calendario-nota">Gols na temporada. Só os marcados “à venda” (5 ou 6 por clube da máquina) aceitam compra; estrangeiro custa 25% menos e jogador com asterisco, 25% mais.</p>
+</th:block>
 </div>
 </div>
 </div>
