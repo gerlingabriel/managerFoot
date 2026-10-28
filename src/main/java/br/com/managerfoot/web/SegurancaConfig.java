@@ -24,7 +24,7 @@ class SegurancaConfig {
 	SecurityFilterChain seguranca(HttpSecurity http, AutenticacaoContas autenticacao,
 			SecurityContextRepository contexto) throws Exception {
 		http.authorizeHttpRequests(a -> a
-				.requestMatchers("/entrar", "/cadastro", "/css/**", "/webjars/**", "/actuator/health", "/error").permitAll()
+				.requestMatchers("/entrar", "/cadastro", "/css/**", "/js/**", "/webjars/**", "/actuator/health", "/error").permitAll()
 				.anyRequest().authenticated())
 			.authenticationProvider(autenticacao)
 			.securityContext(s -> s.securityContextRepository(contexto))

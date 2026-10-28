@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: cabeca('Novo jogo')}"></head>
+<body>
+<div class="campo campo-pagina">
+<div class="pagina">
+<header th:replace="~{fragmentos :: topo}"></header>
+<h1 class="titulo-pagina">Novo jogo</h1>
+
+<div th:if="${campeonatos.isEmpty()}" role="alert" class="alerta">
+Nenhum campeonato disponível. Carregue o banco padrão (veja o README).
+</div>
+
+<form th:unless="${campeonatos.isEmpty()}" th:action="@{/jogos}" method="post" class="pilha-larga" data-envio-unico>
+<div th:if="${erro}" role="alert" class="alerta" th:text="${erro}">erro</div>
+
+<section aria-labelledby="t-camp" class="painel painel-interno">
+<div class="painel-titulo">
+<h2 id="t-camp" class="titulo-secao pequeno">1 · Campeonato</h2>
+<div class="setas">
+<button type="button" class="seta" data-rolar="-1" aria-controls="faixa" aria-label="Campeonatos anteriores"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"></path></svg></button>
+<button type="button" class="seta" data-rolar="1" aria-controls="faixa" aria-label="Próximos campeonatos"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"></path></svg></button>
+</div>
+</div>
+<div id="faixa" class="faixa" role="radiogroup" aria-labelledby="t-camp">
+<label th:each="c, i : ${campeonatos}" class="campeonato">
+<input type="radio" name="paisId" th:value="${c.paisId}" th:checked="${i.first}" class="oculto">
+<span class="campeonato-pais">
+<span aria-hidden="true" class="sigla" th:text="${c.codigo}">BRA</span>
+<span class="nome-clube" th:text="${c.pais}">País</span>
+</span>
+<span class="campeonato-liga" th:text="${c.liga}">Liga</span>
+<span class="campeonato-detalhe" th:text="${c.detalhe}">detalhe</span>
+</label>
+</div>
+</section>
+
+<section aria-labelledby="t-modo" class="painel painel-interno">
+<h2 id="t-modo" class="titulo-secao pequeno">2 · Seu clube</h2>
+<div class="destaque-sorteio">
+<div class="pilha-curta">
+<span class="nome-clube">Clube sorteado</span>
+<span class="texto" th:text="|Você assume um dos ${candidatos} clubes mais fracos da última divisão. Empatados com o ${candidatos}º também entram no sorteio.|">texto</span>
+</div>
+</div>
+</section>
+
+<div class="acoes">
+<a th:href="@{/}" class="botao-discreto botao-link">Voltar</a>
+<button type="submit" class="botao botao-largo">Sortear clube e começar</button>
+</div>
+</form>
+</div>
+</div>
+</body>
+</html>

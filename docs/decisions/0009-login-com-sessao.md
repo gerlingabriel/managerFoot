@@ -34,7 +34,7 @@
   servidor; JWT não traz ganho e complica sair. O usuário fica na sessão
   como `Usuario` (sem senha), com o papel como `ROLE_<PAPEL>`. A senha
   continua verificada por `ContasRepositorio.autenticar`.
-- **Abertos sem login:** `/entrar`, `/cadastro`, `/css/**`, `/webjars/**`,
+- **Abertos sem login:** `/entrar`, `/cadastro`, `/css/**`, `/js/**`, `/webjars/**`,
   `/actuator/health` e `/error`. O resto exige login.
 - **Cadastro já entra:** troca o id da sessão e grava o usuário nela.
 - **HTMX por webjar**, sem dependência de CDN. As fontes (Barlow) vêm do

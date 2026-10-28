@@ -1835,6 +1835,12 @@ começa depois que a anterior estiver testada.
   - **3f.1 (concluída):** entrar, cadastro pelo link e sair, com sessão e
     CSRF (`docs/decisions/0009`); link de cadastro gerado pelo terminal até
     existir a tela do administrador; início provisório.
+  - **3f.2a (concluída):** início com "Novo jogo" e "Voltar a um jogo
+    gravado" (último acesso por treinador, migração V11); novo jogo por
+    sorteio para todos, já com a 1ª temporada iniciada; tela do clube
+    sorteado com os candidatos. Um usuário só abre os próprios jogos.
+  - **3f.2b:** caminho "Escolher clube" do administrador com o quadro de
+    escolha de clube.
   - plantel e tática;
   - partidas simultâneas da divisão (§10.2);
   - classificação;

@@ -6,6 +6,7 @@
 	--borda: #1F5A3A;
 	--texto: #F4F1E6;
 	--texto-suave: #B9CBB9;
+	--texto-claro: #DDE7DA;
 	--destaque: #F2C94C;
 	--destaque-claro: #FFE08A;
 	--erro: #E5484D;
@@ -187,3 +188,308 @@ a:hover { color: var(--destaque-claro); }
 }
 
 form { display: contents; }
+
+/* Páginas depois de entrar (modelos 5b, 5c). */
+.campo-pagina { padding: 24px 16px 40px; }
+
+.pagina {
+	max-width: 1180px;
+	margin: 0 auto;
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+
+.topo {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 14px 20px;
+	background: var(--cartao);
+	border: 1px solid var(--borda);
+	border-radius: 12px;
+}
+
+.topo-marca {
+	font-family: 'Barlow Condensed', sans-serif;
+	font-weight: 700;
+	font-size: 26px;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: var(--destaque);
+	text-decoration: none;
+}
+
+.topo-usuario {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	font-size: 15px;
+	color: var(--texto-claro);
+}
+
+.titulo-pagina {
+	margin: 0;
+	font-family: 'Barlow Condensed', sans-serif;
+	font-weight: 700;
+	font-size: 32px;
+	text-transform: uppercase;
+}
+
+.titulo-secao {
+	margin: 0;
+	font-family: 'Barlow Condensed', sans-serif;
+	font-weight: 700;
+	font-size: 26px;
+	text-transform: uppercase;
+	color: var(--destaque);
+}
+
+.titulo-secao.grande { font-size: 34px; line-height: 1; }
+.titulo-secao.pequeno { font-size: 20px; }
+
+.texto { margin: 0; font-size: 16px; color: var(--texto-claro); }
+.texto.pequeno { font-size: 14px; }
+.suave.pequeno { font-size: 13px; }
+
+.pilha { display: flex; flex-direction: column; gap: 8px; }
+.pilha-curta { display: flex; flex-direction: column; gap: 4px; }
+.pilha-larga { display: flex; flex-direction: column; gap: 20px; }
+.crescer { flex: 1 1 320px; }
+
+.inicio {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 20px;
+	align-items: stretch;
+}
+
+.cartao-novo {
+	flex: 1 1 320px;
+	box-sizing: border-box;
+	background: var(--cartao);
+	border: 2px solid var(--destaque);
+	border-radius: 12px;
+	padding: 24px;
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	justify-content: space-between;
+}
+
+.painel {
+	background: rgba(4, 24, 14, 0.55);
+	border: 1px solid var(--borda);
+	border-radius: 12px;
+}
+
+.painel-interno {
+	padding: 16px;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.lista-jogos {
+	flex: 999 1 560px;
+	min-width: 0;
+	overflow: hidden;
+}
+
+.painel-cabecalho {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	gap: 8px;
+	padding: 16px 20px;
+	border-bottom: 1px solid var(--borda);
+}
+
+.painel-titulo {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.linha-jogo {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 14px;
+	margin: 0;
+	padding: 14px 20px;
+	border-top: 1px solid rgba(31, 90, 58, 0.6);
+}
+
+.linha-jogo-texto {
+	flex: 1 1 260px;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.nome-clube {
+	font-family: 'Barlow Condensed', sans-serif;
+	font-weight: 700;
+	font-size: 22px;
+	text-transform: uppercase;
+}
+
+.botao-link {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	text-decoration: none;
+	box-sizing: border-box;
+}
+
+a.botao { min-height: 52px; color: #1A1A12; }
+a.botao:hover { color: #1A1A12; }
+.botao-largo { min-height: 52px; padding: 0 28px; }
+.botao:disabled { opacity: 0.5; cursor: not-allowed; }
+.botao[aria-disabled="true"] { opacity: 0.7; cursor: progress; }
+
+.botao-contorno {
+	min-height: 44px;
+	padding: 0 20px;
+	display: inline-flex;
+	align-items: center;
+	box-sizing: border-box;
+	background: transparent;
+	color: var(--destaque);
+	border: 1px solid var(--destaque);
+	border-radius: 10px;
+	font: 700 16px 'Barlow Condensed', sans-serif;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	text-decoration: none;
+}
+
+.botao-discreto { color: var(--texto-claro); }
+a.botao-discreto { min-height: 48px; padding: 0 20px; }
+
+.setas { display: flex; gap: 6px; }
+
+.seta {
+	width: 44px;
+	height: 44px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--cartao);
+	color: var(--texto);
+	border: 1px solid var(--borda);
+	border-radius: 8px;
+	cursor: pointer;
+}
+
+.faixa {
+	display: flex;
+	gap: 10px;
+	overflow-x: auto;
+	scroll-snap-type: x mandatory;
+	padding-bottom: 10px;
+}
+
+.campeonato {
+	flex: 0 0 260px;
+	scroll-snap-align: start;
+	min-height: 96px;
+	box-sizing: border-box;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 6px;
+	padding: 12px 14px;
+	border-radius: 10px;
+	cursor: pointer;
+	background: var(--cartao);
+	color: var(--texto);
+	border: 1px solid var(--borda);
+}
+
+.campeonato:has(input:checked) {
+	background: var(--destaque);
+	color: #1A1A12;
+	border: 2px solid var(--destaque);
+}
+
+.campeonato:has(input:focus-visible) { outline: 3px solid var(--texto); outline-offset: 2px; }
+
+.campeonato-pais { display: flex; align-items: center; gap: 10px; }
+.campeonato-liga { font-size: 15px; font-weight: 600; }
+.campeonato-detalhe { font-size: 13px; color: var(--texto-suave); }
+.campeonato:has(input:checked) .campeonato-detalhe { color: #3A3418; }
+
+.sigla {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 40px;
+	height: 24px;
+	padding: 0 4px;
+	border-radius: 4px;
+	font: 700 13px Barlow, sans-serif;
+	background: var(--borda);
+	color: var(--texto);
+}
+
+.campeonato:has(input:checked) .sigla { background: #1A1A12; color: var(--destaque); }
+
+.oculto {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+}
+
+.destaque-sorteio {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 16px;
+	align-items: center;
+	padding: 14px 16px;
+	background: var(--cartao);
+	border: 2px solid var(--destaque);
+	border-radius: 10px;
+}
+
+.acoes {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px;
+	align-items: center;
+	justify-content: flex-end;
+}
+
+.cartao-resultado {
+	background: var(--cartao);
+	border: 1px solid var(--borda);
+	border-radius: 12px;
+	padding: 20px;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 20px;
+	align-items: center;
+}
+
+.rotulo {
+	font-size: 13px;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	color: var(--texto-suave);
+}
+
+.titulo-resultado {
+	font-family: 'Barlow Condensed', sans-serif;
+	font-weight: 700;
+	font-size: 30px;
+	text-transform: uppercase;
+}

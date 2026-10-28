@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: cabeca(${jogo.clube.nome})}"></head>
+<body>
+<div class="campo campo-pagina">
+<div class="pagina">
+<header th:replace="~{fragmentos :: topo}"></header>
+
+<section aria-labelledby="t-clube" class="cartao-resultado">
+<span aria-hidden="true" th:style="${@escudos.estilo(jogo.clube.escudo, 56, 68)}"></span>
+<div class="pilha-curta crescer">
+<span th:if="${sorteadoEntre}" class="rotulo">Clube sorteado</span>
+<span id="t-clube" class="titulo-resultado" th:text="|Você é o treinador do ${jogo.clube.nome}|">Você é o treinador</span>
+<span class="texto" th:text="|${jogo.divisao} · força ${jogo.clube.forca}| + (${sorteadoEntre} ? | · sorteado entre ${sorteadoEntre}| : '')">detalhe</span>
+<span class="suave" th:text="${jogo.onde}">onde</span>
+</div>
+<div class="pilha-curta">
+<button type="button" class="botao" disabled aria-describedby="plantel-em-breve">Ir para o plantel</button>
+<span id="plantel-em-breve" class="suave">O plantel chega na próxima etapa.</span>
+</div>
+</section>
+</div>
+</div>
+</body>
+</html>

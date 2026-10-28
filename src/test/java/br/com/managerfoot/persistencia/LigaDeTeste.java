@@ -28,6 +28,11 @@ final class LigaDeTeste {
 	 * todos com o elenco padrão de 23, e devolve o id do jogo criado dela, com dono participante.
 	 */
 	static long criarJogo(MoldeRepositorio moldes, JogoRepositorio jogos, ContasRepositorio contas) {
+		return jogos.criarJogoComClubeSorteado(criarPais(moldes), participante(contas).id(), 1);
+	}
+
+	/** Cria no molde o país da liga de {@link #criarJogo}, com os planteis, e devolve o id dele. */
+	static long criarPais(MoldeRepositorio moldes) {
 		long pais = moldes.criarPais(moldes.criarMolde("Padrão"), "BRA", "Brasil");
 		ConfiguracaoLiga liga = gravarNoMolde(moldes, pais, new ConfiguracaoLiga("Nacional",
 				List.of(new Divisao("Série A", 1, 50, 0, 2, clubes("A", 16, 35)),
@@ -36,7 +41,7 @@ final class LigaDeTeste {
 		SplittableRandom aleatorio = new SplittableRandom(11);
 		liga.divisoes().forEach(d -> d.clubes().forEach(c -> moldes.adicionarJogadores(c.id(), plantel(c, aleatorio))));
 		liga.filaDeEspera().forEach(c -> moldes.adicionarJogadores(c.id(), plantel(c, aleatorio)));
-		return jogos.criarJogoComClubeSorteado(pais, participante(contas).id(), 1);
+		return pais;
 	}
 
 	/**

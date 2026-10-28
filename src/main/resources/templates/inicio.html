@@ -2,19 +2,39 @@
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragmentos :: cabeca('Início')}"></head>
 <body>
-<div class="campo">
-<main class="conteudo">
-<header th:replace="~{fragmentos :: marca}"></header>
-<div class="cartoes">
-<section aria-labelledby="t-inicio" class="cartao">
-<h2 id="t-inicio" th:text="|Olá, ${usuario.nome}|">Olá</h2>
-<p class="suave">Novo jogo e jogos gravados chegam na próxima etapa.</p>
-<form th:action="@{/sair}" method="post">
-<button type="submit" class="botao-discreto">Sair</button>
-</form>
-</section>
+<div class="campo campo-pagina">
+<div class="pagina">
+<header th:replace="~{fragmentos :: topo}"></header>
+<main class="inicio">
+
+<section aria-labelledby="t-novo" class="cartao-novo">
+<div class="pilha">
+<h2 id="t-novo" class="titulo-secao grande">Novo jogo</h2>
+<p class="texto">Escolha o campeonato e comece uma carreira nova.</p>
 </div>
+<a th:href="@{/jogos/novo}" class="botao botao-link">Começar novo jogo</a>
+</section>
+
+<section aria-labelledby="t-gravados" class="painel lista-jogos">
+<div class="painel-cabecalho">
+<h2 id="t-gravados" class="titulo-secao">Voltar a um jogo gravado</h2>
+<span class="suave" th:text="${jogos.size() == 1} ? '1 jogo' : |${jogos.size()} jogos|">0 jogos</span>
+</div>
+<p th:if="${jogos.isEmpty()}" class="linha-jogo texto">Você ainda não tem jogos. Comece um novo.</p>
+<div th:each="j : ${jogos}" class="linha-jogo">
+<span aria-hidden="true" th:style="${@escudos.estilo(j.clube.escudo, 36, 44)}"></span>
+<div class="linha-jogo-texto">
+<span class="nome-clube" th:text="${j.clube.nome}">Clube</span>
+<span class="texto pequeno" th:text="${j.onde}">onde</span>
+<span class="suave" th:text="${j.quando}">quando</span>
+</div>
+<a th:href="@{/jogos/{id}(id=${j.jogoId})}" class="botao-contorno"
+	th:attr="aria-label=|Continuar ${j.clube.nome}|">Continuar</a>
+</div>
+</section>
+
 </main>
+</div>
 </div>
 </body>
 </html>

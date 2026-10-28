@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&amp;family=Barlow:wght@400;500;600&amp;display=swap">
 <link rel="stylesheet" th:href="@{/css/managerfoot.css}">
 <script th:src="@{/webjars/htmx.org/dist/htmx.min.js}" defer></script>
+<script th:src="@{/js/managerfoot.js}" defer></script>
 </head>
 <body>
 
@@ -17,6 +18,16 @@
 <h1 class="titulo">managerFoot</h1>
 </div>
 <p class="suave lema">Comece por baixo, suba de divisão e não seja demitido.</p>
+</header>
+
+<header th:fragment="topo" class="topo">
+<a th:href="@{/}" class="topo-marca">managerFoot</a>
+<div class="topo-usuario">
+<span th:text="|${usuario.nome} · ${#strings.toLowerCase(usuario.papel)}|">Nome · papel</span>
+<form th:action="@{/sair}" method="post">
+<button type="submit" class="botao-discreto">Sair</button>
+</form>
+</div>
 </header>
 
 <section th:fragment="entrar" aria-labelledby="t-entrar" class="cartao">

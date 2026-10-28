@@ -62,7 +62,7 @@ class EntradaIT {
 			.andExpect(authenticated().withRoles("ADMINISTRADOR"))
 			.andReturn().getRequest().getSession();
 
-		mvc.perform(get("/").session(sessao)).andExpect(status().isOk()).andExpect(content().string(containsString("Olá, Dono")));
+		mvc.perform(get("/").session(sessao)).andExpect(status().isOk()).andExpect(content().string(containsString("Dono · administrador")));
 	}
 
 	@Test
@@ -110,7 +110,7 @@ class EntradaIT {
 			.andExpect(authenticated().withRoles("PARTICIPANTE"))
 			.andReturn().getRequest().getSession();
 
-		mvc.perform(get("/").session(sessao)).andExpect(content().string(containsString("Olá, Gabriel")));
+		mvc.perform(get("/").session(sessao)).andExpect(content().string(containsString("Gabriel · participante")));
 		assertThat(contas.autenticar(email, "senha-nova-1")).hasValueSatisfying(u -> assertThat(u.papel()).isEqualTo(Papel.PARTICIPANTE));
 		// uso único: o mesmo link não abre outro cadastro
 		mvc.perform(get("/cadastro").param("convite", convite))
