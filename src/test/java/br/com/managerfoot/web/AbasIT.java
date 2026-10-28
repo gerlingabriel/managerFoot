@@ -126,7 +126,7 @@ class AbasIT {
 		assertThat(temporada.linhas()).isNotEmpty().allMatch(l -> l.gols() > 0);
 
 		mvc.perform(get(base + "/artilheiros").param("divisao", "1").with(como(treinador)))
-			.andExpect(content().string(containsString("Temporada 1 · ")))
+			.andExpect(content().string(containsString("Temporada 2026 · ")))
 			.andExpect(content().string(containsString(temporada.linhas().getFirst().nome())));
 		mvc.perform(get(base + "/artilheiros/todos-os-tempos").with(como(treinador)))
 			.andExpect(content().string(containsString("Clube atual")))
@@ -166,7 +166,7 @@ class AbasIT {
 		assertThat(pontos).isEqualTo(calendario.linha().pontos());
 
 		mvc.perform(get(base + "/classificacao").param("calendario", String.valueOf(clube)).with(como(treinador)))
-			.andExpect(content().string(containsString("Calendário · Temporada 1")))
+			.andExpect(content().string(containsString("Calendário · Temporada 2026")))
 			.andExpect(content().string(containsString("Placar com os gols do clube primeiro")));
 		mvc.perform(get(base + "/classificacao").param("calendario", "-1").with(como(treinador)))
 			.andExpect(content().string(not(containsString("Calendário · Temporada"))));

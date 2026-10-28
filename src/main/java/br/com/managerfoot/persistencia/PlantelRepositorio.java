@@ -102,7 +102,7 @@ public class PlantelRepositorio {
 				: divisao.calendario().jogos().stream().filter(j -> j.rodada() == processadas + 1 && envolve(j, clube))
 					.findFirst();
 
-		return Optional.of(new VisaoPlantel(jogoId, temporada.numero(), oClube, nomeDivisao, classificacao.linhas().indexOf(linha) + 1,
+		return Optional.of(new VisaoPlantel(jogoId, temporada.numero(), jogos.ano(jogoId, temporada.numero()), oClube, nomeDivisao, classificacao.linhas().indexOf(linha) + 1,
 				linha.pontos(), linha.jogos(), moral.valor(), parametrosMoral.maximo(), moral.faixa(parametrosMoral),
 				processadas + 1, processadas >= total, proximo.map(j -> j.mandante().id() == clube).orElse(null),
 				proximo.map(j -> j.mandante().id() == clube ? j.visitante() : j.mandante()).orElse(null), escalacao,
@@ -204,11 +204,13 @@ public class PlantelRepositorio {
 	/**
 	 * Tudo o que a tela do plantel mostra.
 	 *
+	 * @param temporada número da temporada, enviado pela tela no fim dela
+	 * @param ano ano da temporada, mostrado na tela
 	 * @param emCasa nulo quando não há próximo jogo (folga ou temporada encerrada)
 	 * @param adversario nulo quando não há próximo jogo
 	 * @param saldo caixa do clube em centavos de Real, para saber se pode contratar (rev. 39)
 	 */
-	public record VisaoPlantel(long jogoId, int temporada, Clube clube, String divisao, int posicao, int pontos, int jogos,
+	public record VisaoPlantel(long jogoId, int temporada, int ano, Clube clube, String divisao, int posicao, int pontos, int jogos,
 			int moral, int moralMaxima, Moral.Faixa faixaMoral, int rodada, boolean temporadaEncerrada, Boolean emCasa,
 			Clube adversario, EscalacaoDoTreinador escalacao, List<LinhaJogador> jogadores, List<String> problemas,
 			long saldo, Moeda moeda) {

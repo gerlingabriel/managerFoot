@@ -55,7 +55,7 @@ class JogosDoTreinadorRepositorioIT {
 			assertThat(j.clube().id()).isEqualTo(clube);
 			assertThat(j.pais()).isEqualTo("Brasil");
 			assertThat(j.divisao()).isEqualTo("Série B");
-			assertThat(j.temporada()).isEqualTo(1);
+			assertThat(j.ano()).isEqualTo(2026);
 			assertThat(j.rodada()).isEqualTo(1);
 		});
 	}

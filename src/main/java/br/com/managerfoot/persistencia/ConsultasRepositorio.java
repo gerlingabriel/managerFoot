@@ -150,7 +150,7 @@ public class ConsultasRepositorio {
 			.orElseThrow();
 		String nomeDivisao = jdbc.sql("SELECT nome FROM jogo_divisao WHERE jogo_id = :jogo AND prioridade = :p")
 			.param("jogo", jogoId).param("p", divisao.get().prioridade()).query(String.class).single();
-		return Optional.of(new VisaoCalendario(linha.clube(), temporada.numero(), nomeDivisao,
+		return Optional.of(new VisaoCalendario(linha.clube(), jogos.ano(jogoId, temporada.numero()), nomeDivisao,
 				classificacao.linhas().indexOf(linha) + 1, linha, jogosDoClube));
 	}
 
@@ -190,8 +190,11 @@ public class ConsultasRepositorio {
 		return jdbc.sql("SELECT clube_id FROM jogo_jogador WHERE id = :j").param("j", jogadorId).query(Long.class).single();
 	}
 
+	/** Ano da temporada atual (SPEC §8.1.1, rev. 40). */
 	private int temporada(long jogoId) {
-		return jdbc.sql("SELECT max(numero) FROM jogo_temporada WHERE jogo_id = :jogo").param("jogo", jogoId)
+		return jdbc.sql("""
+				SELECT j.ano_inicial + max(t.numero) - 1 FROM jogo j JOIN jogo_temporada t ON t.jogo_id = j.id
+				WHERE j.id = :jogo GROUP BY j.ano_inicial""").param("jogo", jogoId)
 			.query(Integer.class).single();
 	}
 
@@ -229,7 +232,10 @@ public class ConsultasRepositorio {
 			long clubeId, String clube, int gols) {
 	}
 
-	/** @param prioridade nula no ranking de todos os tempos */
+	/**
+	 * @param prioridade nula no ranking de todos os tempos
+	 * @param temporada ano da temporada atual
+	 */
 	public record VisaoArtilheiros(List<AbaDivisao> divisoes, Integer prioridade, String divisao, int temporada,
 			List<LinhaArtilheiro> linhas, long clubeDoUsuario) {
 	}
@@ -253,7 +259,10 @@ public class ConsultasRepositorio {
 		}
 	}
 
-	/** @param linha a linha do clube na classificação: jogos, vitórias, empates, derrotas e gols */
+	/**
+	 * @param temporada ano da temporada
+	 * @param linha a linha do clube na classificação: jogos, vitórias, empates, derrotas e gols
+	 */
 	public record VisaoCalendario(Clube clube, int temporada, String divisao, int posicao, LinhaClassificacao linha,
 			List<JogoNoCalendario> jogos) {
 	}

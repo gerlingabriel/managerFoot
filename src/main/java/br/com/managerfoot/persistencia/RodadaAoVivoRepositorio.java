@@ -307,8 +307,9 @@ public class RodadaAoVivoRepositorio {
 				}
 			}
 		}
-		int temporada = jdbc.sql("SELECT max(numero) FROM jogo_temporada WHERE jogo_id = :jogo").param("jogo", jogoId)
-			.query(Integer.class).single();
+		int temporada = jdbc.sql("""
+				SELECT j.ano_inicial + max(t.numero) - 1 FROM jogo j JOIN jogo_temporada t ON t.jogo_id = j.id
+				WHERE j.id = :jogo GROUP BY j.ano_inicial""").param("jogo", jogoId).query(Integer.class).single();
 		boolean som = jdbc.sql("SELECT som_gols FROM jogo_treinador WHERE jogo_id = :jogo AND clube_id = :clube")
 			.param("jogo", jogoId).param("clube", clube).query(Boolean.class).single();
 		return new EstadoRodada(jogoId, temporada, linha.rodada(), divisoes, atual, minuto, linha.andandoDesde() == null,
@@ -439,6 +440,7 @@ public class RodadaAoVivoRepositorio {
 	/**
 	 * O quadro da rodada num instante.
 	 *
+	 * @param temporada ano da temporada
 	 * @param divisaoAtual índice em {@code divisoes} da divisão em jogo
 	 * @param comUsuario se a divisão em jogo tem clube do usuário (só ela tem velocidade e pausa)
 	 * @param jogoDoUsuario o jogo do clube do usuário até onde ele já foi jogado; nulo na folga

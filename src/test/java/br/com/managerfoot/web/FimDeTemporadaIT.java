@@ -88,14 +88,14 @@ class FimDeTemporadaIT {
 	@Test
 	void okComecaAProximaTemporadaUmaVezSo() throws Exception {
 		mvc.perform(get(plantel).with(como(treinador)))
-			.andExpect(content().string(containsString("Temporada 1 encerrada")))
+			.andExpect(content().string(containsString("Temporada 2026 encerrada")))
 			.andExpect(content().string(containsString("OK, começar a próxima")));
 
 		mvc.perform(post("/jogos/" + jogoId + "/temporada").param("temporada", "1").with(como(treinador)).with(csrf()))
 			.andExpect(redirectedUrl(plantel))
-			.andExpect(flash().attribute("resultado", containsString("Começou a temporada 2.")));
+			.andExpect(flash().attribute("resultado", containsString("Começou a temporada 2027.")));
 		mvc.perform(post("/jogos/" + jogoId + "/temporada").param("temporada", "1").with(como(treinador)).with(csrf()))
-			.andExpect(flash().attribute("erro", "A temporada 1 já foi encerrada."));
+			.andExpect(flash().attribute("erro", "A temporada 2026 já foi encerrada."));
 
 		assertThat(jdbc.sql("SELECT max(numero) FROM jogo_temporada WHERE jogo_id = :j").param("j", jogoId)
 			.query(Integer.class).single()).isEqualTo(2);

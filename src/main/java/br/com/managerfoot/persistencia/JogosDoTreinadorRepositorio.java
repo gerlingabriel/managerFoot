@@ -78,7 +78,7 @@ public class JogosDoTreinadorRepositorio {
 		return jdbc.sql(SELECAO + " WHERE t.usuario_id = :usuario ORDER BY t.ultimo_acesso_em DESC, j.id DESC")
 			.param("usuario", usuarioId)
 			.query((rs, n) -> new JogoGravado(rs.getLong("jogo_id"), TabelasLiga.clube(rs), rs.getString("pais"),
-					rs.getString("divisao"), rs.getInt("temporada"), rodadaAtual(rs.getInt("processadas"),
+					rs.getString("divisao"), rs.getInt("ano"), rodadaAtual(rs.getInt("processadas"),
 							rs.getInt("total")),
 					rs.getObject("ultimo_acesso_em", OffsetDateTime.class).toInstant()))
 			.list();
@@ -109,7 +109,7 @@ public class JogosDoTreinadorRepositorio {
 	/** Uma linha por jogo do treinador; total de rodadas = as da divisão com mais rodadas. */
 	private static final String SELECAO = """
 			SELECT j.id AS jogo_id, c.id, c.nome, c.forca, c.escudo_modelo, c.escudo_cor_1, c.escudo_cor_2,
-			       p.nome AS pais, d.nome AS divisao, tp.numero AS temporada,
+			       p.nome AS pais, d.nome AS divisao, j.ano_inicial + tp.numero - 1 AS ano,
 			       tp.rodadas_processadas AS processadas, t.ultimo_acesso_em,
 			       (SELECT coalesce(max(pa.rodada), 0) FROM jogo_partida pa WHERE pa.temporada_id = tp.id) AS total
 			FROM jogo_treinador t
@@ -129,7 +129,7 @@ public class JogosDoTreinadorRepositorio {
 	 *
 	 * @param divisao nula se o clube do treinador está na fila de espera
 	 */
-	public record JogoGravado(long jogoId, Clube clube, String pais, String divisao, int temporada, int rodada,
+	public record JogoGravado(long jogoId, Clube clube, String pais, String divisao, int ano, int rodada,
 			Instant ultimoAcesso) {
 	}
 }

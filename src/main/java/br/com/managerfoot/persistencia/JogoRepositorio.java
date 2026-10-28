@@ -41,10 +41,12 @@ public class JogoRepositorio {
 	private final EscalacaoRepositorio escalacoes;
 	private final EscalacaoMaquina escalacaoMaquina = new EscalacaoMaquina(ParametrosMotor.padrao());
 	private final int candidatosClubeInicial;
+	private final int anoInicial;
 
 	public JogoRepositorio(JdbcClient jdbc, ContasRepositorio contas, MoldeRepositorio moldes,
 			EscalacaoRepositorio escalacoes,
-			@Value("${managerfoot.jogo.candidatos-clube-inicial}") int candidatosClubeInicial) {
+			@Value("${managerfoot.jogo.candidatos-clube-inicial}") int candidatosClubeInicial,
+			@Value("${managerfoot.jogo.ano-inicial}") int anoInicial) {
 		if (candidatosClubeInicial < 1) {
 			throw new IllegalArgumentException(
 					"managerfoot.jogo.candidatos-clube-inicial deve ser ao menos 1: " + candidatosClubeInicial);
@@ -54,6 +56,13 @@ public class JogoRepositorio {
 		this.moldes = moldes;
 		this.escalacoes = escalacoes;
 		this.candidatosClubeInicial = candidatosClubeInicial;
+		this.anoInicial = anoInicial;
+	}
+
+	/** Ano da temporada {@code numero} do jogo (SPEC §8.1.1, rev. 40). */
+	public int ano(long jogoId, int numero) {
+		return jdbc.sql("SELECT ano_inicial + :numero - 1 FROM jogo WHERE id = :jogo").param("numero", numero)
+			.param("jogo", jogoId).query(Integer.class).single();
 	}
 
 	/**
@@ -130,10 +139,10 @@ public class JogoRepositorio {
 		ConfiguracaoLiga liga = distribuir(paisMoldeId, semente);
 
 		long jogoId = TabelasLiga.inserir(jdbc, """
-				INSERT INTO jogo (molde_id, pais_codigo, nome_liga, dono_id, semente_criacao)
-				VALUES (:molde, :codigo, :nome, :dono, :semente)""",
+				INSERT INTO jogo (molde_id, pais_codigo, nome_liga, dono_id, semente_criacao, ano_inicial)
+				VALUES (:molde, :codigo, :nome, :dono, :semente, :ano)""",
 				Map.of("molde", pais.moldeId(), "codigo", pais.codigo(), "nome", liga.nome(), "dono", donoId, "semente",
-						semente));
+						semente, "ano", anoInicial));
 		ConfiguracaoLiga copia = TabelasLiga.JOGO.gravar(jdbc, jogoId, liga);
 		List<Clube> origens = clubes(liga);
 		List<Clube> destinos = clubes(copia);

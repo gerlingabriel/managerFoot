@@ -158,7 +158,7 @@ public class CaixaRepositorio {
 		}
 		Integer publicoMedio = publicos.isEmpty() ? null
 				: (int) Math.round(publicos.values().stream().mapToInt(Integer::intValue).average().orElseThrow());
-		return new VisaoFinancas(oClube, temporada.numero(), situacao.divisao(), situacao.rodadas(), moeda(jogoId), saldo,
+		return new VisaoFinancas(oClube, jogos.ano(jogoId, temporada.numero()), situacao.divisao(), situacao.rodadas(), moeda(jogoId), saldo,
 				saldoInicio, situacao.estadio(), publicoMedio, caixa.ingresso(divisao.prioridade()),
 				caixa.folha(plantel), plantel.size(), extrato);
 	}
@@ -269,6 +269,7 @@ public class CaixaRepositorio {
 	/**
 	 * A aba Finanças do clube do usuário, em centavos de Real.
 	 *
+	 * @param temporada ano da temporada
 	 * @param rodadas rodadas já jogadas na temporada
 	 * @param saldoInicioTemporada saldo antes do primeiro lançamento da temporada
 	 * @param estadio capacidade do estádio

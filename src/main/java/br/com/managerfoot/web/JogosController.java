@@ -105,7 +105,7 @@ class JogosController {
 	private static Linha linha(JogoGravado j) {
 		String divisao = j.divisao() == null ? "Fila de espera" : j.divisao();
 		return new Linha(j.jogoId(), j.clube(), divisao,
-				j.pais() + " · " + divisao + " · temporada " + j.temporada() + ", rodada " + j.rodada(),
+				j.pais() + " · " + divisao + " · temporada " + j.ano() + ", rodada " + j.rodada(),
 				"Jogado em " + QUANDO.format(j.ultimoAcesso().atZone(ZoneId.systemDefault())));
 	}
 

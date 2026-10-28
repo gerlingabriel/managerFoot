@@ -76,6 +76,8 @@ class FimDeTemporadaRepositorioIT {
 			rodadas.avancar(jogo, rodada);
 		}
 		ConfiguracaoLiga liga = jogos.carregarLiga(jogo);
+		List<String> lideres = rodadas.classificacao(jogo).values().stream()
+			.map(c -> c.linhas().getFirst().clube().nome()).toList();
 		TransicaoTemporada esperada = TransicaoTemporada.aplicar(liga, rodadas.classificacao(jogo),
 				new SplittableRandom(~SEMENTE_NOVA));
 		long suspensoesAntes = contar("SELECT coalesce(sum(j.suspensao), 0) FROM jogo_jogador j "
@@ -104,6 +106,11 @@ class FimDeTemporadaRepositorioIT {
 		assertThat(rodadas.rodadasProcessadas(jogo)).isZero();
 		assertThat(segunda.divisoes().get(1).calendario().jogos())
 			.anyMatch(j -> j.mandante().nome().equals("Fila 1"));
+
+		// histórico: o líder final de cada divisão, com o ano da temporada (rev. 40)
+		assertThat(jdbc.sql("SELECT clube_nome FROM jogo_campeao WHERE jogo_id = ? AND temporada = 1 AND ano = 2026")
+			.param(jogo).query(String.class).list()).containsExactlyInAnyOrderElementsOf(lideres);
+		assertThat(jogos.ano(jogo, 2)).isEqualTo(2027);
 
 		assertThatThrownBy(() -> fim.avancarTemporada(jogo, 1, SEMENTE_NOVA)).isInstanceOf(IllegalStateException.class)
 			.hasMessageContaining("é a 2");

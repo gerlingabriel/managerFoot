@@ -137,10 +137,10 @@ class PlantelController {
 					: nova.transicao().promovidos().stream().anyMatch(c -> c.id() == clube)
 					? " Seu clube subiu de divisão!"
 					: nova.transicao().rebaixados().stream().anyMatch(c -> c.id() == clube) ? " Seu clube foi rebaixado." : "";
-			redirect.addFlashAttribute("resultado", "Começou a temporada " + nova.temporada().numero() + "." + destino);
+			redirect.addFlashAttribute("resultado", "Começou a temporada " + jogo.ano(jogoId, nova.temporada().numero()) + "." + destino);
 		}
 		catch (IllegalStateException e) {
-			redirect.addFlashAttribute("erro", "A temporada " + temporada + " já foi encerrada.");
+			redirect.addFlashAttribute("erro", "A temporada " + jogo.ano(jogoId, temporada) + " já foi encerrada.");
 		}
 		return voltar(jogoId);
 	}

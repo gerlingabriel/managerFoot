@@ -105,7 +105,7 @@ class JogosIT {
 		assertThat(jogos.listar(participante.id())).hasSize(1);
 		mvc.perform(get("/").with(como(participante)))
 			.andExpect(content().string(containsString("Brasil · ")))
-			.andExpect(content().string(containsString("temporada 1, rodada 1")))
+			.andExpect(content().string(containsString("temporada 2026, rodada 1")))
 			.andExpect(content().string(containsString("href=\"" + url + "/plantel\"")))
 			.andExpect(content().string(not(containsString("Você ainda não tem jogos"))));
 	}

@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 40 (2026-10-28):** ano da temporada (começa em 2026, configurável, +1 por temporada); histórico só de campeões e ranking de títulos dos treinadores; regras do usuário para mercado (compra direta pelo preço da força, leilão 20% mais barato com lance de cada um), contrato em temporadas, pedido de aumento, empréstimo em blocos de 500 mil a 1% por rodada e patrocínio escolhido a cada início de ano.
 -   **rev. 39 (2026-10-28):** modelo da aba Finanças aprovado (só o clube do usuário); saldo do caixa no plantel; público no quadro da rodada e na janela; estádio com nome geral, sem nome próprio por clube; jogadores à venda no clique do clube ficam para o mercado.
 -   **rev. 38 (2026-10-28):** valores do caixa da rodada aprovados como ponto de partida, ajustáveis por simulação; o caixa é lançado no avanço da rodada; clubes da fila de espera não têm lançamentos.
 -   **rev. 37 (2026-10-28):** moeda exibida pelo país da liga e valores guardados em centavos de Real; a economia começa pelo caixa da rodada; as tabelas de valores são propostas pelo agente e validadas por simulação antes do código.
@@ -1106,6 +1107,25 @@ os cartões de um time todo calmo (antes, 2,8 vezes).
     patrocínio, validadas por simulação (§9).
 
 
+### 8.1.1 Ano da temporada e histórico
+
+**Definido (rev. 40):**
+- Cada temporada tem um **ano**: o jogo começa em **2026** (configurável) e
+  cada temporada nova soma um ano. As telas mostram "Temporada 2026".
+- O jogo guarda o **histórico de campeões** por ano. Não haverá histórico
+  de artilheiros por ano.
+- **Ranking de treinadores:** quantos títulos cada treinador tem (só a
+  quantidade).
+- **Em aberto:** quais títulos contam no ranking (só a 1ª divisão ou
+  todas as divisões; copas quando existirem) e se treinadores da máquina
+  aparecem (hoje eles não existem no domínio, §5.4). Proposta: o
+  histórico grava o campeão de **todas** as divisões, com o treinador
+  humano quando houver; a decisão do ranking fica para a tela.
+- **Conflito a confirmar:** o usuário disse que não haverá histórico de
+  artilheiros; a aba "Artilheiros de todos os tempos" (rev. 16) continua
+  até o usuário dizer o contrário, porque é um ranking acumulado e não um
+  histórico por ano.
+
 ### 8.2 Copas nacionais
 
 A copa deve ser configurável, inclusive com alteração do nome. - Formato
@@ -1380,6 +1400,19 @@ Quando o clube estiver no elenco mínimo e um jogador estiver suspenso ou lesion
 -   Um usuário poderá comprar jogadores por leilão ou por compra direta
     a preço definido, quando essa opção existir.
 
+**Definido (rev. 40), pelo usuário:**
+- **Preço do jogador** vem de uma tabela pela força ("um jogador de força
+  X custa Y"). A tabela será proposta pelo agente e validada por simulação,
+  como os salários.
+- **Compra direta:** o usuário compra do clube pelo preço da tabela; é o
+  caminho mais comum para o usuário.
+- **Leilão:** começa no preço da tabela **com 20% de desconto**. Cada
+  participante (usuário e máquina) coloca **um preço**; quem oferecer
+  mais leva. A **máquina participa** e deve ser a compradora mais comum.
+- **Em aberto:** quando o leilão fecha (fim da rodada?), empate de lances,
+  regra de lance da máquina (orçamento, posição que falta, força) e o
+  desconto do estrangeiro.
+
 ### 9.5 Contratos, salários e empréstimos
 
 -   Jogadores possuem contratos com prazo e salário.
@@ -1390,6 +1423,27 @@ Quando o clube estiver no elenco mínimo e um jogador estiver suspenso ou lesion
 -   Se o clube não aceitar a negociação, o jogador poderá ser colocado
     em leilão, de acordo com regras a definir.
 -   Empréstimos e juros devem existir.
+
+**Definido (rev. 40), pelo usuário:**
+- **Contrato em temporadas:** ao comprar ou renovar, o contrato vale um
+  número de temporadas e acaba quando começa a temporada seguinte à
+  última. Comprado na última rodada com contrato de 1 temporada, o
+  jogador começa a próxima já sem contrato.
+- **Pedido de aumento:** quando a força do jogador sobe acima do que o
+  salário paga, ele pede aumento para o salário da força atual. No
+  máximo **1 pedido por rodada** no clube, mesmo que vários jogadores
+  tenham crescido. Aceitar renova o contrato e o jogador não pode ser
+  vendido naquela rodada; recusar põe o jogador em **leilão**, sem o
+  usuário definir o preço (preço da tabela com 20% de desconto).
+- **Dependência:** hoje a força dos jogadores não muda (§6.1 em aberto) e
+  o salário segue a força atual; o pedido de aumento só tem efeito depois
+  da evolução de força e do salário gravado no contrato.
+- **Empréstimo:** em blocos de **500 mil** (Real; convertido na moeda da
+  liga); cada bloco paga **1% de juros por rodada**. O usuário pega
+  quando quiser, pode pagar e pegar de novo.
+- **Em aberto:** limite de blocos, pagamento parcial, o que acontece com
+  saldo negativo e com quem não paga (§9.3); contratos de quantas
+  temporadas podem ser escolhidos.
 -   Definir limites, prazos, taxas e consequências de inadimplência
     antes da implementação final.
 
@@ -1408,6 +1462,17 @@ Quando o clube estiver no elenco mínimo e um jogador estiver suspenso ou lesion
     importância da bilheteria, do mercado e da gestão salarial.
 -   Pode existir uma "força do patrocinador", usada pelo jogo para
     calcular o valor da proposta.
+
+**Definido (rev. 40), pelo usuário:** a cada início de ano aparece uma
+caixa com opções de patrocínio, acessível pelo plantel; o usuário escolhe
+uma e o dinheiro entra no caixa do clube. As opções dependem da posição
+na temporada anterior.
+- **Conflito a confirmar:** acima, contratos de 2 a 4 anos; a regra nova
+  é uma escolha por ano. Proposta: vale a regra nova (um patrocínio por
+  temporada) e os contratos longos saem.
+- **Em aberto:** valores por posição, na primeira temporada (o usuário
+  sugeriu todos iguais), se o dinheiro entra de uma vez ou por rodada, e
+  patrocínio dos clubes da máquina.
 
 ## 10. Interface e apresentação
 

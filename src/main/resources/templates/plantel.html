@@ -88,7 +88,7 @@
 
 <form th:if="${v.temporadaEncerrada}" th:action="@{/jogos/{id}/temporada(id=${v.jogoId})}" method="post" class="pilha-curta" data-envio-unico>
 <input type="hidden" name="temporada" th:value="${v.temporada}">
-<span class="texto" th:text="|Temporada ${v.temporada} encerrada: seu clube terminou em ${v.posicao}º.|">Temporada encerrada</span>
+<span class="texto" th:text="|Temporada ${v.ano} encerrada: seu clube terminou em ${v.posicao}º.|">Temporada encerrada</span>
 <button type="submit" class="botao botao-largo">OK, começar a próxima</button>
 </form>
 <form th:unless="${v.temporadaEncerrada}" th:action="@{/jogos/{id}/rodada(id=${v.jogoId})}" method="post" class="pilha-curta" data-envio-unico>

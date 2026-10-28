@@ -79,6 +79,7 @@ public class FimDeTemporadaRepositorio {
 		}
 
 		Map<Integer, Classificacao> finais = rodadas.classificacao(jogoId);
+		gravarCampeoes(jogoId, numero, finais);
 		// gerador da fila separado do usado por Temporada.iniciar com a mesma semente
 		TransicaoTemporada transicao = TransicaoTemporada.aplicar(jogos.carregarLiga(jogoId), finais,
 				new SplittableRandom(~semente));
@@ -94,6 +95,29 @@ public class FimDeTemporadaRepositorio {
 		Temporada nova = Temporada.iniciar(numero + 1, transicao.proxima(), jogos.carregarPlanteis(jogoId), semente);
 		temporadas.gravar(jogoId, nova);
 		return new NovaTemporada(transicao, nova, demitidos);
+	}
+
+	/**
+	 * Histórico de campeões (SPEC §8.1.1, rev. 40): o primeiro da classificação final de cada
+	 * divisão, com o ano da temporada e o usuário que dirigia o clube (nulo para a máquina).
+	 */
+	private void gravarCampeoes(long jogoId, int temporada, Map<Integer, Classificacao> finais) {
+		finais.forEach((prioridade, classificacao) -> {
+			Clube campeao = classificacao.linhas().getFirst().clube();
+			jdbc.sql("""
+					INSERT INTO jogo_campeao (jogo_id, temporada, ano, divisao_prioridade, divisao_nome, clube_id,
+					                          clube_nome, usuario_id)
+					SELECT j.id, :temporada, j.ano_inicial + :temporada - 1, d.prioridade, d.nome, c.id, c.nome,
+					       (SELECT t.usuario_id FROM jogo_treinador t WHERE t.clube_id = c.id)
+					FROM jogo j JOIN jogo_divisao d ON d.jogo_id = j.id AND d.prioridade = :prioridade
+					JOIN jogo_clube c ON c.id = :clube
+					WHERE j.id = :jogo""")
+				.param("temporada", temporada)
+				.param("prioridade", prioridade)
+				.param("clube", campeao.id())
+				.param("jogo", jogoId)
+				.update();
+		});
 	}
 
 	/**
