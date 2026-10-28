@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 28 — 2026-10-27)
+-   **Status:** versão inicial para revisão (rev. 29 — 2026-10-27)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 29 (2026-10-27):** tela inicial só com novo jogo e jogo gravado; vários jogos gravados por usuário; dois caminhos do administrador no novo jogo; clube com usuário não aceita outro usuário; sorteio em rede com grupo maior a cada usuário; entrada em rede pela sala antes da rodada 1 (provisório); jogo individual testado antes da rede.
 -   **rev. 28 (2026-10-27):** modo de início do jogo (sorteio ou escolha) definido pelo administrador e válido para todos; jogo individual do participante sempre por sorteio; treinadores em rede no plantel; modelos de entrada, novo jogo e quadro de escolha aprovados; molde pessoal salvo no servidor como possibilidade futura.
 -   **rev. 27 (2026-10-27):** clube pertence ao país, não à divisão; a liga só define o formato das divisões; clubes distribuídos pela força ao criar o jogo, com empate sorteado; prioridade automática; promovidos calculados; excluir divisão sobe as de baixo; quadro de escolha do administrador.
 -   **rev. 26 (2026-10-27):** divisões precisam estar completas para o jogo começar e a estrutura não muda durante o jogo; clube começa com a força cadastrada em qualquer divisão e perde força aos poucos até o teto; treinador da máquina com clube rebaixado para a fila segue a demissão por moral.
@@ -159,11 +160,21 @@ Um participante sem privilégios de administrador:
     em rede, todos os participantes escolhem, não só o administrador.
   - Só o administrador define o modo. O jogo individual do participante
     comum é sempre no modo sorteio.
+  - **Definido (rev. 29):** o administrador define o modo pelo caminho que
+    escolhe no novo jogo: **"Sortear clube e começar"** é o modo sorteio e
+    **"Escolher clube"** é o modo escolha, que abre o quadro de escolha de
+    clube.
   - **Provisório:** o modo fica gravado no jogo, para valer para quem
     entrar depois no jogo em rede (Etapa 5).
-  - **Em aberto (Etapa 5):** no modo escolha, dois treinadores podem ficar
-    com o mesmo clube? **Proposta:** não; quem confirmar primeiro fica com
-    ele, e o clube some do quadro dos outros.
+  - **Definido (rev. 29):** um clube que já tem treinador usuário **não
+    aceita outro usuário**. No modo escolha, ele aparece bloqueado no quadro
+    dos outros; se dois confirmarem ao mesmo tempo, fica com quem o servidor
+    processar primeiro.
+  - **Definido (rev. 29) — sorteio em rede:** o grupo de candidatos cresce
+    **um clube por usuário**: 1 usuário sorteia entre os 4 mais fracos, 2
+    entre os 5, 3 entre os 6, e assim por diante (grupo = 4 + usuários − 1;
+    o 4 continua configurável). Clubes que já têm usuário saem do sorteio, e
+    os empatados com o último do grupo continuam entrando.
 - Não poderá alterar regras globais da liga, salvo permissão explícita do
   administrador.
 - **Definido:** pode jogar no modo individual.
@@ -231,6 +242,8 @@ do editor.
 **Definido — salvar na máquina pessoal:**
 - Enquanto o jogo está em andamento, o estado fica no servidor, porque a
   simulação roda lá (`docs/decisions/0004`).
+- **Definido (rev. 29):** cada usuário pode ter **vários jogos gravados** no
+  servidor e voltar a qualquer um deles.
 - O usuário pode **baixar um arquivo de save** para o computador e depois
   **apagar o jogo do servidor**.
 - Para continuar, o usuário envia o arquivo de volta. O servidor
@@ -251,6 +264,17 @@ A sala deverá exibir, no mínimo: - Quantidade de participantes
 conectados. - Nome do treinador de cada participante. - Clube escolhido
 por cada participante. - Estado de cada participante na fase atual (por
 exemplo, configurando, pronto ou desconectado).
+
+**Provisório (rev. 29) — entrada no jogo em rede:**
+- O administrador cria o jogo (campeonato e modo). O jogo fica na **sala**,
+  sem rodada jogada, e ele envia os convites.
+- Quem entra pelo convite não escolhe campeonato nem modo: vai direto para
+  "Sortear clube e começar" (modo sorteio) ou para o quadro de escolha de
+  clube (modo escolha), com os clubes já ocupados bloqueados.
+- O administrador inicia a temporada quando todos estiverem prontos.
+
+**Em aberto (Etapa 5):** entrar num jogo em rede depois da rodada 1.
+**Proposta:** não permitir na primeira versão.
 
 ## 4. Estrutura de ligas e divisões
 
@@ -1417,6 +1441,16 @@ usuário:
   escolha, os clubes do país aparecem nas divisões pela força, a fila de
   espera não pode ser escolhida e o clique no clube mostra o plantel.
 
+**Definido (rev. 29):**
+- **Início**, logo depois de entrar, com **só duas opções**: "Novo jogo" e
+  "Voltar a um jogo gravado" (lista com clube, país, divisão, temporada,
+  rodada e último acesso).
+- **Novo jogo do administrador:** depois do campeonato, dois caminhos:
+  "Sortear clube e começar" ou "Escolher clube". O do participante segue
+  só com o sorteio.
+- O quadro passa a se chamar **quadro de escolha de clube**, sem botão para
+  refazer o sorteio dos empates.
+
 ## 11. Relógio da partida e sincronização multiplayer
 
 ### 11.1 Preparação por turnos
@@ -1723,6 +1757,8 @@ começa depois que a anterior estiver testada.
   mercado, leilões e patrocínios.
 
 ### Etapa 5 — Multiplayer
+- **Definido (rev. 29):** só começa depois que o jogo individual estiver
+  jogável e testado pelo usuário (mecânica e bugs).
 - Sala, convites por e-mail, confirmação de turno, polling e velocidade
   definida pelo administrador.
 - Desconexão (§11.4), privacidade e processamento único.
