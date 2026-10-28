@@ -26,6 +26,7 @@ import br.com.managerfoot.temporada.Disciplina;
 import br.com.managerfoot.temporada.Jogo;
 import br.com.managerfoot.temporada.ProcessamentoRodada;
 import br.com.managerfoot.temporada.ResultadoJogo;
+import br.com.managerfoot.temporada.RodadaAoVivo;
 import br.com.managerfoot.temporada.Temporada;
 
 /**
@@ -67,6 +68,15 @@ public class RodadaRepositorio {
 	 */
 	@Transactional
 	public RodadaJogada avancar(long jogoId, int rodada) {
+		return avancar(jogoId, rodada, List.of());
+	}
+
+	/**
+	 * Como {@link #avancar(long, int)}, com as substituições feitas na rodada ao vivo
+	 * (docs/decisions/0010).
+	 */
+	@Transactional
+	public RodadaJogada avancar(long jogoId, int rodada, List<RodadaAoVivo.Substituicao> substituicoes) {
 		LinhaTemporada linha = temporadaAtual(jogoId, true);
 		if (rodada != linha.rodadasProcessadas() + 1) {
 			throw new IllegalStateException("o jogo " + jogoId + " já processou " + linha.rodadasProcessadas()
@@ -77,22 +87,11 @@ public class RodadaRepositorio {
 			throw new IllegalStateException("a temporada do jogo " + jogoId + " já teve as " + total + " rodadas jogadas");
 		}
 
-		Temporada temporada = temporadas.carregarAtual(jogoId);
 		Map<Long, List<Jogador>> planteis = jogos.carregarPlanteis(jogoId);
 		Disciplina antes = carregarDisciplina(jogoId);
 		Map<Long, Moral> moralAntes = carregarMoral(jogoId);
-		Map<Long, Escalacao> doTreinador = new HashMap<>();
-		escalacoes.carregarDoJogo(jogoId).forEach((clubeId, escalacao) -> {
-			try {
-				doTreinador.put(clubeId, escalacao.escalacao(planteis.getOrDefault(clubeId, List.of()), antes::suspenso));
-			}
-			catch (IllegalStateException e) {
-				throw new IllegalStateException("o clube " + clubeId + " não pode jogar a rodada " + rodada + ": "
-						+ e.getMessage(), e);
-			}
-		});
-		ProcessamentoRodada.Resultado resultado = processamento.jogar(temporada, rodada, planteis, antes, moralAntes,
-				doTreinador);
+		ProcessamentoRodada.Resultado resultado = preparar(jogoId, rodada, planteis, antes, substituicoes)
+			.finalizar(moralAntes);
 
 		for (ProcessamentoRodada.PartidaJogada partida : resultado.partidas()) {
 			gravarPartida(linha.id(), partida);
@@ -119,6 +118,33 @@ public class RodadaRepositorio {
 			throw new IllegalStateException("a rodada " + rodada + " do jogo " + jogoId + " já foi processada");
 		}
 		return new RodadaJogada(rodada, resultado);
+	}
+
+	/**
+	 * A rodada pronta para jogar ao vivo, com as escalações e as substituições já feitas. Não grava
+	 * nada.
+	 *
+	 * @throws IllegalStateException se a escalação de um treinador não pode jogar
+	 */
+	@Transactional(readOnly = true)
+	public RodadaAoVivo preparar(long jogoId, int rodada, List<RodadaAoVivo.Substituicao> substituicoes) {
+		return preparar(jogoId, rodada, jogos.carregarPlanteis(jogoId), carregarDisciplina(jogoId), substituicoes);
+	}
+
+	private RodadaAoVivo preparar(long jogoId, int rodada, Map<Long, List<Jogador>> planteis, Disciplina antes,
+			List<RodadaAoVivo.Substituicao> substituicoes) {
+		Map<Long, Escalacao> doTreinador = new HashMap<>();
+		escalacoes.carregarDoJogo(jogoId).forEach((clubeId, escalacao) -> {
+			try {
+				doTreinador.put(clubeId, escalacao.escalacao(planteis.getOrDefault(clubeId, List.of()), antes::suspenso));
+			}
+			catch (IllegalStateException e) {
+				throw new IllegalStateException("o clube " + clubeId + " não pode jogar a rodada " + rodada + ": "
+						+ e.getMessage(), e);
+			}
+		});
+		return processamento.preparar(temporadas.carregarAtual(jogoId), rodada, planteis, antes, doTreinador,
+				substituicoes);
 	}
 
 	/** Rodadas já jogadas na temporada atual. */

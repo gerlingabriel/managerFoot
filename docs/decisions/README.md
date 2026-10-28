@@ -21,3 +21,4 @@ consideradas, decisão e consequências.
 | [0007](0007-contas-e-cadastro.md) | Contas, senhas e link de cadastro | Aceita |
 | [0008](0008-banco-padrao-gerado.md) | Banco padrão gerado por código e carregado por comando | Aceita |
 | [0009](0009-login-com-sessao.md) | Login com sessão, telas de entrada e link pelo terminal | Aceita |
+| [0010](0010-rodada-ao-vivo.md) | Rodada ao vivo: relógio, pausa e substituições | Aceita |

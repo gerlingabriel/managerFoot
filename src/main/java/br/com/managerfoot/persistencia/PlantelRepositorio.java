@@ -139,6 +139,10 @@ public class PlantelRepositorio {
 	private void alterar(long jogoId, long usuarioId, UnaryOperator<EscalacaoDoTreinador> mudanca, Long jogadorId,
 			Lugar lugar) {
 		long clube = exigirClube(jogoId, usuarioId);
+		if (jdbc.sql("SELECT EXISTS (SELECT 1 FROM jogo_rodada_ao_vivo WHERE jogo_id = :jogo)").param("jogo", jogoId)
+			.query(Boolean.class).single()) {
+			throw new IllegalArgumentException("A rodada está em andamento: as trocas agora são pela substituição.");
+		}
 		List<Jogador> plantel = jogos.carregarPlanteis(jogoId).getOrDefault(clube, List.of());
 		if (jogadorId != null) {
 			Jogador jogador = plantel.stream().filter(j -> j.id() == jogadorId).findFirst()

@@ -2,10 +2,11 @@ package br.com.managerfoot.temporada;
 
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.SplittableRandom;
 
 import br.com.managerfoot.dominio.Clube;
@@ -26,8 +27,9 @@ import br.com.managerfoot.motor.ResultadoPartida;
  * humano jogam com a escalação dele; os demais são escalados pela máquina. Domínio puro: quem chama carrega e grava o estado.
  *
  * <p>Ordem: da divisão de maior número de prioridade até a 1ª; dentro dela, a do calendário.
- * Um gerador derivado da semente da temporada e do número da rodada dá a semente de cada partida
- * e, logo depois dela, o sorteio das suspensões por vermelho direto. Mesmo estado, mesma rodada.
+ * Um gerador derivado da semente da temporada e do número da rodada dá a semente de cada partida,
+ * todas antes do primeiro minuto, e depois a semente do sorteio das suspensões por vermelho direto
+ * (docs/decisions/0010). Mesmo estado, mesma rodada.
  */
 public final class ProcessamentoRodada {
 
@@ -87,9 +89,22 @@ public final class ProcessamentoRodada {
 	 */
 	public Resultado jogar(Temporada temporada, int rodada, Map<Long, List<Jogador>> planteis, Disciplina disciplina,
 			Map<Long, Moral> moral, Map<Long, Escalacao> escalacoes) {
+		return preparar(temporada, rodada, planteis, disciplina, escalacoes, List.of()).finalizar(moral);
+	}
+
+	/**
+	 * Prepara a rodada para jogar ao vivo (docs/decisions/0010): escala os times e sorteia a semente
+	 * de cada partida antes do primeiro minuto. As suspensões usam um gerador separado, para uma
+	 * substituição numa partida não mudar as outras.
+	 *
+	 * @param substituicoes as já feitas pelos treinadores nesta rodada
+	 * @throws IllegalArgumentException se nenhuma divisão tem a rodada
+	 * @throws IllegalStateException se uma escalação tem jogador suspenso ou um clube não tem 11
+	 */
+	public RodadaAoVivo preparar(Temporada temporada, int rodada, Map<Long, List<Jogador>> planteis,
+			Disciplina disciplina, Map<Long, Escalacao> escalacoes, List<RodadaAoVivo.Substituicao> substituicoes) {
 		SplittableRandom aleatorio = new SplittableRandom(temporada.semente() ^ (rodada * MISTURA_RODADA));
-		Map<Long, Moral> novaMoral = new HashMap<>(moral);
-		List<PartidaJogada> partidas = new ArrayList<>();
+		List<RodadaAoVivo.PartidaDaRodada> partidas = new ArrayList<>();
 		List<Temporada.SorteiosDivisao> ordem = temporada.divisoes()
 			.stream()
 			.sorted(Comparator.comparingInt(Temporada.SorteiosDivisao::prioridade).reversed())
@@ -102,28 +117,27 @@ public final class ProcessamentoRodada {
 				.flatMap(r -> r.jogos().stream())
 				.toList();
 			for (Jogo jogo : jogos) {
-				long semente = aleatorio.nextLong();
 				CondicoesPartida condicoes = new CondicoesPartida(
 						Map.of(Lado.CASA, divisao.sorte().de(jogo.mandante()), Lado.FORA,
 								divisao.sorte().de(jogo.visitante())),
 						divisao.bonus().bonusExtra());
-				ResultadoPartida resultado = motor.simular(regras,
+				Set<Lado> doUsuario = EnumSet.noneOf(Lado.class);
+				if (escalacoes.containsKey(jogo.mandante().id())) {
+					doUsuario.add(Lado.CASA);
+				}
+				if (escalacoes.containsKey(jogo.visitante().id())) {
+					doUsuario.add(Lado.FORA);
+				}
+				partidas.add(new RodadaAoVivo.PartidaDaRodada(divisao.prioridade(), jogo, aleatorio.nextLong(),
 						escalar(jogo.mandante(), divisao, planteis, disciplina, escalacoes),
-						escalar(jogo.visitante(), divisao, planteis, disciplina, escalacoes), condicoes, semente);
-				partidas.add(new PartidaJogada(divisao.prioridade(), jogo, semente, resultado));
-
-				List<Long> jogadores = new ArrayList<>();
-				plantel(jogo.mandante(), planteis).forEach(j -> jogadores.add(j.id()));
-				plantel(jogo.visitante(), planteis).forEach(j -> jogadores.add(j.id()));
-				disciplina = disciplina.aposPartida(jogadores, resultado, suspensao, aleatorio);
-				atualizarMoral(novaMoral, jogo.mandante(), true, resultado.golsCasa(), resultado.golsFora());
-				atualizarMoral(novaMoral, jogo.visitante(), false, resultado.golsFora(), resultado.golsCasa());
+						escalar(jogo.visitante(), divisao, planteis, disciplina, escalacoes), doUsuario, condicoes));
 			}
 		}
 		if (partidas.isEmpty()) {
 			throw new IllegalArgumentException("nenhuma divisão tem a rodada " + rodada);
 		}
-		return new Resultado(partidas, disciplina, novaMoral);
+		return new RodadaAoVivo(motor, regras, suspensao, parametrosMoral, partidas, planteis, disciplina,
+				aleatorio.nextLong(), substituicoes);
 	}
 
 	/**
@@ -158,10 +172,5 @@ public final class ProcessamentoRodada {
 
 	private static List<Jogador> plantel(Clube clube, Map<Long, List<Jogador>> planteis) {
 		return planteis.getOrDefault(clube.id(), List.of());
-	}
-
-	private void atualizarMoral(Map<Long, Moral> moral, Clube clube, boolean emCasa, int golsPro, int golsContra) {
-		Moral atual = moral.getOrDefault(clube.id(), Moral.inicial(parametrosMoral));
-		moral.put(clube.id(), atual.aposJogo(emCasa, golsPro, golsContra, parametrosMoral));
 	}
 }

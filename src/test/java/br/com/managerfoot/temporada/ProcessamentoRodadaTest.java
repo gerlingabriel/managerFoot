@@ -30,11 +30,11 @@ import br.com.managerfoot.motor.TipoEvento;
 
 class ProcessamentoRodadaTest {
 
-	private static final ConfiguracaoLiga LIGA = new ConfiguracaoLiga("Nacional",
+	static final ConfiguracaoLiga LIGA = new ConfiguracaoLiga("Nacional",
 			List.of(new Divisao("A", 1, 50, 0, 2, clubes(1, 16, 35)), new Divisao("B", 2, 30, 2, 2, clubes(101, 15, 22))),
 			clubes(201, 2, 15));
-	private static final Map<Long, List<Jogador>> PLANTEIS = planteis();
-	private static final Temporada TEMPORADA = Temporada.iniciar(1, LIGA, PLANTEIS, 99);
+	static final Map<Long, List<Jogador>> PLANTEIS = planteis();
+	static final Temporada TEMPORADA = Temporada.iniciar(1, LIGA, PLANTEIS, 99);
 
 	private final ProcessamentoRodada processamento = ProcessamentoRodada.padrao();
 

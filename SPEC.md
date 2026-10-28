@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 35 (2026-10-28):** rodada ao vivo com relógio no servidor (ADR 0010); velocidades lenta, normal e rápida; divisão sem usuário em cerca de 5 s; sair da tela não pausa a partida.
 -   **rev. 34 (2026-10-28):** no plantel, botões Titular/Banco/Fora em cada linha; suspenso sai sozinho para fora do banco e o treinador completa o time; escalação inicial da máquina (provisório); até o minuto a minuto, "Confirmar e jogar rodada" joga a rodada inteira e mostra o placar.
 -   **rev. 33 (2026-10-28):** quadro da rodada mostra o último lance com ícone; clicar num clube abre uma janela pequena sobre o quadro, como no Elifoot 98, com lances em ordem e, no próprio clube, substituição; clube da máquina mostra a prévia dos 11 de cada lado em vez do 11 x 11 com detalhes; modelos aprovados.
 -   **rev. 32 (2026-10-27):** no banco padrão todos os jogadores são do país do clube; estrangeiros entram pelo editor; adaptação dos formatos aprovada; pesos do temperamento.
@@ -1613,6 +1614,20 @@ Na tela, a divisão sem usuário é exibida sempre em velocidade rápida
 As divisões de número maior vêm primeiro (por exemplo, 3, depois 2) e a
 liga principal (1) por último. Com uma única liga, basta a prioridade 1.
 
+**Definido (rev. 35) — rodada ao vivo (`docs/decisions/0010`):**
+- O servidor anda o relógio pelo tempo passado e refaz cada partida pela
+  semente e pelas substituições gravadas. A tela consulta a cada 1 s
+  (provisório).
+- **Velocidades da divisão com usuário (provisórias):** lenta (1 s por
+  minuto de jogo), normal (0,5 s) e rápida (0,2 s). Começa em normal; a
+  escolha fica gravada para as próximas rodadas.
+- **Divisão sem usuário:** cerca de 5 s na tela (0,05 s por minuto).
+- **Jogo individual:** sair da tela no meio da rodada **não pausa**. A
+  partida segue no servidor, e ao voltar a tela mostra o minuto atual ou o
+  resultado.
+- Enquanto a rodada está ao vivo, a escalação não muda pelo plantel; as
+  trocas são feitas pela substituição.
+
 ### 11.3 Ações privadas e pausas
 
 -   Ações privadas, como escolher substituições ou selecionar o cobrador
@@ -1868,6 +1883,14 @@ começa depois que a anterior estiver testada.
     "Confirmar e jogar rodada" com o placar. As abas de classificação e
     artilheiros, a ficha do jogador e o bloco de treinadores em rede ficam
     para a 3f.5 e a Etapa 5.
+  - **3f.4a (concluída):** rodada ao vivo no servidor (ADR 0010, migração
+    V13): relógio pelo tempo, velocidades, pausa só na divisão do usuário,
+    substituição com a partida pausada, partidas refeitas pela semente e
+    gravação no fim uma vez só. As sementes das partidas passam a ser
+    sorteadas antes das suspensões.
+  - **3f.4b:** quadro da rodada (modelo 1a) com polling e velocidade.
+  - **3f.4c:** janela do jogo com pausa e substituição (modelos 1d e 1e) e
+    som do gol.
   - plantel e tática;
   - partidas simultâneas da divisão (§10.2);
   - classificação;
