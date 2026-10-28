@@ -1,0 +1,101 @@
+package br.com.managerfoot.economia;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.junit.jupiter.api.Test;
+
+import br.com.managerfoot.dominio.Clube;
+import br.com.managerfoot.dominio.Jogador;
+import br.com.managerfoot.dominio.Posicao;
+import br.com.managerfoot.dominio.Temperamento;
+
+class MercadoDaMaquinaTest {
+
+	private final MercadoDaMaquina mercado = MercadoDaMaquina.padrao();
+
+	@Test
+	void limiteEDezRodadasDaFolhaEAbaixoDeleOClubeVende() {
+		// 23 jogadores de força 17: folha de R$ 46.000 por rodada
+		List<Jogador> plantel = plantel(23, 17);
+		assertThat(mercado.limite(plantel)).isEqualTo(460_000_00L);
+		assertThat(mercado.precisaVender(459_999_00L, plantel)).isTrue();
+		assertThat(mercado.precisaVender(460_000_00L, plantel)).isFalse();
+	}
+
+	@Test
+	void vendeOMaisCaroSemAsteriscoSemFicarAbaixoDoElencoMinimo() {
+		List<Jogador> plantel = new ArrayList<>(plantel(23, 17));
+		plantel.add(jogador(100, Posicao.ATACANTE, 40).comAsterisco(true));
+		plantel.add(jogador(101, Posicao.GOLEIRO, 35));
+		// o atacante de força 40 tem asterisco; o goleiro 101 é o mais caro que pode sair
+		assertThat(mercado.jogadorParaVender(plantel, "BRA")).map(Jogador::id).contains(101L);
+
+		// único goleiro não sai, mesmo sendo o mais caro
+		List<Jogador> semReserva = new ArrayList<>(plantel(23, 17).stream().filter(j -> j.posicao() != Posicao.GOLEIRO).toList());
+		semReserva.add(jogador(200, Posicao.GOLEIRO, 45));
+		assertThat(mercado.jogadorParaVender(semReserva, "BRA").orElseThrow().id()).isNotEqualTo(200L);
+	}
+
+	@Test
+	void ninguemSaiQuandoOElencoEstaNoMinimo() {
+		List<Jogador> minimo = new ArrayList<>();
+		minimo.add(jogador(1, Posicao.GOLEIRO, 20));
+		for (int i = 0; i < 4; i++) {
+			minimo.add(jogador(10 + i, Posicao.DEFENSOR, 20));
+			minimo.add(jogador(20 + i, Posicao.MEIO_CAMPISTA, 20));
+		}
+		minimo.add(jogador(30, Posicao.ATACANTE, 20));
+		minimo.add(jogador(31, Posicao.ATACANTE, 20));
+		assertThat(mercado.jogadorParaVender(minimo, "BRA")).isEmpty();
+	}
+
+	@Test
+	void lanceFicaAbaixoDoPrecoEOClubeMaisForteDaUmPoucoMais() {
+		List<Jogador> plantel = plantel(23, 17);
+		Jogador alvo = jogador(300, Posicao.MEIO_CAMPISTA, 17); // preço R$ 160.000
+		long rico = 10_000_000_00L;
+		long fraco = mercado.lance(new Clube(1, "Fraco", 10), rico, plantel, alvo, "BRA", 128_000_00L).orElseThrow();
+		long forte = mercado.lance(new Clube(2, "Forte", 50), rico, plantel, alvo, "BRA", 128_000_00L).orElseThrow();
+		assertThat(fraco).isEqualTo(146_000_00L); // 160.000 × (0,90 + 0,05 × 10/50) = 145.600
+		assertThat(forte).isEqualTo(152_000_00L); // 160.000 × 0,95
+		assertThat(fraco).isLessThan(forte).isGreaterThanOrEqualTo(128_000_00L);
+	}
+
+	@Test
+	void naoDaLanceSemCaixaAcimaDoLimiteNemComPlantelCheio() {
+		Jogador alvo = jogador(300, Posicao.MEIO_CAMPISTA, 17);
+		Clube clube = new Clube(1, "Clube", 17);
+		List<Jogador> plantel = plantel(23, 17);
+		// com o novo jogador a folha é 24 × R$ 2.000 = R$ 48.000: limite de 10 rodadas mais folga de 5,
+		// R$ 720.000; lance de R$ 147.000
+		assertThat(mercado.lance(clube, 867_000_00L, plantel, alvo, "BRA", 0)).contains(147_000_00L);
+		assertThat(mercado.lance(clube, 866_999_00L, plantel, alvo, "BRA", 0)).isEmpty();
+		assertThat(mercado.lance(clube, 10_000_000_00L, plantel(Clube.MAXIMO_JOGADORES, 17), alvo, "BRA", 0)).isEmpty();
+	}
+
+	@Test
+	void naoDaLanceEmJogadorMaisDeCincoPontosAbaixoDaForcaEmCampo() {
+		Clube clube = new Clube(1, "Clube", 30);
+		List<Jogador> plantel = plantel(23, 30);
+		long rico = 100_000_000_00L;
+		assertThat(mercado.lance(clube, rico, plantel, jogador(300, Posicao.ATACANTE, 25), "BRA", 0)).isPresent();
+		assertThat(mercado.lance(clube, rico, plantel, jogador(301, Posicao.ATACANTE, 24), "BRA", 0)).isEmpty();
+	}
+
+	private static List<Jogador> plantel(int quantidade, int forca) {
+		Posicao[] ordem = { Posicao.GOLEIRO, Posicao.DEFENSOR, Posicao.DEFENSOR, Posicao.MEIO_CAMPISTA,
+				Posicao.MEIO_CAMPISTA, Posicao.ATACANTE };
+		List<Jogador> plantel = new ArrayList<>();
+		for (int i = 0; i < quantidade; i++) {
+			plantel.add(jogador(i + 1, ordem[i % ordem.length], forca));
+		}
+		return plantel;
+	}
+
+	private static Jogador jogador(long id, Posicao posicao, int forca) {
+		return new Jogador(id, "J" + id, posicao, forca, Temperamento.NORMAL, "BRA");
+	}
+}

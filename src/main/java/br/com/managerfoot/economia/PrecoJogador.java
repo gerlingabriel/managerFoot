@@ -42,7 +42,8 @@ public final class PrecoJogador {
 		return redondo(Math.round(preco(jogador, paisDaLiga) * (1 - parametros.descontoLeilao())));
 	}
 
-	private long redondo(long centavos) {
+	/** Arredonda para o múltiplo do mercado (mínimo de um múltiplo). */
+	long redondo(long centavos) {
 		return Math.max(parametros.arredondamento(),
 				Math.round((double) centavos / parametros.arredondamento()) * parametros.arredondamento());
 	}

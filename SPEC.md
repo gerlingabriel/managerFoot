@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 44 (2026-10-28):** proposta simulada do mercado da máquina (lance 10% abaixo mais até 5% pela força, 1 venda e 1 compra por rodada, interesse até 5 pontos abaixo da força em campo, folga de 5 rodadas da folha na compra), aguardando aprovação.
 -   **rev. 43 (2026-10-28):** estrangeiro 25% mais barato e asterisco 25% mais caro; a máquina só compra por leilão, renova sempre e deixa 5 ou 6 jogadores sorteados à venda; compra e venda da máquina pelo saldo comparado a 10 rodadas da folha; saldo negativo põe jogador em leilão sem lance mínimo; no início da temporada todos ficam sem contrato e só quem ganha abaixo da força pede aumento (1 por rodada); patrocínio entra de uma vez no início, para todos os clubes.
 -   **rev. 42 (2026-10-28):** leilão: empate por sorteio, sem lance não vende até o fim da rodada, máquina dá lance depois do OK dos usuários, usuário sem caixa não precisa ser esperado; estrangeiro 10% mais barato; empréstimo retirado; todo clube tem treinador e o ranking inclui todos; patrocínio proporcional à posição anterior (igual no 1º ano) e por temporada; contrato só até o fim da temporada.
 -   **rev. 41 (2026-10-28):** tabela de preço proposta (80 rodadas de salário, provisória); leilão resolvido na hora: os da máquina depois do OK da tática e antes do minuto a minuto; o do usuário quando ele põe o jogador à venda.
@@ -1471,11 +1472,24 @@ A máquina oferece um pouco abaixo do preço padrão (§9.4).
   como proposta; o usuário ainda não tem noção do valor. Será recalibrada
   pela simulação de temporadas com o mercado da máquina, para que as
   finanças produzam o ciclo acima.
-- **Em aberto:** quanto abaixo do padrão a máquina oferece, o que é
-  "preferência" (proposta: o clube mais forte entre os que podem comprar
-  dá mais, e a posição do jogador não pesa), quantos jogadores a máquina
-  vende ou compra por rodada e se o leilão por falta de caixa respeita o
-  elenco mínimo (§9.3).
+- **Provisório (rev. 44) — proposta do agente, aguardando aprovação,**
+  simulada em `docs/simulacoes/mercado-maquina.md` (valores em
+  `economia.ParametrosMercadoMaquina`, regra em `economia.MercadoDaMaquina`):
+  - **Lance:** 10% abaixo do preço, mais até 5% proporcional à força do
+    clube (a "preferência pela força do time"); leva o maior.
+  - **Quem vende:** o clube abaixo do limite põe em leilão **1 jogador por
+    rodada**, o mais caro sem asterisco cuja saída não deixa a posição
+    abaixo do elenco mínimo do §9.3 (1 goleiro, 4 defensores, 4 meias, 2
+    atacantes).
+  - **Quem compra:** no máximo **1 compra por rodada**; só dá lance em
+    jogador com força de pelo menos a **força em campo do clube menos 5**
+    (sem isso, os clubes ricos da 1ª compravam qualquer jogador e a 3ª
+    nunca comprava); e só se, pago o lance, sobrar o limite **mais 5
+    rodadas da folha** (sem essa folga, 35% das compras eram seguidas de
+    venda em até 3 rodadas; com ela, 0%).
+  - **Resultado:** o terço de cima da tabela compra (0,6 a 1,9 por
+    temporada) e o de baixo vende (1,0 a 2,3); a força em campo do fundo
+    cai cerca de 1 ponto na temporada.
 
 ### 9.5 Contratos, salários e empréstimos
 
