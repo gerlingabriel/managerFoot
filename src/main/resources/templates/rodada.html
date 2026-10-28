@@ -5,8 +5,10 @@
 <div class="campo campo-pagina">
 <div class="pagina">
 
-<div id="quadro" class="pilha-larga" th:attr="hx-get=@{/jogos/{id}/rodada(id=${e.jogoId})}"
-	hx-trigger="every 1s" hx-select="#quadro" hx-swap="outerHTML">
+<div id="quadro" class="pilha-larga" th:attr="hx-get=@{/jogos/{id}/rodada(id=${e.jogoId})},
+		hx-trigger=${e.comUsuario and e.pausada ? null : 'every 1s'},
+		data-gols=${e.golsNaDivisao()}, data-divisao=${e.divisaoAtual}, data-som=${e.somGols}"
+	hx-select="#quadro" hx-swap="outerHTML">
 
 <header class="clube-topo" th:with="atual=${e.divisoes[e.divisaoAtual]}">
 <div class="pilha-curta">
@@ -25,6 +27,7 @@
 </div>
 </header>
 
+<div class="controles-rodada">
 <form th:if="${e.comUsuario}" th:action="@{/jogos/{id}/rodada/velocidade(id=${e.jogoId})}" method="post"
 	class="velocidades" role="group" aria-label="Velocidade da partida"
 	hx-boost="true" hx-target="#quadro" hx-select="#quadro" hx-swap="outerHTML">
@@ -32,6 +35,22 @@
 	th:attr="aria-pressed=${v == e.velocidade}"
 	th:text="${v.name() == 'LENTA' ? 'Lenta' : (v.name() == 'NORMAL' ? 'Normal' : 'Rápida')}">Normal</button>
 </form>
+<form th:action="@{/jogos/{id}/rodada/som(id=${e.jogoId})}" method="post"
+	hx-boost="true" hx-target="#quadro" hx-select="#quadro" hx-swap="outerHTML">
+<input type="hidden" name="ligado" th:value="${!e.somGols}">
+<button type="submit" class="botao-som" data-ativar-som th:attr="aria-pressed=${e.somGols}">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4z"></path><path th:if="${e.somGols}" d="M15.5 8.5a5 5 0 0 1 0 7"></path><path th:if="${e.somGols}" d="M19 5a10 10 0 0 1 0 14"></path><path th:unless="${e.somGols}" d="M22 9l-6 6"></path><path th:unless="${e.somGols}" d="M16 9l6 6"></path></svg>
+<span th:text="${e.somGols} ? 'Som dos gols ligado' : 'Som dos gols desligado'">Som</span>
+</button>
+</form>
+</div>
+
+<div th:if="${e.comUsuario and e.pausada and janela == null}" role="status" class="aviso-pausa">
+<span>Partida pausada.</span>
+<form th:action="@{/jogos/{id}/rodada/continuar(id=${e.jogoId})}" method="post">
+<button type="submit" class="botao">Continuar</button>
+</form>
+</div>
 
 <section th:with="atual=${e.divisoes[e.divisaoAtual]}" th:attr="aria-label=${atual.nome}" class="painel grupo">
 <div class="painel-cabecalho">
@@ -43,7 +62,11 @@
 <div th:each="j : ${e.partidas}" class="jogo-linha" th:classappend="${j.doUsuario} ? 'do-usuario'">
 <div class="jogo-clube mandante">
 <span th:if="${j.expulsaoCasa}" class="cartao vermelho" role="img" aria-label="Expulsão"></span>
-<span class="jogo-nome" th:text="${j.mandante.nome}">Mandante</span>
+<form th:if="${e.comUsuario}" th:action="@{/jogos/{id}/rodada/janela(id=${e.jogoId})}" method="post" class="clube-clicavel">
+<input type="hidden" name="mandante" th:value="${j.mandante.id}">
+<button type="submit" class="jogo-nome" th:text="${j.mandante.nome}" th:attr="aria-label=|${j.mandante.nome}: pausar e ver o jogo|">Mandante</button>
+</form>
+<span th:unless="${e.comUsuario}" class="jogo-nome" th:text="${j.mandante.nome}">Mandante</span>
 <span aria-hidden="true" th:style="${@escudos.estilo(j.mandante.escudo, 22, 26)}"></span>
 </div>
 <div class="placar" th:attr="aria-label=|${j.golsCasa} a ${j.golsFora}|">
@@ -51,7 +74,11 @@
 </div>
 <div class="jogo-clube">
 <span aria-hidden="true" th:style="${@escudos.estilo(j.visitante.escudo, 22, 26)}"></span>
-<span class="jogo-nome" th:text="${j.visitante.nome}">Visitante</span>
+<form th:if="${e.comUsuario}" th:action="@{/jogos/{id}/rodada/janela(id=${e.jogoId})}" method="post" class="clube-clicavel">
+<input type="hidden" name="mandante" th:value="${j.mandante.id}">
+<button type="submit" class="jogo-nome" th:text="${j.visitante.nome}" th:attr="aria-label=|${j.visitante.nome}: pausar e ver o jogo|">Visitante</button>
+</form>
+<span th:unless="${e.comUsuario}" class="jogo-nome" th:text="${j.visitante.nome}">Visitante</span>
 <span th:if="${j.expulsaoFora}" class="cartao vermelho" role="img" aria-label="Expulsão"></span>
 </div>
 <span class="ultimo-lance">
@@ -68,9 +95,11 @@
 </section>
 
 <footer class="rodape-rodada suave">
-<span th:text="${e.comUsuario} ? 'A linha mostra o último lance de cada jogo.' : 'Nenhum clube desta divisão é seu: os jogos correm sempre rápido.'">texto</span>
+<span th:text="${e.comUsuario} ? 'A linha mostra o último lance. Clique num clube para pausar e ver todos os lances; no seu clube, também as substituições.' : 'Nenhum clube desta divisão é seu: os jogos correm sempre rápido.'">texto</span>
 <span th:text="${e.divisaoAtual == e.divisoes.size() - 1} ? 'Ao fim desta divisão você volta ao plantel.' : 'Ao terminar, começa a próxima divisão.'">texto</span>
 </footer>
+
+<th:block th:if="${janela != null}"><div th:replace="~{janela :: janela}"></div></th:block>
 </div>
 
 </div>

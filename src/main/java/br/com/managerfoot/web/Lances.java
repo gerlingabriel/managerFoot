@@ -23,4 +23,9 @@ public class Lances {
 			default -> "vermelho";
 		};
 	}
+
+	/** Substituição feita: "46' Viana ↔ Uchôa" (quem saiu ↔ quem entrou). */
+	public String substituicao(EventoPartida troca) {
+		return troca.minuto() + "' " + troca.substituido().nome() + " ↔ " + troca.jogador().nome();
+	}
 }

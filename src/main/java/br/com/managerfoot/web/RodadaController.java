@@ -2,6 +2,7 @@ package br.com.managerfoot.web;
 
 import java.io.IOException;
 import java.time.Clock;
+import java.time.Instant;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
@@ -29,8 +30,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 /**
- * Jogos da rodada ao vivo (SPEC §10.2 e §11.2; modelo 1a; docs/decisions/0010). A tela consulta o
- * quadro a cada segundo; quando a rodada termina, volta ao plantel com o placar do usuário.
+ * Jogos da rodada ao vivo (SPEC §10.2 e §11.2; modelos 1a, 1d e 1e; docs/decisions/0010). A tela
+ * consulta o quadro a cada segundo; clicar num clube pausa e abre a janela do jogo; quando a rodada
+ * termina, volta ao plantel com o placar do usuário.
  */
 @Controller
 class RodadaController {
@@ -66,9 +68,13 @@ class RodadaController {
 	/** O quadro; com HTMX (a cada segundo) a página troca só o quadro. */
 	@GetMapping("/jogos/{jogoId}/rodada")
 	String quadro(@AuthenticationPrincipal Usuario usuario, @PathVariable long jogoId,
+			@RequestParam(name = "janela", required = false) Long janela,
+			@RequestParam(name = "sai", required = false) Long sai,
+			@RequestParam(name = "entra", required = false) Long entra,
 			@RequestHeader(name = "HX-Request", required = false) String htmx, Model model, HttpServletRequest request,
 			HttpServletResponse response) {
-		Optional<EstadoRodada> estado = aoVivo.estado(jogoId, usuario.id(), relogio.instant());
+		Instant agora = relogio.instant();
+		Optional<EstadoRodada> estado = aoVivo.estado(jogoId, usuario.id(), agora);
 		if (estado.isEmpty() || estado.get().terminada()) {
 			String plantel = "/jogos/" + jogoId + "/plantel";
 			estado.map(EstadoRodada::jogoDoUsuario).ifPresentOrElse(
@@ -84,7 +90,53 @@ class RodadaController {
 		model.addAttribute("usuario", usuario);
 		model.addAttribute("e", estado.get());
 		model.addAttribute("velocidades", Velocidade.values());
+		if (janela != null && estado.get().comUsuario()) {
+			aoVivo.janela(jogoId, usuario.id(), janela, sai, entra, agora).ifPresent(j -> {
+				model.addAttribute("janela", j);
+				model.addAttribute("sai", sai);
+				model.addAttribute("entra", entra);
+			});
+		}
 		return "rodada";
+	}
+
+	/** Clicar num clube da divisão do usuário pausa a partida e abre a janela do jogo (SPEC rev. 30 e 33). */
+	@PostMapping("/jogos/{jogoId}/rodada/janela")
+	String abrirJanela(@AuthenticationPrincipal Usuario usuario, @PathVariable long jogoId,
+			@RequestParam("mandante") long mandante) {
+		aoVivo.pausar(jogoId, usuario.id(), relogio.instant());
+		return "redirect:/jogos/" + jogoId + "/rodada?janela=" + mandante;
+	}
+
+	/** "Continuar" ou fechar a janela: a partida volta a andar. */
+	@PostMapping("/jogos/{jogoId}/rodada/continuar")
+	String continuar(@AuthenticationPrincipal Usuario usuario, @PathVariable long jogoId) {
+		aoVivo.continuar(jogoId, usuario.id(), relogio.instant());
+		return "redirect:/jogos/" + jogoId + "/rodada";
+	}
+
+	@PostMapping("/jogos/{jogoId}/rodada/substituir")
+	String substituir(@AuthenticationPrincipal Usuario usuario, @PathVariable long jogoId,
+			@RequestParam("mandante") long mandante, @RequestParam(name = "sai", required = false) Long sai,
+			@RequestParam(name = "entra", required = false) Long entra, RedirectAttributes redirect) {
+		if (sai == null || entra == null) {
+			redirect.addFlashAttribute("erro", "Marque quem sai e quem entra.");
+		} else {
+			try {
+				aoVivo.substituir(jogoId, usuario.id(), sai, entra, relogio.instant());
+			}
+			catch (IllegalArgumentException e) {
+				redirect.addFlashAttribute("erro", e.getMessage());
+			}
+		}
+		return "redirect:/jogos/" + jogoId + "/rodada?janela=" + mandante;
+	}
+
+	@PostMapping("/jogos/{jogoId}/rodada/som")
+	String som(@AuthenticationPrincipal Usuario usuario, @PathVariable long jogoId, @RequestParam("ligado") boolean ligado,
+			@RequestParam(name = "janela", required = false) Long janela) {
+		aoVivo.definirSom(jogoId, usuario.id(), ligado);
+		return "redirect:/jogos/" + jogoId + "/rodada" + (janela == null ? "" : "?janela=" + janela);
 	}
 
 	@PostMapping("/jogos/{jogoId}/rodada/velocidade")

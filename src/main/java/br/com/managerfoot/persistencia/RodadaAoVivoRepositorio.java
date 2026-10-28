@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,9 +18,13 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import br.com.managerfoot.dominio.Clube;
+import br.com.managerfoot.dominio.Formacao;
+import br.com.managerfoot.dominio.Jogador;
 import br.com.managerfoot.motor.EventoPartida;
 import br.com.managerfoot.motor.Lado;
 import br.com.managerfoot.motor.ParametrosMotor;
+import br.com.managerfoot.motor.Partida;
+import br.com.managerfoot.motor.RegrasPartida;
 import br.com.managerfoot.motor.TipoEvento;
 import br.com.managerfoot.temporada.RelogioRodada;
 import br.com.managerfoot.temporada.RodadaAoVivo;
@@ -191,6 +196,73 @@ public class RodadaAoVivoRepositorio {
 			.update();
 	}
 
+	/** Liga ou desliga o som dos gols; vale também para as próximas rodadas. */
+	@Transactional
+	public void definirSom(long jogoId, long usuarioId, boolean ligado) {
+		exigirClube(jogoId, usuarioId);
+		jdbc.sql("UPDATE jogo_treinador SET som_gols = :som WHERE jogo_id = :jogo AND usuario_id = :usuario")
+			.param("som", ligado)
+			.param("jogo", jogoId)
+			.param("usuario", usuarioId)
+			.update();
+	}
+
+	/**
+	 * A janela de um jogo da divisão em andamento (SPEC §10.5, rev. 33): lances, os 11 de cada lado e,
+	 * no clube do usuário, o banco e as substituições. Com {@code sai} e {@code entra}, também a
+	 * formação que ficaria com a troca. Vazio se o jogo não é da divisão em andamento.
+	 */
+	@Transactional(readOnly = true)
+	public Optional<JanelaJogo> janela(long jogoId, long usuarioId, long mandanteId, Long sai, Long entra, Instant agora) {
+		long clube = exigirClube(jogoId, usuarioId);
+		Optional<Linha> linha = linha(jogoId);
+		if (linha.isEmpty()) {
+			return Optional.empty();
+		}
+		RodadaAoVivo rodada = rodadas.preparar(jogoId, linha.get().rodada(), substituicoes(jogoId));
+		Map<Integer, List<PartidaDaRodada>> porDivisao = porDivisao(rodada);
+		RelogioRodada relogio = relogio(porDivisao);
+		double progresso = progresso(linha.get(), relogio, velocidade(jogoId, usuarioId), agora);
+		if (relogio.terminado(progresso)) {
+			return Optional.empty();
+		}
+		int minuto = relogio.minuto(progresso);
+		int prioridade = new ArrayList<>(porDivisao.keySet()).get(relogio.divisao(progresso));
+		Optional<PartidaDaRodada> partida = porDivisao.get(prioridade).stream()
+			.filter(p -> p.jogo().mandante().id() == mandanteId).findFirst();
+		if (partida.isEmpty()) {
+			return Optional.empty();
+		}
+		PartidaDaRodada p = partida.get();
+		Partida jogo = rodada.noMinuto(p, minuto);
+		List<EventoPartida> eventos = jogo.resultado().eventos();
+		Lado doUsuario = p.jogo().mandante().id() == clube ? Lado.CASA : p.jogo().visitante().id() == clube ? Lado.FORA : null;
+		String previa = null;
+		String erroPrevia = null;
+		if (doUsuario != null && sai != null && entra != null) {
+			try {
+				previa = rodada.formacaoCom(p, minuto, doUsuario, sai, entra).rotulo();
+			}
+			catch (IllegalArgumentException e) {
+				erroPrevia = e.getMessage();
+			}
+		}
+		int maximo = RegrasPartida.padrao().substituicoes();
+		List<TimeNaJanela> times = new ArrayList<>();
+		for (Lado lado : Lado.values()) {
+			Set<Long> amarelados = new HashSet<>();
+			eventos.stream().filter(e -> e.lado() == lado && e.tipo() == TipoEvento.CARTAO_AMARELO)
+				.forEach(e -> amarelados.add(e.jogador().id()));
+			times.add(new TimeNaJanela(p.clube(lado), jogo.formacaoAtual(lado), jogo.emCampo(lado),
+					lado == doUsuario ? jogo.reservasDisponiveis(lado) : List.of(), maximo - jogo.substituicoesRestantes(lado),
+					maximo, eventos.stream().filter(e -> e.lado() == lado && e.tipo() == TipoEvento.SUBSTITUICAO).toList(),
+					amarelados));
+		}
+		return Optional.of(new JanelaJogo(p.jogo().mandante().id(), minuto, linha.get().andandoDesde() == null,
+				placar(rodada, p, minuto, clube), eventos.stream().filter(e -> LANCES.contains(e.tipo())).toList(), doUsuario,
+				times.get(0), times.get(1), previa, erroPrevia));
+	}
+
 	/** Grava a rodada pelo caminho de sempre e encerra a rodada ao vivo; o segundo pedido não faz nada. */
 	private void finalizar(long jogoId, int rodada, List<RodadaAoVivo.Substituicao> substituicoes) {
 		int apagadas = jdbc.sql("DELETE FROM jogo_rodada_ao_vivo WHERE jogo_id = :jogo AND rodada = :rodada")
@@ -233,8 +305,10 @@ public class RodadaAoVivoRepositorio {
 		}
 		int temporada = jdbc.sql("SELECT max(numero) FROM jogo_temporada WHERE jogo_id = :jogo").param("jogo", jogoId)
 			.query(Integer.class).single();
+		boolean som = jdbc.sql("SELECT som_gols FROM jogo_treinador WHERE jogo_id = :jogo AND clube_id = :clube")
+			.param("jogo", jogoId).param("clube", clube).query(Boolean.class).single();
 		return new EstadoRodada(jogoId, temporada, linha.rodada(), divisoes, atual, minuto, linha.andandoDesde() == null,
-				terminada, velocidade, relogio.comUsuario().get(atual), placares, doUsuario);
+				terminada, velocidade, relogio.comUsuario().get(atual), placares, doUsuario, som);
 	}
 
 	private static PlacarAoVivo placar(RodadaAoVivo rodada, PartidaDaRodada p, int minuto, long clube) {
@@ -313,6 +387,30 @@ public class RodadaAoVivoRepositorio {
 	private record Linha(int rodada, double progresso, Instant andandoDesde) {
 	}
 
+	/**
+	 * Um lado na janela do jogo.
+	 *
+	 * @param banco reservas que ainda podem entrar; vazio no clube que não é do usuário
+	 */
+	public record TimeNaJanela(Clube clube, Formacao formacao, List<Jogador> emCampo, List<Jogador> banco,
+			int substituicoesFeitas, int substituicoesMaximas, List<EventoPartida> substituicoes, Set<Long> amarelados) {
+	}
+
+	/**
+	 * A janela de um jogo, pausado ou não.
+	 *
+	 * @param doUsuario o lado do clube do usuário; nulo se o jogo não é dele
+	 * @param previa formação com a troca marcada; nula sem troca marcada ou se ela não vale
+	 * @param erroPrevia por que a troca marcada não vale
+	 */
+	public record JanelaJogo(long mandanteId, int minuto, boolean pausada, PlacarAoVivo placar, List<EventoPartida> lances,
+			Lado doUsuario, TimeNaJanela casa, TimeNaJanela fora, String previa, String erroPrevia) {
+
+		public List<TimeNaJanela> times() {
+			return List.of(casa, fora);
+		}
+	}
+
 	public enum Situacao {
 		TERMINADA,
 		JOGANDO,
@@ -337,9 +435,15 @@ public class RodadaAoVivoRepositorio {
 	 * @param divisaoAtual índice em {@code divisoes} da divisão em jogo
 	 * @param comUsuario se a divisão em jogo tem clube do usuário (só ela tem velocidade e pausa)
 	 * @param jogoDoUsuario o jogo do clube do usuário até onde ele já foi jogado; nulo na folga
+	 * @param somGols se a tela toca o som dos gols (SPEC §10.4)
 	 */
 	public record EstadoRodada(long jogoId, int temporada, int rodada, List<DivisaoNaRodada> divisoes, int divisaoAtual,
 			int minuto, boolean pausada, boolean terminada, Velocidade velocidade, boolean comUsuario,
-			List<PlacarAoVivo> partidas, PlacarAoVivo jogoDoUsuario) {
+			List<PlacarAoVivo> partidas, PlacarAoVivo jogoDoUsuario, boolean somGols) {
+
+		/** Gols da divisão em jogo até o minuto: a tela toca o som quando o número sobe. */
+		public int golsNaDivisao() {
+			return partidas.stream().mapToInt(p -> p.golsCasa() + p.golsFora()).sum();
+		}
 	}
 }

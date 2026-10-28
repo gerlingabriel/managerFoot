@@ -10,6 +10,7 @@ import java.util.SplittableRandom;
 
 import br.com.managerfoot.dominio.Clube;
 import br.com.managerfoot.dominio.Escalacao;
+import br.com.managerfoot.dominio.Formacao;
 import br.com.managerfoot.dominio.Jogador;
 import br.com.managerfoot.dominio.Moral;
 import br.com.managerfoot.dominio.ParametrosMoral;
@@ -94,6 +95,21 @@ public final class RodadaAoVivo {
 	 * @throws IllegalArgumentException se a troca não é permitida, com o motivo para a tela
 	 */
 	public Substituicao substituir(PartidaDaRodada partida, int minuto, Lado lado, long saiId, long entraId) {
+		Partida p = trocar(partida, minuto, lado, saiId, entraId);
+		return new Substituicao(partida.jogo().mandante().id(), p.minuto(), lado, saiId, entraId);
+	}
+
+	/**
+	 * A formação que o time teria com a troca, sem gravá-la: a prévia da janela do jogo (SPEC §10.5,
+	 * rev. 33).
+	 *
+	 * @throws IllegalArgumentException se a troca não é permitida, com o motivo para a tela
+	 */
+	public Formacao formacaoCom(PartidaDaRodada partida, int minuto, Lado lado, long saiId, long entraId) {
+		return trocar(partida, minuto, lado, saiId, entraId).formacaoAtual(lado);
+	}
+
+	private Partida trocar(PartidaDaRodada partida, int minuto, Lado lado, long saiId, long entraId) {
 		if (!partida.ladosDoUsuario().contains(lado)) {
 			throw new IllegalArgumentException("Só o treinador do clube faz substituições.");
 		}
@@ -106,7 +122,7 @@ public final class RodadaAoVivo {
 		Jogador entra = p.reservasDisponiveis(lado).stream().filter(j -> j.id() == entraId).findFirst()
 			.orElseThrow(() -> new IllegalArgumentException("Quem entra precisa estar no banco e ainda não ter jogado."));
 		p.substituir(lado, sai, entra);
-		return new Substituicao(partida.jogo().mandante().id(), p.minuto(), lado, saiId, entraId);
+		return p;
 	}
 
 	/** Uma rodada igual a esta com mais uma substituição. */

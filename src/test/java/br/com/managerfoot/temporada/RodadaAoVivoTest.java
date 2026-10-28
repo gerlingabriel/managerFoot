@@ -7,11 +7,13 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 
 import br.com.managerfoot.dominio.Clube;
 import br.com.managerfoot.dominio.Escalacao;
+import br.com.managerfoot.dominio.Formacao;
 import br.com.managerfoot.dominio.Jogador;
 import br.com.managerfoot.dominio.Posicao;
 import br.com.managerfoot.motor.EscalacaoMaquina;
@@ -85,6 +87,33 @@ class RodadaAoVivoTest {
 			.withMessage("Quem sai precisa estar em campo.");
 		assertThatIllegalArgumentException().isThrownBy(() -> rodada.substituir(doClube, 90, Lado.CASA, emCampo, reserva))
 			.withMessage("A partida já terminou.");
+	}
+
+	@Test
+	void previaDaFormacaoMudaOSetorSemGravar() {
+		RodadaAoVivo rodada = preparar();
+		PartidaDaRodada doClube = partidaDoUsuario(rodada);
+		Partida aos20 = rodada.noMinuto(doClube, 20);
+		Formacao antes = aos20.formacaoAtual(Lado.CASA);
+		// a primeira troca entre setores de linha diferentes que resulta numa formação da lista
+		for (Jogador sai : aos20.emCampo(Lado.CASA)) {
+			for (Jogador entra : aos20.reservasDisponiveis(Lado.CASA)) {
+				if (sai.posicao() == Posicao.GOLEIRO || entra.posicao() == Posicao.GOLEIRO || sai.posicao() == entra.posicao()) {
+					continue;
+				}
+				int[] quantidades = { 0, antes.quantidade(Posicao.DEFENSOR), antes.quantidade(Posicao.MEIO_CAMPISTA),
+						antes.quantidade(Posicao.ATACANTE) };
+				quantidades[sai.posicao().ordinal()]--;
+				quantidades[entra.posicao().ordinal()]++;
+				Optional<Formacao> esperada = Formacao.com(quantidades[1], quantidades[2], quantidades[3]);
+				if (esperada.isPresent()) {
+					assertThat(rodada.formacaoCom(doClube, 20, Lado.CASA, sai.id(), entra.id())).isEqualTo(esperada.get());
+					assertThat(rodada.noMinuto(doClube, 21).emCampo(Lado.CASA)).contains(sai);
+					return;
+				}
+			}
+		}
+		throw new AssertionError("nenhuma troca de setor válida a partir de " + antes.rotulo());
 	}
 
 	@Test

@@ -1894,8 +1894,15 @@ começa depois que a anterior estiver testada.
     usuário. "Confirmar e jogar rodada" abre o quadro, e no fim a tela volta
     ao plantel com o placar. Ficam para depois a coluna de público (sem
     estádio no domínio) e, na 3f.4c, o som e o clique no clube.
-  - **3f.4c:** janela do jogo com pausa e substituição (modelos 1d e 1e) e
-    som do gol.
+  - **3f.4c (concluída):** clicar num clube da divisão do usuário pausa a
+    partida e abre a janela do jogo sobre o quadro (modelos 1d e 1e):
+    lances em ordem e, no próprio clube, em campo e banco, a formação
+    resultante da troca, as substituições feitas e "Substituir"; nos
+    outros jogos, os 11 de cada lado. "Continuar" ou fechar retoma. Som
+    dos gols ligado ou desligado no quadro, mantido para as próximas
+    rodadas (migração V14). Fica fora o cabeçalho com estádio e público
+    (sem estádio no domínio). As caixas "Cartões vermelhos" e "Lesões"
+    continuam em aberto.
   - plantel e tática;
   - partidas simultâneas da divisão (§10.2);
   - classificação;

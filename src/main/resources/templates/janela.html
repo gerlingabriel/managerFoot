@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Janela do jogo sobre o quadro (SPEC §10.5, rev. 33; modelos 1d e 1e). -->
+<div th:fragment="janela" class="janela-fundo" th:with="p=${janela.placar}, meu=${janela.doUsuario == null ? null : (janela.doUsuario.name() == 'CASA' ? janela.casa : janela.fora)}">
+<div role="dialog" aria-modal="true" aria-labelledby="t-janela" class="janela" th:classappend="${meu != null} ? 'larga'">
+
+<div class="janela-topo">
+<div class="janela-linha">
+<span class="janela-espaco"></span>
+<span class="suave centro" th:text="|${janela.minuto}' · ${janela.pausada ? 'partida pausada' : 'ao vivo'}|">63' · partida pausada</span>
+<form th:action="@{/jogos/{id}/rodada/continuar(id=${e.jogoId})}" method="post">
+<button type="submit" class="janela-fechar" aria-label="Fechar e continuar">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12"></path><path d="M18 6 6 18"></path></svg>
+</button>
+</form>
+</div>
+<h2 id="t-janela" class="janela-placar">
+<span class="janela-clube mandante">
+<span th:if="${p.expulsaoCasa}" class="cartao vermelho" role="img" aria-label="Expulsão"></span>
+<span class="jogo-nome" th:text="${p.mandante.nome}">Mandante</span>
+<span aria-hidden="true" th:style="${@escudos.estilo(p.mandante.escudo, 24, 28)}"></span>
+</span>
+<span class="placar" th:attr="aria-label=|${p.golsCasa} a ${p.golsFora}|"><span th:text="${p.golsCasa}">0</span><span th:text="${p.golsFora}">0</span></span>
+<span class="janela-clube">
+<span aria-hidden="true" th:style="${@escudos.estilo(p.visitante.escudo, 24, 28)}"></span>
+<span class="jogo-nome" th:text="${p.visitante.nome}">Visitante</span>
+<span th:if="${p.expulsaoFora}" class="cartao vermelho" role="img" aria-label="Expulsão"></span>
+</span>
+</h2>
+</div>
+
+<section aria-label="Lances da partida" class="janela-lances">
+<p th:if="${janela.lances.isEmpty()}" class="suave centro">Nenhum lance até agora.</p>
+<div th:each="l : ${janela.lances}" class="janela-lance" th:with="casa=${l.lado.name() == 'CASA'}, tipo=${l.tipo.name()}">
+<span class="lance-casa" th:text="${casa} ? |${l.jogador.nome}${l.penalti ? ' (pên.)' : ''}| : ''">Nome</span>
+<span class="lance-meio">
+<span class="lance-minuto" th:text="|${l.minuto}'|">0'</span>
+<span class="lance" th:classappend="${@lances.icone(l)}" role="img"
+	th:attr="aria-label=|${tipo == 'GOL' ? 'Gol' : (tipo == 'CARTAO_AMARELO' ? 'Cartão amarelo' : 'Expulsão')} de ${l.jogador.nome}|"></span>
+</span>
+<span class="lance-fora" th:text="${casa} ? '' : |${l.jogador.nome}${l.penalti ? ' (pên.)' : ''}|">Nome</span>
+</div>
+</section>
+
+<div th:if="${erro}" role="alert" class="alerta janela-erro" th:text="${#strings.capitalize(erro)}">erro</div>
+
+<!-- Próprio clube (1d): em campo e banco para a substituição. -->
+<section th:if="${meu != null}" aria-labelledby="t-subs" class="janela-subs">
+<div class="janela-subs-topo">
+<h3 id="t-subs" class="titulo-coluna" th:text="|${meu.clube.nome} · ${meu.formacao.rotulo()}|">Clube · 4-4-2</h3>
+<span class="suave"><span th:text="|substituições: ${meu.substituicoesFeitas} de ${meu.substituicoesMaximas}|">substituições</span><span th:each="t : ${meu.substituicoes}" th:text="| · ${@lances.substituicao(t)}|"></span></span>
+</div>
+<form th:action="@{/jogos/{id}/rodada/substituir(id=${e.jogoId})}" method="post" class="janela-troca"
+	th:attr="hx-get=@{/jogos/{id}/rodada(id=${e.jogoId})}" hx-trigger="change" hx-params="janela,sai,entra"
+	hx-select="#quadro" hx-target="#quadro" hx-swap="outerHTML">
+<input type="hidden" name="janela" th:value="${janela.mandanteId}">
+<input type="hidden" name="mandante" th:value="${janela.mandanteId}">
+<fieldset class="lista-troca em-campo">
+<legend class="oculto">Em campo: escolha quem sai</legend>
+<label th:each="j : ${meu.emCampo}" class="troca-linha sai">
+<input type="radio" name="sai" th:value="${j.id}" th:checked="${sai == j.id}" class="oculto">
+<span class="troca-pos" th:text="${j.posicao.name().substring(0, 1)}">G</span>
+<span class="troca-nome"><span th:text="${j.nome}">Nome</span><span th:if="${j.asterisco}" class="asterisco">★</span></span>
+<span th:if="${meu.amarelados.contains(j.id)}" class="lance amarelo" role="img" aria-label="Cartão amarelo"></span>
+<span class="troca-forca" th:text="${j.forca}">0</span>
+</label>
+</fieldset>
+<div class="pilha-curta lista-lateral">
+<fieldset class="lista-troca">
+<legend class="oculto">Banco: escolha quem entra</legend>
+<p th:if="${meu.banco.isEmpty()}" class="suave troca-linha">Ninguém no banco.</p>
+<label th:each="j : ${meu.banco}" class="troca-linha entra">
+<input type="radio" name="entra" th:value="${j.id}" th:checked="${entra == j.id}" class="oculto">
+<span class="troca-pos" th:text="${j.posicao.name().substring(0, 1)}">G</span>
+<span class="troca-nome"><span th:text="${j.nome}">Nome</span><span th:if="${j.asterisco}" class="asterisco">★</span></span>
+<span class="troca-forca" th:text="${j.forca}">0</span>
+</label>
+</fieldset>
+<span th:if="${janela.previa != null}" class="texto pequeno" th:text="|Com a troca, fica ${janela.previa}|">fica 3-4-3</span>
+<span th:if="${janela.erroPrevia != null}" class="erro-campo" th:text="${#strings.capitalize(janela.erroPrevia)}">erro</span>
+<button type="submit" class="botao" th:disabled="${meu.substituicoesFeitas >= meu.substituicoesMaximas}">Substituir</button>
+</div>
+</form>
+</section>
+
+<!-- Outro jogo (1e): prévia dos 11 de cada lado. -->
+<section th:if="${meu == null}" aria-label="Quem está jogando" class="janela-times">
+<div th:each="t : ${janela.times()}" class="pilha-curta">
+<span class="titulo-coluna pequeno" th:text="|${t.clube.nome} · ${t.formacao.rotulo()}|">Clube · 4-4-2</span>
+<div class="lista-troca">
+<div th:each="j : ${t.emCampo}" class="troca-linha">
+<span class="troca-pos" th:text="${j.posicao.name().substring(0, 1)}">G</span>
+<span class="troca-nome"><span th:text="${j.nome}">Nome</span><span th:if="${j.asterisco}" class="asterisco">★</span></span>
+<span class="troca-forca" th:text="${j.forca}">0</span>
+</div>
+</div>
+</div>
+</section>
+
+<div class="janela-rodape">
+<form th:action="@{/jogos/{id}/rodada/continuar(id=${e.jogoId})}" method="post">
+<button type="submit" class="botao-continuar" autofocus>Continuar</button>
+</form>
+</div>
+</div>
+</div>
+</body>
+</html>

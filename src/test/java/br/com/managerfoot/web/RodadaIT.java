@@ -2,6 +2,7 @@ package br.com.managerfoot.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -15,6 +16,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,12 +35,18 @@ import br.com.managerfoot.bancopadrao.GeradorBancoPadrao;
 import br.com.managerfoot.bancopadrao.PaisPadrao;
 import br.com.managerfoot.bancopadrao.ParametrosBancoPadrao;
 import br.com.managerfoot.contas.Usuario;
+import br.com.managerfoot.dominio.EscalacaoDoTreinador;
+import br.com.managerfoot.dominio.Jogador;
+import br.com.managerfoot.dominio.Posicao;
 import br.com.managerfoot.motor.ParametrosMotor;
 import br.com.managerfoot.persistencia.BancoPadraoRepositorio;
 import br.com.managerfoot.persistencia.ContasRepositorio;
+import br.com.managerfoot.persistencia.EscalacaoRepositorio;
+import br.com.managerfoot.persistencia.JogoRepositorio;
 import br.com.managerfoot.persistencia.JogosDoTreinadorRepositorio;
 import br.com.managerfoot.persistencia.MoldeRepositorio;
 import br.com.managerfoot.persistencia.RodadaRepositorio;
+import br.com.managerfoot.temporada.RodadaAoVivo.PartidaDaRodada;
 
 /** Jogos da rodada ao vivo pela tela (modelo 1a; docs/decisions/0010), com o relógio do teste. */
 @Import(TestcontainersConfiguration.class)
@@ -71,6 +79,12 @@ class RodadaIT {
 
 	@Autowired
 	JdbcClient jdbc;
+
+	@Autowired
+	JogoRepositorio jogo;
+
+	@Autowired
+	EscalacaoRepositorio escalacoes;
 
 	Usuario treinador;
 	long jogoId;
@@ -156,6 +170,123 @@ class RodadaIT {
 		mvc.perform(get(rodada).with(como(outro))).andExpect(status().isNotFound());
 		mvc.perform(post(rodada + "/velocidade").param("velocidade", "LENTA").with(como(outro)).with(csrf()))
 			.andExpect(status().isNotFound());
+	}
+
+	@Test
+	void clicarNoProprioClubePausaEAbreAJanelaComSubstituicao() throws Exception {
+		iniciar();
+		agora(10);
+		long mandante = partidaDoUsuario().jogo().mandante().id();
+
+		mvc.perform(post(rodada + "/janela").param("mandante", String.valueOf(mandante)).with(como(treinador)).with(csrf()))
+			.andExpect(redirectedUrl(rodada + "?janela=" + mandante));
+		agora(60);
+		mvc.perform(get(rodada).param("janela", String.valueOf(mandante)).with(como(treinador)))
+			.andExpect(content().string(containsString("20&#39; · partida pausada")))
+			.andExpect(content().string(containsString("substituições: 0 de 5")))
+			.andExpect(content().string(containsString("Substituir")))
+			.andExpect(content().string(not(containsString("every 1s"))));
+
+		Troca troca = troca();
+		mvc.perform(get(rodada).param("janela", String.valueOf(mandante)).param("sai", troca.sai())
+				.param("entra", troca.entra()).with(como(treinador)))
+			.andExpect(content().string(containsString("Com a troca, fica")));
+		mvc.perform(post(rodada + "/substituir").param("mandante", String.valueOf(mandante)).param("sai", troca.sai())
+				.param("entra", troca.entra()).with(como(treinador)).with(csrf()))
+			.andExpect(redirectedUrl(rodada + "?janela=" + mandante))
+			.andExpect(flash().attributeCount(0));
+		mvc.perform(get(rodada).param("janela", String.valueOf(mandante)).with(como(treinador)))
+			.andExpect(content().string(containsString("substituições: 1 de 5")))
+			.andExpect(content().string(containsString("20&#39; ")));
+
+		mvc.perform(post(rodada + "/continuar").with(como(treinador)).with(csrf())).andExpect(redirectedUrl(rodada));
+		agora(61);
+		mvc.perform(get(rodada).with(como(treinador)))
+			.andExpect(content().string(containsString("22&#39;")))
+			.andExpect(content().string(containsString("every 1s")));
+	}
+
+	@Test
+	void trocaInvalidaVoltaComOMotivo() throws Exception {
+		iniciar();
+		long mandante = partidaDoUsuario().jogo().mandante().id();
+		mvc.perform(post(rodada + "/janela").param("mandante", String.valueOf(mandante)).with(como(treinador)).with(csrf()));
+
+		mvc.perform(post(rodada + "/substituir").param("mandante", String.valueOf(mandante)).with(como(treinador)).with(csrf()))
+			.andExpect(flash().attribute("erro", "Marque quem sai e quem entra."));
+		Troca troca = troca();
+		mvc.perform(post(rodada + "/substituir").param("mandante", String.valueOf(mandante)).param("sai", troca.entra())
+				.param("entra", troca.sai()).with(como(treinador)).with(csrf()))
+			.andExpect(flash().attribute("erro", "Quem sai precisa estar em campo."));
+	}
+
+	@Test
+	void janelaDeOutroJogoMostraOsOnzeDeCadaLadoSemSubstituicao() throws Exception {
+		iniciar();
+		PartidaDaRodada doUsuario = partidaDoUsuario();
+		long outro = rodadas.preparar(jogoId, 1, List.of()).partidas().stream()
+			.filter(p -> p.prioridade() == doUsuario.prioridade() && p != doUsuario
+					&& p.jogo().mandante().id() != doUsuario.jogo().mandante().id())
+			.findFirst().orElseThrow().jogo().mandante().id();
+
+		mvc.perform(post(rodada + "/janela").param("mandante", String.valueOf(outro)).with(como(treinador)).with(csrf()));
+		mvc.perform(get(rodada).param("janela", String.valueOf(outro)).with(como(treinador)))
+			.andExpect(content().string(containsString("Quem está jogando")))
+			.andExpect(content().string(not(containsString("Substituir"))));
+	}
+
+	@Test
+	void somDosGolsLigaEDesliga() throws Exception {
+		iniciar();
+		mvc.perform(get(rodada).with(como(treinador))).andExpect(content().string(containsString("data-som=\"true\"")));
+
+		mvc.perform(post(rodada + "/som").param("ligado", "false").with(como(treinador)).with(csrf()))
+			.andExpect(redirectedUrl(rodada));
+
+		mvc.perform(get(rodada).with(como(treinador)))
+			.andExpect(content().string(containsString("Som dos gols desligado")))
+			.andExpect(content().string(containsString("data-som=\"false\"")));
+	}
+
+	@Test
+	void divisaoSemUsuarioNaoTemClubesClicaveis() throws Exception {
+		iniciar();
+		// a divisão do usuário (a última) joga primeiro e dura 45 s em normal
+		agora(46);
+		mvc.perform(get(rodada).with(como(treinador)))
+			.andExpect(content().string(containsString("Nenhum clube desta divisão é seu")))
+			.andExpect(content().string(not(containsString("pausar e ver o jogo"))));
+	}
+
+	private void iniciar() throws Exception {
+		mvc.perform(post(rodada).param("rodada", "1").with(como(treinador)).with(csrf())).andExpect(redirectedUrl(rodada));
+	}
+
+	private PartidaDaRodada partidaDoUsuario() {
+		long clube = jogo.clubeDoTreinador(jogoId, treinador.id()).orElseThrow();
+		return rodadas.preparar(jogoId, 1, List.of()).partidas().stream()
+			.filter(p -> p.jogo().mandante().id() == clube || p.jogo().visitante().id() == clube).findFirst().orElseThrow();
+	}
+
+	/** Um titular de linha e um reserva da mesma posição do clube do usuário. */
+	private Troca troca() {
+		long clube = jogo.clubeDoTreinador(jogoId, treinador.id()).orElseThrow();
+		EscalacaoDoTreinador escalacao = escalacoes.carregar(clube).orElseThrow();
+		List<Jogador> plantel = jogo.carregarPlanteis(jogoId).get(clube);
+		for (Jogador entra : plantel) {
+			if (!escalacao.reservas().contains(entra.id()) || entra.posicao() == Posicao.GOLEIRO) {
+				continue;
+			}
+			for (Jogador sai : plantel) {
+				if (escalacao.titulares().contains(sai.id()) && sai.posicao() == entra.posicao()) {
+					return new Troca(String.valueOf(sai.id()), String.valueOf(entra.id()));
+				}
+			}
+		}
+		throw new IllegalStateException("sem troca na mesma posição");
+	}
+
+	private record Troca(String sai, String entra) {
 	}
 
 	private void agora(long segundos) {
