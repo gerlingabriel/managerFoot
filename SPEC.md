@@ -1474,8 +1474,32 @@ reajustados por nova simulação (`docs/simulacoes/economia-caixa.md`):
     amplia: olha a força; se o clube cresceu de força, amplia; senão, deixa
     como está; se está com muito dinheiro, amplia um pouco. A **obra leva
     tempo** (prazo a definir pelo agente).
--   **Em simulação (rev. 56):** público, ampliação e patrocínio
-    (`docs/simulacoes/`); valores propostos pelo agente para aprovação.
+-   **Provisório (rev. 56) — proposta do agente, aguardando aprovação**
+    (`economia.PublicoDoJogo`, `economia.AmpliacaoEstadio`, valores em
+    `economia.ParametrosPublico`; simulação em
+    `docs/simulacoes/estadio-publico-patrocinio.md`, 6 ligas × 3 sementes ×
+    6 temporadas com evolução, caixa, prêmio e patrocínio, sem mercado):
+    - **Torcida** do clube: a curva atual de 5.000 a 80.000 pela **força em
+      campo atual** (cresce e cai com a evolução). **Estádio inicial**: 75%
+      da torcida pela força cadastrada (força 50 começa com 60.000).
+    - **Ocupação** (fração da torcida): 75% no jogo do líder, caindo em linha
+      reta até 15% no do último; receber o líder soma até 15%, menos quanto
+      pior o mandante (o último não ganha nada); nas 3 últimas rodadas, 1º
+      contra 2º soma mais 15%. Até a 5ª rodada a tabela vale aos poucos
+      (começa em 45%). Sorteio de ±8%; nunca passa do estádio. Substitui a
+      ocupação pela moral e pela força do adversário (rev. 38).
+    - **Resultado:** topo da tabela 72–79% do estádio, meio 45–48%, fundo
+      22–26%; líder contra o 2º 84–95%; só 3–8% dos jogos passam de 90%. Um
+      clube de força 30 com 80.000 lugares não passa de ~23.000 pagantes.
+    - **Ampliação:** 5.000 lugares por R$ 1.587.000, valem depois de **6
+      rodadas de obra**, uma obra por vez, até 80.000. A **máquina** amplia
+      quando o jogo grande (líder contra o 2º) já passa do estádio com o
+      bloco novo e sobram 1,5 limite de caixa; ou, com 3 limites sobrando,
+      até 105% da torcida. Na simulação, a 1ª amplia 0,6 vez por clube na 1ª
+      temporada e 0,1 depois; a 2ª e a 3ª quase nunca.
+    - **Atenção:** sem o mercado na simulação, 40% dos clubes da 3ª terminam
+      a temporada com saldo negativo (o fundo da tabela arrecada metade do
+      que arrecadava); no jogo, esses clubes vendem jogadores (§9.3).
 -   **Definido (rev. 55):** modelo **6c** aprovado (janela do estádio com
     capacidade, limite de 120.000 (80.000 na rev. 56), ingresso de R$ 40 e "Ampliar 5.000
     lugares" pelo preço de um jogador de força 50; desligado sem caixa, no
@@ -1747,6 +1771,18 @@ na temporada anterior.
   vitória; menor à vista mais um bônus se subir de divisão). A caixa abre no
   plantel e a rodada 1 só começa depois da escolha. Os valores das propostas
   ainda serão simulados.
+- **Provisório (rev. 56) — valores das propostas, aguardando aprovação**
+  (`economia.PropostasPatrocinio`, mesma simulação):
+  - **Fixa:** o valor da tabela, à vista.
+  - **Por vitória:** 60% à vista e o resto dividido pelas vitórias de quem
+    vence 37% dos jogos (na 1ª com 20 clubes, cerca de R$ 5.600 por vitória
+    para quem recebe R$ 197 mil de tabela).
+  - **Por acesso:** 50% à vista e mais 1,5 vez a tabela se subir; **na 1ª
+    divisão, se ficar entre os 3 primeiros** (proposta do agente: não há
+    para onde subir).
+  - **Resultado:** no meio da tabela a fixa e a por vitória pagam o mesmo; no
+    topo, por vitória e por acesso pagam 20–30% mais; no fundo, a fixa é
+    sempre a melhor. Nenhuma proposta é sempre a melhor.
 - **Definido (rev. 45), pelo usuário:** o patrocínio vale cerca de **10% do
   prêmio do campeão** da divisão.
 - **Definido (rev. 46), pelo usuário:** o patrocínio usa o mesmo teto de
