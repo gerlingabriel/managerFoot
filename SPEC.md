@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 27 — 2026-10-27)
+-   **Status:** versão inicial para revisão (rev. 28 — 2026-10-27)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 28 (2026-10-27):** modo de início do jogo (sorteio ou escolha) definido pelo administrador e válido para todos; jogo individual do participante sempre por sorteio; treinadores em rede no plantel; modelos de entrada, novo jogo e quadro de escolha aprovados; molde pessoal salvo no servidor como possibilidade futura.
 -   **rev. 27 (2026-10-27):** clube pertence ao país, não à divisão; a liga só define o formato das divisões; clubes distribuídos pela força ao criar o jogo, com empate sorteado; prioridade automática; promovidos calculados; excluir divisão sobe as de baixo; quadro de escolha do administrador.
 -   **rev. 26 (2026-10-27):** divisões precisam estar completas para o jogo começar e a estrutura não muda durante o jogo; clube começa com a força cadastrada em qualquer divisão e perde força aos poucos até o teto; treinador da máquina com clube rebaixado para a fila segue a demissão por moral.
 -   **rev. 25 (2026-10-27):** todo jogo tem dono; empatados com o 4º mais fraco também entram no sorteio do clube inicial; o administrador pode escolher o clube ou pedir o sorteio; clube só de divisão, nunca da fila; divisão sem clubes suficientes fica em aberto.
@@ -134,7 +135,7 @@ Um participante sem privilégios de administrador:
 - **Definido (rev. 15):** o clube do participante comum é **sorteado entre
   os 4 clubes de menor força da última divisão** do país escolhido. Exemplo:
   Inglaterra com uma só divisão leva ao sorteio entre os 4 mais fracos dela.
-  - Só o administrador escolhe qualquer clube.
+  - Só num jogo no **modo escolha** (abaixo, rev. 28) o clube é escolhido.
   - **Provisório:** o número 4 fica configurável.
   - A essência do Elifoot 98 é começar por baixo, assumir outros times e
     ser demitido.
@@ -144,11 +145,25 @@ Um participante sem privilégios de administrador:
   - **Empate no grupo:** se outros clubes empatam com o último do grupo dos
     mais fracos, todos entram no sorteio. Uma divisão com menos clubes que
     o grupo sorteia entre todos.
-  - O administrador pode **escolher** o clube ou pedir o **sorteio**, como
-    o participante.
+  - O administrador define o **modo** do jogo (abaixo, rev. 28): escolha
+    ou sorteio.
   - O clube inicial, escolhido ou sorteado, é sempre de uma **divisão**;
     clube da fila de espera não serve.
   - O sorteio usa uma semente gravada no jogo, para poder ser reproduzido.
+- **Definido (rev. 28) — modo de início do jogo:** ao criar o jogo, o
+  administrador define o **modo**, que vale para **todos** os treinadores
+  daquele jogo:
+  - **Sorteio:** todos, inclusive o administrador, recebem um clube
+    sorteado entre os mais fracos da última divisão (regras acima).
+  - **Escolha:** cada treinador escolhe qualquer clube de divisão. Num jogo
+    em rede, todos os participantes escolhem, não só o administrador.
+  - Só o administrador define o modo. O jogo individual do participante
+    comum é sempre no modo sorteio.
+  - **Provisório:** o modo fica gravado no jogo, para valer para quem
+    entrar depois no jogo em rede (Etapa 5).
+  - **Em aberto (Etapa 5):** no modo escolha, dois treinadores podem ficar
+    com o mesmo clube? **Proposta:** não; quem confirmar primeiro fica com
+    ele, e o clube some do quadro dos outros.
 - Não poderá alterar regras globais da liga, salvo permissão explícita do
   administrador.
 - **Definido:** pode jogar no modo individual.
@@ -201,6 +216,13 @@ adicionais e como os arquivos/configurações são compartilhados.
   (§8.3.3).
 - O banco editável é um **molde**: ao iniciar um jogo, o servidor faz uma
   cópia, e o jogo evolui sem alterar o molde (`docs/decisions/0006`).
+
+**Em aberto (rev. 28) — molde pessoal no servidor:** o editor pode entrar
+mais à frente. Hoje vale o arquivo exportado na máquina da pessoa, para o
+servidor não guardar esses dados. No futuro, a pessoa poderá salvar as
+edições num **registro em seu nome** no servidor e jogar sobre elas; os
+outros jogadores criam os seus ou jogam o banco padrão. Decidir na etapa
+do editor.
 
 **Em aberto:**
 - Formato do arquivo de importação/exportação. **Proposta:** JSON com
@@ -1359,6 +1381,9 @@ da mesma divisão seguem na mesma tela.
 - **Definido (rev. 18):** o calendário mostra os jogos que já existem. Os
   da liga existem desde o início da temporada. Os de copa, continentais e
   Mundial aparecem conforme os confrontos são criados (§8.2).
+- **Definido (rev. 28):** em jogo em rede, o plantel mostra os
+  **treinadores da sessão**, com nome, clube e divisão, e o estado de cada
+  um (configurando, pronto, desconectado), como na sala (§3.3).
 - Contratos, finanças, estádio, copas e competições continentais ganham
   telas próprias nas etapas em que forem implementados, também com modelo
   para aprovação antes.
@@ -1380,6 +1405,17 @@ gestão e exibição compatíveis com o modo individual ou multiplayer.
 ficha do jogador, classificação e artilheiros foram aprovados pelo usuário
 no artefato de design (privado, versão 12). Eles orientam a implementação
 em Thymeleaf + HTMX.
+
+**Definido (rev. 28):** aprovados no mesmo artefato, com os ajustes do
+usuário:
+- **Entrar e cadastro:** e-mail e senha; cadastro só pelo link, com nome do
+  treinador, e-mail e senha repetida; erros na própria tela.
+- **Novo jogo:** campeonatos numa **faixa com rolagem lateral**, com setas,
+  porque podem ser muitos; depois o clube. O participante vê os candidatos
+  do sorteio e, depois, o clube que recebeu.
+- **Quadro de escolha:** o administrador define o modo do jogo; no modo
+  escolha, os clubes do país aparecem nas divisões pela força, a fila de
+  espera não pode ser escolhida e o clique no clube mostra o plantel.
 
 ## 11. Relógio da partida e sincronização multiplayer
 
