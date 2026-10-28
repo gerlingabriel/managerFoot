@@ -1,12 +1,17 @@
 package br.com.managerfoot.economia;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.SplittableRandom;
 import java.util.random.RandomGenerator;
 
 import br.com.managerfoot.dominio.Jogador;
 import br.com.managerfoot.dominio.Moral;
 import br.com.managerfoot.dominio.ParametrosMoral;
+import br.com.managerfoot.temporada.Jogo;
+import br.com.managerfoot.temporada.Rodada;
 
 /**
  * Caixa da rodada (SPEC §9.1 e §9.2, rev. 37): estádio, público, bilheteria, despesas de jogo e
@@ -83,6 +88,44 @@ public final class CaixaDaRodada {
 		}
 		lancamentos.add(new Lancamento(TipoLancamento.SALARIOS, -folha(plantel)));
 		return lancamentos;
+	}
+
+	/**
+	 * Caixa de uma divisão numa rodada: o público de cada jogo e os lançamentos de cada clube, inclusive
+	 * o da folga. O público de cada jogo é sorteado pela semente da partida, para a rodada refeita dar
+	 * o mesmo caixa.
+	 *
+	 * @param sementePorMandante semente da partida, pelo id do mandante
+	 * @param capacidades estádio de cada clube
+	 * @param moral moral dos clubes antes da rodada; quem não estiver tem a moral inicial
+	 */
+	public Movimento rodada(Rodada rodada, int prioridadeDivisao, Map<Long, Long> sementePorMandante,
+			Map<Long, Integer> capacidades, Map<Long, Moral> moral, Map<Long, List<Jogador>> planteis) {
+		Map<Long, Integer> publicos = new HashMap<>();
+		Map<Long, List<Lancamento>> lancamentos = new HashMap<>();
+		for (Jogo jogo : rodada.jogos()) {
+			long mandante = jogo.mandante().id();
+			// a partida usa a semente; o público usa o complemento para não repetir a mesma sequência
+			int publico = publico(capacidades.get(mandante), moral.getOrDefault(mandante, Moral.inicial(parametrosMoral)),
+					jogo.mandante().forca(), jogo.visitante().forca(),
+					new SplittableRandom(~sementePorMandante.get(mandante)));
+			publicos.put(mandante, publico);
+			lancamentos.put(mandante, lancamentos(Local.CASA, prioridadeDivisao, publico, planteis.get(mandante)));
+			long visitante = jogo.visitante().id();
+			lancamentos.put(visitante, lancamentos(Local.FORA, prioridadeDivisao, 0, planteis.get(visitante)));
+		}
+		rodada.folga()
+			.ifPresent(c -> lancamentos.put(c.id(), lancamentos(Local.FOLGA, prioridadeDivisao, 0, planteis.get(c.id()))));
+		return new Movimento(publicos, lancamentos);
+	}
+
+	/** Público de cada jogo pelo id do mandante e lançamentos de cada clube pelo id. */
+	public record Movimento(Map<Long, Integer> publicoPorMandante, Map<Long, List<Lancamento>> lancamentos) {
+
+		public Movimento {
+			publicoPorMandante = Map.copyOf(publicoPorMandante);
+			lancamentos = Map.copyOf(lancamentos);
+		}
 	}
 
 	public enum Local {

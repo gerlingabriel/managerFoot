@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 38 (2026-10-28):** valores do caixa da rodada aprovados como ponto de partida, ajustáveis por simulação; o caixa é lançado no avanço da rodada; clubes da fila de espera não têm lançamentos.
 -   **rev. 37 (2026-10-28):** moeda exibida pelo país da liga e valores guardados em centavos de Real; a economia começa pelo caixa da rodada; as tabelas de valores são propostas pelo agente e validadas por simulação antes do código.
 -   **rev. 36 (2026-10-28):** usuário com clube rebaixado para a fila é demitido e assume um clube sorteado entre os mais fracos da última divisão (provisório até os convites); modelo do calendário do clube aprovado.
 -   **rev. 35 (2026-10-28):** rodada ao vivo com relógio no servidor (ADR 0010); velocidades lenta, normal e rápida; divisão sem usuário em cerca de 5 s; sair da tela não pausa a partida.
@@ -1286,9 +1287,10 @@ O que ela confirma:
 **Em aberto:** criar tabelas próprias de força × preço × salário ×
 receita × premiação × patrocínio, validadas por simulação de temporadas.
 
-**Provisório (rev. 37) — proposta do agente para o caixa da rodada,
-aguardando aprovação** (`economia.ParametrosEconomia`; simulação em
-`docs/simulacoes/economia-caixa.md`):
+**Definido (rev. 38) — valores iniciais do caixa da rodada**, propostos
+pelo agente (rev. 37) e aprovados pelo usuário como ponto de partida; os
+números continuam em `economia.ParametrosEconomia` e podem ser
+reajustados por nova simulação (`docs/simulacoes/economia-caixa.md`):
 - **Estádio inicial:** 5.000 lugares até a força 12 e 80.000 na força 50,
   crescendo na mesma proporção (cerca de 7,6%) a cada ponto de força, em
   múltiplos de 500.
@@ -1307,6 +1309,15 @@ aguardando aprovação** (`economia.ParametrosEconomia`; simulação em
   dentro de cada divisão os mais fortes lucram mais; os mais fracos da 2ª
   e da 3ª fecham a temporada levemente no vermelho; a 1ª é a mais
   lucrativa.
+- **Lançamento (rev. 38):** o caixa é lançado no avanço da rodada, na
+  mesma transação, com extrato por clube, rodada e tipo (bilheteria,
+  custo do jogo, deslocamento, salários) que não aceita repetição. O
+  público de cada jogo é gravado na partida e sorteado pela semente
+  dela. Estádio e saldo inicial são calculados no primeiro avanço
+  (também em jogos salvos antes da economia).
+- **Provisório (rev. 38):** clubes da fila de espera não jogam e não têm
+  lançamentos; numa divisão com menos rodadas que a maior, a rodada sem
+  jogo também não tem lançamentos (como na simulação).
 
 ### 9.1.1 Moedas
 

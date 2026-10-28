@@ -46,19 +46,22 @@ public class RodadaRepositorio {
 	private final JogoRepositorio jogos;
 	private final TemporadaRepositorio temporadas;
 	private final EscalacaoRepositorio escalacoes;
+	private final CaixaRepositorio caixas;
 	private final ProcessamentoRodada processamento = ProcessamentoRodada.padrao();
 
 	public RodadaRepositorio(JdbcClient jdbc, JogoRepositorio jogos, TemporadaRepositorio temporadas,
-			EscalacaoRepositorio escalacoes) {
+			EscalacaoRepositorio escalacoes, CaixaRepositorio caixas) {
 		this.jdbc = jdbc;
 		this.jogos = jogos;
 		this.temporadas = temporadas;
 		this.escalacoes = escalacoes;
+		this.caixas = caixas;
 	}
 
 	/**
-	 * Joga a rodada da temporada atual e grava placares, gols, cartões, suspensões e moral. Os clubes
-	 * de treinador humano jogam com a escalação gravada, e quem ficou suspenso sai dela.
+	 * Joga a rodada da temporada atual e grava placares, gols, cartões, suspensões, moral e o caixa
+	 * dos clubes (SPEC §9.1). Os clubes de treinador humano jogam com a escalação gravada, e quem
+	 * ficou suspenso sai dela.
 	 *
 	 * @param rodada a rodada que quem pede espera jogar: a seguinte à última processada
 	 * @return o resultado do processamento
@@ -90,7 +93,8 @@ public class RodadaRepositorio {
 		Map<Long, List<Jogador>> planteis = jogos.carregarPlanteis(jogoId);
 		Disciplina antes = carregarDisciplina(jogoId);
 		Map<Long, Moral> moralAntes = carregarMoral(jogoId);
-		ProcessamentoRodada.Resultado resultado = preparar(jogoId, rodada, planteis, antes, substituicoes)
+		Temporada temporada = temporadas.carregarAtual(jogoId);
+		ProcessamentoRodada.Resultado resultado = preparar(temporada, rodada, jogoId, planteis, antes, substituicoes)
 			.finalizar(moralAntes);
 
 		for (ProcessamentoRodada.PartidaJogada partida : resultado.partidas()) {
@@ -98,6 +102,7 @@ public class RodadaRepositorio {
 		}
 		gravarDisciplina(planteis, antes, resultado.disciplina());
 		escalacoes.retirarSuspensos(jogoId);
+		caixas.lancarRodada(jogoId, linha.id(), temporada, rodada, resultado.partidas(), moralAntes, planteis);
 		resultado.moral().forEach((clubeId, moral) -> {
 			if (!moral.equals(moralAntes.get(clubeId))) {
 				jdbc.sql("UPDATE jogo_clube SET moral = :moral WHERE id = :clube")
@@ -128,10 +133,11 @@ public class RodadaRepositorio {
 	 */
 	@Transactional(readOnly = true)
 	public RodadaAoVivo preparar(long jogoId, int rodada, List<RodadaAoVivo.Substituicao> substituicoes) {
-		return preparar(jogoId, rodada, jogos.carregarPlanteis(jogoId), carregarDisciplina(jogoId), substituicoes);
+		return preparar(temporadas.carregarAtual(jogoId), rodada, jogoId, jogos.carregarPlanteis(jogoId),
+				carregarDisciplina(jogoId), substituicoes);
 	}
 
-	private RodadaAoVivo preparar(long jogoId, int rodada, Map<Long, List<Jogador>> planteis, Disciplina antes,
+	private RodadaAoVivo preparar(Temporada temporada, int rodada, long jogoId, Map<Long, List<Jogador>> planteis, Disciplina antes,
 			List<RodadaAoVivo.Substituicao> substituicoes) {
 		Map<Long, Escalacao> doTreinador = new HashMap<>();
 		escalacoes.carregarDoJogo(jogoId).forEach((clubeId, escalacao) -> {
@@ -143,7 +149,7 @@ public class RodadaRepositorio {
 						+ e.getMessage(), e);
 			}
 		});
-		return processamento.preparar(temporadas.carregarAtual(jogoId), rodada, planteis, antes, doTreinador,
+		return processamento.preparar(temporada, rodada, planteis, antes, doTreinador,
 				substituicoes);
 	}
 

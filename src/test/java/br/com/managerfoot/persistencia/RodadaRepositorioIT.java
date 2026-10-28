@@ -80,14 +80,47 @@ class RodadaRepositorioIT {
 	}
 
 	@Test
+	void rodadaAbreOCaixaELancaOExtratoDeCadaClube() {
+		assertThat(contar("SELECT count(*) FROM jogo_clube WHERE jogo_id = ? AND saldo IS NOT NULL")).isZero();
+
+		rodadas.avancar(jogo, 1);
+
+		// todos os clubes ganham estádio e saldo; só os das divisões têm lançamentos
+		assertThat(contar("SELECT count(*) FROM jogo_clube WHERE jogo_id = ? AND saldo IS NULL")).isZero();
+		assertThat(contar("""
+				SELECT count(DISTINCT l.clube_id) FROM jogo_lancamento l JOIN jogo_clube c ON c.id = l.clube_id
+				WHERE c.jogo_id = ? AND l.tipo = 'SALARIOS'""")).isEqualTo(16 + 15);
+		assertThat(contar("""
+				SELECT count(*) FROM jogo_partida p JOIN jogo_temporada t ON t.id = p.temporada_id
+				WHERE t.jogo_id = ? AND p.rodada = 1 AND (p.publico IS NULL OR p.publico > (
+				  SELECT c.estadio_capacidade FROM jogo_clube c WHERE c.id = p.mandante_id))""")).isZero();
+		// bilheteria de cada mandante = público × ingresso de R$ 40
+		assertThat(contar("""
+				SELECT count(*) FROM jogo_partida p JOIN jogo_temporada t ON t.id = p.temporada_id
+				WHERE t.jogo_id = ? AND p.rodada = 1 AND p.publico * 4000 IS DISTINCT FROM (SELECT l.valor
+				  FROM jogo_lancamento l WHERE l.clube_id = p.mandante_id AND l.rodada = 1 AND l.tipo = 'BILHETERIA')"""))
+			.isZero();
+		long saldos = contar("SELECT sum(saldo) FROM jogo_clube WHERE jogo_id = ?");
+
+		rodadas.avancar(jogo, 2);
+
+		long extrato2 = contar("""
+				SELECT sum(l.valor) FROM jogo_lancamento l JOIN jogo_clube c ON c.id = l.clube_id
+				WHERE c.jogo_id = ? AND l.rodada = 2""");
+		assertThat(contar("SELECT sum(saldo) FROM jogo_clube WHERE jogo_id = ?")).isEqualTo(saldos + extrato2);
+	}
+
+	@Test
 	void pedidoRepetidoOuForaDeOrdemERecusadoSemDuplicar() {
 		rodadas.avancar(jogo, 1);
 		long eventos = contarEventos();
+		long lancamentos = contarLancamentos();
 
 		assertThatThrownBy(() -> rodadas.avancar(jogo, 1)).isInstanceOf(IllegalStateException.class)
 			.hasMessageContaining("a próxima é a 2");
 		assertThatThrownBy(() -> rodadas.avancar(jogo, 3)).isInstanceOf(IllegalStateException.class);
 		assertThat(contarEventos()).isEqualTo(eventos);
+		assertThat(contarLancamentos()).isEqualTo(lancamentos);
 		assertThat(rodadas.rodadasProcessadas(jogo)).isEqualTo(1);
 	}
 
@@ -162,6 +195,10 @@ class RodadaRepositorioIT {
 
 	private long contarEventos() {
 		return contar("SELECT count(*) FROM jogo_evento e JOIN jogo_clube c ON c.id = e.clube_id WHERE c.jogo_id = ?");
+	}
+
+	private long contarLancamentos() {
+		return contar("SELECT count(*) FROM jogo_lancamento l JOIN jogo_clube c ON c.id = l.clube_id WHERE c.jogo_id = ?");
 	}
 
 	private long contar(String sql) {

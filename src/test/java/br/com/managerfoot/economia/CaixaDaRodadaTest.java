@@ -3,16 +3,21 @@ package br.com.managerfoot.economia;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.SplittableRandom;
 import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.Test;
 
+import br.com.managerfoot.dominio.Clube;
 import br.com.managerfoot.dominio.Jogador;
 import br.com.managerfoot.dominio.Moral;
 import br.com.managerfoot.dominio.Posicao;
 import br.com.managerfoot.dominio.Temperamento;
 import br.com.managerfoot.economia.CaixaDaRodada.Local;
+import br.com.managerfoot.temporada.Jogo;
+import br.com.managerfoot.temporada.Rodada;
 
 class CaixaDaRodadaTest {
 
@@ -63,6 +68,26 @@ class CaixaDaRodadaTest {
 				new Lancamento(TipoLancamento.DESLOCAMENTO, -30_000_00L), new Lancamento(TipoLancamento.SALARIOS, -2_000_00L));
 		assertThat(caixa.lancamentos(Local.FOLGA, 3, 0, plantel))
 			.containsExactly(new Lancamento(TipoLancamento.SALARIOS, -2_000_00L));
+	}
+
+	@Test
+	void rodadaLancaMandanteVisitanteEFolgaComPublicoReproduzivel() {
+		Clube a = new Clube(1, "A", 30);
+		Clube b = new Clube(2, "B", 30);
+		Clube c = new Clube(3, "C", 30);
+		Rodada rodada = new Rodada(1, List.of(new Jogo(1, a, b)), Optional.of(c));
+		List<Jogador> plantel = List.of(jogador(17));
+		Map<Long, List<Jogador>> planteis = Map.of(1L, plantel, 2L, plantel, 3L, plantel);
+		Map<Long, Integer> capacidades = Map.of(1L, 10_000, 2L, 10_000, 3L, 10_000);
+
+		CaixaDaRodada.Movimento movimento = caixa.rodada(rodada, 1, Map.of(1L, 99L), capacidades, Map.of(), planteis);
+
+		int publico = movimento.publicoPorMandante().get(1L);
+		assertThat(publico).isEqualTo(caixa.publico(10_000, new Moral(18), 30, 30, new SplittableRandom(~99L)));
+		assertThat(movimento.lancamentos().get(1L)).isEqualTo(caixa.lancamentos(Local.CASA, 1, publico, plantel));
+		assertThat(movimento.lancamentos().get(2L)).isEqualTo(caixa.lancamentos(Local.FORA, 1, 0, plantel));
+		assertThat(movimento.lancamentos().get(3L)).isEqualTo(caixa.lancamentos(Local.FOLGA, 1, 0, plantel));
+		assertThat(caixa.rodada(rodada, 1, Map.of(1L, 99L), capacidades, Map.of(), planteis)).isEqualTo(movimento);
 	}
 
 	private int media(Moral moral, int forcaCasa, int forcaFora) {
