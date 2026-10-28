@@ -37,6 +37,7 @@ import br.com.managerfoot.persistencia.ConsultasRepositorio.VisaoArtilheiros;
 import br.com.managerfoot.persistencia.ConsultasRepositorio.VisaoCalendario;
 import br.com.managerfoot.persistencia.ContasRepositorio;
 import br.com.managerfoot.persistencia.JogoRepositorio;
+import br.com.managerfoot.persistencia.CompraRepositorio;
 import br.com.managerfoot.persistencia.JogosDoTreinadorRepositorio;
 import br.com.managerfoot.persistencia.MoldeRepositorio;
 import br.com.managerfoot.persistencia.RodadaRepositorio;
@@ -73,6 +74,9 @@ class AbasIT {
 
 	@Autowired
 	CaixaRepositorio caixas;
+
+	@Autowired
+	CompraRepositorio compras;
 
 	@Autowired
 	JdbcClient jdbc;
@@ -206,6 +210,34 @@ class AbasIT {
 			.param("c", clube)
 			.query(Long.class)
 			.single();
+	}
+
+	@Test
+	void compraApareceNaColunaDeMercadoDaRodadaComONomeDoJogador() throws Exception {
+		long clube = jogo.clubeDoTreinador(jogoId, treinador.id()).orElseThrow();
+		long alvo = jdbc.sql("""
+				SELECT jj.id FROM jogo_jogador jj JOIN jogo_clube c ON c.id = jj.clube_id
+				WHERE c.jogo_id = :j AND jj.a_venda ORDER BY jj.forca, jj.id LIMIT 1""")
+			.param("j", jogoId).query(Long.class).single();
+		String nome = jdbc.sql("SELECT nome FROM jogo_jogador WHERE id = :id").param("id", alvo).query(String.class).single();
+
+		long pago = compras.comprar(jogoId, treinador.id(), alvo);
+
+		VisaoFinancas f = caixas.financas(jogoId, treinador.id());
+		LinhaExtrato rodada3 = f.extrato().getLast();
+		assertThat(rodada3.rodada()).isEqualTo(3);
+		assertThat(rodada3.mercado()).isEqualTo(-pago);
+		assertThat(rodada3.detalhes()).singleElement().asString().startsWith("Compra: " + nome + " (");
+		assertThat(f.totalMercado()).isEqualTo(-pago);
+		long saldoGravado = jdbc.sql("SELECT saldo FROM jogo_clube WHERE id = :c").param("c", clube).query(Long.class).single();
+		assertThat(rodada3.saldo()).isEqualTo(saldoGravado).isEqualTo(f.saldo());
+		assertThat(f.saldoInicioTemporada() + f.resultado()).isEqualTo(saldoGravado);
+
+		mvc.perform(get(base + "/financas").with(como(treinador)))
+			.andExpect(status().isOk())
+			.andExpect(content().string(containsString("Mercado e prêmios")))
+			.andExpect(content().string(containsString("Patrocínio da temporada")))
+			.andExpect(content().string(containsString("Compra: " + nome)));
 	}
 
 	@Test

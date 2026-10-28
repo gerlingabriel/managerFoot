@@ -1281,7 +1281,7 @@ a.link-clube:hover { color: var(--destaque); text-decoration: underline; }
 .financas-numero.positivo, .tabela-extrato .positivo { color: #3FB37F; }
 .financas-nota { margin: 0; padding: 10px 20px 14px; }
 
-.tabela-extrato { width: 100%; min-width: 1040px; border-collapse: collapse; font-size: 15px; font-variant-numeric: tabular-nums; }
+.tabela-extrato { width: 100%; min-width: 1180px; border-collapse: collapse; font-size: 15px; font-variant-numeric: tabular-nums; }
 
 .tabela-extrato th {
 	padding: 8px 10px;
@@ -1303,3 +1303,12 @@ a.link-clube:hover { color: var(--destaque); text-decoration: underline; }
 
 /* Público no quadro da rodada (modelo 1a). */
 .jogo-publico { font-size: 14px; color: var(--texto-suave); text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Finanças (modelo 6b): compra, venda ou prêmio embaixo do jogo da rodada. */
+.extrato-detalhe {
+	display: block;
+	margin-top: 2px;
+	font-size: 13px;
+	color: var(--texto-suave);
+	white-space: nowrap;
+}

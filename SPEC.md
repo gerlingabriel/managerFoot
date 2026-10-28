@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 50 (2026-10-28):** finanças pelo modelo 6b (aprovado): linha do patrocínio, coluna "Mercado e prêmios" com o jogador comprado ou vendido; usuário quer ver o plantel inteiro ao clicar no clube (modelo 7a revisado para aprovação).
 -   **rev. 49 (2026-10-28):** compra direta no servidor (V19): paga o preço da tabela ao clube da máquina, recusa sem caixa, com 25 jogadores ou durante a rodada; lançamentos de compra e venda no extrato. Tela ainda não ligada.
 -   **rev. 48 (2026-10-28):** patrocínio lançado no início de cada temporada (rodada 0) e prêmio da liga na última rodada (V18); a tela de finanças mostra o patrocínio dentro do saldo do início.
 -   **rev. 47 (2026-10-28):** jogadores à venda da máquina gravados (V17), completados a cada temporada e rodada; salário gravado adiado até a força poder mudar (ADR 0011).
@@ -1597,6 +1598,13 @@ na temporada anterior.
   todos recebem a média das posições (R$ 197 mil na 1ª com 20 clubes); o
   valor usa a divisão em que o clube jogou a temporada anterior; quem vem
   da fila de espera recebe como o último da divisão em que entra.
+- **Definido (rev. 50), modelo 6b aprovado:** a aba Finanças mostra o
+  saldo do fim da temporada anterior (ou o inicial do clube), uma linha
+  "Patrocínio da temporada" e a coluna "Mercado e prêmios" (compras com
+  sinal de menos, vendas e prêmio da liga) com o jogador embaixo do jogo
+  da rodada. Compras antes da 1ª rodada aparecem em "Antes da 1ª rodada".
+  Diferença do modelo: a linha do patrocínio ainda não diz a posição da
+  temporada anterior.
 - **Gravado (rev. 48):** o patrocínio é lançado de uma vez na "rodada 0"
   da temporada (ao criar o jogo e na virada). A tela de finanças ainda não
   tem linha própria para patrocínio e prêmio: eles aparecem no saldo do

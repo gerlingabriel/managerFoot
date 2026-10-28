@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import br.com.managerfoot.dominio.Clube;
 import br.com.managerfoot.dominio.Jogador;
 import br.com.managerfoot.dominio.Moral;
+import br.com.managerfoot.dominio.Posicao;
 import br.com.managerfoot.economia.CaixaDaRodada;
 import br.com.managerfoot.economia.Lancamento;
 import br.com.managerfoot.economia.Moeda;
@@ -126,18 +127,30 @@ public class CaixaRepositorio {
 					rs.getLong("temporada_id"), rs.getInt("rodadas_processadas"), rs.getString("divisao")))
 			.single();
 
+		// modelo 6b (rev. 50): patrocínio (rodada 0) em linha própria; compras, vendas e prêmio na coluna
+		// de mercado da rodada, com os detalhes
 		Map<Integer, Map<TipoLancamento, Long>> porRodada = new TreeMap<>();
-		// o extrato é das rodadas: o patrocínio (rodada 0) entra no saldo do início; compras, vendas e
-		// prêmio entram no saldo da rodada, ainda sem coluna própria
+		Map<Integer, List<String>> detalhes = new HashMap<>();
 		jdbc.sql("""
-				SELECT rodada, tipo, sum(valor) AS valor FROM jogo_lancamento
-				WHERE clube_id = :clube AND temporada_id = :temporada AND rodada >= 1
-				GROUP BY rodada, tipo""")
+				SELECT l.rodada, l.tipo, l.valor, jj.nome, jj.posicao, jj.forca
+				FROM jogo_lancamento l LEFT JOIN jogo_jogador jj ON jj.id = l.jogador_id
+				WHERE l.clube_id = :clube AND l.temporada_id = :temporada
+				ORDER BY l.rodada, l.id""")
 			.param("clube", clube)
 			.param("temporada", situacao.temporadaId())
 			.query(rs -> {
-				porRodada.computeIfAbsent(rs.getInt("rodada"), r -> new HashMap<>())
-					.put(TipoLancamento.valueOf(rs.getString("tipo")), rs.getLong("valor"));
+				int rodada = rs.getInt("rodada");
+				TipoLancamento tipo = TipoLancamento.valueOf(rs.getString("tipo"));
+				porRodada.computeIfAbsent(rodada, r -> new HashMap<>()).merge(tipo, rs.getLong("valor"), Long::sum);
+				String detalhe = switch (tipo) {
+					case COMPRA, VENDA -> (tipo == TipoLancamento.COMPRA ? "Compra: " : "Venda: ") + rs.getString("nome")
+							+ " (" + sigla(rs.getString("posicao")) + ", " + rs.getInt("forca") + ")";
+					case PREMIO -> "Prêmio da liga";
+					default -> null;
+				};
+				if (detalhe != null) {
+					detalhes.computeIfAbsent(rodada, r -> new ArrayList<>()).add(detalhe);
+				}
 			});
 		Map<Integer, Integer> publicos = new HashMap<>();
 		jdbc.sql("""
@@ -150,13 +163,21 @@ public class CaixaRepositorio {
 			});
 
 		long saldo = saldo(clube, plantel);
-		long saldoInicio = saldo - porRodada.values().stream().flatMap(v -> v.values().stream()).mapToLong(Long::longValue).sum();
+		long saldoAnterior = saldo
+				- porRodada.values().stream().flatMap(v -> v.values().stream()).mapToLong(Long::longValue).sum();
+		long patrocinio = porRodada.getOrDefault(0, Map.of()).getOrDefault(TipoLancamento.PATROCINIO, 0L);
 		List<LinhaExtrato> extrato = new ArrayList<>();
-		long acumulado = saldoInicio;
+		long acumulado = saldoAnterior + patrocinio;
 		for (Map.Entry<Integer, Map<TipoLancamento, Long>> e : porRodada.entrySet()) {
 			int rodada = e.getKey();
 			Map<TipoLancamento, Long> valores = e.getValue();
-			acumulado += valores.values().stream().mapToLong(Long::longValue).sum();
+			long mercado = valores.getOrDefault(TipoLancamento.COMPRA, 0L) + valores.getOrDefault(TipoLancamento.VENDA, 0L)
+					+ valores.getOrDefault(TipoLancamento.PREMIO, 0L);
+			if (rodada == 0 && mercado == 0) {
+				continue; // só o patrocínio, que tem linha própria
+			}
+			acumulado += valores.values().stream().mapToLong(Long::longValue).sum()
+					- (rodada == 0 ? patrocinio : 0);
 			Optional<Jogo> jogo = divisao.calendario().jogos().stream()
 				.filter(j -> j.rodada() == rodada && envolve(j, clube)).findFirst();
 			extrato.add(new LinhaExtrato(rodada, jogo.map(j -> j.mandante().id() == clube).orElse(null),
@@ -164,13 +185,13 @@ public class CaixaRepositorio {
 					publicos.get(rodada), valores.getOrDefault(TipoLancamento.BILHETERIA, 0L),
 					valores.getOrDefault(TipoLancamento.CUSTO_DO_JOGO, 0L),
 					valores.getOrDefault(TipoLancamento.DESLOCAMENTO, 0L), valores.getOrDefault(TipoLancamento.SALARIOS, 0L),
-					acumulado));
+					mercado, detalhes.getOrDefault(rodada, List.of()), acumulado));
 		}
 		Integer publicoMedio = publicos.isEmpty() ? null
 				: (int) Math.round(publicos.values().stream().mapToInt(Integer::intValue).average().orElseThrow());
-		return new VisaoFinancas(oClube, jogos.ano(jogoId, temporada.numero()), situacao.divisao(), situacao.rodadas(), moeda(jogoId), saldo,
-				saldoInicio, situacao.estadio(), publicoMedio, caixa.ingresso(divisao.prioridade()),
-				caixa.folha(plantel), plantel.size(), extrato);
+		return new VisaoFinancas(oClube, jogos.ano(jogoId, temporada.numero()), temporada.numero() == 1, situacao.divisao(),
+				situacao.rodadas(), moeda(jogoId), saldo, saldoAnterior, patrocinio, situacao.estadio(), publicoMedio,
+				caixa.ingresso(divisao.prioridade()), caixa.folha(plantel), plantel.size(), extrato);
 	}
 
 	/**
@@ -349,6 +370,15 @@ public class CaixaRepositorio {
 			.update();
 	}
 
+	private static String sigla(String posicao) {
+		return switch (Posicao.valueOf(posicao)) {
+			case GOLEIRO -> "G";
+			case DEFENSOR -> "Z";
+			case MEIO_CAMPISTA -> "M";
+			case ATACANTE -> "A";
+		};
+	}
+
 	private static boolean envolve(Jogo jogo, long clube) {
 		return jogo.mandante().id() == clube || jogo.visitante().id() == clube;
 	}
@@ -364,11 +394,21 @@ public class CaixaRepositorio {
 	 * @param publico nulo fora de casa e na folga
 	 * @param saldo saldo depois da rodada
 	 */
+	/**
+	 * Uma rodada do extrato; a rodada 0 só aparece com compras ou vendas feitas antes da 1ª rodada.
+	 *
+	 * @param mercado compras (negativas), vendas e prêmio da liga
+	 * @param detalhes o que entrou em {@code mercado}, para mostrar embaixo do jogo
+	 */
 	public record LinhaExtrato(int rodada, Boolean emCasa, Clube adversario, Integer publico, long bilheteria,
-			long custoDoJogo, long deslocamento, long salarios, long saldo) {
+			long custoDoJogo, long deslocamento, long salarios, long mercado, List<String> detalhes, long saldo) {
+
+		public LinhaExtrato {
+			detalhes = List.copyOf(detalhes);
+		}
 
 		public long resultado() {
-			return bilheteria + custoDoJogo + deslocamento + salarios;
+			return bilheteria + custoDoJogo + deslocamento + salarios + mercado;
 		}
 	}
 
@@ -377,13 +417,15 @@ public class CaixaRepositorio {
 	 *
 	 * @param temporada ano da temporada
 	 * @param rodadas rodadas já jogadas na temporada
-	 * @param saldoInicioTemporada saldo antes do primeiro lançamento da temporada
+	 * @param primeiraTemporada o saldo anterior é o saldo inicial do clube
+	 * @param saldoAnterior saldo antes de qualquer lançamento da temporada (o do fim da anterior)
+	 * @param patrocinio patrocínio da temporada, lançado no início
 	 * @param estadio capacidade do estádio
 	 * @param publicoMedio média dos jogos em casa na temporada; nulo se ainda não houve
 	 * @param folha salários de uma rodada
 	 */
-	public record VisaoFinancas(Clube clube, int temporada, String divisao, int rodadas, Moeda moeda, long saldo,
-			long saldoInicioTemporada, int estadio, Integer publicoMedio, long ingresso, long folha, int jogadores,
+	public record VisaoFinancas(Clube clube, int temporada, boolean primeiraTemporada, String divisao, int rodadas,
+			Moeda moeda, long saldo, long saldoAnterior, long patrocinio, int estadio, Integer publicoMedio, long ingresso, long folha, int jogadores,
 			List<LinhaExtrato> extrato) {
 
 		public long receitas() {
@@ -402,13 +444,23 @@ public class CaixaRepositorio {
 			return extrato.stream().mapToLong(LinhaExtrato::salarios).sum();
 		}
 
+		public long totalMercado() {
+			return extrato.stream().mapToLong(LinhaExtrato::mercado).sum();
+		}
+
 		/** Saídas da temporada, negativas. */
 		public long despesas() {
 			return totalCustoDoJogo() + totalDeslocamento() + totalSalarios();
 		}
 
+		/** Saldo no início da temporada, já com o patrocínio. */
+		public long saldoInicioTemporada() {
+			return saldoAnterior + patrocinio;
+		}
+
+		/** Resultado das rodadas: caixa, mercado e prêmio (o patrocínio está no início). */
 		public long resultado() {
-			return receitas() + despesas();
+			return receitas() + despesas() + totalMercado();
 		}
 
 		/** Ocupação média do estádio, em %; nula sem jogo em casa. */
