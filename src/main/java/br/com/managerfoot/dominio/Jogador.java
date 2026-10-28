@@ -45,6 +45,11 @@ public record Jogador(long id, String nome, Posicao posicao, int forca, Temperam
 		this(id, nome, posicao, forca, temperamento, false, nacionalidade);
 	}
 
+	/** O mesmo jogador com outra força. */
+	public Jogador comForca(int forca) {
+		return new Jogador(id, nome, posicao, forca, temperamento, asterisco, nacionalidade);
+	}
+
 	/** O mesmo jogador com ou sem asterisco. */
 	public Jogador comAsterisco(boolean asterisco) {
 		return new Jogador(id, nome, posicao, forca, temperamento, asterisco, nacionalidade);
