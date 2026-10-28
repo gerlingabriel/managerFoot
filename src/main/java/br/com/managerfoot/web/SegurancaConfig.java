@@ -25,6 +25,7 @@ class SegurancaConfig {
 			SecurityContextRepository contexto) throws Exception {
 		http.authorizeHttpRequests(a -> a
 				.requestMatchers("/entrar", "/cadastro", "/css/**", "/js/**", "/webjars/**", "/actuator/health", "/error").permitAll()
+				.requestMatchers("/jogos/escolher", "/jogos/escolher/**").hasRole("ADMINISTRADOR")
 				.anyRequest().authenticated())
 			.authenticationProvider(autenticacao)
 			.securityContext(s -> s.securityContextRepository(contexto))

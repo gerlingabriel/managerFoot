@@ -59,6 +59,19 @@ public class JogosDoTreinadorRepositorio {
 		return new NovoJogo(jogoId, candidatos);
 	}
 
+	/**
+	 * Jogo novo com o clube escolhido pelo administrador no quadro de
+	 * {@link JogoRepositorio#distribuicao} da mesma semente, e a 1ª temporada iniciada.
+	 *
+	 * @param clubeMoldeId id do clube no molde
+	 */
+	@Transactional
+	public long criarComEscolha(long paisMoldeId, long administradorId, long semente, long clubeMoldeId) {
+		long jogoId = jogos.criarJogoComClubeEscolhido(paisMoldeId, administradorId, semente, clubeMoldeId);
+		temporadas.iniciarPrimeiraTemporada(jogoId, new SplittableRandom(semente).nextLong());
+		return jogoId;
+	}
+
 	/** Jogos em que o usuário é treinador, do último acesso para o mais antigo. */
 	@Transactional(readOnly = true)
 	public List<JogoGravado> listar(long usuarioId) {

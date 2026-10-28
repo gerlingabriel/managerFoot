@@ -35,7 +35,7 @@ Nenhum campeonato disponível. Carregue o banco padrão (veja o README).
 </div>
 </section>
 
-<section aria-labelledby="t-modo" class="painel painel-interno">
+<section th:if="${usuario.papel.name() == 'PARTICIPANTE'}" aria-labelledby="t-modo" class="painel painel-interno">
 <h2 id="t-modo" class="titulo-secao pequeno">2 · Seu clube</h2>
 <div class="destaque-sorteio">
 <div class="pilha-curta">
@@ -45,9 +45,23 @@ Nenhum campeonato disponível. Carregue o banco padrão (veja o README).
 </div>
 </section>
 
+<section th:if="${usuario.papel.name() == 'ADMINISTRADOR'}" aria-labelledby="t-modo" class="painel painel-interno">
+<h2 id="t-modo" class="titulo-secao pequeno">2 · Como começar</h2>
+<div class="opcoes">
+<button type="submit" class="opcao">
+<span class="opcao-titulo">Sortear clube e começar</span>
+<span class="texto" th:text="|Você recebe um dos ${candidatos} clubes mais fracos da última divisão.|">texto</span>
+</button>
+<button type="submit" class="opcao" th:formaction="@{/jogos/escolher}">
+<span class="opcao-titulo">Escolher clube</span>
+<span class="texto">Abre o quadro de escolha com todos os clubes do país.</span>
+</button>
+</div>
+</section>
+
 <div class="acoes">
 <a th:href="@{/}" class="botao-discreto botao-link">Voltar</a>
-<button type="submit" class="botao botao-largo">Sortear clube e começar</button>
+<button th:if="${usuario.papel.name() == 'PARTICIPANTE'}" type="submit" class="botao botao-largo">Sortear clube e começar</button>
 </div>
 </form>
 </div>

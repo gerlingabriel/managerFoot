@@ -35,7 +35,8 @@
   como `Usuario` (sem senha), com o papel como `ROLE_<PAPEL>`. A senha
   continua verificada por `ContasRepositorio.autenticar`.
 - **Abertos sem login:** `/entrar`, `/cadastro`, `/css/**`, `/js/**`, `/webjars/**`,
-  `/actuator/health` e `/error`. O resto exige login.
+  `/actuator/health` e `/error`. O resto exige login, e o quadro de escolha
+  de clube (`/jogos/escolher/**`) exige o papel de administrador.
 - **Cadastro já entra:** troca o id da sessão e grava o usuário nela.
 - **HTMX por webjar**, sem dependência de CDN. As fontes (Barlow) vêm do
   Google Fonts, como no modelo; sem internet o navegador usa a fonte do

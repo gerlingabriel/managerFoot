@@ -493,3 +493,154 @@ a.botao-discreto { min-height: 48px; padding: 0 20px; }
 	font-size: 30px;
 	text-transform: uppercase;
 }
+
+/* Novo jogo do administrador e quadro de escolha de clube (modelos 5d, 5e). */
+.opcoes {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+	gap: 12px;
+}
+
+.opcao {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding: 16px;
+	min-height: 140px;
+	border-radius: 10px;
+	text-align: left;
+	background: var(--cartao);
+	color: var(--texto);
+	border: 1px solid var(--borda);
+	cursor: pointer;
+	font-family: Barlow, sans-serif;
+}
+
+.opcao:hover { border-color: var(--destaque); }
+
+.opcao-titulo {
+	font-family: 'Barlow Condensed', sans-serif;
+	font-weight: 700;
+	font-size: 24px;
+	text-transform: uppercase;
+	color: var(--destaque);
+}
+
+.quadro-cabecalho {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	justify-content: space-between;
+	gap: 16px;
+}
+
+.quadro {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 20px;
+	align-items: flex-start;
+}
+
+.quadro-colunas {
+	flex: 999 1 560px;
+	min-width: 0;
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+	gap: 12px;
+}
+
+.coluna { overflow: hidden; }
+.coluna-fila { border-style: dashed; }
+
+.coluna-cabecalho {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	gap: 8px;
+	padding: 10px 12px;
+	border-bottom: 1px solid var(--borda);
+}
+
+.titulo-coluna {
+	margin: 0;
+	font-family: 'Barlow Condensed', sans-serif;
+	font-weight: 700;
+	font-size: 19px;
+	text-transform: uppercase;
+	color: var(--destaque);
+}
+
+.coluna-clubes { display: flex; flex-direction: column; }
+
+.clube-linha {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	min-height: 44px;
+	padding: 0 12px;
+	border-top: 1px solid rgba(31, 90, 58, 0.6);
+	color: var(--texto);
+	text-decoration: none;
+}
+
+a.clube-linha:hover { color: var(--texto); background: rgba(242, 201, 76, 0.1); }
+.clube-linha.sorteavel { background: rgba(242, 201, 76, 0.05); }
+.clube-linha.marcado { background: rgba(242, 201, 76, 0.18); box-shadow: inset 4px 0 0 var(--destaque); }
+.clube-linha.bloqueado { opacity: 0.6; cursor: not-allowed; }
+
+.clube-nome {
+	flex: 1;
+	min-width: 0;
+	font-family: 'Barlow Condensed', sans-serif;
+	font-weight: 600;
+	font-size: 17px;
+	text-transform: uppercase;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.clube-forca, .forca {
+	font-family: 'Barlow Condensed', sans-serif;
+	font-weight: 700;
+	font-size: 18px;
+	font-variant-numeric: tabular-nums;
+}
+
+.plantel-escolha { flex: 1 1 300px; }
+
+.plantel-topo { display: flex; align-items: center; gap: 12px; }
+.nome-clube.grande { margin: 0; font-size: 26px; line-height: 1; }
+
+.plantel-tabela { width: 100%; border-collapse: collapse; font-size: 15px; }
+
+.plantel-tabela th {
+	padding: 4px 0;
+	font-size: 12px;
+	font-weight: 400;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	text-align: left;
+	color: var(--texto-suave);
+	border-bottom: 1px solid var(--borda);
+}
+
+.plantel-tabela td { padding: 4px 0; border-bottom: 1px solid rgba(31, 90, 58, 0.6); }
+.plantel-tabela .num { text-align: right; }
+.jogador-nome { font-weight: 600; padding-left: 10px !important; }
+.asterisco { color: var(--destaque); font-weight: 700; }
+
+.pos {
+	display: inline-flex;
+	justify-content: center;
+	width: 30px;
+	padding: 2px 0;
+	border-radius: 6px;
+	font: 700 14px Barlow, sans-serif;
+	color: var(--texto);
+}
+
+.pos-GOLEIRO { background: #7C3AED; }
+.pos-DEFENSOR { background: #1D4ED8; }
+.pos-MEIO_CAMPISTA { background: #0F766E; }
+.pos-ATACANTE { background: #B91C1C; }

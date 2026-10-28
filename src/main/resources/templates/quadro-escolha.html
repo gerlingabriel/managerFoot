@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: cabeca('Escolha seu clube')}"></head>
+<body>
+<div class="campo campo-pagina">
+<div class="pagina">
+<header th:replace="~{fragmentos :: topo}"></header>
+
+<div class="quadro-cabecalho">
+<div class="pilha-curta">
+<span class="rotulo" th:text="|Novo jogo · ${campeonato.nomePais} · ${campeonato.nomeLiga}|">Novo jogo</span>
+<h1 class="titulo-pagina">Escolha seu clube</h1>
+</div>
+<a th:href="@{/jogos/novo}" class="botao-discreto botao-link">Voltar</a>
+</div>
+
+<p class="texto">Clubes do país já distribuídos pela força, como ficarão no jogo. Empates de força foram sorteados. Clique num clube para ver o plantel.</p>
+
+<div id="quadro" class="quadro">
+<main class="quadro-colunas">
+<section th:each="col : ${colunas}" th:attr="aria-label=${col.titulo}" class="painel coluna" th:classappend="${col.fila} ? 'coluna-fila'">
+<div class="coluna-cabecalho">
+<h2 class="titulo-coluna" th:text="${col.titulo}">Divisão</h2>
+<span class="suave pequeno" th:text="${col.nota}">nota</span>
+</div>
+<div class="coluna-clubes">
+<th:block th:each="c : ${col.clubes}">
+<span th:if="${col.fila}" class="clube-linha bloqueado" aria-disabled="true">
+<span aria-hidden="true" th:style="${@escudos.estilo(c.escudo, 20, 24)}"></span>
+<span class="clube-nome" th:text="${c.nome}">Clube</span>
+<span class="clube-forca" th:text="${c.forca}">0</span>
+</span>
+<a th:unless="${col.fila}" class="clube-linha"
+	th:classappend="${escolhido != null and escolhido.clube.id == c.id} ? 'marcado' : (${col.candidatos.contains(c.id)} ? 'sorteavel')"
+	th:href="@{/jogos/escolher(clube=${c.id})}" th:attr="aria-current=${escolhido != null and escolhido.clube.id == c.id} ? 'true' : null"
+	hx-select="#quadro" hx-target="#quadro" hx-swap="outerHTML show:none" hx-push-url="true"
+	th:hx-get="@{/jogos/escolher(clube=${c.id})}">
+<span aria-hidden="true" th:style="${@escudos.estilo(c.escudo, 20, 24)}"></span>
+<span class="clube-nome" th:text="${c.nome}">Clube</span>
+<span class="clube-forca" th:text="${c.forca}">0</span>
+</a>
+</th:block>
+</div>
+</section>
+</main>
+
+<aside aria-labelledby="t-plantel" class="painel painel-interno plantel-escolha">
+<p th:if="${escolhido == null}" id="t-plantel" class="texto">Clique num clube para ver o plantel.</p>
+<th:block th:if="${escolhido != null}">
+<div class="plantel-topo">
+<span aria-hidden="true" th:style="${@escudos.estilo(escolhido.clube.escudo, 44, 52)}"></span>
+<div class="pilha-curta">
+<h2 id="t-plantel" class="nome-clube grande" th:text="${escolhido.clube.nome}">Clube</h2>
+<span class="suave" th:text="${escolhido.resumo}">resumo</span>
+</div>
+</div>
+<table class="plantel-tabela">
+<thead><tr><th scope="col">Pos</th><th scope="col">Jogador</th><th scope="col" class="num">Força</th></tr></thead>
+<tbody>
+<tr th:each="j : ${escolhido.plantel}">
+<td><span class="pos" th:classappend="|pos-${j.posicao}|" th:text="${j.posicao.name().substring(0, 1)}"
+	th:attr="title=${j.posicao.nome(1)}">G</span></td>
+<td class="jogador-nome"><span th:text="${j.nome}">Nome</span> <span th:if="${j.asterisco}" class="asterisco" title="jogador com asterisco">★</span></td>
+<td class="num forca" th:text="${j.forca}">0</td>
+</tr>
+</tbody>
+</table>
+<form th:action="@{/jogos/escolher/assumir}" method="post" data-envio-unico>
+<input type="hidden" name="clube" th:value="${escolhido.clube.id}">
+<button type="submit" class="botao botao-largo" th:text="|Assumir ${escolhido.clube.nome}|">Assumir</button>
+</form>
+</th:block>
+</aside>
+</div>
+</div>
+</div>
+</body>
+</html>

@@ -19,7 +19,6 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import br.com.managerfoot.contas.Usuario;
 import br.com.managerfoot.dominio.Clube;
-import br.com.managerfoot.persistencia.BancoPadraoRepositorio;
 import br.com.managerfoot.persistencia.JogosDoTreinadorRepositorio;
 import br.com.managerfoot.persistencia.JogosDoTreinadorRepositorio.JogoGravado;
 import br.com.managerfoot.persistencia.JogosDoTreinadorRepositorio.NovoJogo;
@@ -28,7 +27,7 @@ import br.com.managerfoot.persistencia.MoldeRepositorio.CampeonatoDisponivel;
 import br.com.managerfoot.temporada.FormatoDivisao;
 import br.com.managerfoot.temporada.FormatoLiga;
 
-/** Início, novo jogo por sorteio e abertura de um jogo gravado (SPEC §3.2 e §10.5, rev. 28 e 29). */
+/** Início, novo jogo por sorteio (o caminho da escolha está em {@link EscolhaClubeController}) e abertura de um jogo gravado (SPEC §3.2 e §10.5, rev. 28 e 29). */
 @Controller
 class JogosController {
 
@@ -36,14 +35,14 @@ class JogosController {
 
 	private final JogosDoTreinadorRepositorio jogos;
 	private final MoldeRepositorio moldes;
-	private final BancoPadraoRepositorio bancoPadrao;
+	private final Campeonatos campeonatos;
 	private final int candidatosClubeInicial;
 
-	JogosController(JogosDoTreinadorRepositorio jogos, MoldeRepositorio moldes, BancoPadraoRepositorio bancoPadrao,
+	JogosController(JogosDoTreinadorRepositorio jogos, MoldeRepositorio moldes, Campeonatos campeonatos,
 			@Value("${managerfoot.jogo.candidatos-clube-inicial}") int candidatosClubeInicial) {
 		this.jogos = jogos;
 		this.moldes = moldes;
-		this.bancoPadrao = bancoPadrao;
+		this.campeonatos = campeonatos;
 		this.candidatosClubeInicial = candidatosClubeInicial;
 	}
 
@@ -57,7 +56,7 @@ class JogosController {
 	@GetMapping("/jogos/novo")
 	String novo(@AuthenticationPrincipal Usuario usuario, Model model) {
 		model.addAttribute("usuario", usuario);
-		model.addAttribute("campeonatos", campeonatos().stream().map(this::cartao).toList());
+		model.addAttribute("campeonatos", campeonatos.disponiveis().stream().map(this::cartao).toList());
 		model.addAttribute("candidatos", candidatosClubeInicial);
 		return "novo-jogo";
 	}
@@ -65,8 +64,7 @@ class JogosController {
 	@PostMapping("/jogos")
 	String criar(@AuthenticationPrincipal Usuario usuario, @RequestParam("paisId") long paisId, Model model,
 			RedirectAttributes redirect) {
-		// só os campeonatos oferecidos na tela: o id enviado pelo navegador não é confiável
-		if (campeonatos().stream().noneMatch(c -> c.paisId() == paisId)) {
+		if (campeonatos.buscar(paisId).isEmpty()) {
 			model.addAttribute("erro", "Escolha um dos campeonatos da lista.");
 			return novo(usuario, model);
 		}
@@ -83,10 +81,6 @@ class JogosController {
 		model.addAttribute("usuario", usuario);
 		model.addAttribute("jogo", linha(jogo));
 		return "jogo";
-	}
-
-	private List<CampeonatoDisponivel> campeonatos() {
-		return bancoPadrao.moldeId().map(moldes::campeonatosDisponiveis).orElse(List.of());
 	}
 
 	private Cartao cartao(CampeonatoDisponivel c) {

@@ -1839,8 +1839,12 @@ começa depois que a anterior estiver testada.
     gravado" (último acesso por treinador, migração V11); novo jogo por
     sorteio para todos, já com a 1ª temporada iniciada; tela do clube
     sorteado com os candidatos. Um usuário só abre os próprios jogos.
-  - **3f.2b:** caminho "Escolher clube" do administrador com o quadro de
-    escolha de clube.
+  - **3f.2b (concluída):** novo jogo do administrador com "Sortear clube e
+    começar" ou "Escolher clube"; quadro de escolha com as divisões pela
+    força, fila bloqueada, candidatos do sorteio destacados e plantel do
+    clube clicado; "Assumir" cria o jogo com a 1ª temporada. A semente do
+    quadro fica na sessão e é consumida ao assumir (clique duplo não cria
+    dois jogos). Frases sobre rede do modelo ficaram fora até a Etapa 5.
   - plantel e tática;
   - partidas simultâneas da divisão (§10.2);
   - classificação;
