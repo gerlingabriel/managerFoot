@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 29 — 2026-10-27)
+-   **Status:** versão inicial para revisão (rev. 30 — 2026-10-27)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 30 (2026-10-27):** banco padrão com formatos reais pesquisados e nomes fictícios (compostos, só nome ou só sobrenome); clicar num clube durante o minuto a minuto pausa a partida e mostra as escalações, e no próprio clube abre as substituições.
 -   **rev. 29 (2026-10-27):** tela inicial só com novo jogo e jogo gravado; vários jogos gravados por usuário; dois caminhos do administrador no novo jogo; clube com usuário não aceita outro usuário; sorteio em rede com grupo maior a cada usuário; entrada em rede pela sala antes da rodada 1 (provisório); jogo individual testado antes da rede.
 -   **rev. 28 (2026-10-27):** modo de início do jogo (sorteio ou escolha) definido pelo administrador e válido para todos; jogo individual do participante sempre por sorteio; treinadores em rede no plantel; modelos de entrada, novo jogo e quadro de escolha aprovados; molde pessoal salvo no servidor como possibilidade futura.
 -   **rev. 27 (2026-10-27):** clube pertence ao país, não à divisão; a liga só define o formato das divisões; clubes distribuídos pela força ao criar o jogo, com empate sorteado; prioridade automática; promovidos calculados; excluir divisão sobe as de baixo; quadro de escolha do administrador.
@@ -313,6 +314,16 @@ clubes necessários = Σ (clubes de cada divisão) + rebaixados da última divis
   - promovidos e rebaixados;
   - estrutura das copas e competições continentais.
 - Os **nomes** de clubes, jogadores e torneios são **aleatórios**.
+
+**Definido (rev. 30) — banco padrão e nomes:**
+- O banco padrão é feito com os **formatos reais** das ligas, pesquisados e
+  registrados com fonte e data, antes do jogo individual jogável.
+- Clubes e jogadores têm **nomes fictícios**. Como são só nomes, podem
+  coincidir com nomes que já existem no futebol.
+- Nome do jogador em três formas: **nome composto** (nome e sobrenome),
+  **só o nome** ou **só um sobrenome**, como nos apelidos de camisa.
+- **Provisório:** os nomes são montados combinando listas de nomes e
+  sobrenomes comuns; não se copia lista de jogadores reais.
 
 **Pendência:** pesquisar e registrar esses formatos, com fonte e data, ao
 montar o banco padrão. Não preencher de memória.
@@ -1382,6 +1393,16 @@ da mesma divisão seguem na mesma tela.
     titulares de cada time (11 x 11), sem os reservas.
 -   Se o clube for controlado pelo usuário, poderá fazer substituições
     nas condições permitidas.
+-   **Definido (rev. 30) — pausa no minuto a minuto:** quando a divisão em
+    jogo tem clube de usuário, **clicar em qualquer clube pausa a partida**
+    e mostra as escalações (11 x 11). Clicar no **próprio clube** abre
+    também as **substituições**. A partida continua quando a janela é
+    fechada. Vale para o jogo individual; a pausa em rede segue a §11.3,
+    ainda em aberto.
+    - Consequência: o servidor não pode calcular a rodada inteira de uma
+      vez. A partida avança por minuto e aceita substituições no meio; a
+      forma técnica será registrada numa decisão de arquitetura antes da
+      tela da rodada.
 -   Não permitir ações de gestão que pertençam a outro participante.
 
 **Definido (rev. 16) — tela do plantel:**
