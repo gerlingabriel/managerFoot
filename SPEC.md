@@ -1862,7 +1862,12 @@ começa depois que a anterior estiver testada.
   - **3f.3a (concluída):** escalação do treinador gravada (migração V12),
     inicial pela máquina, usada na rodada; suspensos saem dela depois da
     rodada; escalação inválida impede a rodada (rev. 34).
-  - **3f.3b:** tela do plantel e tática do modelo aprovado.
+  - **3f.3b (concluída):** tela do plantel do modelo aprovado: cabeçalho
+    com divisão, posição, moral e próximo jogo; tática com as 8 formações;
+    batedor; resumo; titulares, banco e fora com os botões T/B/–; e
+    "Confirmar e jogar rodada" com o placar. As abas de classificação e
+    artilheiros, a ficha do jogador e o bloco de treinadores em rede ficam
+    para a 3f.5 e a Etapa 5.
   - plantel e tática;
   - partidas simultâneas da divisão (§10.2);
   - classificação;

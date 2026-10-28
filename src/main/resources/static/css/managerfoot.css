@@ -644,3 +644,191 @@ a.clube-linha:hover { color: var(--texto); background: rgba(242, 201, 76, 0.1); 
 .pos-DEFENSOR { background: #1D4ED8; }
 .pos-MEIO_CAMPISTA { background: #0F766E; }
 .pos-ATACANTE { background: #B91C1C; }
+
+/* Plantel e tática (modelo 2a). */
+.clube-topo {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	padding: 16px 20px;
+	background: var(--cartao);
+	border: 1px solid var(--borda);
+	border-radius: 12px;
+}
+
+.clube-identidade { display: flex; align-items: center; gap: 14px; }
+.clube-indicadores { display: flex; flex-wrap: wrap; align-items: center; gap: 24px; }
+
+.moral { display: flex; flex-direction: column; gap: 6px; min-width: 180px; }
+.moral-linha { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+
+.moral-valor {
+	font-family: 'Barlow Condensed', sans-serif;
+	font-weight: 700;
+	font-size: 24px;
+	color: var(--destaque);
+}
+
+.moral-escala { font-size: 15px; color: var(--texto-suave); }
+
+/* faixas da moral padrão (0-30): vermelha até 5, amarela até 14, verde a partir de 15 */
+.moral-barra {
+	position: relative;
+	height: 8px;
+	border-radius: 4px;
+	background: linear-gradient(90deg, var(--erro) 0 20%, var(--destaque) 20% 50%, #3FB37F 50% 100%);
+}
+
+.moral-marca {
+	position: absolute;
+	top: -4px;
+	width: 4px;
+	height: 16px;
+	background: var(--texto);
+	border-radius: 2px;
+}
+
+.proximo-jogo {
+	font-family: 'Barlow Condensed', sans-serif;
+	font-weight: 600;
+	font-size: 20px;
+}
+
+.aviso-resultado {
+	padding: 12px 16px;
+	border-radius: 10px;
+	background: rgba(63, 179, 127, 0.14);
+	border: 1px solid #3FB37F;
+	font-family: 'Barlow Condensed', sans-serif;
+	font-weight: 700;
+	font-size: 22px;
+}
+
+.abas {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	padding: 4px;
+	background: var(--cartao);
+	border: 1px solid var(--borda);
+	border-radius: 10px;
+	align-self: flex-start;
+}
+
+.aba {
+	min-height: 40px;
+	display: inline-flex;
+	align-items: center;
+	padding: 0 16px;
+	border-radius: 7px;
+	font: 600 15px Barlow, sans-serif;
+	color: var(--texto-suave);
+}
+
+.aba.atual { background: var(--destaque); color: #1A1A12; }
+.aba[aria-disabled="true"] { cursor: not-allowed; }
+
+.plantel-corpo { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; }
+.plantel-lateral { flex: 1 1 260px; display: flex; flex-direction: column; gap: 16px; }
+.plantel-grupos { flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+
+.formacoes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+
+.formacao {
+	min-height: 60px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 2px;
+	border-radius: 10px;
+	cursor: pointer;
+	font-family: Barlow, sans-serif;
+	background: var(--cartao);
+	color: var(--texto);
+	border: 1px solid var(--borda);
+}
+
+.formacao[aria-pressed="true"] { background: var(--destaque); color: #1A1A12; border: 2px solid var(--destaque); }
+.formacao-rotulo { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 22px; }
+.formacao-estilo { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--texto-suave); }
+.formacao[aria-pressed="true"] .formacao-estilo { color: #3A3418; }
+
+.valida { margin: 0; font-size: 14px; color: #3FB37F; }
+.problemas { margin: 0; padding-left: 18px; font-size: 14px; color: var(--erro-texto); }
+
+.selecao {
+	min-height: 44px;
+	padding: 0 12px;
+	background: var(--cartao);
+	color: var(--texto);
+	border: 1px solid var(--borda);
+	border-radius: 8px;
+	font: 500 15px Barlow, sans-serif;
+}
+
+.resumo { margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.resumo div { display: flex; justify-content: space-between; gap: 12px; font-size: 15px; }
+.resumo dt { color: var(--texto-suave); }
+.resumo dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.centro { text-align: center; }
+.grupo { overflow: hidden; }
+.tabela-rolagem { overflow-x: auto; }
+
+.tabela-plantel { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 15px; }
+
+.tabela-plantel th {
+	padding: 8px 12px;
+	font-size: 12px;
+	font-weight: 400;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	text-align: left;
+	color: var(--texto-suave);
+}
+
+.tabela-plantel td { padding: 6px 12px; border-top: 1px solid rgba(31, 90, 58, 0.6); }
+.tabela-plantel .num { text-align: right; font-variant-numeric: tabular-nums; }
+.tabela-plantel .gols { font-weight: 600; }
+.temperamento { color: var(--texto-claro); }
+.jogador-celula { white-space: nowrap; }
+.tabela-plantel .jogador-nome { padding-left: 0 !important; }
+
+.sigla-pais {
+	padding: 1px 6px;
+	border-radius: 4px;
+	background: var(--borda);
+	border: 1px solid #3C7A57;
+	color: var(--texto);
+	font: 700 12px Barlow, sans-serif;
+	letter-spacing: 0.04em;
+}
+
+.suspenso {
+	padding: 1px 6px;
+	border-radius: 4px;
+	border: 1px solid var(--erro);
+	color: var(--erro-texto);
+	font: 600 12px Barlow, sans-serif;
+}
+
+.lugar { display: inline-flex; gap: 4px; }
+
+.lugar button {
+	width: 40px;
+	height: 40px;
+	border-radius: 6px;
+	border: 1px solid var(--borda);
+	background: transparent;
+	color: var(--texto-claro);
+	font: 700 14px Barlow, sans-serif;
+	cursor: pointer;
+}
+
+.lugar button[aria-pressed="true"] { background: var(--destaque); border-color: var(--destaque); color: #1A1A12; }
+.lugar button:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.legenda { display: flex; align-items: center; gap: 8px; }

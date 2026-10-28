@@ -14,10 +14,7 @@
 <span class="texto" th:text="|${jogo.divisao} · força ${jogo.clube.forca}| + (${sorteadoEntre} ? | · sorteado entre ${sorteadoEntre}| : '')">detalhe</span>
 <span class="suave" th:text="${jogo.onde}">onde</span>
 </div>
-<div class="pilha-curta">
-<button type="button" class="botao" disabled aria-describedby="plantel-em-breve">Ir para o plantel</button>
-<span id="plantel-em-breve" class="suave">O plantel chega na próxima etapa.</span>
-</div>
+<a th:href="@{/jogos/{id}/plantel(id=${jogo.jogoId})}" class="botao botao-link botao-largo">Ir para o plantel</a>
 </section>
 </div>
 </div>

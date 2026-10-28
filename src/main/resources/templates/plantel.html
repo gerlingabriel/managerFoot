@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: cabeca(|Plantel · ${v.clube.nome}|)}"></head>
+<body>
+<div class="campo campo-pagina">
+<div class="pagina">
+<header th:replace="~{fragmentos :: topo}"></header>
+
+<div id="plantel" class="pilha-larga" hx-boost="true" hx-target="#plantel" hx-select="#plantel" hx-swap="outerHTML show:none">
+
+<header class="clube-topo">
+<div class="clube-identidade">
+<span aria-hidden="true" th:style="${@escudos.estilo(v.clube.escudo, 40, 48)}"></span>
+<div class="pilha-curta">
+<h1 class="titulo-pagina" th:text="${v.clube.nome}">Clube</h1>
+<span class="suave" th:text="|${v.divisao} · ${v.posicao}º lugar · ${v.pontos} ${v.pontos == 1 ? 'ponto' : 'pontos'} em ${v.jogos} ${v.jogos == 1 ? 'jogo' : 'jogos'}|">Divisão</span>
+</div>
+</div>
+<div class="clube-indicadores">
+<div class="moral" th:with="faixa=${v.faixaMoral.name() == 'VERDE' ? 'verde' : (v.faixaMoral.name() == 'AMARELO' ? 'amarela' : 'vermelha')}">
+<div class="moral-linha">
+<span class="rotulo">Moral</span>
+<span class="moral-valor"><span th:text="${v.moral}">18</span> <span class="moral-escala" th:text="|/ ${v.moralMaxima} · ${faixa}|">/ 30</span></span>
+</div>
+<div class="moral-barra" role="img" th:attr="aria-label=|Moral ${v.moral} de ${v.moralMaxima}, faixa ${faixa}|">
+<span class="moral-marca" th:style="|left: calc(${v.moral * 100 / v.moralMaxima}% - 2px)|"></span>
+</div>
+</div>
+<div class="pilha-curta">
+<span class="rotulo" th:text="${v.temporadaEncerrada} ? 'Temporada' : |Próximo jogo · Rodada ${v.rodada}|">Próximo jogo</span>
+<span class="proximo-jogo" th:if="${v.temporadaEncerrada}">Temporada encerrada</span>
+<span class="proximo-jogo" th:if="${!v.temporadaEncerrada and v.adversario == null}">Folga</span>
+<span class="proximo-jogo" th:if="${v.adversario != null}" th:text="|${v.emCasa ? 'Em casa' : 'Fora'} · ${v.adversario.nome}|">Fora · Adversário</span>
+</div>
+</div>
+</header>
+
+<div th:if="${resultado}" role="status" class="aviso-resultado" th:text="${resultado}">Rodada 1: A 1 x 0 B</div>
+<div th:if="${erro}" role="alert" class="alerta" th:text="${erro}">erro</div>
+
+<nav aria-label="Telas do treinador" class="abas">
+<span class="aba atual" aria-current="page">Plantel</span>
+<span class="aba" aria-disabled="true" title="Chega na próxima etapa">Classificação</span>
+<span class="aba" aria-disabled="true" title="Chega na próxima etapa">Artilheiros da temporada</span>
+<span class="aba" aria-disabled="true" title="Chega na próxima etapa">Artilheiros de todos os tempos</span>
+</nav>
+
+<div class="plantel-corpo">
+
+<aside class="plantel-lateral">
+<section aria-labelledby="t-tatica" class="painel painel-interno">
+<h2 id="t-tatica" class="titulo-secao pequeno">Tática</h2>
+<form th:action="@{/jogos/{id}/plantel/formacao(id=${v.jogoId})}" method="post" class="formacoes">
+<button th:each="f : ${formacoes}" type="submit" name="formacao" th:value="${f.name()}" class="formacao"
+	th:attr="aria-pressed=${f == v.escalacao.formacao}">
+<span class="formacao-rotulo" th:text="${f.rotulo()}">4-4-2</span>
+<span class="formacao-estilo" th:text="${f.estilo().name() == 'NORMAL' ? 'Normal' : (f.estilo().name() == 'OFENSIVO' ? 'Ofensiva' : 'Defensiva')}">Normal</span>
+</button>
+</form>
+<p th:if="${v.problemas.isEmpty()}" class="valida" th:text="${valida}">Escalação válida</p>
+<ul th:unless="${v.problemas.isEmpty()}" class="problemas" aria-label="O que falta na escalação">
+<li th:each="p : ${v.problemas}" th:text="${#strings.capitalize(p)}">faltam 1 defensor</li>
+</ul>
+</section>
+
+<section aria-labelledby="t-batedor" class="painel painel-interno">
+<h2 id="t-batedor" class="titulo-secao pequeno">Pênaltis</h2>
+<form th:action="@{/jogos/{id}/plantel/batedor(id=${v.jogoId})}" method="post" class="campo-form">
+<label for="batedor">Batedor (só você vê)</label>
+<select id="batedor" name="batedor" class="selecao" data-enviar-ao-mudar>
+<option value="" th:selected="${v.escalacao.batedor == null}">Automático — maior força em campo</option>
+<option th:each="l : ${batedores}" th:value="${l.jogador.id}" th:selected="${v.escalacao.batedor == l.jogador.id}"
+	th:text="|${l.jogador.nome} (${l.jogador.posicao.name().substring(0, 1)} · ${l.jogador.forca}${l.jogador.asterisco ? ' ★' : ''})|">Jogador</option>
+</select>
+<noscript><button type="submit" class="botao-discreto">Definir batedor</button></noscript>
+</form>
+</section>
+
+<section aria-labelledby="t-resumo" class="painel painel-interno">
+<h2 id="t-resumo" class="titulo-secao pequeno">Resumo</h2>
+<dl class="resumo">
+<div><dt>Força média dos titulares</dt><dd th:text="${forcaMedia}">0</dd></div>
+<div><dt>Estrangeiros em campo</dt><dd th:text="${estrangeirosEmCampo}">0</dd></div>
+<div><dt>Asteriscos em campo</dt><dd th:text="|${asteriscosEmCampo} de ${limiteAsteriscos}|">0 de 3</dd></div>
+<div><dt>Substituições na partida</dt><dd th:text="${substituicoes}">5</dd></div>
+</dl>
+</section>
+
+<form th:action="@{/jogos/{id}/rodada(id=${v.jogoId})}" method="post" class="pilha-curta" data-envio-unico>
+<input type="hidden" name="rodada" th:value="${v.rodada}">
+<button type="submit" class="botao botao-largo" th:disabled="${v.temporadaEncerrada or !v.problemas.isEmpty()}"
+	aria-describedby="jogar-ajuda">Confirmar e jogar rodada</button>
+<span id="jogar-ajuda" class="suave centro"
+	th:text="${v.temporadaEncerrada} ? 'O fim de temporada chega numa próxima etapa.' : (${v.problemas.isEmpty()} ? |Joga a rodada ${v.rodada} inteira de uma vez.| : 'Complete a escalação para jogar.')">ajuda</span>
+</form>
+</aside>
+
+<main class="plantel-grupos">
+<section th:each="g : ${grupos}" th:attr="aria-label=${g.titulo}" class="painel grupo">
+<div class="painel-cabecalho">
+<h2 class="titulo-secao pequeno" th:text="${g.titulo}">Titulares</h2>
+<span class="suave" th:text="${g.nota}">nota</span>
+</div>
+<div class="tabela-rolagem">
+<table class="tabela-plantel">
+<thead>
+<tr>
+<th scope="col">Pos</th><th scope="col">Jogador</th><th scope="col" class="num">Força</th>
+<th scope="col">Temperamento</th><th scope="col" class="num" title="Gols na temporada">Gols</th>
+<th scope="col" class="num">Amarelos</th><th scope="col"><span class="oculto">Lugar</span></th>
+</tr>
+</thead>
+<tbody>
+<tr th:if="${g.jogadores.isEmpty()}"><td colspan="7" class="suave">Nenhum jogador.</td></tr>
+<tr th:each="l : ${g.jogadores}" th:with="j=${l.jogador}">
+<td><span class="pos" th:classappend="|pos-${j.posicao}|" th:text="${j.posicao.name().substring(0, 1)}" th:title="${j.posicao.nome(1)}">G</span></td>
+<td class="jogador-celula">
+<span class="jogador-nome" th:text="${j.nome}">Nome</span>
+<span th:if="${j.asterisco}" class="asterisco" title="jogador com asterisco">★</span>
+<span th:if="${l.estrangeiro}" class="sigla-pais" th:text="${l.estrangeiro}" th:title="|estrangeiro (${l.estrangeiro})|">ARG</span>
+<span th:if="${l.suspenso}" class="suspenso">suspenso</span>
+</td>
+<td class="num forca" th:text="${j.forca}">0</td>
+<td class="temperamento" th:text="${#strings.capitalize(#strings.toLowerCase(j.temperamento.name()))}">Normal</td>
+<td class="num gols" th:text="${l.gols}">0</td>
+<td class="num" th:text="${l.amarelos}">0</td>
+<td>
+<form th:action="@{/jogos/{id}/plantel/jogador/{j}(id=${v.jogoId},j=${j.id})}" method="post" class="lugar" role="group"
+	th:attr="aria-label=|Lugar de ${j.nome}|">
+<button type="submit" name="lugar" value="TITULAR" title="Titular" aria-label="Titular" th:attr="aria-pressed=${l.lugar.name() == 'TITULAR'}" th:disabled="${l.suspenso}">T</button>
+<button type="submit" name="lugar" value="BANCO" title="Banco" aria-label="Banco" th:attr="aria-pressed=${l.lugar.name() == 'BANCO'}" th:disabled="${l.suspenso}">B</button>
+<button type="submit" name="lugar" value="FORA" title="Fora do banco" aria-label="Fora do banco" th:attr="aria-pressed=${l.lugar.name() == 'FORA'}">–</button>
+</form>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<p class="suave legenda"><span class="sigla-pais">ARG</span> estrangeiro. Jogador do país do clube fica sem sigla.</p>
+</main>
+</div>
+</div>
+</div>
+</div>
+</body>
+</html>

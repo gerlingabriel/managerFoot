@@ -28,7 +28,7 @@
 <span class="texto pequeno" th:text="${j.onde}">onde</span>
 <span class="suave" th:text="${j.quando}">quando</span>
 </div>
-<a th:href="@{/jogos/{id}(id=${j.jogoId})}" class="botao-contorno"
+<a th:href="@{/jogos/{id}/plantel(id=${j.jogoId})}" class="botao-contorno"
 	th:attr="aria-label=|Continuar ${j.clube.nome}|">Continuar</a>
 </div>
 </section>

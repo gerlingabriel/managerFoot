@@ -16,3 +16,8 @@ document.addEventListener('submit', function (e) {
 	form.dataset.enviado = 'sim';
 	form.querySelectorAll('button[type=submit]').forEach(function (b) { b.setAttribute('aria-disabled', 'true'); });
 });
+
+// Seleção que grava ao mudar (batedor de pênalti): envia o próprio formulário.
+document.addEventListener('change', function (e) {
+	if (e.target.matches('select[data-enviar-ao-mudar]')) e.target.form.requestSubmit();
+});

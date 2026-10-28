@@ -36,6 +36,39 @@ public record EscalacaoDoTreinador(Formacao formacao, Set<Long> titulares, Set<L
 				escalacao.batedorPreferido().map(Jogador::id).orElse(null));
 	}
 
+	/** Onde o jogador está. */
+	public Lugar lugarDe(long jogadorId) {
+		if (titulares.contains(jogadorId)) {
+			return Lugar.TITULAR;
+		}
+		return reservas.contains(jogadorId) ? Lugar.BANCO : Lugar.FORA;
+	}
+
+	/**
+	 * O jogador movido para o lugar (SPEC §10.3, rev. 34). A escalação resultante pode ficar
+	 * incompleta; quem vai para fora deixa de ser o batedor.
+	 */
+	public EscalacaoDoTreinador com(long jogadorId, Lugar lugar) {
+		Set<Long> novosTitulares = menos(titulares, Set.of(jogadorId));
+		Set<Long> novasReservas = menos(reservas, Set.of(jogadorId));
+		switch (lugar) {
+			case TITULAR -> novosTitulares.add(jogadorId);
+			case BANCO -> novasReservas.add(jogadorId);
+			case FORA -> { }
+		}
+		Long novoBatedor = lugar == Lugar.FORA && Objects.equals(batedor, jogadorId) ? null : batedor;
+		return new EscalacaoDoTreinador(formacao, novosTitulares, novasReservas, novoBatedor);
+	}
+
+	public EscalacaoDoTreinador com(Formacao novaFormacao) {
+		return new EscalacaoDoTreinador(novaFormacao, titulares, reservas, batedor);
+	}
+
+	/** @param novoBatedor nulo é o automático */
+	public EscalacaoDoTreinador comBatedor(Long novoBatedor) {
+		return new EscalacaoDoTreinador(formacao, titulares, reservas, novoBatedor);
+	}
+
 	/** A mesma escalação sem esses jogadores, que passam para fora do banco (e deixam de bater pênalti). */
 	public EscalacaoDoTreinador sem(Set<Long> jogadores) {
 		return new EscalacaoDoTreinador(formacao, menos(titulares, jogadores), menos(reservas, jogadores),
