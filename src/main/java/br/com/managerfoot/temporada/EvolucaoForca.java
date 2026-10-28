@@ -3,12 +3,18 @@ package br.com.managerfoot.temporada;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.random.RandomGenerator;
 
+import br.com.managerfoot.dominio.Escalacao;
 import br.com.managerfoot.dominio.Jogador;
+import br.com.managerfoot.motor.EventoPartida;
+import br.com.managerfoot.motor.Lado;
+import br.com.managerfoot.motor.ResultadoPartida;
+import br.com.managerfoot.motor.TipoEvento;
 import br.com.managerfoot.temporada.ParametrosEvolucao.Desfecho;
 
 /**
@@ -57,6 +63,27 @@ public final class EvolucaoForca {
 			int delta = variacao.getOrDefault(j.id(), 0);
 			return delta == 0 ? j : j.comForca(Math.clamp(j.forca() + delta, Jogador.FORCA_MINIMA, Jogador.FORCA_MAXIMA));
 		}).toList();
+	}
+
+	/**
+	 * O plantel do clube que jogou no {@code lado} da partida: jogaram os titulares e quem entrou; o
+	 * banco são as reservas que não entraram.
+	 */
+	public List<Jogador> aposPartida(List<Jogador> plantel, Escalacao escalacao, ResultadoPartida resultado, Lado lado,
+			int teto, int forcaDoClube, RandomGenerator aleatorio) {
+		Set<Long> jogaram = new HashSet<>();
+		escalacao.titulares().forEach(j -> jogaram.add(j.id()));
+		for (EventoPartida e : resultado.eventos()) {
+			if (e.tipo() == TipoEvento.SUBSTITUICAO && e.lado() == lado) {
+				jogaram.add(e.jogador().id());
+			}
+		}
+		Set<Long> banco = new HashSet<>();
+		escalacao.reservas().forEach(j -> banco.add(j.id()));
+		banco.removeAll(jogaram);
+		int golsPro = lado == Lado.CASA ? resultado.golsCasa() : resultado.golsFora();
+		int golsContra = lado == Lado.CASA ? resultado.golsFora() : resultado.golsCasa();
+		return aposPartida(plantel, jogaram, banco, Desfecho.de(golsPro, golsContra), teto, forcaDoClube, aleatorio);
 	}
 
 	/** Sorteia quantos: a parte inteira certa e mais um com a chance da parte fracionária. */

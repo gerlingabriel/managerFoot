@@ -6,12 +6,10 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import java.util.SplittableRandom;
 import java.util.TreeMap;
 
@@ -25,11 +23,8 @@ import br.com.managerfoot.dominio.Clube;
 import br.com.managerfoot.dominio.Escalacao;
 import br.com.managerfoot.dominio.Jogador;
 import br.com.managerfoot.dominio.Moral;
-import br.com.managerfoot.motor.EventoPartida;
 import br.com.managerfoot.motor.Lado;
 import br.com.managerfoot.motor.ParametrosMotor;
-import br.com.managerfoot.motor.TipoEvento;
-import br.com.managerfoot.temporada.ParametrosEvolucao.Desfecho;
 
 /**
  * Gera {@code docs/simulacoes/evolucao-forca.md}: várias temporadas seguidas das ligas do banco
@@ -134,10 +129,8 @@ class RelatorioEvolucaoTest {
 					int gf = jogada.resultado().golsFora();
 					resultados.computeIfAbsent(jogada.prioridade(), k -> new ArrayList<>())
 						.add(new ResultadoJogo(jogada.jogo(), gc, gf));
-					evoluir(evolucao, planteis, partida.jogo().mandante(), partida.casa(), Lado.CASA, jogada, Desfecho.de(gc, gf),
-							teto, aleatorio);
-					evoluir(evolucao, planteis, partida.jogo().visitante(), partida.fora(), Lado.FORA, jogada,
-							Desfecho.de(gf, gc), teto, aleatorio);
+					evoluir(evolucao, planteis, partida.jogo().mandante(), partida.casa(), Lado.CASA, jogada, teto, aleatorio);
+					evoluir(evolucao, planteis, partida.jogo().visitante(), partida.fora(), Lado.FORA, jogada, teto, aleatorio);
 				}
 				disciplina = res.disciplina();
 				moral = new HashMap<>(res.moral());
@@ -153,20 +146,9 @@ class RelatorioEvolucaoTest {
 	}
 
 	private static void evoluir(EvolucaoForca evolucao, Map<Long, List<Jogador>> planteis, Clube clube, Escalacao escalacao,
-			Lado lado, ProcessamentoRodada.PartidaJogada jogada, Desfecho desfecho, Map<Long, Integer> teto,
-			SplittableRandom aleatorio) {
-		Set<Long> jogaram = new HashSet<>();
-		escalacao.titulares().forEach(j -> jogaram.add(j.id()));
-		for (EventoPartida e : jogada.resultado().eventos()) {
-			if (e.tipo() == TipoEvento.SUBSTITUICAO && e.lado() == lado) {
-				jogaram.add(e.jogador().id());
-			}
-		}
-		Set<Long> banco = new HashSet<>();
-		escalacao.reservas().forEach(j -> banco.add(j.id()));
-		banco.removeAll(jogaram);
-		planteis.put(clube.id(), evolucao.aposPartida(planteis.get(clube.id()), jogaram, banco, desfecho, teto.get(clube.id()),
-				clube.forca(), aleatorio));
+			Lado lado, ProcessamentoRodada.PartidaJogada jogada, Map<Long, Integer> teto, SplittableRandom aleatorio) {
+		planteis.put(clube.id(), evolucao.aposPartida(planteis.get(clube.id()), escalacao, jogada.resultado(), lado,
+				teto.get(clube.id()), clube.forca(), aleatorio));
 	}
 
 	private static void medir(ConfiguracaoLiga liga, Map<Long, List<Jogador>> planteis, int temporada,

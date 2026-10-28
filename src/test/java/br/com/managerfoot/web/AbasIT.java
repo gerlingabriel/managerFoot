@@ -271,18 +271,22 @@ class AbasIT {
 		long clube = jogo.clubeDoTreinador(jogoId, treinador.id()).orElseThrow();
 		VisaoFinancas f = caixas.financas(jogoId, treinador.id());
 		long saldoGravado = jdbc.sql("SELECT saldo FROM jogo_clube WHERE id = :c").param("c", clube).query(Long.class).single();
-		long folha = CaixaDaRodada.padrao().folha(jogo.carregarPlanteis(jogoId).get(clube));
+		// a folha muda a cada rodada com a evolução de força (rev. 55)
+		long patrocinioLancado = jdbc.sql("""
+				SELECT l.valor FROM jogo_lancamento l WHERE l.clube_id = :c AND l.tipo = 'PATROCINIO'""")
+			.param("c", clube).query(Long.class).single();
 
 		assertThat(f.clube().id()).isEqualTo(clube);
 		assertThat(f.moeda()).isEqualTo(Moeda.REAL);
 		assertThat(f.rodadas()).isEqualTo(3);
 		assertThat(f.extrato()).extracting(LinhaExtrato::rodada).containsExactly(1, 2, 3);
-		assertThat(f.extrato()).allMatch(l -> l.salarios() == -folha);
+		assertThat(f.extrato()).allMatch(l -> l.salarios() < 0);
 		assertThat(f.extrato()).allMatch(l -> l.emCasa() == null || l.emCasa() == (l.publico() != null));
 		assertThat(f.saldo()).isEqualTo(saldoGravado);
 		assertThat(f.extrato().getLast().saldo()).isEqualTo(saldoGravado);
 		// o saldo do início inclui o patrocínio da temporada, lançado na rodada 0
-		assertThat(f.saldoInicioTemporada()).isEqualTo(10 * folha + patrocinio(clube)).isGreaterThan(10 * folha);
+		assertThat(patrocinioLancado).isEqualTo(patrocinio(clube));
+		assertThat(f.saldoInicioTemporada()).isGreaterThan(patrocinio(clube));
 		assertThat(f.saldoInicioTemporada() + f.resultado()).isEqualTo(saldoGravado);
 
 		mvc.perform(get(base + "/financas").with(como(treinador)))

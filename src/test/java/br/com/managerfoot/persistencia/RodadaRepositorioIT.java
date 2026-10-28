@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -20,6 +21,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 import br.com.managerfoot.TestcontainersConfiguration;
+import br.com.managerfoot.dominio.Jogador;
 import br.com.managerfoot.temporada.Classificacao;
 import br.com.managerfoot.temporada.Disciplina;
 import br.com.managerfoot.temporada.LinhaClassificacao;
@@ -77,6 +79,26 @@ class RodadaRepositorioIT {
 				  (SELECT count(*) FROM jogo_evento e WHERE e.partida_id = p.id AND e.tipo = 'GOL')""")).isZero();
 		assertThat(contar("SELECT count(*) FROM jogo_clube WHERE jogo_id = ? AND moral IS NOT NULL"))
 			.isEqualTo(16 + 14);
+	}
+
+	@Test
+	void rodadaMudaAForcaEmNoMaximoUmPontoPorJogadorPelaEvolucao() {
+		Map<Long, List<Jogador>> antes = jogos.carregarPlanteis(jogo);
+		RodadaRepositorio.RodadaJogada jogada = rodadas.avancar(jogo, 1);
+
+		Map<Long, List<Jogador>> depois = jogos.carregarPlanteis(jogo);
+		int mudaram = 0;
+		for (var e : antes.entrySet()) {
+			Map<Long, Integer> forcaDepois = new HashMap<>();
+			depois.get(e.getKey()).forEach(j -> forcaDepois.put(j.id(), j.forca()));
+			for (Jogador j : e.getValue()) {
+				int diferenca = forcaDepois.get(j.id()) - j.forca();
+				assertThat(diferenca).isBetween(-1, 1);
+				mudaram += diferenca != 0 ? 1 : 0;
+			}
+		}
+		// cada partida: pelo menos 1 do vencedor e 5 do perdedor, ou 3 de cada no empate, perdem 1
+		assertThat(mudaram).isGreaterThanOrEqualTo(jogada.resultado().partidas().size() * 4);
 	}
 
 	@Test

@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 55 — 2026-10-28)
+-   **Status:** versão inicial para revisão (rev. 56 — 2026-10-28)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 56 (2026-10-28):** evolução C aprovada e gravada no avanço da rodada; público pela posição na tabela dos dois clubes e limitado pela força do clube; estádio máximo de 80.000; a máquina amplia quando cresce de força ou sobra dinheiro; a obra leva tempo; simular estádio, público e patrocínio.
 -   **rev. 55 (2026-10-28):** evolução corrigida pelo usuário: cada jogador perde no máximo 1 ponto por partida e o resultado decide quantos perdem (1, 3 ou 5); simulação refeita, nova proposta do agente (crescem 4, 2 ou 0,5 dos que não jogaram, com piso); modelos 6c (estádio) e 9a (patrocínio) aprovados.
 -   **rev. 54 (2026-10-28):** modelo 8a (histórico) aprovado; um treinador por clube, obrigatório ao criar ou editar clube; patrocínio volta à caixa de escolha da rev. 40; estádio até 120.000 lugares para todos, com janela nas finanças (capacidade, ingresso fixo por clube e divisão, ampliação de 5.000 lugares pelo preço de um jogador de força 50); regra de evolução de força descrita pelo usuário e simulada (`docs/simulacoes/evolucao-forca.md`), proposta do agente aguardando aprovação. Gravados os treinadores da máquina e a aba Histórico (V23).
 -   **rev. 53 (2026-10-28):** venda do usuário por leilão: o usuário define o lance mínimo na ficha do jogador e o resultado aparece na tela do 7b; com caixa negativo o jogo escolhe um jogador sem contrato renovado e, se todos estiverem renovados, a venda fica para o início da temporada seguinte, antes de tudo. Gravada a venda pela ficha (V21). Caixa negativo: o jogador é sorteado entre os sem contrato renovado (decisão do usuário, para que qualquer um possa sair) e gravado (V22).
@@ -724,7 +725,7 @@ perdem: 1 na vitória, 3 no empate e 5 na derrota. ("3" eram 3 jogadores, não
 ~~Proposta da rev. 54 (chances individuais de crescer de 37,5%, 20% e
 3,75%).~~ **Substituída na rev. 55.**
 
-**Provisório (rev. 55) — proposta do agente, aguardando aprovação**
+**Definido (rev. 56) — proposta do agente da rev. 55, aprovada pelo usuário** ("vou testar depois")
 (`temporada.EvolucaoForca`, valores em `temporada.ParametrosEvolucao`,
 simulação em `docs/simulacoes/evolucao-forca.md`, 6 ligas × 3 sementes × 6
 temporadas com promoção e rebaixamento, só máquina):
@@ -749,8 +750,10 @@ temporadas com promoção e rebaixamento, só máquina):
     1ª temporada (os titulares se desgastam e os reservas sobem) e depois
     fica estável; a distância entre o mais fraco e o mais forte se mantém e
     7 a 12% dos jogadores ficam no teto.
-- **Ainda não gravado:** o salário segue a força atual; com a evolução, o
-  pedido de aumento (§9.5) passa a ter efeito.
+- **Gravado (rev. 56):** a evolução roda no avanço de cada rodada, na mesma
+  transação, com sorteio pela semente da temporada e da rodada, e grava a
+  força de quem mudou. O salário segue a força atual, então a folha muda a
+  cada rodada; o pedido de aumento (§9.5) ainda não existe.
 
 ### 6.2 Moral do time
 
@@ -1451,8 +1454,30 @@ reajustados por nova simulação (`docs/simulacoes/economia-caixa.md`):
     por enquanto**, com valores por clube e por divisão definidos pelo
     agente (a simular; na rev. 37, preços diferentes por divisão deixavam
     uma divisão rica e outra quebrada).
+-   **Definido (rev. 56), pelo usuário — substitui o limite de 120.000:**
+    o estádio pode chegar a **80.000 lugares** no máximo ("com essa
+    quantidade não será tão roubado").
+-   **Definido (rev. 56), pelo usuário — público:**
+    - Depende da **posição na tabela** do clube contra a do adversário: o
+      líder que recebe o 2º enche o estádio. No início da temporada o peso
+      da posição é menor; a partir da **5ª rodada** a conta pela posição vale
+      inteira.
+    - Depende também da **força do clube**: um clube da 2ª divisão com
+      estádio enorme **nunca** enche; estádio cheio só em finais (copas).
+    - Clubes perto da liderança têm estádio mais cheio; os de baixo, **bem
+      abaixo da metade**, mesmo recebendo o líder; o meio da tabela fica
+      perto da **metade**.
+    - Estádio grande traz mais dinheiro, mas, mesmo com o máximo, um jogo da
+      liga **não chega perto de lotar**, a não ser num jogo muito importante
+      (por exemplo, última rodada entre o 1º e o 2º), e isso é raro.
+-   **Definido (rev. 56), pelo usuário — ampliação:** a máquina também
+    amplia: olha a força; se o clube cresceu de força, amplia; senão, deixa
+    como está; se está com muito dinheiro, amplia um pouco. A **obra leva
+    tempo** (prazo a definir pelo agente).
+-   **Em simulação (rev. 56):** público, ampliação e patrocínio
+    (`docs/simulacoes/`); valores propostos pelo agente para aprovação.
 -   **Definido (rev. 55):** modelo **6c** aprovado (janela do estádio com
-    capacidade, limite de 120.000, ingresso de R$ 40 e "Ampliar 5.000
+    capacidade, limite de 120.000 (80.000 na rev. 56), ingresso de R$ 40 e "Ampliar 5.000
     lugares" pelo preço de um jogador de força 50; desligado sem caixa, no
     limite ou com rodada ao vivo).
 -   Referência inicial: capacidade de 5.000 para clubes pequenos e

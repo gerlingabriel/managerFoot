@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.SplittableRandom;
 import java.util.TreeMap;
 import java.util.stream.Stream;
 
@@ -22,7 +23,9 @@ import br.com.managerfoot.motor.EventoPartida;
 import br.com.managerfoot.motor.Lado;
 import br.com.managerfoot.motor.TipoEvento;
 import br.com.managerfoot.temporada.Classificacao;
+import br.com.managerfoot.temporada.ConfiguracaoLiga;
 import br.com.managerfoot.temporada.Disciplina;
+import br.com.managerfoot.temporada.EvolucaoForca;
 import br.com.managerfoot.temporada.Jogo;
 import br.com.managerfoot.temporada.ProcessamentoRodada;
 import br.com.managerfoot.temporada.ResultadoJogo;
@@ -49,6 +52,7 @@ public class RodadaRepositorio {
 	private final CaixaRepositorio caixas;
 	private final MercadoRepositorio mercado;
 	private final ProcessamentoRodada processamento = ProcessamentoRodada.padrao();
+	private final EvolucaoForca evolucao = EvolucaoForca.padrao();
 
 	public RodadaRepositorio(JdbcClient jdbc, JogoRepositorio jogos, TemporadaRepositorio temporadas,
 			EscalacaoRepositorio escalacoes, CaixaRepositorio caixas, MercadoRepositorio mercado) {
@@ -96,8 +100,8 @@ public class RodadaRepositorio {
 		Disciplina antes = carregarDisciplina(jogoId);
 		Map<Long, Moral> moralAntes = carregarMoral(jogoId);
 		Temporada temporada = temporadas.carregarAtual(jogoId);
-		ProcessamentoRodada.Resultado resultado = preparar(temporada, rodada, jogoId, planteis, antes, substituicoes)
-			.finalizar(moralAntes);
+		RodadaAoVivo aoVivo = preparar(temporada, rodada, jogoId, planteis, antes, substituicoes);
+		ProcessamentoRodada.Resultado resultado = aoVivo.finalizar(moralAntes);
 
 		for (ProcessamentoRodada.PartidaJogada partida : resultado.partidas()) {
 			gravarPartida(linha.id(), partida);
@@ -105,6 +109,7 @@ public class RodadaRepositorio {
 		gravarDisciplina(planteis, antes, resultado.disciplina());
 		escalacoes.retirarSuspensos(jogoId);
 		caixas.lancarRodada(jogoId, linha.id(), temporada, rodada, resultado.partidas(), moralAntes, planteis);
+		evoluir(jogoId, temporada, rodada, aoVivo, resultado, planteis);
 		mercado.reporAVenda(jogoId, MercadoRepositorio.semente(temporada.semente(), rodada));
 		resultado.moral().forEach((clubeId, moral) -> {
 			if (!moral.equals(moralAntes.get(clubeId))) {
@@ -126,6 +131,40 @@ public class RodadaRepositorio {
 			throw new IllegalStateException("a rodada " + rodada + " do jogo " + jogoId + " já foi processada");
 		}
 		return new RodadaJogada(rodada, resultado);
+	}
+
+	/**
+	 * Evolução de força depois das partidas (SPEC §6.1, rev. 55): quem jogou se desgasta, quem não
+	 * jogou pode crescer. Grava só quem mudou. Sorteio pela semente da temporada e da rodada.
+	 */
+	private void evoluir(long jogoId, Temporada temporada, int rodada, RodadaAoVivo aoVivo,
+			ProcessamentoRodada.Resultado resultado, Map<Long, List<Jogador>> planteis) {
+		ConfiguracaoLiga liga = jogos.carregarLiga(jogoId);
+		Map<Integer, Integer> tetos = new HashMap<>();
+		liga.divisoes().forEach(d -> tetos.put(d.prioridade(), d.limiteForca()));
+		SplittableRandom aleatorio = new SplittableRandom(temporada.semente() * 41 + rodada);
+		for (int i = 0; i < aoVivo.partidas().size(); i++) {
+			RodadaAoVivo.PartidaDaRodada partida = aoVivo.partidas().get(i);
+			ProcessamentoRodada.PartidaJogada jogada = resultado.partidas().get(i);
+			if (!partida.jogo().equals(jogada.jogo())) {
+				throw new IllegalStateException("partidas fora de ordem na rodada " + rodada);
+			}
+			int teto = tetos.get(partida.prioridade());
+			for (Lado lado : Lado.values()) {
+				Clube clube = partida.clube(lado);
+				List<Jogador> plantel = planteis.getOrDefault(clube.id(), List.of());
+				List<Jogador> depois = evolucao.aposPartida(plantel, lado == Lado.CASA ? partida.casa() : partida.fora(),
+						jogada.resultado(), lado, teto, clube.forca(), aleatorio);
+				for (int k = 0; k < plantel.size(); k++) {
+					if (depois.get(k).forca() != plantel.get(k).forca()) {
+						jdbc.sql("UPDATE jogo_jogador SET forca = :forca WHERE id = :jogador")
+							.param("forca", depois.get(k).forca())
+							.param("jogador", depois.get(k).id())
+							.update();
+					}
+				}
+			}
+		}
 	}
 
 	/**
