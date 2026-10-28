@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 37 (2026-10-28):** moeda exibida pelo país da liga e valores guardados em centavos de Real; a economia começa pelo caixa da rodada; as tabelas de valores são propostas pelo agente e validadas por simulação antes do código.
 -   **rev. 36 (2026-10-28):** usuário com clube rebaixado para a fila é demitido e assume um clube sorteado entre os mais fracos da última divisão (provisório até os convites); modelo do calendário do clube aprovado.
 -   **rev. 35 (2026-10-28):** rodada ao vivo com relógio no servidor (ADR 0010); velocidades lenta, normal e rápida; divisão sem usuário em cerca de 5 s; sair da tela não pausa a partida.
 -   **rev. 34 (2026-10-28):** no plantel, botões Titular/Banco/Fora em cada linha; suspenso sai sozinho para fora do banco e o treinador completa o time; escalação inicial da máquina (provisório); até o minuto a minuto, "Confirmar e jogar rodada" joga a rodada inteira e mostra o placar.
@@ -1285,6 +1286,28 @@ O que ela confirma:
 **Em aberto:** criar tabelas próprias de força × preço × salário ×
 receita × premiação × patrocínio, validadas por simulação de temporadas.
 
+**Provisório (rev. 37) — proposta do agente para o caixa da rodada,
+aguardando aprovação** (`economia.ParametrosEconomia`; simulação em
+`docs/simulacoes/economia-caixa.md`):
+- **Estádio inicial:** 5.000 lugares até a força 12 e 80.000 na força 50,
+  crescendo na mesma proporção (cerca de 7,6%) a cada ponto de força, em
+  múltiplos de 500.
+- **Salário por rodada:** R$ 2.000 na força 17, crescendo 7,2% por ponto
+  (cerca de R$ 1.400 na força 12 e R$ 19.800 na força 50).
+- **Ingresso:** R$ 40 em todas as divisões. Com preços diferentes por
+  divisão, a simulação deixava uma divisão rica e outra quebrada.
+- **Público:** 45% do estádio com moral inicial e adversário de mesma
+  força; a moral máxima soma 20 pontos e a moral zero tira 30; adversário
+  20 pontos mais forte soma 15; sorteio de ±8; entre 10% e 100% da
+  capacidade.
+- **Despesas de jogo:** 15% da bilheteria no jogo em casa; deslocamento de
+  R$ 60.000 (1ª), R$ 30.000 (2ª) e R$ 15.000 (3ª) no jogo fora.
+- **Saldo inicial:** 10 rodadas da folha do clube.
+- **Resultado na simulação (só o caixa, sem patrocínio nem premiação):**
+  dentro de cada divisão os mais fortes lucram mais; os mais fracos da 2ª
+  e da 3ª fecham a temporada levemente no vermelho; a 1ª é a mais
+  lucrativa.
+
 ### 9.1.1 Moedas
 
 **Definido:**
@@ -1292,11 +1315,12 @@ receita × premiação × patrocínio, validadas por simulação de temporadas.
 - As moedas seguem uma proporção fixa, configurável: **1 Dólar = 5 Reais**
   e **1 Euro = 6 Reais**.
 
-**Em aberto:**
-- Qual moeda cada clube ou liga usa: pelo país, escolhida pelo usuário ou
-  outra regra.
-- Qual moeda é a base interna dos cálculos. Hipótese técnica: guardar
-  valores numa unidade base inteira e converter só na exibição.
+**Definido (rev. 37):**
+- A moeda exibida segue o **país da liga**: Brasil em Real; Inglaterra,
+  Espanha, Itália e Portugal em Euro; Argentina em Dólar (não há peso nem
+  libra entre as três moedas).
+- Os valores são guardados como **inteiros em centavos de Real** e
+  convertidos só na exibição.
 
 ### 9.2 Estádios
 
@@ -1929,6 +1953,12 @@ começa depois que a anterior estiver testada.
 ### Etapa 4 — Economia
 - Depende das tabelas a definir (§9.1). Antes de implementar, propor as
   tabelas e validá-las por simulação de temporadas.
+- **Definido (rev. 37):** começa pelo **caixa da rodada**: saldo do clube,
+  estádio (nome e capacidade), público e bilheteria em casa, despesa de
+  jogo fora, salários por rodada e um extrato rastreável por rodada.
+  Mercado, leilões, empréstimos, contratos e patrocínios vêm depois. As
+  tabelas de valores são propostas pelo agente e aprovadas pelo usuário
+  depois da simulação.
 - Contratos, salários, bilheteria, estádio, moedas, empréstimos, juros,
   mercado, leilões e patrocínios.
 
