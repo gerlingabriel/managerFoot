@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 41 (2026-10-28):** tabela de preço proposta (80 rodadas de salário, provisória); leilão resolvido na hora: os da máquina depois do OK da tática e antes do minuto a minuto; o do usuário quando ele põe o jogador à venda.
 -   **rev. 40 (2026-10-28):** ano da temporada (começa em 2026, configurável, +1 por temporada); histórico só de campeões e ranking de títulos dos treinadores; regras do usuário para mercado (compra direta pelo preço da força, leilão 20% mais barato com lance de cada um), contrato em temporadas, pedido de aumento, empréstimo em blocos de 500 mil a 1% por rodada e patrocínio escolhido a cada início de ano.
 -   **rev. 39 (2026-10-28):** modelo da aba Finanças aprovado (só o clube do usuário); saldo do caixa no plantel; público no quadro da rodada e na janela; estádio com nome geral, sem nome próprio por clube; jogadores à venda no clique do clube ficam para o mercado.
 -   **rev. 38 (2026-10-28):** valores do caixa da rodada aprovados como ponto de partida, ajustáveis por simulação; o caixa é lançado no avanço da rodada; clubes da fila de espera não têm lançamentos.
@@ -1409,9 +1410,27 @@ Quando o clube estiver no elenco mínimo e um jogador estiver suspenso ou lesion
 - **Leilão:** começa no preço da tabela **com 20% de desconto**. Cada
   participante (usuário e máquina) coloca **um preço**; quem oferecer
   mais leva. A **máquina participa** e deve ser a compradora mais comum.
-- **Em aberto:** quando o leilão fecha (fim da rodada?), empate de lances,
-  regra de lance da máquina (orçamento, posição que falta, força) e o
-  desconto do estrangeiro.
+- **Provisório (rev. 41) — tabela de preço, proposta pelo agente e
+  aguardando aprovação:** preço da compra direta = **80 rodadas do salário**
+  do jogador (cerca de duas temporadas), arredondado em R$ 1.000; leilão
+  começa 20% abaixo. Força 17 custa R$ 160 mil, força 40 R$ 792 mil, força
+  50 R$ 1,59 milhão. Na simulação (`docs/simulacoes/economia-caixa.md`), o
+  saldo inicial compra cerca de 2,4 jogadores da força do próprio clube em
+  todas as divisões, e o resultado de uma temporada compra de 0 (os mais
+  fracos da 2ª e da 3ª) a 5 (os mais fortes da 1ª). Valores em
+  `economia.ParametrosMercado`.
+- **Definido (rev. 41) — momento do leilão:** o leilão é **na hora**, sem
+  esperar rodadas.
+  - **Jogador posto à venda pela máquina:** os leilões acontecem depois
+    que o usuário clica no OK da tática (Confirmar) e antes de começar o
+    minuto a minuto.
+  - **Jogador posto à venda pelo usuário** ("vender por leilão"): resolve
+    no momento; a máquina pode comprar e, em rede (depois), os outros
+    usuários podem ofertar.
+- **Em aberto:** empate de lances, regra de lance da máquina (orçamento,
+  posição que falta, força), o que acontece se ninguém der lance, como o
+  usuário dá lance nos leilões da máquina nesse intervalo, e o desconto do
+  estrangeiro.
 
 ### 9.5 Contratos, salários e empréstimos
 

@@ -46,6 +46,8 @@ class RelatorioEconomiaTest {
 	private static final Path SAIDA = Path.of("docs/simulacoes/economia-caixa.md");
 
 	private final CaixaDaRodada caixa = CaixaDaRodada.padrao();
+	private final PrecoJogador preco = PrecoJogador.padrao();
+	private final ParametrosMercado mercado = ParametrosMercado.padrao();
 	private final ParametrosEconomia parametros = ParametrosEconomia.padrao();
 	private final ParametrosMoral parametrosMoral = ParametrosMoral.padrao();
 
@@ -88,6 +90,7 @@ class RelatorioEconomiaTest {
 		md.append("\n*Receita líquida* é bilheteria menos custo do jogo e deslocamento. *Resultado* é a receita líquida menos ")
 			.append("a folha. *Fecham no vermelho*: clubes cujo resultado da temporada é negativo (o saldo inicial cobre ")
 			.append(parametros.rodadasDeFolhaNoInicio()).append(" rodadas de folha).\n");
+		mercado(md);
 		Files.createDirectories(SAIDA.getParent());
 		Files.writeString(SAIDA, md.toString());
 		System.out.println(md);
@@ -160,6 +163,8 @@ class RelatorioEconomiaTest {
 				int terco = Math.min(2, i * 3 / ordem.size());
 				a.tercos[terco] += r;
 				a.clubesPorTerco[terco]++;
+				a.forcaPorTerco[terco] += c.forca();
+				a.saldoInicialPorTerco[terco] += caixa.saldoInicial(planteis.get(c.id()));
 			}
 		}
 	}
@@ -202,6 +207,47 @@ class RelatorioEconomiaTest {
 			.append(". Custo do jogo em casa: ").append(pct(parametros.custoDoJogo())).append(" da bilheteria.\n\n");
 	}
 
+	/** Proposta da rev. 41: preço pela força e quanto o caixa de uma temporada compra. */
+	private void mercado(StringBuilder md) {
+		md.append("\n## Mercado: preço do jogador (proposta da rev. 41)\n\n");
+		md.append("Preço da compra direta = ").append(mercado.rodadasDeSalarioNoPreco())
+			.append(" rodadas do salário do jogador (cerca de duas temporadas de 38 rodadas), arredondado em R$ 1.000. ")
+			.append("O leilão começa ").append(pct(mercado.descontoLeilao())).append(" abaixo (regra do usuário).\n\n");
+		md.append("| Força | Salário por rodada | Preço (compra direta) | Lance inicial do leilão |\n|---|---|---|---|\n");
+		for (int forca : new int[] { 5, 12, 17, 22, 26, 30, 35, 40, 45, 50 }) {
+			Jogador j = jogador(forca);
+			md.append("| ").append(forca).append(" | ").append(real(caixa.salario(j))).append(" | ")
+				.append(real(preco.preco(j))).append(" | ").append(real(preco.lanceInicialLeilao(j))).append(" |\n");
+		}
+		md.append("\n### Quantos jogadores da própria força o clube compra\n\n");
+		md.append("Por terço de força dentro da divisão: força média do terço, preço de um jogador dessa força, quantos ")
+			.append("o saldo inicial paga e quantos o resultado de uma temporada (só o caixa da rodada) paga.\n\n");
+		md.append("| Divisão | Terço | Força média | Preço | Saldo inicial compra | Resultado da temporada compra |\n")
+			.append("|---|---|---|---|---|---|\n");
+		String[] nomes = { "Mais fortes", "Medianos", "Mais fracos" };
+		porDivisao.forEach((prioridade, a) -> {
+			for (int t = 0; t < 3; t++) {
+				double forca = a.forcaPorTerco[t] / a.clubesPorTerco[t];
+				long p = preco.preco(jogador((int) Math.round(forca)));
+				md.append("| ").append(prioridade).append("ª | ").append(nomes[t]).append(" | ")
+					.append(String.format(Locale.forLanguageTag("pt-BR"), "%.1f", forca)).append(" | ").append(real(p))
+					.append(" | ").append(vezes(a.saldoInicialPorTerco[t] / a.clubesPorTerco[t] / p)).append(" | ")
+					.append(vezes(a.tercos[t] / a.clubesPorTerco[t] / p)).append(" |\n");
+			}
+		});
+		md.append("\nVender um jogador rende o preço (ou o lance do leilão) e tira o salário dele da folha. ")
+			.append("Ainda fora: patrocínio, premiação, empréstimo, desconto do estrangeiro e regra de lance da máquina.\n");
+	}
+
+	private static Jogador jogador(int forca) {
+		return new Jogador(1, "x", Posicao.ATACANTE, forca, Temperamento.NORMAL, "BRA");
+	}
+
+	private static String vezes(double quantidade) {
+		return quantidade < 0 ? "nenhum (resultado negativo)"
+				: String.format(Locale.forLanguageTag("pt-BR"), "%.1f", quantidade);
+	}
+
 	private static String real(double centavos) {
 		return Moeda.REAL.formatar(Math.round(centavos));
 	}
@@ -229,5 +275,7 @@ class RelatorioEconomiaTest {
 		int forcaMax;
 		final double[] tercos = new double[3];
 		final int[] clubesPorTerco = new int[3];
+		final double[] forcaPorTerco = new double[3];
+		final double[] saldoInicialPorTerco = new double[3];
 	}
 }

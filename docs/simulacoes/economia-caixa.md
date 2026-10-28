@@ -43,3 +43,38 @@ Ocupação: 45% com moral inicial e adversário de mesma força; moral máxima s
 | 3ª | R$ 971.042 | R$ 228.008 | R$ -303.340 | R$ -387.715 |
 
 *Receita líquida* é bilheteria menos custo do jogo e deslocamento. *Resultado* é a receita líquida menos a folha. *Fecham no vermelho*: clubes cujo resultado da temporada é negativo (o saldo inicial cobre 10 rodadas de folha).
+
+## Mercado: preço do jogador (proposta da rev. 41)
+
+Preço da compra direta = 80 rodadas do salário do jogador (cerca de duas temporadas de 38 rodadas), arredondado em R$ 1.000. O leilão começa 20% abaixo (regra do usuário).
+
+| Força | Salário por rodada | Preço (compra direta) | Lance inicial do leilão |
+|---|---|---|---|
+| 5 | R$ 868 | R$ 69.000 | R$ 55.000 |
+| 12 | R$ 1.413 | R$ 113.000 | R$ 90.000 |
+| 17 | R$ 2.000 | R$ 160.000 | R$ 128.000 |
+| 22 | R$ 2.831 | R$ 227.000 | R$ 182.000 |
+| 26 | R$ 3.739 | R$ 299.000 | R$ 239.000 |
+| 30 | R$ 4.938 | R$ 395.000 | R$ 316.000 |
+| 35 | R$ 6.991 | R$ 559.000 | R$ 447.000 |
+| 40 | R$ 9.897 | R$ 792.000 | R$ 634.000 |
+| 45 | R$ 14.011 | R$ 1.121.000 | R$ 897.000 |
+| 50 | R$ 19.836 | R$ 1.587.000 | R$ 1.270.000 |
+
+### Quantos jogadores da própria força o clube compra
+
+Por terço de força dentro da divisão: força média do terço, preço de um jogador dessa força, quantos o saldo inicial paga e quantos o resultado de uma temporada (só o caixa da rodada) paga.
+
+| Divisão | Terço | Força média | Preço | Saldo inicial compra | Resultado da temporada compra |
+|---|---|---|---|---|---|
+| 1ª | Mais fortes | 47,6 | R$ 1.381.000 | 2,3 | 5,3 |
+| 1ª | Medianos | 42,1 | R$ 910.000 | 2,4 | 2,9 |
+| 1ª | Mais fracos | 37,2 | R$ 643.000 | 2,5 | 0,4 |
+| 2ª | Mais fortes | 28,8 | R$ 369.000 | 2,4 | 3,8 |
+| 2ª | Medianos | 26,0 | R$ 299.000 | 2,4 | 1,6 |
+| 2ª | Mais fracos | 23,1 | R$ 243.000 | 2,4 | nenhum (resultado negativo) |
+| 3ª | Mais fortes | 20,9 | R$ 211.000 | 2,4 | 4,6 |
+| 3ª | Medianos | 17,7 | R$ 172.000 | 2,4 | 1,3 |
+| 3ª | Mais fracos | 14,7 | R$ 139.000 | 2,4 | nenhum (resultado negativo) |
+
+Vender um jogador rende o preço (ou o lance do leilão) e tira o salário dele da folha. Ainda fora: patrocínio, premiação, empréstimo, desconto do estrangeiro e regra de lance da máquina.
