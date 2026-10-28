@@ -832,3 +832,107 @@ a.clube-linha:hover { color: var(--texto); background: rgba(242, 201, 76, 0.1); 
 .lugar button:disabled { opacity: 0.35; cursor: not-allowed; }
 
 .legenda { display: flex; align-items: center; gap: 8px; }
+
+/* Jogos da rodada (modelo 1a). */
+.etapas { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.etapa {
+	padding: 6px 12px;
+	border-radius: 999px;
+	font: 600 14px Barlow, sans-serif;
+	color: var(--texto-suave);
+	box-shadow: inset 0 0 0 1px var(--borda);
+}
+
+.etapa.terminada { background: var(--borda); color: var(--texto-claro); box-shadow: none; }
+.etapa.jogando { background: var(--destaque); color: #1A1A12; box-shadow: none; }
+
+.relogio { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; min-width: 160px; }
+
+.relogio-minuto {
+	font-family: 'Barlow Condensed', sans-serif;
+	font-size: 40px;
+	font-weight: 700;
+	line-height: 1;
+	color: var(--destaque);
+	font-variant-numeric: tabular-nums;
+}
+
+.relogio-barra { width: 160px; height: 6px; background: var(--borda); border-radius: 3px; overflow: hidden; }
+.relogio-barra div { height: 6px; background: var(--destaque); }
+
+.velocidades {
+	display: flex;
+	gap: 4px;
+	padding: 4px;
+	background: var(--cartao);
+	border: 1px solid var(--borda);
+	border-radius: 10px;
+	align-self: flex-start;
+}
+
+.velocidade {
+	min-height: 40px;
+	padding: 0 14px;
+	border: 0;
+	border-radius: 7px;
+	font: 600 14px Barlow, sans-serif;
+	cursor: pointer;
+	background: transparent;
+	color: var(--texto-claro);
+}
+
+.velocidade[aria-pressed="true"] { background: var(--destaque); color: #1A1A12; }
+
+.jogos-rodada { min-width: 680px; display: flex; flex-direction: column; }
+
+.jogo-linha {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 88px minmax(0, 1fr) 210px;
+	align-items: center;
+	column-gap: 14px;
+	padding: 8px 20px;
+	border-top: 1px solid rgba(31, 90, 58, 0.6);
+}
+
+.jogo-linha.do-usuario { background: rgba(242, 201, 76, 0.12); box-shadow: inset 4px 0 0 var(--destaque); }
+
+.jogo-clube { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.jogo-clube.mandante { justify-content: flex-end; }
+
+.jogo-nome {
+	font-family: 'Barlow Condensed', sans-serif;
+	font-weight: 600;
+	font-size: 20px;
+	text-transform: uppercase;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.placar { display: flex; justify-content: center; gap: 4px; }
+
+.placar span {
+	min-width: 34px;
+	height: 34px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 6px;
+	font-family: 'Barlow Condensed', sans-serif;
+	font-weight: 700;
+	font-size: 22px;
+	font-variant-numeric: tabular-nums;
+	background: var(--destaque);
+	color: #1A1A12;
+}
+
+.ultimo-lance { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 15px; color: var(--texto-claro); }
+.lance-texto { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.lance, .cartao { flex: none; }
+.lance.gol { width: 14px; height: 14px; border-radius: 50%; background: var(--texto); box-shadow: inset 0 0 0 3px #1A1A12, 0 0 0 1px var(--texto); }
+.lance.amarelo { width: 10px; height: 14px; border-radius: 2px; background: var(--destaque); }
+.lance.vermelho, .cartao.vermelho { width: 10px; height: 14px; border-radius: 2px; background: var(--erro); }
+
+.rodape-rodada { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; font-size: 14px; }

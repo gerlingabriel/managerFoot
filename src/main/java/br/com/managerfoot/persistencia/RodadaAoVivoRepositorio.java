@@ -219,18 +219,33 @@ public class RodadaAoVivoRepositorio {
 			Situacao situacao = terminada || i < atual ? Situacao.TERMINADA : i == atual ? Situacao.JOGANDO : Situacao.AGUARDANDO;
 			divisoes.add(new DivisaoNaRodada(nomes.get(prioridades.get(i)), situacao, relogio.comUsuario().get(i)));
 		}
-		List<PlacarAoVivo> placares = porDivisao.get(prioridades.get(atual)).stream().map(p -> {
-			List<EventoPartida> eventos = rodada.eventosAte(p, minuto);
-			int golsCasa = (int) eventos.stream().filter(e -> e.tipo() == TipoEvento.GOL && e.lado() == Lado.CASA).count();
-			int golsFora = (int) eventos.stream().filter(e -> e.tipo() == TipoEvento.GOL && e.lado() == Lado.FORA).count();
-			EventoPartida ultimo = eventos.stream().filter(e -> LANCES.contains(e.tipo())).reduce((a, b) -> b).orElse(null);
-			return new PlacarAoVivo(p.jogo().mandante(), p.jogo().visitante(), golsCasa, golsFora,
-					p.jogo().mandante().id() == clube || p.jogo().visitante().id() == clube, ultimo,
-					eventos.stream().anyMatch(e -> EXPULSOES.contains(e.tipo()) && e.lado() == Lado.CASA),
-					eventos.stream().anyMatch(e -> EXPULSOES.contains(e.tipo()) && e.lado() == Lado.FORA));
-		}).toList();
-		return new EstadoRodada(jogoId, linha.rodada(), divisoes, atual, minuto, linha.andandoDesde() == null, terminada,
-				velocidade, relogio.comUsuario().get(atual), placares);
+		List<PlacarAoVivo> placares = porDivisao.get(prioridades.get(atual)).stream()
+			.map(p -> placar(rodada, p, minuto, clube))
+			.toList();
+		// o jogo do usuário no minuto em que ele está: o final, se a divisão dele já terminou
+		PlacarAoVivo doUsuario = null;
+		for (int i = 0; i < prioridades.size(); i++) {
+			for (PartidaDaRodada p : porDivisao.get(prioridades.get(i))) {
+				if (p.jogo().mandante().id() == clube || p.jogo().visitante().id() == clube) {
+					doUsuario = placar(rodada, p, terminada || i < atual ? Integer.MAX_VALUE : i == atual ? minuto : 0, clube);
+				}
+			}
+		}
+		int temporada = jdbc.sql("SELECT max(numero) FROM jogo_temporada WHERE jogo_id = :jogo").param("jogo", jogoId)
+			.query(Integer.class).single();
+		return new EstadoRodada(jogoId, temporada, linha.rodada(), divisoes, atual, minuto, linha.andandoDesde() == null,
+				terminada, velocidade, relogio.comUsuario().get(atual), placares, doUsuario);
+	}
+
+	private static PlacarAoVivo placar(RodadaAoVivo rodada, PartidaDaRodada p, int minuto, long clube) {
+		List<EventoPartida> eventos = rodada.eventosAte(p, minuto);
+		int golsCasa = (int) eventos.stream().filter(e -> e.tipo() == TipoEvento.GOL && e.lado() == Lado.CASA).count();
+		int golsFora = (int) eventos.stream().filter(e -> e.tipo() == TipoEvento.GOL && e.lado() == Lado.FORA).count();
+		EventoPartida ultimo = eventos.stream().filter(e -> LANCES.contains(e.tipo())).reduce((a, b) -> b).orElse(null);
+		return new PlacarAoVivo(p.jogo().mandante(), p.jogo().visitante(), golsCasa, golsFora,
+				p.jogo().mandante().id() == clube || p.jogo().visitante().id() == clube, ultimo,
+				eventos.stream().anyMatch(e -> EXPULSOES.contains(e.tipo()) && e.lado() == Lado.CASA),
+				eventos.stream().anyMatch(e -> EXPULSOES.contains(e.tipo()) && e.lado() == Lado.FORA));
 	}
 
 	/** Partidas por divisão, na ordem de exibição (da maior prioridade para a 1ª). */
@@ -321,8 +336,10 @@ public class RodadaAoVivoRepositorio {
 	 *
 	 * @param divisaoAtual índice em {@code divisoes} da divisão em jogo
 	 * @param comUsuario se a divisão em jogo tem clube do usuário (só ela tem velocidade e pausa)
+	 * @param jogoDoUsuario o jogo do clube do usuário até onde ele já foi jogado; nulo na folga
 	 */
-	public record EstadoRodada(long jogoId, int rodada, List<DivisaoNaRodada> divisoes, int divisaoAtual, int minuto,
-			boolean pausada, boolean terminada, Velocidade velocidade, boolean comUsuario, List<PlacarAoVivo> partidas) {
+	public record EstadoRodada(long jogoId, int temporada, int rodada, List<DivisaoNaRodada> divisoes, int divisaoAtual,
+			int minuto, boolean pausada, boolean terminada, Velocidade velocidade, boolean comUsuario,
+			List<PlacarAoVivo> partidas, PlacarAoVivo jogoDoUsuario) {
 	}
 }

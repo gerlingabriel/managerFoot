@@ -23,12 +23,11 @@ import br.com.managerfoot.motor.ParametrosMotor;
 import br.com.managerfoot.temporada.Classificacao;
 import br.com.managerfoot.temporada.Jogo;
 import br.com.managerfoot.temporada.LinhaClassificacao;
-import br.com.managerfoot.temporada.ProcessamentoRodada;
 import br.com.managerfoot.temporada.Temporada;
 
 /**
- * Plantel e tática do treinador humano (SPEC §10.3, rev. 16, 31 e 34): o que a tela mostra, as
- * mudanças na escalação e o "Confirmar e jogar rodada". Toda operação confere que o usuário é o
+ * Plantel e tática do treinador humano (SPEC §10.3, rev. 16, 31 e 34): o que a tela mostra e as
+ * mudanças na escalação. Toda operação confere que o usuário é o
  * treinador do jogo; caso contrário, o jogo não existe para ele.
  */
 @Repository
@@ -122,18 +121,6 @@ public class PlantelRepositorio {
 			}
 			return e.comBatedor(jogadorId);
 		}, null, null);
-	}
-
-	/**
-	 * Joga a rodada esperada com a escalação gravada e devolve o jogo do treinador (vazio na folga).
-	 *
-	 * @throws IllegalStateException se a escalação não pode jogar, ou se a rodada já foi jogada
-	 */
-	@Transactional
-	public Optional<ProcessamentoRodada.PartidaJogada> jogarRodada(long jogoId, long usuarioId, int rodada) {
-		long clube = exigirClube(jogoId, usuarioId);
-		RodadaRepositorio.RodadaJogada jogada = rodadas.avancar(jogoId, rodada);
-		return jogada.resultado().partidas().stream().filter(p -> envolve(p.jogo(), clube)).findFirst();
 	}
 
 	private void alterar(long jogoId, long usuarioId, UnaryOperator<EscalacaoDoTreinador> mudanca, Long jogadorId,

@@ -20,7 +20,6 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
@@ -138,21 +137,6 @@ class PlantelIT {
 			.filter(id -> !depois.reservas().contains(id)).findFirst().orElseThrow();
 		pedir(post(plantel + "/batedor").param("batedor", String.valueOf(deFora)))
 			.andExpect(flash().attribute("erro", "O batedor precisa estar entre os titulares ou no banco."));
-	}
-
-	@Test
-	void jogarRodadaMostraOPlacarEUmSegundoCliqueNaoJogaOutra() throws Exception {
-		MvcResult jogada = pedir(post(jogarRodada()).param("rodada", "1"))
-			.andExpect(flash().attribute("resultado", containsString("Rodada 1: ")))
-			.andReturn();
-		assertThat(rodadas.rodadasProcessadas(jogoId)).isEqualTo(1);
-		mvc.perform(get(plantel).with(como(treinador)).flashAttrs(jogada.getFlashMap()))
-			.andExpect(content().string(containsString("Rodada 1: ")))
-			.andExpect(content().string(containsString("Próximo jogo · Rodada 2")));
-
-		pedir(post(jogarRodada()).param("rodada", "1"))
-			.andExpect(flash().attribute("erro", "A rodada 1 já foi jogada. Confira o plantel."));
-		assertThat(rodadas.rodadasProcessadas(jogoId)).isEqualTo(1);
 	}
 
 	@Test

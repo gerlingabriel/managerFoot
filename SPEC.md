@@ -1888,7 +1888,12 @@ começa depois que a anterior estiver testada.
     substituição com a partida pausada, partidas refeitas pela semente e
     gravação no fim uma vez só. As sementes das partidas passam a ser
     sorteadas antes das suspensões.
-  - **3f.4b:** quadro da rodada (modelo 1a) com polling e velocidade.
+  - **3f.4b (concluída):** quadro da rodada (modelo 1a), atualizado a cada
+    1 s: divisões na ordem em que jogam, minuto, placares, expulsões e
+    último lance; velocidade lenta, normal e rápida só na divisão do
+    usuário. "Confirmar e jogar rodada" abre o quadro, e no fim a tela volta
+    ao plantel com o placar. Ficam para depois a coluna de público (sem
+    estádio no domínio) e, na 3f.4c, o som e o clique no clube.
   - **3f.4c:** janela do jogo com pausa e substituição (modelos 1d e 1e) e
     som do gol.
   - plantel e tática;

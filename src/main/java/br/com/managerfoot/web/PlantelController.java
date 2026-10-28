@@ -5,7 +5,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.NoSuchElementException;
-import java.util.Optional;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -29,27 +28,34 @@ import br.com.managerfoot.persistencia.JogosDoTreinadorRepositorio;
 import br.com.managerfoot.persistencia.PlantelRepositorio;
 import br.com.managerfoot.persistencia.PlantelRepositorio.LinhaJogador;
 import br.com.managerfoot.persistencia.PlantelRepositorio.VisaoPlantel;
-import br.com.managerfoot.temporada.ProcessamentoRodada.PartidaJogada;
+import br.com.managerfoot.persistencia.RodadaAoVivoRepositorio;
 import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * Plantel e tática (SPEC §10.3; modelo aprovado, rev. 16, 31 e 34). Cada mudança grava e volta à
- * tela (com HTMX, só a área do plantel é trocada).
+ * tela (com HTMX, só a área do plantel é trocada). "Confirmar e jogar rodada" fica em
+ * {@link RodadaController}.
  */
 @Controller
 class PlantelController {
 
 	private final PlantelRepositorio plantel;
 	private final JogosDoTreinadorRepositorio jogos;
+	private final RodadaAoVivoRepositorio aoVivo;
 
-	PlantelController(PlantelRepositorio plantel, JogosDoTreinadorRepositorio jogos) {
+	PlantelController(PlantelRepositorio plantel, JogosDoTreinadorRepositorio jogos, RodadaAoVivoRepositorio aoVivo) {
 		this.plantel = plantel;
 		this.jogos = jogos;
+		this.aoVivo = aoVivo;
 	}
 
 	@GetMapping("/jogos/{jogoId}/plantel")
 	String plantel(@AuthenticationPrincipal Usuario usuario, @PathVariable long jogoId, Model model) {
 		jogos.abrir(jogoId, usuario.id()).orElseThrow(NoSuchElementException::new);
+		if (aoVivo.emAndamento(jogoId)) {
+			// rodada ao vivo: o plantel fica fechado até ela terminar (docs/decisions/0010)
+			return "redirect:/jogos/" + jogoId + "/rodada";
+		}
 		VisaoPlantel v = plantel.visao(jogoId, usuario.id()).orElseThrow(NoSuchElementException::new);
 		List<LinhaJogador> titulares = grupo(v, Lugar.TITULAR);
 		model.addAttribute("usuario", usuario);
@@ -95,30 +101,6 @@ class PlantelController {
 		return voltar(jogoId);
 	}
 
-	/** "Confirmar e jogar rodada": até o minuto a minuto (3f.4), joga a rodada inteira (rev. 34). */
-	@PostMapping("/jogos/{jogoId}/rodada")
-	String jogarRodada(@AuthenticationPrincipal Usuario usuario, @PathVariable long jogoId,
-			@RequestParam("rodada") int rodada, RedirectAttributes redirect) {
-		VisaoPlantel v = plantel.visao(jogoId, usuario.id()).orElseThrow(NoSuchElementException::new);
-		if (!v.problemas().isEmpty()) {
-			redirect.addFlashAttribute("erro", "Complete a escalação antes de jogar a rodada.");
-			return voltar(jogoId);
-		}
-		try {
-			Optional<PartidaJogada> partida = plantel.jogarRodada(jogoId, usuario.id(), rodada);
-			redirect.addFlashAttribute("resultado", partida
-				.map(p -> "Rodada " + rodada + ": " + p.jogo().mandante().nome() + " " + p.resultado().golsCasa() + " x "
-						+ p.resultado().golsFora() + " " + p.jogo().visitante().nome())
-				.orElse("Rodada " + rodada + ": seu clube folgou."));
-		}
-		catch (IllegalStateException e) {
-			// clique repetido ou outra aba: a rodada pedida já não é a próxima
-			redirect.addFlashAttribute("erro", "A rodada " + rodada + " já foi jogada. Confira o plantel.");
-		}
-		return voltar(jogoId);
-	}
-
-	/** Jogo de outro usuário ou inexistente: para quem pede, ele não existe. */
 	@ExceptionHandler(NoSuchElementException.class)
 	void naoEncontrado(HttpServletResponse response) throws IOException {
 		response.sendError(HttpStatus.NOT_FOUND.value());

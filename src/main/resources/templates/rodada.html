@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: cabeca(|Rodada ${e.rodada}|)}"></head>
+<body>
+<div class="campo campo-pagina">
+<div class="pagina">
+
+<div id="quadro" class="pilha-larga" th:attr="hx-get=@{/jogos/{id}/rodada(id=${e.jogoId})}"
+	hx-trigger="every 1s" hx-select="#quadro" hx-swap="outerHTML">
+
+<header class="clube-topo" th:with="atual=${e.divisoes[e.divisaoAtual]}">
+<div class="pilha-curta">
+<span class="rotulo" th:text="|Temporada ${e.temporada}|">Temporada 1</span>
+<h1 class="titulo-pagina" th:text="|Rodada ${e.rodada}|">Rodada 1</h1>
+</div>
+<nav aria-label="Divisões da rodada, na ordem em que jogam" class="etapas">
+<span th:each="d : ${e.divisoes}" class="etapa" th:classappend="${d.situacao.name() == 'JOGANDO'} ? 'jogando' : (${d.situacao.name() == 'TERMINADA'} ? 'terminada')"
+	th:text="|${d.nome} · ${d.situacao.name() == 'JOGANDO' ? 'jogando' : (d.situacao.name() == 'TERMINADA' ? 'terminada' : 'aguardando')}|">Divisão · jogando</span>
+</nav>
+<div class="relogio">
+<span class="relogio-minuto" th:text="|${e.minuto}'|">0'</span>
+<div class="relogio-barra" role="img" th:attr="aria-label=|${e.minuto} de 90 minutos|">
+<div th:style="|width: ${e.minuto * 100 / 90}%|"></div>
+</div>
+</div>
+</header>
+
+<form th:if="${e.comUsuario}" th:action="@{/jogos/{id}/rodada/velocidade(id=${e.jogoId})}" method="post"
+	class="velocidades" role="group" aria-label="Velocidade da partida"
+	hx-boost="true" hx-target="#quadro" hx-select="#quadro" hx-swap="outerHTML">
+<button th:each="v : ${velocidades}" type="submit" name="velocidade" th:value="${v.name()}" class="velocidade"
+	th:attr="aria-pressed=${v == e.velocidade}"
+	th:text="${v.name() == 'LENTA' ? 'Lenta' : (v.name() == 'NORMAL' ? 'Normal' : 'Rápida')}">Normal</button>
+</form>
+
+<section th:with="atual=${e.divisoes[e.divisaoAtual]}" th:attr="aria-label=${atual.nome}" class="painel grupo">
+<div class="painel-cabecalho">
+<h2 class="titulo-secao pequeno" th:text="${atual.nome}">Divisão</h2>
+<span class="suave" th:text="|${e.comUsuario and e.pausada ? 'Pausada' : 'Ao vivo'} · ${e.partidas.size()} ${e.partidas.size() == 1 ? 'jogo' : 'jogos'}|">Ao vivo</span>
+</div>
+<div class="tabela-rolagem">
+<div class="jogos-rodada">
+<div th:each="j : ${e.partidas}" class="jogo-linha" th:classappend="${j.doUsuario} ? 'do-usuario'">
+<div class="jogo-clube mandante">
+<span th:if="${j.expulsaoCasa}" class="cartao vermelho" role="img" aria-label="Expulsão"></span>
+<span class="jogo-nome" th:text="${j.mandante.nome}">Mandante</span>
+<span aria-hidden="true" th:style="${@escudos.estilo(j.mandante.escudo, 22, 26)}"></span>
+</div>
+<div class="placar" th:attr="aria-label=|${j.golsCasa} a ${j.golsFora}|">
+<span th:text="${j.golsCasa}">0</span><span th:text="${j.golsFora}">0</span>
+</div>
+<div class="jogo-clube">
+<span aria-hidden="true" th:style="${@escudos.estilo(j.visitante.escudo, 22, 26)}"></span>
+<span class="jogo-nome" th:text="${j.visitante.nome}">Visitante</span>
+<span th:if="${j.expulsaoFora}" class="cartao vermelho" role="img" aria-label="Expulsão"></span>
+</div>
+<span class="ultimo-lance">
+<th:block th:if="${j.ultimoLance != null}">
+<span class="lance" th:classappend="${@lances.icone(j.ultimoLance)}" role="img"
+	th:with="tipo=${j.ultimoLance.tipo.name()}"
+	th:attr="aria-label=${tipo == 'GOL' ? 'Gol' : (tipo == 'CARTAO_AMARELO' ? 'Cartão amarelo' : 'Expulsão')}"></span>
+<span class="lance-texto" th:text="${@lances.texto(j.ultimoLance)}">Nome 41'</span>
+</th:block>
+</span>
+</div>
+</div>
+</div>
+</section>
+
+<footer class="rodape-rodada suave">
+<span th:text="${e.comUsuario} ? 'A linha mostra o último lance de cada jogo.' : 'Nenhum clube desta divisão é seu: os jogos correm sempre rápido.'">texto</span>
+<span th:text="${e.divisaoAtual == e.divisoes.size() - 1} ? 'Ao fim desta divisão você volta ao plantel.' : 'Ao terminar, começa a próxima divisão.'">texto</span>
+</footer>
+</div>
+
+</div>
+</div>
+</body>
+</html>
