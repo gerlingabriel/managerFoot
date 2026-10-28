@@ -11,7 +11,7 @@ playoff vira vaga direta. Os rebaixados de uma divisão são os promovidos da
 de baixo (§4.1, rev. 11), e os rebaixados da última vão para a fila de
 espera.
 
-**Status da adaptação:** **Provisório**, aguardando aprovação do usuário.
+**Status da adaptação:** **Definido** (aprovada pelo usuário na SPEC rev. 32).
 
 ## Resumo da adaptação
 

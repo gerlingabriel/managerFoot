@@ -47,6 +47,17 @@ unset ADMIN_SENHA
 Sem `--spring.main.web-application-type=none`, a aplicação cria o administrador
 e continua rodando normalmente.
 
+## Banco padrão
+
+Gera e grava os 6 países do banco padrão (Brasil, Argentina, Inglaterra,
+Espanha, Itália e Portugal; SPEC §4.1, `docs/decisions/0008`). Rodar de novo
+não duplica nada.
+
+```bash
+set -a && . ./.env && set +a
+./mvnw spring-boot:run -Dspring-boot.run.arguments="--carregar-banco-padrao --spring.main.web-application-type=none"
+```
+
 ## Testes
 
 | Comando | O que roda |

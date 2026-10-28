@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 31 — 2026-10-27)
+-   **Status:** versão inicial para revisão (rev. 32 — 2026-10-27)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 32 (2026-10-27):** no banco padrão todos os jogadores são do país do clube; estrangeiros entram pelo editor; adaptação dos formatos aprovada; pesos do temperamento.
 -   **rev. 31 (2026-10-27):** países e formato do banco padrão (até 3 divisões, até 20 clubes, pontos corridos, acesso direto); força do clube pela média em campo; faixas de força por divisão; asteriscos de 0 a 3 por clube; temperamento sorteado com peso; plantel com gols antes dos amarelos e sigla do país do estrangeiro.
 -   **rev. 30 (2026-10-27):** banco padrão com formatos reais pesquisados e nomes fictícios (compostos, só nome ou só sobrenome); clicar num clube durante o minuto a minuto pausa a partida e mostra as escalações, e no próprio clube abre as substituições.
 -   **rev. 29 (2026-10-27):** tela inicial só com novo jogo e jogo gravado; vários jogos gravados por usuário; dois caminhos do administrador no novo jogo; clube com usuário não aceita outro usuário; sorteio em rede com grupo maior a cada usuário; entrada em rede pela sala antes da rodada 1 (provisório); jogo individual testado antes da rede.
@@ -510,8 +511,12 @@ rankings de artilheiros e o histórico de cartões de cada jogador (§7.4).
 **Definido — elenco gerado:**
 - Cada clube tem **23 jogadores** cadastrados (composição abaixo; máximo de 25).
 - Nomes e nacionalidades são gerados por padrão, por sorteio.
-- Cada clube tem **de 5 a 7 estrangeiros**, para não distorcer o limite de
-  estrangeiros (§8.4).
+- ~~Cada clube tem **de 5 a 7 estrangeiros**, para não distorcer o limite de
+  estrangeiros (§8.4).~~ **Substituído na rev. 32:** no banco padrão,
+  **todos os jogadores são do país do clube**. Ao cadastrar ou editar um
+  jogador, o editor permite escolher qualquer país.
+  - **Conflito resolvido (rev. 32):** a instrução do usuário substitui a
+    regra dos 5 a 7 estrangeiros.
 
 **Definido (rev. 17) — composição padrão:**
 - O cadastro padrão gera **23 jogadores**: 3 goleiros, 7 defensores,
@@ -519,7 +524,8 @@ rankings de artilheiros e o histórico de cartões de cada jogador (§7.4).
 - O elenco pode chegar a **25**; as 2 vagas livres servem para compra e
   venda e dependem das finanças. A máquina também precisa dessa folga para
   negociar.
-- Os 5 a 7 estrangeiros continuam valendo dentro dos 23.
+- ~~Os 5 a 7 estrangeiros continuam valendo dentro dos 23.~~ (rev. 32: sem
+  estrangeiros no banco padrão.)
 
 **Definido (rev. 17) — bônus de artilharia da temporada:**
 - No início de cada temporada, o sistema sorteia cerca de **15 jogadores**
@@ -549,6 +555,8 @@ O temperamento pode assumir:
 **Definido (rev. 31):** no banco padrão, o temperamento é **sorteado com
 peso**: Normal é o mais comum e Violento o mais raro. **Provisório:** os
 pesos exatos ficam configuráveis e são propostos junto do gerador.
+**Definido (rev. 32):** Normal 40%, Calmo 20%, Educado 20%, Ansioso 13% e
+Violento 7% (`ParametrosBancoPadrao`).
 
 ### 5.3 Jogadores com asterisco
 
@@ -1791,7 +1799,10 @@ começa depois que a anterior estiver testada.
     administrador. A demissão do usuário rebaixado para a fila (§4.1) ainda
     não é aplicada no fim de temporada, porque o destino dele está em
     aberto.
-- Banco padrão gerado: 23 jogadores por clube (máximo 25), 5 a 7 estrangeiros (§5.2).
+- **Banco padrão (concluído, rev. 32):** 6 países com formatos adaptados
+  (`docs/banco-padrao-formatos.md`), 23 jogadores nacionais por clube, força
+  do clube igual à média dos 11 em campo; gerado por código e carregado com
+  `--carregar-banco-padrao` (`docs/decisions/0008`).
 - Telas Thymeleaf + HTMX:
   - plantel e tática;
   - partidas simultâneas da divisão (§10.2);

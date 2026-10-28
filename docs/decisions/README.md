@@ -19,3 +19,4 @@ consideradas, decisão e consequências.
 | [0005](0005-pacotes-e-persistencia-inicial.md) | Estrutura de pacotes e persistência inicial | Aceita |
 | [0006](0006-molde-copia-e-sql-explicito.md) | Molde editável, cópia por jogo e SQL explícito | Aceita |
 | [0007](0007-contas-e-cadastro.md) | Contas, senhas e link de cadastro | Aceita |
+| [0008](0008-banco-padrao-gerado.md) | Banco padrão gerado por código e carregado por comando | Aceita |
