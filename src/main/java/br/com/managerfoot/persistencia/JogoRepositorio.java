@@ -19,7 +19,11 @@ import br.com.managerfoot.contas.AcessoNegadoException;
 import br.com.managerfoot.contas.Papel;
 import br.com.managerfoot.contas.Usuario;
 import br.com.managerfoot.dominio.Clube;
+import br.com.managerfoot.dominio.EscalacaoDoTreinador;
+import br.com.managerfoot.dominio.Formacao;
 import br.com.managerfoot.dominio.Jogador;
+import br.com.managerfoot.motor.EscalacaoMaquina;
+import br.com.managerfoot.motor.ParametrosMotor;
 import br.com.managerfoot.temporada.ClubeInicial;
 import br.com.managerfoot.temporada.ConfiguracaoLiga;
 import br.com.managerfoot.temporada.Divisao;
@@ -34,9 +38,12 @@ public class JogoRepositorio {
 	private final JdbcClient jdbc;
 	private final ContasRepositorio contas;
 	private final MoldeRepositorio moldes;
+	private final EscalacaoRepositorio escalacoes;
+	private final EscalacaoMaquina escalacaoMaquina = new EscalacaoMaquina(ParametrosMotor.padrao());
 	private final int candidatosClubeInicial;
 
 	public JogoRepositorio(JdbcClient jdbc, ContasRepositorio contas, MoldeRepositorio moldes,
+			EscalacaoRepositorio escalacoes,
 			@Value("${managerfoot.jogo.candidatos-clube-inicial}") int candidatosClubeInicial) {
 		if (candidatosClubeInicial < 1) {
 			throw new IllegalArgumentException(
@@ -45,6 +52,7 @@ public class JogoRepositorio {
 		this.jdbc = jdbc;
 		this.contas = contas;
 		this.moldes = moldes;
+		this.escalacoes = escalacoes;
 		this.candidatosClubeInicial = candidatosClubeInicial;
 	}
 
@@ -161,12 +169,18 @@ public class JogoRepositorio {
 			.orElseThrow(() -> new NoSuchElementException("usuário " + usuarioId + " não existe"));
 	}
 
+	/** Põe o treinador no clube, que começa com a escalação da máquina (SPEC §10.3, rev. 34). */
 	private void inserirTreinador(long jogoId, long usuarioId, long clubeId) {
 		jdbc.sql("INSERT INTO jogo_treinador (jogo_id, usuario_id, clube_id) VALUES (:jogo, :usuario, :clube)")
 			.param("jogo", jogoId)
 			.param("usuario", usuarioId)
 			.param("clube", clubeId)
 			.update();
+		List<Jogador> plantel = TabelasLiga.JOGO.carregarPlantel(jdbc, clubeId);
+		// elenco abaixo de 11 ainda está em aberto (SPEC §9.3): sem escalação gravada, como os da máquina
+		if (plantel.size() >= Formacao.TITULARES) {
+			escalacoes.gravar(clubeId, EscalacaoDoTreinador.de(escalacaoMaquina.escalar(plantel)));
+		}
 	}
 
 	/**

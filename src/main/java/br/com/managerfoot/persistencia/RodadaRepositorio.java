@@ -15,6 +15,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import br.com.managerfoot.dominio.Clube;
+import br.com.managerfoot.dominio.Escalacao;
 import br.com.managerfoot.dominio.Jogador;
 import br.com.managerfoot.dominio.Moral;
 import br.com.managerfoot.motor.EventoPartida;
@@ -43,21 +44,26 @@ public class RodadaRepositorio {
 	private final JdbcClient jdbc;
 	private final JogoRepositorio jogos;
 	private final TemporadaRepositorio temporadas;
+	private final EscalacaoRepositorio escalacoes;
 	private final ProcessamentoRodada processamento = ProcessamentoRodada.padrao();
 
-	public RodadaRepositorio(JdbcClient jdbc, JogoRepositorio jogos, TemporadaRepositorio temporadas) {
+	public RodadaRepositorio(JdbcClient jdbc, JogoRepositorio jogos, TemporadaRepositorio temporadas,
+			EscalacaoRepositorio escalacoes) {
 		this.jdbc = jdbc;
 		this.jogos = jogos;
 		this.temporadas = temporadas;
+		this.escalacoes = escalacoes;
 	}
 
 	/**
-	 * Joga a rodada da temporada atual e grava placares, gols, cartões, suspensões e moral.
+	 * Joga a rodada da temporada atual e grava placares, gols, cartões, suspensões e moral. Os clubes
+	 * de treinador humano jogam com a escalação gravada, e quem ficou suspenso sai dela.
 	 *
 	 * @param rodada a rodada que quem pede espera jogar: a seguinte à última processada
 	 * @return o resultado do processamento
 	 * @throws NoSuchElementException se o jogo não existe ou não tem temporada
-	 * @throws IllegalStateException se a rodada já foi jogada, está fora de ordem ou não existe
+	 * @throws IllegalStateException se a rodada já foi jogada, está fora de ordem ou não existe, ou se
+	 *         a escalação gravada de um treinador não pode jogar
 	 */
 	@Transactional
 	public RodadaJogada avancar(long jogoId, int rodada) {
@@ -75,12 +81,24 @@ public class RodadaRepositorio {
 		Map<Long, List<Jogador>> planteis = jogos.carregarPlanteis(jogoId);
 		Disciplina antes = carregarDisciplina(jogoId);
 		Map<Long, Moral> moralAntes = carregarMoral(jogoId);
-		ProcessamentoRodada.Resultado resultado = processamento.jogar(temporada, rodada, planteis, antes, moralAntes);
+		Map<Long, Escalacao> doTreinador = new HashMap<>();
+		escalacoes.carregarDoJogo(jogoId).forEach((clubeId, escalacao) -> {
+			try {
+				doTreinador.put(clubeId, escalacao.escalacao(planteis.getOrDefault(clubeId, List.of()), antes::suspenso));
+			}
+			catch (IllegalStateException e) {
+				throw new IllegalStateException("o clube " + clubeId + " não pode jogar a rodada " + rodada + ": "
+						+ e.getMessage(), e);
+			}
+		});
+		ProcessamentoRodada.Resultado resultado = processamento.jogar(temporada, rodada, planteis, antes, moralAntes,
+				doTreinador);
 
 		for (ProcessamentoRodada.PartidaJogada partida : resultado.partidas()) {
 			gravarPartida(linha.id(), partida);
 		}
 		gravarDisciplina(planteis, antes, resultado.disciplina());
+		escalacoes.retirarSuspensos(jogoId);
 		resultado.moral().forEach((clubeId, moral) -> {
 			if (!moral.equals(moralAntes.get(clubeId))) {
 				jdbc.sql("UPDATE jogo_clube SET moral = :moral WHERE id = :clube")

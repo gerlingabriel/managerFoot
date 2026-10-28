@@ -5,20 +5,27 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.SplittableRandom;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.Test;
 
 import br.com.managerfoot.dominio.Clube;
+import br.com.managerfoot.dominio.Escalacao;
+import br.com.managerfoot.dominio.Formacao;
 import br.com.managerfoot.dominio.Jogador;
 import br.com.managerfoot.dominio.Moral;
 import br.com.managerfoot.dominio.Posicao;
 import br.com.managerfoot.dominio.Temperamento;
+import br.com.managerfoot.motor.EscalacaoMaquina;
 import br.com.managerfoot.motor.EventoPartida;
+import br.com.managerfoot.motor.ParametrosMotor;
 import br.com.managerfoot.motor.TipoEvento;
 
 class ProcessamentoRodadaTest {
@@ -62,6 +69,39 @@ class ProcessamentoRodadaTest {
 	}
 
 	@Test
+	void clubeDoTreinadorJogaComAEscalacaoDele() {
+		Clube clube = LIGA.divisoes().getFirst().clubes().getFirst();
+		List<Jogador> plantel = PLANTEIS.get(clube.id());
+		// os mais fracos de cada posição num 5-4-1, para não coincidir com a escolha da máquina
+		Escalacao escolhida = new Escalacao(Formacao.F_5_4_1, List.of(
+				maisFracos(plantel, Posicao.GOLEIRO, 1), maisFracos(plantel, Posicao.DEFENSOR, 5),
+				maisFracos(plantel, Posicao.MEIO_CAMPISTA, 4), maisFracos(plantel, Posicao.ATACANTE, 1))
+			.stream().flatMap(List::stream).toList());
+		Set<Long> escalados = escolhida.titulares().stream().map(Jogador::id).collect(Collectors.toSet());
+		Set<Long> doClube = plantel.stream().map(Jogador::id).collect(Collectors.toSet());
+
+		List<EventoPartida> eventos = new ArrayList<>();
+		for (int rodada = 1; rodada <= 15; rodada++) {
+			processamento.jogar(TEMPORADA, rodada, PLANTEIS, Disciplina.vazia(), Map.of(), Map.of(clube.id(), escolhida))
+				.partidas().forEach(p -> eventos.addAll(p.resultado().eventos()));
+		}
+
+		List<Long> doClubeNosEventos = eventos.stream().map(e -> e.jogador().id()).filter(doClube::contains).toList();
+		assertThat(doClubeNosEventos).isNotEmpty().allMatch(escalados::contains);
+	}
+
+	@Test
+	void escalacaoDoTreinadorComSuspensoERecusada() {
+		Clube clube = LIGA.divisoes().getFirst().clubes().getFirst();
+		Escalacao escolhida = new EscalacaoMaquina(ParametrosMotor.padrao()).escalar(PLANTEIS.get(clube.id()));
+		Disciplina suspenso = new Disciplina(Map.of(), Map.of(escolhida.titulares().getLast().id(), 1));
+
+		assertThatIllegalStateException()
+			.isThrownBy(() -> processamento.jogar(TEMPORADA, 1, PLANTEIS, suspenso, Map.of(), Map.of(clube.id(), escolhida)))
+			.withMessageContaining("suspenso");
+	}
+
+	@Test
 	void rodadaInexistenteERecusada() {
 		assertThatIllegalArgumentException()
 			.isThrownBy(() -> processamento.jogar(TEMPORADA, 99, PLANTEIS, Disciplina.vazia(), Map.of()));
@@ -101,6 +141,11 @@ class ProcessamentoRodadaTest {
 		long cartoes = todas.stream().flatMap(p -> p.resultado().eventos().stream()).map(EventoPartida::tipo)
 			.filter(t -> t == TipoEvento.CARTAO_AMARELO).count();
 		assertThat(cartoes).isPositive();
+	}
+
+	private static List<Jogador> maisFracos(List<Jogador> plantel, Posicao posicao, int quantidade) {
+		return plantel.stream().filter(j -> j.posicao() == posicao).sorted(Comparator.comparingInt(Jogador::forca))
+			.limit(quantidade).toList();
 	}
 
 	private static List<Clube> clubes(int primeiroId, int quantidade, int forca) {

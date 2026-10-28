@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 34 (2026-10-28):** no plantel, botões Titular/Banco/Fora em cada linha; suspenso sai sozinho para fora do banco e o treinador completa o time; escalação inicial da máquina (provisório); até o minuto a minuto, "Confirmar e jogar rodada" joga a rodada inteira e mostra o placar.
 -   **rev. 33 (2026-10-28):** quadro da rodada mostra o último lance com ícone; clicar num clube abre uma janela pequena sobre o quadro, como no Elifoot 98, com lances em ordem e, no próprio clube, substituição; clube da máquina mostra a prévia dos 11 de cada lado em vez do 11 x 11 com detalhes; modelos aprovados.
 -   **rev. 32 (2026-10-27):** no banco padrão todos os jogadores são do país do clube; estrangeiros entram pelo editor; adaptação dos formatos aprovada; pesos do temperamento.
 -   **rev. 31 (2026-10-27):** países e formato do banco padrão (até 3 divisões, até 20 clubes, pontos corridos, acesso direto); força do clube pela média em campo; faixas de força por divisão; asteriscos de 0 a 3 por clube; temperamento sorteado com peso; plantel com gols antes dos amarelos e sigla do país do estrangeiro.
@@ -1458,6 +1459,19 @@ da mesma divisão seguem na mesma tela.
 - **Definido (rev. 28):** em jogo em rede, o plantel mostra os
   **treinadores da sessão**, com nome, clube e divisão, e o estado de cada
   um (configurando, pronto, desconectado), como na sala (§3.3).
+- **Definido (rev. 34) — montar o time:**
+  - Cada linha do plantel tem três botões, **Titular**, **Banco** e
+    **Fora**; a linha continua abrindo a ficha do jogador.
+  - **Provisório (proposta do agente):** o jogo começa com a escalação da
+    máquina para o clube do treinador, e ele muda o que quiser.
+  - A escalação fica gravada mesmo incompleta, e a tela diz o que falta (ex.: "faltam 1 defensor"); a rodada só sai com a
+    escalação válida.
+  - Depois de uma rodada, quem ficou **suspenso sai sozinho** para fora do
+    banco, marcado como suspenso, e deixa de ser o batedor. O treinador
+    completa o time.
+  - Até existir o minuto a minuto (3f.4), "Confirmar e jogar rodada" grava
+    a escalação, joga a rodada inteira de uma vez e volta ao plantel com o
+    placar do jogo do treinador.
 - **Definido (rev. 31) — colunas do elenco:** posição, nome (com ★),
   força, temperamento, **gols** da temporada e **amarelos**, nessa ordem:
   os gols vêm antes porque são mais importantes.
@@ -1845,6 +1859,10 @@ começa depois que a anterior estiver testada.
     clube clicado; "Assumir" cria o jogo com a 1ª temporada. A semente do
     quadro fica na sessão e é consumida ao assumir (clique duplo não cria
     dois jogos). Frases sobre rede do modelo ficaram fora até a Etapa 5.
+  - **3f.3a (concluída):** escalação do treinador gravada (migração V12),
+    inicial pela máquina, usada na rodada; suspensos saem dela depois da
+    rodada; escalação inválida impede a rodada (rev. 34).
+  - **3f.3b:** tela do plantel e tática do modelo aprovado.
   - plantel e tática;
   - partidas simultâneas da divisão (§10.2);
   - classificação;

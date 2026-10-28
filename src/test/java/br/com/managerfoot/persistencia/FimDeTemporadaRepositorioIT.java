@@ -53,6 +53,7 @@ class FimDeTemporadaRepositorioIT {
 	@BeforeEach
 	void criaJogoComTemporada() {
 		jogo = LigaDeTeste.criarJogo(moldes, jogos, contas);
+		LigaDeTeste.escalarTodosPelaMaquina(jdbc, jogo);
 		temporadas.iniciarPrimeiraTemporada(jogo, 2026);
 	}
 

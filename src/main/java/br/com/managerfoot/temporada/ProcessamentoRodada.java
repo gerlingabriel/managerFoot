@@ -22,8 +22,8 @@ import br.com.managerfoot.motor.RegrasPartida;
 import br.com.managerfoot.motor.ResultadoPartida;
 
 /**
- * Joga uma rodada da liga em processamento rápido, com todos os clubes escalados pela máquina
- * (SPEC §7.4.1 e §11.2). Domínio puro: quem chama carrega e grava o estado.
+ * Joga uma rodada da liga em processamento rápido (SPEC §7.4.1 e §11.2): os clubes de treinador
+ * humano jogam com a escalação dele; os demais são escalados pela máquina. Domínio puro: quem chama carrega e grava o estado.
  *
  * <p>Ordem: da divisão de maior número de prioridade até a 1ª; dentro dela, a do calendário.
  * Um gerador derivado da semente da temporada e do número da rodada dá a semente de cada partida
@@ -75,6 +75,18 @@ public final class ProcessamentoRodada {
 	 */
 	public Resultado jogar(Temporada temporada, int rodada, Map<Long, List<Jogador>> planteis, Disciplina disciplina,
 			Map<Long, Moral> moral) {
+		return jogar(temporada, rodada, planteis, disciplina, moral, Map.of());
+	}
+
+	/**
+	 * Como {@link #jogar(Temporada, int, Map, Disciplina, Map)}, com a escalação dos treinadores.
+	 *
+	 * @param escalacoes escalação por id do clube, com os jogadores do plantel; os clubes ausentes
+	 *        são escalados pela máquina
+	 * @throws IllegalStateException se uma escalação tem jogador suspenso
+	 */
+	public Resultado jogar(Temporada temporada, int rodada, Map<Long, List<Jogador>> planteis, Disciplina disciplina,
+			Map<Long, Moral> moral, Map<Long, Escalacao> escalacoes) {
 		SplittableRandom aleatorio = new SplittableRandom(temporada.semente() ^ (rodada * MISTURA_RODADA));
 		Map<Long, Moral> novaMoral = new HashMap<>(moral);
 		List<PartidaJogada> partidas = new ArrayList<>();
@@ -95,8 +107,9 @@ public final class ProcessamentoRodada {
 						Map.of(Lado.CASA, divisao.sorte().de(jogo.mandante()), Lado.FORA,
 								divisao.sorte().de(jogo.visitante())),
 						divisao.bonus().bonusExtra());
-				ResultadoPartida resultado = motor.simular(regras, escalar(jogo.mandante(), divisao, planteis, disciplina),
-						escalar(jogo.visitante(), divisao, planteis, disciplina), condicoes, semente);
+				ResultadoPartida resultado = motor.simular(regras,
+						escalar(jogo.mandante(), divisao, planteis, disciplina, escalacoes),
+						escalar(jogo.visitante(), divisao, planteis, disciplina, escalacoes), condicoes, semente);
 				partidas.add(new PartidaJogada(divisao.prioridade(), jogo, semente, resultado));
 
 				List<Long> jogadores = new ArrayList<>();
@@ -113,9 +126,24 @@ public final class ProcessamentoRodada {
 		return new Resultado(partidas, disciplina, novaMoral);
 	}
 
-	/** Escalação da máquina com quem não está suspenso e o asterisco temporário da temporada. */
+	/**
+	 * A escalação do treinador, se houver, ou a da máquina com quem não está suspenso; nas duas, o
+	 * asterisco temporário da temporada.
+	 */
 	private Escalacao escalar(Clube clube, Temporada.SorteiosDivisao divisao, Map<Long, List<Jogador>> planteis,
-			Disciplina disciplina) {
+			Disciplina disciplina, Map<Long, Escalacao> escalacoes) {
+		Escalacao doTreinador = escalacoes.get(clube.id());
+		if (doTreinador != null) {
+			List<Jogador> suspensos = new ArrayList<>(doTreinador.titulares());
+			suspensos.addAll(doTreinador.reservas());
+			suspensos.removeIf(j -> !disciplina.suspenso(j.id()));
+			if (!suspensos.isEmpty()) {
+				throw new IllegalStateException(clube.nome() + ": " + suspensos.getFirst().nome() + " está suspenso");
+			}
+			return new Escalacao(doTreinador.formacao(), doTreinador.titulares().stream().map(divisao.bonus()::aplicar).toList(),
+					doTreinador.reservas().stream().map(divisao.bonus()::aplicar).toList(),
+					doTreinador.batedorPreferido().map(divisao.bonus()::aplicar).orElse(null));
+		}
 		List<Jogador> disponiveis = plantel(clube, planteis).stream()
 			.filter(j -> !disciplina.suspenso(j.id()))
 			.map(divisao.bonus()::aplicar)

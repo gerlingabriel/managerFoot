@@ -6,6 +6,8 @@ import java.util.SplittableRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 
+import org.springframework.jdbc.core.simple.JdbcClient;
+
 import br.com.managerfoot.contas.Usuario;
 import br.com.managerfoot.dominio.Clube;
 import br.com.managerfoot.dominio.Jogador;
@@ -29,6 +31,16 @@ final class LigaDeTeste {
 	 */
 	static long criarJogo(MoldeRepositorio moldes, JogoRepositorio jogos, ContasRepositorio contas) {
 		return jogos.criarJogoComClubeSorteado(criarPais(moldes), participante(contas).id(), 1);
+	}
+
+	/**
+	 * Apaga a escalação gravada do treinador: o clube dele passa a ser escalado pela máquina. Serve
+	 * aos testes da temporada, em que suspensões parariam a rodada até o treinador completar o time.
+	 */
+	static void escalarTodosPelaMaquina(JdbcClient jdbc, long jogoId) {
+		jdbc.sql("DELETE FROM jogo_escalacao e USING jogo_clube c WHERE c.id = e.clube_id AND c.jogo_id = :jogo")
+			.param("jogo", jogoId)
+			.update();
 	}
 
 	/** Cria no molde o país da liga de {@link #criarJogo}, com os planteis, e devolve o id dele. */

@@ -56,7 +56,8 @@ public record Escalacao(Formacao formacao, List<Jogador> titulares, List<Jogador
 		return titulares.stream().filter(j -> j.posicao() == posicao).toList();
 	}
 
-	private static List<String> problemas(Formacao formacao, List<Jogador> titulares, List<Jogador> reservas) {
+	/** Problemas que impedem a escalação, em mensagens para a tela; vazia se ela é válida. */
+	public static List<String> problemas(Formacao formacao, List<Jogador> titulares, List<Jogador> reservas) {
 		List<String> problemas = new ArrayList<>();
 		if (titulares.size() != Formacao.TITULARES) {
 			problemas.add("são necessários " + Formacao.TITULARES + " titulares, mas há " + titulares.size());
