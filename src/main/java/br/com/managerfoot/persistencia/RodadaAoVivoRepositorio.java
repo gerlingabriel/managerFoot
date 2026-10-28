@@ -46,12 +46,15 @@ public class RodadaAoVivoRepositorio {
 	private final JdbcClient jdbc;
 	private final JogoRepositorio jogos;
 	private final RodadaRepositorio rodadas;
+	private final CaixaRepositorio caixas;
 	private final int minutos = ParametrosMotor.padrao().minutos();
 
-	public RodadaAoVivoRepositorio(JdbcClient jdbc, JogoRepositorio jogos, RodadaRepositorio rodadas) {
+	public RodadaAoVivoRepositorio(JdbcClient jdbc, JogoRepositorio jogos, RodadaRepositorio rodadas,
+			CaixaRepositorio caixas) {
 		this.jdbc = jdbc;
 		this.jogos = jogos;
 		this.rodadas = rodadas;
+		this.caixas = caixas;
 	}
 
 	/** Se o jogo tem rodada ao vivo. */
@@ -259,7 +262,7 @@ public class RodadaAoVivoRepositorio {
 					amarelados));
 		}
 		return Optional.of(new JanelaJogo(p.jogo().mandante().id(), minuto, linha.get().andandoDesde() == null,
-				placar(rodada, p, minuto, clube), eventos.stream().filter(e -> LANCES.contains(e.tipo())).toList(), doUsuario,
+				placar(rodada, p, minuto, clube, caixas.publicos(jogoId, List.of(p))), eventos.stream().filter(e -> LANCES.contains(e.tipo())).toList(), doUsuario,
 				times.get(0), times.get(1), previa, erroPrevia));
 	}
 
@@ -291,15 +294,16 @@ public class RodadaAoVivoRepositorio {
 			Situacao situacao = terminada || i < atual ? Situacao.TERMINADA : i == atual ? Situacao.JOGANDO : Situacao.AGUARDANDO;
 			divisoes.add(new DivisaoNaRodada(nomes.get(prioridades.get(i)), situacao, relogio.comUsuario().get(i)));
 		}
+		Map<Long, Integer> publicos = caixas.publicos(jogoId, rodada.partidas());
 		List<PlacarAoVivo> placares = porDivisao.get(prioridades.get(atual)).stream()
-			.map(p -> placar(rodada, p, minuto, clube))
+			.map(p -> placar(rodada, p, minuto, clube, publicos))
 			.toList();
 		// o jogo do usuário no minuto em que ele está: o final, se a divisão dele já terminou
 		PlacarAoVivo doUsuario = null;
 		for (int i = 0; i < prioridades.size(); i++) {
 			for (PartidaDaRodada p : porDivisao.get(prioridades.get(i))) {
 				if (p.jogo().mandante().id() == clube || p.jogo().visitante().id() == clube) {
-					doUsuario = placar(rodada, p, terminada || i < atual ? Integer.MAX_VALUE : i == atual ? minuto : 0, clube);
+					doUsuario = placar(rodada, p, terminada || i < atual ? Integer.MAX_VALUE : i == atual ? minuto : 0, clube, publicos);
 				}
 			}
 		}
@@ -311,12 +315,14 @@ public class RodadaAoVivoRepositorio {
 				terminada, velocidade, relogio.comUsuario().get(atual), placares, doUsuario, som);
 	}
 
-	private static PlacarAoVivo placar(RodadaAoVivo rodada, PartidaDaRodada p, int minuto, long clube) {
+	private static PlacarAoVivo placar(RodadaAoVivo rodada, PartidaDaRodada p, int minuto, long clube,
+			Map<Long, Integer> publicos) {
 		List<EventoPartida> eventos = rodada.eventosAte(p, minuto);
 		int golsCasa = (int) eventos.stream().filter(e -> e.tipo() == TipoEvento.GOL && e.lado() == Lado.CASA).count();
 		int golsFora = (int) eventos.stream().filter(e -> e.tipo() == TipoEvento.GOL && e.lado() == Lado.FORA).count();
 		EventoPartida ultimo = eventos.stream().filter(e -> LANCES.contains(e.tipo())).reduce((a, b) -> b).orElse(null);
-		return new PlacarAoVivo(p.jogo().mandante(), p.jogo().visitante(), golsCasa, golsFora,
+		return new PlacarAoVivo(p.jogo().mandante(), p.jogo().visitante(), publicos.get(p.jogo().mandante().id()),
+				golsCasa, golsFora,
 				p.jogo().mandante().id() == clube || p.jogo().visitante().id() == clube, ultimo,
 				eventos.stream().anyMatch(e -> EXPULSOES.contains(e.tipo()) && e.lado() == Lado.CASA),
 				eventos.stream().anyMatch(e -> EXPULSOES.contains(e.tipo()) && e.lado() == Lado.FORA));
@@ -423,9 +429,10 @@ public class RodadaAoVivoRepositorio {
 	/**
 	 * Um jogo no quadro da rodada.
 	 *
+	 * @param publico pagantes, o mesmo que o avanço grava (modelo 1a)
 	 * @param ultimoLance gol, amarelo ou vermelho mais recente; nulo se não houve (SPEC rev. 33)
 	 */
-	public record PlacarAoVivo(Clube mandante, Clube visitante, int golsCasa, int golsFora, boolean doUsuario,
+	public record PlacarAoVivo(Clube mandante, Clube visitante, int publico, int golsCasa, int golsFora, boolean doUsuario,
 			EventoPartida ultimoLance, boolean expulsaoCasa, boolean expulsaoFora) {
 	}
 

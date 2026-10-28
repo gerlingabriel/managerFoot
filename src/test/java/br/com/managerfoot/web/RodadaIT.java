@@ -182,7 +182,9 @@ class RodadaIT {
 			.andExpect(redirectedUrl(rodada + "?janela=" + mandante));
 		agora(60);
 		mvc.perform(get(rodada).param("janela", String.valueOf(mandante)).with(como(treinador)))
-			.andExpect(content().string(containsString("20&#39; · partida pausada")))
+			.andExpect(content().string(containsString("20&#39; · Estádio · público ")))
+			.andExpect(content().string(containsString(" · partida pausada")))
+			.andExpect(content().string(containsString("class=\"jogo-publico\"")))
 			.andExpect(content().string(containsString("substituições: 0 de 5")))
 			.andExpect(content().string(containsString("Substituir")))
 			.andExpect(content().string(not(containsString("every 1s"))));

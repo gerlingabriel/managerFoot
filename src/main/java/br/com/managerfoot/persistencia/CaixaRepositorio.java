@@ -23,6 +23,7 @@ import br.com.managerfoot.economia.TipoLancamento;
 import br.com.managerfoot.temporada.Jogo;
 import br.com.managerfoot.temporada.ProcessamentoRodada;
 import br.com.managerfoot.temporada.Rodada;
+import br.com.managerfoot.temporada.RodadaAoVivo;
 import br.com.managerfoot.temporada.Temporada;
 
 /**
@@ -61,6 +62,33 @@ public class CaixaRepositorio {
 	public Moeda moeda(long jogoId) {
 		return Moeda.doPais(jdbc.sql("SELECT pais_codigo FROM jogo WHERE id = :jogo").param("jogo", jogoId)
 			.query(String.class).single());
+	}
+
+	/**
+	 * Público de cada jogo da rodada ao vivo, pelo id do mandante (modelo 1a): o mesmo que o avanço
+	 * vai gravar, porque usa a mesma semente, a moral de antes da rodada e o estádio (o inicial, se o
+	 * caixa ainda não foi aberto).
+	 */
+	@Transactional(readOnly = true)
+	public Map<Long, Integer> publicos(long jogoId, List<RodadaAoVivo.PartidaDaRodada> partidas) {
+		Map<Long, Integer> capacidades = new HashMap<>();
+		Map<Long, Moral> moral = new HashMap<>();
+		jdbc.sql("SELECT id, forca, estadio_capacidade, moral FROM jogo_clube WHERE jogo_id = :jogo")
+			.param("jogo", jogoId)
+			.query(rs -> {
+				long id = rs.getLong("id");
+				capacidades.put(id, rs.getObject("estadio_capacidade") == null ? caixa.capacidadeInicial(rs.getInt("forca"))
+						: rs.getInt("estadio_capacidade"));
+				if (rs.getObject("moral") != null) {
+					moral.put(id, new Moral(rs.getInt("moral")));
+				}
+			});
+		Map<Long, Integer> publicos = new HashMap<>();
+		for (RodadaAoVivo.PartidaDaRodada p : partidas) {
+			long mandante = p.jogo().mandante().id();
+			publicos.put(mandante, caixa.publico(p.jogo(), capacidades.get(mandante), moral.get(mandante), p.semente()));
+		}
+		return publicos;
 	}
 
 	/**

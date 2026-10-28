@@ -6,7 +6,9 @@ import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -139,6 +141,21 @@ class RodadaAoVivoRepositorioIT {
 		assertThat(aoVivo.emAndamento(jogo)).isFalse();
 		assertThatIllegalStateException().isThrownBy(() -> aoVivo.iniciar(jogo, usuario, 1, T0.plusSeconds(3_700)));
 		assertThatIllegalStateException().isThrownBy(() -> aoVivo.iniciar(jogo, usuario, 3, T0.plusSeconds(3_700)));
+	}
+
+	@Test
+	void publicoAoVivoEOMesmoGravadoNoFimDaRodada() {
+		aoVivo.iniciar(jogo, usuario, 1, T0);
+		Map<Long, Integer> aoVivoPorMandante = new HashMap<>();
+		estado(10).partidas().forEach(p -> aoVivoPorMandante.put(p.mandante().id(), p.publico()));
+
+		estado(3_600);
+
+		assertThat(aoVivoPorMandante).isNotEmpty().allSatisfy((mandante, publico) -> {
+			assertThat(publico).isPositive();
+			assertThat(jdbc.sql("SELECT publico FROM jogo_partida WHERE rodada = 1 AND mandante_id = :m")
+				.param("m", mandante).query(Integer.class).single()).isEqualTo(publico);
+		});
 	}
 
 	@Test

@@ -77,6 +77,17 @@ public final class CaixaDaRodada {
 	}
 
 	/**
+	 * Público do jogo pela semente da partida: o mesmo no quadro ao vivo e no lançamento da rodada.
+	 *
+	 * @param moralMandante nula vale a moral inicial
+	 */
+	public int publico(Jogo jogo, int capacidade, Moral moralMandante, long sementePartida) {
+		// a partida usa a semente; o público usa o complemento para não repetir a mesma sequência
+		return publico(capacidade, moralMandante == null ? Moral.inicial(parametrosMoral) : moralMandante,
+				jogo.mandante().forca(), jogo.visitante().forca(), new SplittableRandom(~sementePartida));
+	}
+
+	/**
 	 * Lançamentos do clube numa rodada: em casa, bilheteria e custo do jogo; fora, deslocamento; e a
 	 * folha de salários. Na folga, só a folha.
 	 *
@@ -110,10 +121,7 @@ public final class CaixaDaRodada {
 		Map<Long, List<Lancamento>> lancamentos = new HashMap<>();
 		for (Jogo jogo : rodada.jogos()) {
 			long mandante = jogo.mandante().id();
-			// a partida usa a semente; o público usa o complemento para não repetir a mesma sequência
-			int publico = publico(capacidades.get(mandante), moral.getOrDefault(mandante, Moral.inicial(parametrosMoral)),
-					jogo.mandante().forca(), jogo.visitante().forca(),
-					new SplittableRandom(~sementePorMandante.get(mandante)));
+			int publico = publico(jogo, capacidades.get(mandante), moral.get(mandante), sementePorMandante.get(mandante));
 			publicos.put(mandante, publico);
 			lancamentos.put(mandante, lancamentos(Local.CASA, prioridadeDivisao, publico, planteis.get(mandante)));
 			long visitante = jogo.visitante().id();

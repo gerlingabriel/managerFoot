@@ -60,6 +60,7 @@
 <div class="tabela-rolagem">
 <div class="jogos-rodada">
 <div th:each="j : ${e.partidas}" class="jogo-linha" th:classappend="${j.doUsuario} ? 'do-usuario'">
+<span class="jogo-publico" th:text="${#numbers.formatInteger(j.publico, 1, 'POINT')}" th:attr="aria-label=|Público ${#numbers.formatInteger(j.publico, 1, 'POINT')}|">0</span>
 <div class="jogo-clube mandante">
 <span th:if="${j.expulsaoCasa}" class="cartao vermelho" role="img" aria-label="Expulsão"></span>
 <form th:if="${e.comUsuario}" th:action="@{/jogos/{id}/rodada/janela(id=${e.jogoId})}" method="post" class="clube-clicavel">

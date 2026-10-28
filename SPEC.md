@@ -15,7 +15,7 @@
 
 ### Histórico de revisões
 
--   **rev. 39 (2026-10-28):** modelo da aba Finanças aprovado (só o clube do usuário); saldo do caixa no plantel; estádio com nome geral, sem nome próprio por clube; jogadores à venda no clique do clube ficam para o mercado.
+-   **rev. 39 (2026-10-28):** modelo da aba Finanças aprovado (só o clube do usuário); saldo do caixa no plantel; público no quadro da rodada e na janela; estádio com nome geral, sem nome próprio por clube; jogadores à venda no clique do clube ficam para o mercado.
 -   **rev. 38 (2026-10-28):** valores do caixa da rodada aprovados como ponto de partida, ajustáveis por simulação; o caixa é lançado no avanço da rodada; clubes da fila de espera não têm lançamentos.
 -   **rev. 37 (2026-10-28):** moeda exibida pelo país da liga e valores guardados em centavos de Real; a economia começa pelo caixa da rodada; as tabelas de valores são propostas pelo agente e validadas por simulação antes do código.
 -   **rev. 36 (2026-10-28):** usuário com clube rebaixado para a fila é demitido e assume um clube sorteado entre os mais fracos da última divisão (provisório até os convites); modelo do calendário do clube aprovado.
@@ -1600,6 +1600,10 @@ rodada (casa ou fora, adversário com escudo, público, bilheteria, custo do
 jogo, deslocamento, salários, resultado e saldo) e o total. Saídas com
 sinal de menos. O **plantel** mostra o **caixa** (saldo) no cabeçalho,
 para o treinador saber se pode contratar; o valor leva à aba Finanças.
+- **Público na rodada (rev. 39):** o quadro da rodada mostra o público de
+  cada jogo na primeira coluna (modelo 1a) e a janela do jogo mostra
+  "Estádio · público" no cabeçalho. É o mesmo público que o avanço grava:
+  sorteado pela semente da partida, com a moral de antes da rodada.
 - **Depois, com o mercado (§9.4):** clicar num clube na classificação
   poderá mostrar os jogadores postos à venda; sem preço definido não há
   oferta.

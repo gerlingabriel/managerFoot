@@ -884,11 +884,11 @@ a.clube-linha:hover { color: var(--texto); background: rgba(242, 201, 76, 0.1); 
 
 .velocidade[aria-pressed="true"] { background: var(--destaque); color: #1A1A12; }
 
-.jogos-rodada { min-width: 680px; display: flex; flex-direction: column; }
+.jogos-rodada { min-width: 760px; display: flex; flex-direction: column; }
 
 .jogo-linha {
 	display: grid;
-	grid-template-columns: minmax(0, 1fr) 88px minmax(0, 1fr) 210px;
+	grid-template-columns: 72px minmax(0, 1fr) 88px minmax(0, 1fr) 210px;
 	align-items: center;
 	column-gap: 14px;
 	padding: 8px 20px;
@@ -1300,3 +1300,6 @@ a.link-clube:hover { color: var(--destaque); text-decoration: underline; }
 .tabela-extrato tr.inicio td { color: var(--texto-suave); }
 .tabela-extrato tr.total td { background: rgba(242, 201, 76, 0.12); border-top: 1px solid #3C7A57; }
 .extrato-local { width: 40px; flex: none; font-size: 14px; color: var(--texto-claro); }
+
+/* Público no quadro da rodada (modelo 1a). */
+.jogo-publico { font-size: 14px; color: var(--texto-suave); text-align: right; font-variant-numeric: tabular-nums; }
