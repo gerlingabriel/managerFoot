@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 45 (2026-10-28):** usuário aprovou a proposta do mercado da máquina (rev. 44) e definiu a premiação da liga (campeão = 2 jogadores de força 50 com asterisco, 2º 30% menos, 3º 10%) e o patrocínio (cerca de 10% do prêmio); proposta de força de referência por divisão.
 -   **rev. 44 (2026-10-28):** proposta simulada do mercado da máquina (lance 10% abaixo mais até 5% pela força, 1 venda e 1 compra por rodada, interesse até 5 pontos abaixo da força em campo, folga de 5 rodadas da folha na compra), aguardando aprovação.
 -   **rev. 43 (2026-10-28):** estrangeiro 25% mais barato e asterisco 25% mais caro; a máquina só compra por leilão, renova sempre e deixa 5 ou 6 jogadores sorteados à venda; compra e venda da máquina pelo saldo comparado a 10 rodadas da folha; saldo negativo põe jogador em leilão sem lance mínimo; no início da temporada todos ficam sem contrato e só quem ganha abaixo da força pede aumento (1 por rodada); patrocínio entra de uma vez no início, para todos os clubes.
 -   **rev. 42 (2026-10-28):** leilão: empate por sorteio, sem lance não vende até o fim da rodada, máquina dá lance depois do OK dos usuários, usuário sem caixa não precisa ser esperado; estrangeiro 10% mais barato; empréstimo retirado; todo clube tem treinador e o ranking inclui todos; patrocínio proporcional à posição anterior (igual no 1º ano) e por temporada; contrato só até o fim da temporada.
@@ -1105,10 +1106,20 @@ os cartões de um time todo calmo (antes, 2,8 vezes).
         campeonato.
     -   Ao final da temporada também há premiação para o artilheiro, para a
         copa e para as competições continentais.
--   **Em aberto:** os valores. A referência do Elifoot 98 não documenta
-    finanças (`docs/referencia-elifoot98.md` §6). Será preciso criar tabelas
-    próprias que relacionem força, contrato, receita, premiação e
-    patrocínio, validadas por simulação (§9).
+-   ~~**Em aberto:** os valores.~~ **Definido (rev. 45), pelo usuário —
+    prêmio da liga:**
+    - **Campeão:** o preço de **2 jogadores de força 50 com asterisco**
+      (R$ 3.968.000 com a tabela de preço atual).
+    - **2º:** 30% menos que o campeão (70%). **3º:** 10% do prêmio do
+      campeão. Do 4º em diante, nada.
+    - **Provisório (rev. 45), proposta do agente:** nas divisões de baixo
+      o prêmio usa a **força do clube mais forte da divisão** no lugar de
+      50 (2ª ≈ R$ 977 mil, 3ª ≈ R$ 566 mil). Com isso o prêmio do campeão
+      fica entre 21% e 25% da bilheteria da temporada nas três divisões; com
+      força 50 em todas, o campeão da 3ª ganharia cerca de 1,5 temporada de
+      bilheteria. Simulado em `docs/simulacoes/mercado-maquina.md`; valores
+      em `economia.ParametrosPremiacao`, regra em `economia.Premiacao`.
+    - O prêmio é pago no fim da temporada (ainda não gravado).
 
 
 ### 8.1.1 Ano da temporada e histórico
@@ -1472,7 +1483,7 @@ A máquina oferece um pouco abaixo do preço padrão (§9.4).
   como proposta; o usuário ainda não tem noção do valor. Será recalibrada
   pela simulação de temporadas com o mercado da máquina, para que as
   finanças produzam o ciclo acima.
-- **Provisório (rev. 44) — proposta do agente, aguardando aprovação,**
+- **Definido (rev. 45; proposta do agente na rev. 44, aprovada pelo usuário),**
   simulada em `docs/simulacoes/mercado-maquina.md` (valores em
   `economia.ParametrosMercadoMaquina`, regra em `economia.MercadoDaMaquina`):
   - **Lance:** 10% abaixo do preço, mais até 5% proporcional à força do
@@ -1558,7 +1569,14 @@ na temporada anterior.
   recebem o mesmo valor.
 - **Definido (rev. 43):** o dinheiro entra **de uma vez, no início da
   temporada**, para **todos os clubes** (usuários e máquina).
-- **Em aberto:** a tabela de valores (proposta do agente com simulação).
+- **Definido (rev. 45), pelo usuário:** o patrocínio vale cerca de **10% do
+  prêmio do campeão** da divisão.
+- **Provisório (rev. 45), proposta do agente:** o 1º colocado da temporada
+  anterior recebe os 10% cheios e cada posição abaixo recebe em proporção
+  linear, até o último com 1/N (N = clubes da divisão): na 1ª, de
+  R$ 397 mil a R$ 20 mil. Na primeira temporada, todos recebem a média
+  (R$ 208 mil numa divisão de 20 na 1ª). O valor usa a divisão em que o
+  clube jogou a temporada anterior. Ainda não gravado.
 
 ## 10. Interface e apresentação
 

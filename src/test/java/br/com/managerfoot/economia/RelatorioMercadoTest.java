@@ -55,9 +55,12 @@ class RelatorioMercadoTest {
 	private final MercadoDaMaquina mercado = MercadoDaMaquina.padrao();
 	private final ParametrosMercadoMaquina parametros = ParametrosMercadoMaquina.padrao();
 	private final ParametrosMoral parametrosMoral = ParametrosMoral.padrao();
+	private final Premiacao premiacao = Premiacao.padrao();
 
 	private final Map<Integer, Acumulado> porDivisao = new TreeMap<>();
 	private final Geral geral = new Geral();
+	/** Bilheteria da rodada por clube, somada ao acumulado da divisão. */
+	private final Map<Long, Long> receita = new HashMap<>();
 
 	@Test
 	void gerarRelatorio() throws IOException {
@@ -83,7 +86,25 @@ class RelatorioMercadoTest {
 			.append(parametros.interesseAbaixoDoTime()).append("; o lance é ").append(pct(parametros.descontoLance())).append(" abaixo do preço, mais até ")
 			.append(pct(parametros.acrescimoPelaForca())).append(" pela força do clube;\n")
 			.append("- leva o maior lance; empate por sorteio; sem lance, o jogador fica.\n\n")
-			.append("Sem patrocínio, premiação nem compra direta de usuário. Preço: `ParametrosMercado.padrao()`.\n\n");
+			.append("O patrocínio da primeira temporada (igual para todos da divisão) entra no saldo inicial. Sem ")
+			.append("premiação (paga no fim) nem compra direta de usuário. Preço: `ParametrosMercado.padrao()`.\n\n");
+		md.append("## Premiação da liga e patrocínio (rev. 45)\n\n");
+		md.append("Prêmio do campeão = preço de 2 jogadores com asterisco da **força de referência** (proposta: a do ")
+			.append("clube mais forte da divisão); 2º = 70%; 3º = 10%; patrocínio do 1º colocado = 10% do prêmio do ")
+			.append("campeão, caindo em proporção até o último; na primeira temporada, a média para todos. Médias por ")
+			.append("temporada simulada.\n\n");
+		md.append("| Divisão | Força de referência | Campeão | 2º | 3º | Patrocínio no 1º ano | Bilheteria média do clube na temporada | Campeão / bilheteria |\n");
+		md.append("|---|---|---|---|---|---|---|---|\n");
+		porDivisao.forEach((prioridade, a) -> {
+			double clubes = a.clubes[0] + a.clubes[1] + a.clubes[2];
+			double bilheteria = a.receitaPorClube / clubes;
+			md.append("| ").append(prioridade).append("ª | ").append(decimal(a.referencia / a.temporadas)).append(" | ")
+				.append(real(a.campeao / a.temporadas)).append(" | ").append(real(a.segundo / a.temporadas)).append(" | ")
+				.append(real(a.terceiro / a.temporadas)).append(" | ").append(real(a.patrocinio / a.temporadas))
+				.append(" | ").append(real(bilheteria)).append(" | ").append(pct(a.campeao / a.temporadas / bilheteria))
+				.append(" |\n");
+		});
+		md.append("\n");
 		md.append("## Por posição final na tabela (média por clube e temporada)\n\n");
 		md.append("| Divisão | Terço da tabela | Vendas | Compras | Força em campo: início → fim | Saldo final (em limites) |\n");
 		md.append("|---|---|---|---|---|---|\n");
@@ -144,13 +165,28 @@ class RelatorioMercadoTest {
 		Set<Long> negativos = new HashSet<>();
 		Set<Long> naLiga = new HashSet<>();
 		liga.divisoes().forEach(d -> d.clubes().forEach(c -> naLiga.add(c.id())));
-		for (Clube c : clubes) {
-			capacidade.put(c.id(), caixa.capacidadeInicial(c.forca()));
-			saldo.put(c.id(), caixa.saldoInicial(planteis.get(c.id())));
-			forcaInicio.put(c.id(), emCampo(planteis.get(c.id())));
+		Map<Long, Integer> referencia = new HashMap<>();
+		for (Divisao divisao : liga.divisoes()) {
+			int forca = divisao.clubes().stream().mapToInt(Clube::forca).max().orElseThrow();
+			Acumulado a = porDivisao.computeIfAbsent(divisao.prioridade(), k -> new Acumulado());
+			a.temporadas++;
+			a.referencia += forca;
+			a.campeao += premiacao.premio(1, forca);
+			a.segundo += premiacao.premio(2, forca);
+			a.terceiro += premiacao.premio(3, forca);
+			a.patrocinio += premiacao.patrocinioInicial(divisao.clubes().size(), forca);
+			divisao.clubes().forEach(c -> referencia.put(c.id(), forca));
+			for (Clube c : divisao.clubes()) {
+				// patrocínio da primeira temporada, igual para todos da divisão, no início
+				capacidade.put(c.id(), caixa.capacidadeInicial(c.forca()));
+				saldo.put(c.id(), caixa.saldoInicial(planteis.get(c.id()))
+						+ premiacao.patrocinioInicial(divisao.clubes().size(), forca));
+				forcaInicio.put(c.id(), emCampo(planteis.get(c.id())));
+			}
 		}
 		Disciplina disciplina = Disciplina.vazia();
 		Map<Long, Moral> moral = new HashMap<>();
+		receita.clear();
 		int rodadas = temporada.divisoes().stream().mapToInt(d -> d.calendario().rodadas().size()).max().orElse(0);
 		for (int numero = 1; numero <= rodadas; numero++) {
 			ProcessamentoRodada.Resultado r = processamento.jogar(temporada, numero, Map.copyOf(planteis), disciplina, moral);
@@ -173,6 +209,11 @@ class RelatorioMercadoTest {
 						lancar(jogo.visitante(), Local.FORA, d.prioridade(), 0, planteis, saldo);
 					}
 					rodada.folga().ifPresent(c -> lancar(c, Local.FOLGA, d.prioridade(), 0, planteis, saldo));
+					Acumulado a = porDivisao.get(d.prioridade());
+					for (Jogo jogo : rodada.jogos()) {
+						a.receitaPorClube += receita.getOrDefault(jogo.mandante().id(), 0L);
+					}
+					receita.clear();
 				}
 			}
 			disciplina = r.disciplina();
@@ -259,11 +300,18 @@ class RelatorioMercadoTest {
 			Map<Long, Long> saldo) {
 		for (Lancamento l : caixa.lancamentos(local, prioridade, publico, planteis.get(clube.id()))) {
 			saldo.merge(clube.id(), l.valor(), Long::sum);
+			if (l.tipo() == TipoLancamento.BILHETERIA) {
+				receita.merge(clube.id(), l.valor(), Long::sum);
+			}
 		}
 	}
 
 	private static double emCampo(List<Jogador> plantel) {
 		return MercadoDaMaquina.forcaEmCampo(plantel);
+	}
+
+	private static String real(double centavos) {
+		return Moeda.REAL.formatar(Math.round(centavos));
 	}
 
 	private static String decimal(double valor) {
@@ -275,6 +323,14 @@ class RelatorioMercadoTest {
 	}
 
 	private static final class Acumulado {
+		double temporadas;
+		double referencia;
+		double campeao;
+		double segundo;
+		double terceiro;
+		double patrocinio;
+		/** Bilheteria somada de todos os clubes; dividida pelos clubes dá a média por clube. */
+		double receitaPorClube;
 		final double[] clubes = new double[3];
 		final double[] vendas = new double[3];
 		final double[] compras = new double[3];
