@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 49 (2026-10-28):** compra direta no servidor (V19): paga o preço da tabela ao clube da máquina, recusa sem caixa, com 25 jogadores ou durante a rodada; lançamentos de compra e venda no extrato. Tela ainda não ligada.
 -   **rev. 48 (2026-10-28):** patrocínio lançado no início de cada temporada (rodada 0) e prêmio da liga na última rodada (V18); a tela de finanças mostra o patrocínio dentro do saldo do início.
 -   **rev. 47 (2026-10-28):** jogadores à venda da máquina gravados (V17), completados a cada temporada e rodada; salário gravado adiado até a força poder mudar (ADR 0011).
 -   **rev. 46 (2026-10-28):** prêmio e patrocínio pelo teto de força da divisão; patrocínio cai 10% do 1º para o 2º e 8% a cada posição seguinte; só o título da 1ª divisão conta no ranking de treinadores.
@@ -1466,6 +1467,12 @@ A máquina oferece um pouco abaixo do preço padrão (§9.4).
   - **Asterisco:** **25% mais caro** na compra direta. No leilão o lance
     inicial continua 20% abaixo do preço (já com o acréscimo).
   - A **máquina só compra por leilão**; a compra direta é do usuário.
+  - **Gravado (rev. 49):** a compra direta confere no servidor que o
+    jogador está anunciado num clube da máquina, que o plantel do
+    comprador tem menos de 25, que o caixa paga o preço e que não há
+    rodada ao vivo. O jogador muda de clube, sai do anúncio e entra fora
+    do banco; comprador e vendedor ganham lançamentos de compra e venda
+    na última rodada processada (0 antes da primeira).
   - **Finanças importam:** clube forte que perde fica com estádio mais
     vazio e precisa vender os jogadores caros; clube fraco que sobe ganha
     caixa para comprar. Com o tempo o clube tende à força média do que o

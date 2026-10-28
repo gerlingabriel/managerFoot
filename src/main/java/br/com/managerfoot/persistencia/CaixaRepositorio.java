@@ -127,11 +127,12 @@ public class CaixaRepositorio {
 			.single();
 
 		Map<Integer, Map<TipoLancamento, Long>> porRodada = new TreeMap<>();
-		// o extrato mostra o caixa das rodadas; patrocínio e prêmio entram no saldo do início
+		// o extrato é das rodadas: o patrocínio (rodada 0) entra no saldo do início; compras, vendas e
+		// prêmio entram no saldo da rodada, ainda sem coluna própria
 		jdbc.sql("""
-				SELECT rodada, tipo, valor FROM jogo_lancamento
+				SELECT rodada, tipo, sum(valor) AS valor FROM jogo_lancamento
 				WHERE clube_id = :clube AND temporada_id = :temporada AND rodada >= 1
-				  AND tipo IN ('BILHETERIA', 'CUSTO_DO_JOGO', 'DESLOCAMENTO', 'SALARIOS')""")
+				GROUP BY rodada, tipo""")
 			.param("clube", clube)
 			.param("temporada", situacao.temporadaId())
 			.query(rs -> {
@@ -262,6 +263,38 @@ public class CaixaRepositorio {
 			.param("jogo", jogoId)
 			.query(Long.class)
 			.single();
+	}
+
+	/**
+	 * Lançamento de compra ou venda de jogador na temporada atual, na última rodada processada, e o
+	 * saldo do clube.
+	 */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void lancarMercado(long jogoId, long clubeId, TipoLancamento tipo, long valor, long jogadorId) {
+		if (tipo != TipoLancamento.COMPRA && tipo != TipoLancamento.VENDA) {
+			throw new IllegalArgumentException("lançamento de mercado deve ser compra ou venda, não " + tipo);
+		}
+		long temporadaId = temporadaAtual(jogoId);
+		jdbc.sql("""
+				INSERT INTO jogo_lancamento (clube_id, temporada_id, rodada, tipo, valor, jogador_id)
+				SELECT :clube, t.id, t.rodadas_processadas, :tipo, :valor, :jogador FROM jogo_temporada t
+				WHERE t.id = :temporada""")
+			.param("clube", clubeId)
+			.param("temporada", temporadaId)
+			.param("tipo", tipo.name())
+			.param("valor", valor)
+			.param("jogador", jogadorId)
+			.update();
+		jdbc.sql("UPDATE jogo_clube SET saldo = saldo + :valor WHERE id = :clube")
+			.param("valor", valor)
+			.param("clube", clubeId)
+			.update();
+	}
+
+	/** Abre o caixa (estádio e saldo inicial) dos clubes do jogo que ainda não têm. */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void abrirCaixas(long jogoId) {
+		abrirCaixas(jogoId, jogos.carregarPlanteis(jogoId));
 	}
 
 	/** Capacidade inicial do estádio e saldo inicial dos clubes que ainda não têm caixa. */
