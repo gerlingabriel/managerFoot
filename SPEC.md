@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 32 — 2026-10-27)
+-   **Status:** versão inicial para revisão (rev. 33 — 2026-10-28)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 33 (2026-10-28):** quadro da rodada mostra o último lance com ícone; clicar num clube abre uma janela pequena sobre o quadro, como no Elifoot 98, com lances em ordem e, no próprio clube, substituição; clube da máquina mostra a prévia dos 11 de cada lado em vez do 11 x 11 com detalhes; modelos aprovados.
 -   **rev. 32 (2026-10-27):** no banco padrão todos os jogadores são do país do clube; estrangeiros entram pelo editor; adaptação dos formatos aprovada; pesos do temperamento.
 -   **rev. 31 (2026-10-27):** países e formato do banco padrão (até 3 divisões, até 20 clubes, pontos corridos, acesso direto); força do clube pela média em campo; faixas de força por divisão; asteriscos de 0 a 3 por clube; temperamento sorteado com peso; plantel com gols antes dos amarelos e sigla do país do estrangeiro.
 -   **rev. 30 (2026-10-27):** banco padrão com formatos reais pesquisados e nomes fictícios (compostos, só nome ou só sobrenome); clicar num clube durante o minuto a minuto pausa a partida e mostra as escalações, e no próprio clube abre as substituições.
@@ -1416,14 +1417,15 @@ da mesma divisão seguem na mesma tela.
 
 -   A tela de elenco deve preservar a leitura simples do Elifoot 98, com
     modernizações.
--   Durante o jogo, ao clicar em um clube, o usuário vê apenas os 11
-    titulares de cada time (11 x 11), sem os reservas.
+-   Durante o jogo, ao clicar em um clube, o usuário vê os lances e os 11
+    em campo de cada time, sem os reservas. **Exceção (rev. 33):** no
+    próprio clube aparece também o banco, para a substituição (§10.5).
 -   Se o clube for controlado pelo usuário, poderá fazer substituições
     nas condições permitidas.
--   **Definido (rev. 30) — pausa no minuto a minuto:** quando a divisão em
-    jogo tem clube de usuário, **clicar em qualquer clube pausa a partida**
-    e mostra as escalações (11 x 11). Clicar no **próprio clube** abre
-    também as **substituições**. A partida continua quando a janela é
+-   **Definido (rev. 30, forma da janela na rev. 33) — pausa no minuto a
+    minuto:** quando a divisão em jogo tem clube de usuário, **clicar em
+    qualquer clube pausa a partida** e abre a janela do jogo (§10.5, rev.
+    33). Clicar no **próprio clube** abre também as **substituições**. A partida continua quando a janela é
     fechada. Vale para o jogo individual; a pausa em rede segue a §11.3,
     ainda em aberto.
     - Consequência: o servidor não pode calcular a rodada inteira de uma
@@ -1496,6 +1498,32 @@ usuário:
 - **Quadro de escolha:** o administrador define o modo do jogo; no modo
   escolha, os clubes do país aparecem nas divisões pela força, a fila de
   espera não pode ser escolhida e o clique no clube mostra o plantel.
+
+**Definido (rev. 33) — clique no clube durante a rodada:**
+- **Quadro da rodada:** a coluna da direita mostra o **último lance** do
+  jogo, com ícone (gol, amarelo ou vermelho) e "nome minuto'". Se houve
+  gol e depois amarelo, aparece o amarelo; os gols ficam na janela.
+- **Janela pequena sobre o quadro**, como no Elifoot 98, e não uma tela
+  cheia. O quadro fica escurecido atrás.
+  - **Cabeçalho:** minuto, estádio, público e "partida pausada"; abaixo,
+    mandante (nome e escudo) à esquerda, placar no centro e visitante à
+    direita, alinhados com os lances. Marca de expulsão ao lado do clube.
+  - **Lances** em ordem: minuto e ícone (gol, amarelo, vermelho e, quando
+    houver, lesão) no **centro**; o nome do jogador do lado do clube dele
+    (mandante à esquerda, visitante à direita). Pênalti como "(pên.)".
+  - **Próprio clube:** abaixo dos lances, os 11 em campo e o banco; o
+    usuário marca quem sai e quem entra, vê a formação resultante e clica
+    em **Substituir**. Mostra as substituições usadas (ex.: 1 de 5) e as
+    já feitas. Expulso não aparece para troca.
+  - **Clube da máquina:** a mesma janela, sem substituição, com uma
+    **prévia simples** dos 11 de cada lado (formação, posição, nome e
+    força), mandante à esquerda e visitante à direita.
+  - Botão **Continuar** (ou fechar) retoma a partida.
+- **Em aberto:** caixas do Elifoot 98 "Cartões vermelhos" e "Lesões"
+  (provavelmente pausa automática nesses lances); árbitro não existe no
+  domínio e fica fora.
+- Convite de outro clube ao usuário: modelo depois da regra de moral
+  (§6.2) e demissão (§5.4).
 
 **Definido (rev. 29):**
 - **Início**, logo depois de entrar, com **só duas opções**: "Novo jogo" e

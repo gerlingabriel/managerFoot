@@ -34,3 +34,20 @@ implementação.
   classificação.
 - Mostrar o estádio e a lista completa de gols e expulsões ao clicar em um
   jogo. Nesse caso aparecem só os 11 titulares de cada time (SPEC §10.3).
+
+## Janela ao clicar num jogo (captura vista em 2026-10-28)
+
+Captura pública do Elifoot 98 na página de download do baixesoft.com (7ª
+imagem), vista em 2026-10-28. A imagem não fica no repositório.
+
+- Janela pequena sobre o quadro da rodada, com título "MANDANTE, gols -
+  VISITANTE, gols".
+- Lista de lances com placar parcial, autor e minuto (ex.: "1:0 Ney Santos
+  38'"), e o árbitro ao lado.
+- Duas caixas de marcar: "Cartões vermelhos" e "Lesões". A função delas não
+  aparece na imagem.
+- Botão "Continuar".
+- No clube do usuário, um painel com os titulares (posição, nome, força) e
+  o banco, e o botão "Substituir".
+
+A adaptação aprovada está na SPEC §10.5 (rev. 33).
