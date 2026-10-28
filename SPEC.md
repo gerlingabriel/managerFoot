@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 30 — 2026-10-27)
+-   **Status:** versão inicial para revisão (rev. 31 — 2026-10-27)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 31 (2026-10-27):** países e formato do banco padrão (até 3 divisões, até 20 clubes, pontos corridos, acesso direto); força do clube pela média em campo; faixas de força por divisão; asteriscos de 0 a 3 por clube; temperamento sorteado com peso; plantel com gols antes dos amarelos e sigla do país do estrangeiro.
 -   **rev. 30 (2026-10-27):** banco padrão com formatos reais pesquisados e nomes fictícios (compostos, só nome ou só sobrenome); clicar num clube durante o minuto a minuto pausa a partida e mostra as escalações, e no próprio clube abre as substituições.
 -   **rev. 29 (2026-10-27):** tela inicial só com novo jogo e jogo gravado; vários jogos gravados por usuário; dois caminhos do administrador no novo jogo; clube com usuário não aceita outro usuário; sorteio em rede com grupo maior a cada usuário; entrada em rede pela sala antes da rodada 1 (provisório); jogo individual testado antes da rede.
 -   **rev. 28 (2026-10-27):** modo de início do jogo (sorteio ou escolha) definido pelo administrador e válido para todos; jogo individual do participante sempre por sorteio; treinadores em rede no plantel; modelos de entrada, novo jogo e quadro de escolha aprovados; molde pessoal salvo no servidor como possibilidade futura.
@@ -325,6 +326,16 @@ clubes necessários = Σ (clubes de cada divisão) + rebaixados da última divis
 - **Provisório:** os nomes são montados combinando listas de nomes e
   sobrenomes comuns; não se copia lista de jogadores reais.
 
+**Definido (rev. 31) — países e formato do banco padrão:**
+- Países: **Brasil, Argentina, Inglaterra, Espanha, Itália e Portugal**.
+  Outros podem entrar depois.
+- Até **3 divisões** por país.
+- O jogo não precisa ser fiel: o formato real é **adaptado** à regra de 15
+  a 20 clubes por divisão, em **pontos corridos**, com **acesso e
+  rebaixamento diretos**, sem grupos nem playoffs. Ex.: uma divisão real de
+  24 clubes vira 20; um acesso decidido em playoff vira acesso direto.
+- A pesquisa registra o formato real e a adaptação feita, com fonte e data.
+
 **Pendência:** pesquisar e registrar esses formatos, com fonte e data, ao
 montar o banco padrão. Não preencher de memória.
 
@@ -447,8 +458,12 @@ A geração do elenco deve respeitar a força cadastrada:
 - A geração deve evitar diferenças acidentais grandes entre equipes que
   deveriam ser equivalentes.
 
-**Em aberto:** definir se a força do clube é média simples, média
-ponderada pelos titulares ou outro indicador.
+**Definido (rev. 31):** a força do clube é a **média dos 11 em campo**, na
+escalação que a máquina escolheria (§7.4.1), não a média dos 23.
+
+**Definido (rev. 31) — faixas de força do banco padrão:** 1ª divisão de
+**35 a 50**, 2ª de **22 a 30** e 3ª de **12 a 22**. O limite (teto) das
+divisões do banco padrão segue o topo da faixa: 50, 30 e 22.
 
 ## 5. Clubes, jogadores e treinadores
 
@@ -531,10 +546,14 @@ O temperamento pode assumir:
 - Ansioso.
 - Violento.
 
-**Provisório:** a associação de temperamento ao jogador pode ser aleatória
-ou derivada de um cálculo sobre o nome.
+**Definido (rev. 31):** no banco padrão, o temperamento é **sorteado com
+peso**: Normal é o mais comum e Violento o mais raro. **Provisório:** os
+pesos exatos ficam configuráveis e são propostos junto do gerador.
 
 ### 5.3 Jogadores com asterisco
+
+**Definido (rev. 31) — banco padrão:** cada clube tem de **0 a 3**
+jogadores com asterisco, com mais chance nos clubes mais fortes.
 
 O asterisco indica um jogador especial, mais caro e potencialmente mais
 influente na finalização: - Jogadores com asterisco têm custo maior. -
@@ -1429,6 +1448,14 @@ da mesma divisão seguem na mesma tela.
 - **Definido (rev. 28):** em jogo em rede, o plantel mostra os
   **treinadores da sessão**, com nome, clube e divisão, e o estado de cada
   um (configurando, pronto, desconectado), como na sala (§3.3).
+- **Definido (rev. 31) — colunas do elenco:** posição, nome (com ★),
+  força, temperamento, **gols** da temporada e **amarelos**, nessa ordem:
+  os gols vêm antes porque são mais importantes.
+- **Provisório (rev. 31) — estrangeiro:** em vez da bandeira, uma **caixa
+  com a sigla** do país (ex.: ARG) logo depois do nome, como na escolha do
+  campeonato. Estrangeiro que não conta no limite tem a caixa tracejada e
+  mais apagada. Jogador do país do clube fica sem caixa. Se aprovado,
+  substitui a bandeira da rev. 21 (não exige imagens dos 211 países).
 - Contratos, finanças, estádio, copas e competições continentais ganham
   telas próprias nas etapas em que forem implementados, também com modelo
   para aprovação antes.
