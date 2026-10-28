@@ -17,6 +17,7 @@ import br.com.managerfoot.dominio.Formacao;
 import br.com.managerfoot.dominio.Jogador;
 import br.com.managerfoot.dominio.Lugar;
 import br.com.managerfoot.dominio.Moral;
+import br.com.managerfoot.economia.Moeda;
 import br.com.managerfoot.dominio.ParametrosMoral;
 import br.com.managerfoot.motor.EscalacaoMaquina;
 import br.com.managerfoot.motor.ParametrosMotor;
@@ -38,15 +39,17 @@ public class PlantelRepositorio {
 	private final TemporadaRepositorio temporadas;
 	private final RodadaRepositorio rodadas;
 	private final EscalacaoRepositorio escalacoes;
+	private final CaixaRepositorio caixas;
 	private final ParametrosMoral parametrosMoral = ParametrosMoral.padrao();
 
 	public PlantelRepositorio(JdbcClient jdbc, JogoRepositorio jogos, TemporadaRepositorio temporadas,
-			RodadaRepositorio rodadas, EscalacaoRepositorio escalacoes) {
+			RodadaRepositorio rodadas, EscalacaoRepositorio escalacoes, CaixaRepositorio caixas) {
 		this.jdbc = jdbc;
 		this.jogos = jogos;
 		this.temporadas = temporadas;
 		this.rodadas = rodadas;
 		this.escalacoes = escalacoes;
+		this.caixas = caixas;
 	}
 
 	/**
@@ -103,7 +106,7 @@ public class PlantelRepositorio {
 				linha.pontos(), linha.jogos(), moral.valor(), parametrosMoral.maximo(), moral.faixa(parametrosMoral),
 				processadas + 1, processadas >= total, proximo.map(j -> j.mandante().id() == clube).orElse(null),
 				proximo.map(j -> j.mandante().id() == clube ? j.visitante() : j.mandante()).orElse(null), escalacao,
-				linhas, problemas));
+				linhas, problemas, caixas.saldo(clube, plantel), caixas.moeda(jogoId)));
 	}
 
 	/** Move o jogador para titular, banco ou fora (SPEC §10.3, rev. 34). */
@@ -203,9 +206,11 @@ public class PlantelRepositorio {
 	 *
 	 * @param emCasa nulo quando não há próximo jogo (folga ou temporada encerrada)
 	 * @param adversario nulo quando não há próximo jogo
+	 * @param saldo caixa do clube em centavos de Real, para saber se pode contratar (rev. 39)
 	 */
 	public record VisaoPlantel(long jogoId, int temporada, Clube clube, String divisao, int posicao, int pontos, int jogos,
 			int moral, int moralMaxima, Moral.Faixa faixaMoral, int rodada, boolean temporadaEncerrada, Boolean emCasa,
-			Clube adversario, EscalacaoDoTreinador escalacao, List<LinhaJogador> jogadores, List<String> problemas) {
+			Clube adversario, EscalacaoDoTreinador escalacao, List<LinhaJogador> jogadores, List<String> problemas,
+			long saldo, Moeda moeda) {
 	}
 }

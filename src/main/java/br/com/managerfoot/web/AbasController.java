@@ -13,21 +13,26 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import br.com.managerfoot.contas.Usuario;
+import br.com.managerfoot.persistencia.CaixaRepositorio;
+import br.com.managerfoot.persistencia.ClubeNaFilaException;
 import br.com.managerfoot.persistencia.ConsultasRepositorio;
 import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * Abas Classificação, Artilheiros da temporada e Artilheiros de todos os tempos (SPEC §10.3, rev.
  * 16; modelos aprovados). Com {@code ficha=<id>}, a aba abre a ficha do jogador por cima; na
- * classificação, {@code calendario=<clube>} abre o calendário do clube (rev. 17 e 36).
+ * classificação, {@code calendario=<clube>} abre o calendário do clube (rev. 17 e 36). A aba
+ * Finanças mostra só o clube do usuário (modelo 6a, rev. 39).
  */
 @Controller
 class AbasController {
 
 	private final ConsultasRepositorio consultas;
+	private final CaixaRepositorio caixas;
 
-	AbasController(ConsultasRepositorio consultas) {
+	AbasController(ConsultasRepositorio consultas, CaixaRepositorio caixas) {
 		this.consultas = consultas;
+		this.caixas = caixas;
 	}
 
 	@GetMapping("/jogos/{jogoId}/classificacao")
@@ -66,6 +71,22 @@ class AbasController {
 			consultas.ficha(jogoId, usuario.id(), ficha).ifPresent(f -> model.addAttribute("ficha", f));
 		}
 		return "artilheiros";
+	}
+
+	@GetMapping("/jogos/{jogoId}/financas")
+	String financas(@AuthenticationPrincipal Usuario usuario, @PathVariable long jogoId, Model model) {
+		model.addAttribute("usuario", usuario);
+		model.addAttribute("jogoId", jogoId);
+		model.addAttribute("f", caixas.financas(jogoId, usuario.id()));
+		return "financas";
+	}
+
+	/** Clube na fila de espera: não joga a temporada e não tem extrato (SPEC §4.1). */
+	@ExceptionHandler(ClubeNaFilaException.class)
+	String naFila(Model model) {
+		model.addAttribute("mensagem", "Seu clube caiu para a fila de espera e não joga esta temporada, "
+				+ "por isso não tem finanças da temporada.");
+		return "aviso";
 	}
 
 	/** Jogo de outro usuário ou inexistente: para quem pede, ele não existe. */

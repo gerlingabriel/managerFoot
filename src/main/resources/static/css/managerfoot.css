@@ -1246,3 +1246,57 @@ a.link-clube:hover { color: var(--destaque); text-decoration: underline; }
 .marca-resultado.resultado-E { background: var(--destaque); color: #1A1A12; }
 .marca-resultado.resultado-D { background: var(--erro); color: #FFF5F5; }
 .calendario-nota { margin: 0; padding: 10px 16px 14px; border-top: 1px solid var(--borda); font-size: 14px; }
+
+/* Finanças do clube (modelo 6a, rev. 39). */
+.caixa-valor {
+	font-family: 'Barlow Condensed', sans-serif;
+	font-weight: 700;
+	font-size: 24px;
+	text-decoration: none;
+}
+
+.caixa-valor.negativo, .financas-numero.negativo, .tabela-extrato .negativo { color: var(--erro-texto); }
+
+.financas-resumo { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+
+.financas-quadro {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	padding: 14px 18px;
+	background: var(--cartao);
+	border: 1px solid var(--borda);
+	border-radius: 12px;
+}
+
+.financas-numero {
+	font-family: 'Barlow Condensed', sans-serif;
+	font-weight: 700;
+	font-size: 34px;
+	line-height: 1.1;
+	font-variant-numeric: tabular-nums;
+}
+
+.financas-numero.destaque { color: var(--destaque); }
+.financas-numero.positivo, .tabela-extrato .positivo { color: #3FB37F; }
+.financas-nota { margin: 0; padding: 10px 20px 14px; }
+
+.tabela-extrato { width: 100%; min-width: 1040px; border-collapse: collapse; font-size: 15px; font-variant-numeric: tabular-nums; }
+
+.tabela-extrato th {
+	padding: 8px 10px;
+	font-size: 12px;
+	font-weight: 400;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	text-align: left;
+	color: var(--texto-suave);
+}
+
+.tabela-extrato td { padding: 7px 10px; border-top: 1px solid rgba(31, 90, 58, 0.6); white-space: nowrap; }
+.tabela-extrato .num { text-align: right; }
+.tabela-extrato .vazio { color: var(--texto-suave); }
+.tabela-extrato .resultado, .tabela-extrato .saldo { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 18px; }
+.tabela-extrato tr.inicio td { color: var(--texto-suave); }
+.tabela-extrato tr.total td { background: rgba(242, 201, 76, 0.12); border-top: 1px solid #3C7A57; }
+.extrato-local { width: 40px; flex: none; font-size: 14px; color: var(--texto-claro); }

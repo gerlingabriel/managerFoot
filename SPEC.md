@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 39 (2026-10-28):** modelo da aba Finanças aprovado (só o clube do usuário); saldo do caixa no plantel; estádio com nome geral, sem nome próprio por clube; jogadores à venda no clique do clube ficam para o mercado.
 -   **rev. 38 (2026-10-28):** valores do caixa da rodada aprovados como ponto de partida, ajustáveis por simulação; o caixa é lançado no avanço da rodada; clubes da fila de espera não têm lançamentos.
 -   **rev. 37 (2026-10-28):** moeda exibida pelo país da liga e valores guardados em centavos de Real; a economia começa pelo caixa da rodada; as tabelas de valores são propostas pelo agente e validadas por simulação antes do código.
 -   **rev. 36 (2026-10-28):** usuário com clube rebaixado para a fila é demitido e assume um clube sorteado entre os mais fracos da última divisão (provisório até os convites); modelo do calendário do clube aprovado.
@@ -1335,7 +1336,9 @@ reajustados por nova simulação (`docs/simulacoes/economia-caixa.md`):
 
 ### 9.2 Estádios
 
--   Cada clube tem nome de estádio e capacidade.
+-   Cada clube tem capacidade de estádio. **Definido (rev. 39):** o
+    estádio não tem nome próprio por clube; as telas usam o nome geral
+    "Estádio".
 -   A capacidade pode ser ampliada mediante custo.
 -   Referência inicial: capacidade de 5.000 para clubes pequenos e
     limite configurável de até 120.000.
@@ -1585,6 +1588,21 @@ posição; resumo de jogos, vitórias, empates, derrotas e gols; uma linha
 por rodada com local (casa ou fora), adversário com escudo e resultado com
 os gols do clube primeiro e a marca V, E ou D colorida; o próximo jogo em
 destaque; folgas marcadas; jogos futuros com "—".
+
+**Definido (rev. 39) — finanças do clube (modelo 6a):** aba **Finanças**
+depois dos artilheiros, só para o clube do usuário (as finanças dos clubes
+da máquina e dos outros treinadores não são visíveis). Cabeçalho com
+escudo, temporada, divisão, última rodada e moeda; quadros de saldo (com o
+saldo do início da temporada), resultado da temporada (receitas e
+despesas), estádio (lugares, público médio, ocupação e ingresso) e folha
+por rodada; extrato da temporada atual com o saldo inicial, uma linha por
+rodada (casa ou fora, adversário com escudo, público, bilheteria, custo do
+jogo, deslocamento, salários, resultado e saldo) e o total. Saídas com
+sinal de menos. O **plantel** mostra o **caixa** (saldo) no cabeçalho,
+para o treinador saber se pode contratar; o valor leva à aba Finanças.
+- **Depois, com o mercado (§9.4):** clicar num clube na classificação
+  poderá mostrar os jogadores postos à venda; sem preço definido não há
+  oferta.
 
 **Definido (rev. 29):**
 - **Início**, logo depois de entrar, com **só duas opções**: "Novo jogo" e

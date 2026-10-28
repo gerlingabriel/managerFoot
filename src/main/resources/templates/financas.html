@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: cabeca('Finanças')}"></head>
+<body>
+<div class="campo campo-pagina">
+<div class="pagina">
+<header th:replace="~{fragmentos :: topo}"></header>
+<nav th:replace="~{fragmentos :: abas(${jogoId}, 'financas')}"></nav>
+
+<!-- Finanças do clube do usuário (modelo 6a, rev. 39). -->
+<header class="clube-topo">
+<div class="clube-identidade">
+<span aria-hidden="true" th:style="${@escudos.estilo(f.clube.escudo, 36, 44)}"></span>
+<div class="pilha-curta">
+<h1 class="titulo-pagina" th:text="|${f.clube.nome} · Finanças|">Clube · Finanças</h1>
+<span class="suave" th:text="|Temporada ${f.temporada} · ${f.divisao} · ${f.rodadas == 0 ? 'antes da 1ª rodada' : 'depois da rodada ' + f.rodadas} · valores em ${f.moeda.simbolo()}|">Temporada</span>
+</div>
+</div>
+</header>
+
+<div class="financas-resumo">
+<div class="financas-quadro">
+<span class="rotulo">Saldo</span>
+<span class="financas-numero destaque" th:classappend="${f.saldo < 0} ? 'negativo'" th:text="${f.moeda.formatar(f.saldo)}">R$ 0</span>
+<span class="suave" th:text="|início da temporada: ${f.moeda.formatar(f.saldoInicioTemporada)}|">início</span>
+</div>
+<div class="financas-quadro">
+<span class="rotulo">Resultado da temporada</span>
+<span class="financas-numero" th:classappend="${f.resultado() < 0} ? 'negativo' : 'positivo'" th:text="${f.moeda.formatarComSinal(f.resultado())}">R$ 0</span>
+<span class="suave" th:text="|receitas ${f.moeda.formatar(f.receitas())} · despesas ${f.moeda.formatar(-f.despesas())}|">receitas</span>
+</div>
+<div class="financas-quadro">
+<span class="rotulo">Estádio</span>
+<span class="financas-numero" th:text="|${#numbers.formatInteger(f.estadio, 1, 'POINT')} lugares|">0 lugares</span>
+<span class="suave" th:text="${f.publicoMedio == null} ? |sem jogo em casa ainda · ingresso ${f.moeda.formatar(f.ingresso)}| : |público médio ${#numbers.formatInteger(f.publicoMedio, 1, 'POINT')} (${f.ocupacao()}%) · ingresso ${f.moeda.formatar(f.ingresso)}|">público</span>
+</div>
+<div class="financas-quadro">
+<span class="rotulo">Folha por rodada</span>
+<span class="financas-numero" th:text="${f.moeda.formatar(f.folha)}">R$ 0</span>
+<span class="suave" th:text="|${f.jogadores} jogadores · paga em toda rodada com jogo|">jogadores</span>
+</div>
+</div>
+
+<section aria-labelledby="t-extrato" class="painel grupo">
+<div class="painel-titulo painel-cabecalho">
+<h2 id="t-extrato" class="titulo-secao pequeno">Extrato por rodada</h2>
+<span class="suave">entradas positivas, saídas com sinal de menos</span>
+</div>
+<div class="tabela-rolagem">
+<table class="tabela-extrato">
+<thead>
+<tr>
+<th scope="col" class="num">Rod.</th><th scope="col">Jogo</th><th scope="col" class="num">Público</th>
+<th scope="col" class="num">Bilheteria</th><th scope="col" class="num">Custo do jogo</th>
+<th scope="col" class="num">Deslocamento</th><th scope="col" class="num">Salários</th>
+<th scope="col" class="num">Resultado</th><th scope="col" class="num">Saldo</th>
+</tr>
+</thead>
+<tbody>
+<tr class="inicio">
+<td class="num">—</td><td>Saldo inicial da temporada</td>
+<td></td><td></td><td></td><td></td><td></td><td></td>
+<td class="num saldo" th:text="${f.moeda.formatar(f.saldoInicioTemporada)}">R$ 0</td>
+</tr>
+<tr th:each="l : ${f.extrato}">
+<td class="num suave" th:text="${l.rodada}">1</td>
+<td>
+<span th:if="${l.adversario != null}" class="clube-celula"><span class="extrato-local" th:text="${l.emCasa} ? 'Casa' : 'Fora'">Casa</span><span aria-hidden="true" th:style="${@escudos.estilo(l.adversario.escudo, 18, 22)}"></span><span class="jogo-nome calendario-nome" th:text="${l.adversario.nome}">Adversário</span></span>
+<span th:if="${l.adversario == null}" class="suave">Folga</span>
+</td>
+<td class="num" th:text="${l.publico == null} ? '—' : ${#numbers.formatInteger(l.publico, 1, 'POINT')}">—</td>
+<td th:replace="~{:: valor(${f.moeda}, ${l.bilheteria})}"></td>
+<td th:replace="~{:: valor(${f.moeda}, ${l.custoDoJogo})}"></td>
+<td th:replace="~{:: valor(${f.moeda}, ${l.deslocamento})}"></td>
+<td th:replace="~{:: valor(${f.moeda}, ${l.salarios})}"></td>
+<td class="num resultado" th:classappend="${l.resultado() < 0} ? 'negativo' : 'positivo'" th:text="${f.moeda.formatarComSinal(l.resultado())}">+ R$ 0</td>
+<td class="num saldo" th:text="${f.moeda.formatar(l.saldo)}">R$ 0</td>
+</tr>
+<tr class="total" th:if="${!f.extrato.isEmpty()}">
+<td></td><td>Total da temporada</td><td></td>
+<td th:replace="~{:: valor(${f.moeda}, ${f.receitas()})}"></td>
+<td th:replace="~{:: valor(${f.moeda}, ${f.totalCustoDoJogo()})}"></td>
+<td th:replace="~{:: valor(${f.moeda}, ${f.totalDeslocamento()})}"></td>
+<td th:replace="~{:: valor(${f.moeda}, ${f.totalSalarios()})}"></td>
+<td class="num resultado" th:classappend="${f.resultado() < 0} ? 'negativo' : 'positivo'" th:text="${f.moeda.formatarComSinal(f.resultado())}">+ R$ 0</td>
+<td class="num saldo" th:text="${f.moeda.formatar(f.saldo)}">R$ 0</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p th:if="${f.extrato.isEmpty()}" class="suave financas-nota">O caixa entra no fim de cada rodada; ainda não há lançamentos nesta temporada.</p>
+</section>
+
+<footer class="suave pilha-curta">
+<span>O caixa entra no fim de cada rodada. Jogo em casa: bilheteria (público × ingresso) menos o custo do jogo. Jogo fora: deslocamento. Salários em toda rodada com jogo.</span>
+<span>Patrocínio, premiação, mercado e empréstimos entram quando existirem.</span>
+</footer>
+
+<table th:if="${false}"><tr><td th:fragment="valor(moeda, centavos)" class="num" th:classappend="${centavos < 0} ? 'negativo' : (${centavos == 0} ? 'vazio')"
+	th:text="${centavos == 0} ? '—' : (${centavos < 0} ? ${moeda.formatarComSinal(centavos)} : ${moeda.formatar(centavos)})">—</td></tr></table>
+</div>
+</div>
+</body>
+</html>

@@ -23,4 +23,12 @@ class MoedaTest {
 		assertThat(Moeda.EURO.formatar(tresMilReais)).isEqualTo("€ 500");
 		assertThat(Moeda.REAL.formatar(-1_234_567_00L)).isEqualTo("R$ -1.234.567");
 	}
+
+	@Test
+	void formataComSinalParaOExtrato() {
+		assertThat(Moeda.REAL.formatarComSinal(129_204_00L)).isEqualTo("+ R$ 129.204");
+		assertThat(Moeda.REAL.formatarComSinal(-227_634_00L)).isEqualTo("− R$ 227.634");
+		assertThat(Moeda.EURO.formatarComSinal(-6_00L)).isEqualTo("− € 1");
+		assertThat(Moeda.EURO.formatarComSinal(2_00L)).isEqualTo("€ 0");
+	}
 }

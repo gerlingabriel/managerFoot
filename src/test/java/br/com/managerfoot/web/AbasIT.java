@@ -24,7 +24,12 @@ import br.com.managerfoot.bancopadrao.PaisPadrao;
 import br.com.managerfoot.bancopadrao.ParametrosBancoPadrao;
 import br.com.managerfoot.contas.Usuario;
 import br.com.managerfoot.motor.ParametrosMotor;
+import br.com.managerfoot.economia.CaixaDaRodada;
+import br.com.managerfoot.economia.Moeda;
 import br.com.managerfoot.persistencia.BancoPadraoRepositorio;
+import br.com.managerfoot.persistencia.CaixaRepositorio;
+import br.com.managerfoot.persistencia.CaixaRepositorio.LinhaExtrato;
+import br.com.managerfoot.persistencia.CaixaRepositorio.VisaoFinancas;
 import br.com.managerfoot.persistencia.ConsultasRepositorio;
 import br.com.managerfoot.persistencia.ConsultasRepositorio.JogoNoCalendario;
 import br.com.managerfoot.persistencia.ConsultasRepositorio.LinhaArtilheiro;
@@ -67,9 +72,13 @@ class AbasIT {
 	ConsultasRepositorio consultas;
 
 	@Autowired
+	CaixaRepositorio caixas;
+
+	@Autowired
 	JdbcClient jdbc;
 
 	Usuario treinador;
+	long brasil;
 	long jogoId;
 	String base;
 
@@ -77,7 +86,7 @@ class AbasIT {
 	void jogoComTresRodadas() {
 		bancoPadrao.carregar(new GeradorBancoPadrao(ParametrosBancoPadrao.padrao(), ParametrosMotor.padrao())
 			.gerar(PaisPadrao.TODOS));
-		long brasil = moldes.campeonatosDisponiveis(bancoPadrao.moldeId().orElseThrow()).stream()
+		brasil = moldes.campeonatosDisponiveis(bancoPadrao.moldeId().orElseThrow()).stream()
 			.filter(c -> c.codigoPais().equals("BRA")).findFirst().orElseThrow().paisId();
 		treinador = contas.criarAdministrador("a" + System.nanoTime() + "@exemplo.com", "Gabriel", "senha-boa-1");
 		jogoId = jogos.criarComSorteio(brasil, treinador.id(), 13).jogoId();
@@ -164,12 +173,53 @@ class AbasIT {
 	}
 
 	@Test
+	void financasDoClubeDoUsuarioBatemComOExtratoGravado() throws Exception {
+		long clube = jogo.clubeDoTreinador(jogoId, treinador.id()).orElseThrow();
+		VisaoFinancas f = caixas.financas(jogoId, treinador.id());
+		long saldoGravado = jdbc.sql("SELECT saldo FROM jogo_clube WHERE id = :c").param("c", clube).query(Long.class).single();
+		long folha = CaixaDaRodada.padrao().folha(jogo.carregarPlanteis(jogoId).get(clube));
+
+		assertThat(f.clube().id()).isEqualTo(clube);
+		assertThat(f.moeda()).isEqualTo(Moeda.REAL);
+		assertThat(f.rodadas()).isEqualTo(3);
+		assertThat(f.extrato()).extracting(LinhaExtrato::rodada).containsExactly(1, 2, 3);
+		assertThat(f.extrato()).allMatch(l -> l.salarios() == -folha);
+		assertThat(f.extrato()).allMatch(l -> l.emCasa() == null || l.emCasa() == (l.publico() != null));
+		assertThat(f.saldo()).isEqualTo(saldoGravado);
+		assertThat(f.extrato().getLast().saldo()).isEqualTo(saldoGravado);
+		assertThat(f.saldoInicioTemporada()).isEqualTo(10 * folha);
+		assertThat(f.saldoInicioTemporada() + f.resultado()).isEqualTo(saldoGravado);
+
+		mvc.perform(get(base + "/financas").with(como(treinador)))
+			.andExpect(status().isOk())
+			.andExpect(content().string(containsString("aria-current=\"page\">Finanças")))
+			.andExpect(content().string(containsString("Extrato por rodada")))
+			.andExpect(content().string(containsString("depois da rodada 3")))
+			.andExpect(content().string(containsString(Moeda.REAL.formatar(saldoGravado))));
+		mvc.perform(get(base + "/plantel").with(como(treinador)))
+			.andExpect(content().string(containsString("Caixa " + Moeda.REAL.formatar(saldoGravado))));
+	}
+
+	@Test
+	void financasAntesDaPrimeiraRodadaMostramOSaldoInicial() {
+		long novo = jogos.criarComSorteio(brasil, treinador.id(), 21).jogoId();
+		VisaoFinancas f = caixas.financas(novo, treinador.id());
+		long clube = jogo.clubeDoTreinador(novo, treinador.id()).orElseThrow();
+		long folha = CaixaDaRodada.padrao().folha(jogo.carregarPlanteis(novo).get(clube));
+
+		assertThat(f.extrato()).isEmpty();
+		assertThat(f.saldo()).isEqualTo(10 * folha).isEqualTo(f.saldoInicioTemporada());
+		assertThat(f.publicoMedio()).isNull();
+	}
+
+	@Test
 	void outroUsuarioNaoVeAsAbas() throws Exception {
 		Usuario outro = contas.criarAdministrador("o" + System.nanoTime() + "@exemplo.com", "Outro", "senha-boa-1");
 
 		mvc.perform(get(base + "/classificacao").with(como(outro))).andExpect(status().isNotFound());
 		mvc.perform(get(base + "/artilheiros").with(como(outro))).andExpect(status().isNotFound());
 		mvc.perform(get(base + "/artilheiros/todos-os-tempos").with(como(outro))).andExpect(status().isNotFound());
+		mvc.perform(get(base + "/financas").with(como(outro))).andExpect(status().isNotFound());
 	}
 
 	private static RequestPostProcessor como(Usuario usuario) {

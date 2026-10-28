@@ -27,6 +27,11 @@
 </div>
 </div>
 <div class="pilha-curta">
+<span class="rotulo">Caixa</span>
+<a th:href="@{/jogos/{id}/financas(id=${v.jogoId})}" class="caixa-valor" th:classappend="${v.saldo < 0} ? 'negativo'"
+	th:text="${v.moeda.formatar(v.saldo)}" th:attr="aria-label=|Caixa ${v.moeda.formatar(v.saldo)}, ver finanças|">R$ 0</a>
+</div>
+<div class="pilha-curta">
 <span class="rotulo" th:text="${v.temporadaEncerrada} ? 'Temporada' : |Próximo jogo · Rodada ${v.rodada}|">Próximo jogo</span>
 <span class="proximo-jogo" th:if="${v.temporadaEncerrada}">Temporada encerrada</span>
 <span class="proximo-jogo" th:if="${!v.temporadaEncerrada and v.adversario == null}">Folga</span>

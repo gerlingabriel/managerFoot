@@ -44,6 +44,11 @@ public final class CaixaDaRodada {
 		return (int) Math.round(parametros.capacidadeMinima() * Math.pow(crescimento, pontos) / 500) * 500;
 	}
 
+	/** Preço do ingresso na divisão. */
+	public long ingresso(int prioridadeDivisao) {
+		return parametros.ingresso(prioridadeDivisao);
+	}
+
 	/** Salário por rodada do jogador, pela força. */
 	public long salario(Jogador jogador) {
 		return Math.round(parametros.salarioReferencia()

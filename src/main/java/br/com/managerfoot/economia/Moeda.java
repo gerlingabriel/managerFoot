@@ -29,9 +29,22 @@ public enum Moeda {
 		return POR_PAIS.getOrDefault(codigoPais, REAL);
 	}
 
+	public String simbolo() {
+		return simbolo;
+	}
+
 	/** O valor nesta moeda, sem centavos: "R$ 1.234.567", "€ 205.761". */
 	public String formatar(long centavosDeReal) {
 		long unidades = Math.round(centavosDeReal / 100.0 / reaisPorUnidade);
 		return simbolo + " " + NumberFormat.getIntegerInstance(Locale.forLanguageTag("pt-BR")).format(unidades);
+	}
+
+	/** Resultado com sinal à frente, para extratos: "+ R$ 129.204", "− R$ 227.634"; zero sem sinal. */
+	public String formatarComSinal(long centavosDeReal) {
+		String valor = formatar(Math.abs(centavosDeReal));
+		if (valor.endsWith(" 0")) {
+			return valor;
+		}
+		return (centavosDeReal < 0 ? "− " : "+ ") + valor;
 	}
 }
