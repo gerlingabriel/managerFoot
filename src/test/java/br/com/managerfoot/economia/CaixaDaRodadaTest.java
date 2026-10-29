@@ -77,9 +77,9 @@ class CaixaDaRodadaTest {
 		Clube c = new Clube(3, "C", 30);
 		Rodada rodada = new Rodada(1, List.of(new Jogo(1, a, b)), Optional.of(c));
 		List<Jogador> plantel = List.of(jogador(17));
-		Map<Long, List<Jogador>> planteis = Map.of(1L, plantel, 2L, plantel, 3L, plantel);
 
-		CaixaDaRodada.Movimento movimento = caixa.rodada(rodada, 1, Map.of(1L, 7_500), planteis);
+		CaixaDaRodada.Movimento movimento = caixa.rodada(rodada, 1, Map.of(1L, 7_500),
+				Map.of(1L, caixa.folha(plantel), 2L, caixa.folha(plantel), 3L, caixa.folha(plantel)));
 
 		int publico = movimento.publicoPorMandante().get(1L);
 		assertThat(publico).isEqualTo(7_500);

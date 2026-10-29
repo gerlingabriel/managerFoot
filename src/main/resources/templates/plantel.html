@@ -146,6 +146,40 @@
 </main>
 </div>
 <th:block th:if="${ficha != null}"><div th:replace="~{fragmentos :: ficha(${ficha}, @{/jogos/{id}/plantel(id=${v.jogoId})}, @{/jogos/{id}/mercado/vender(id=${v.jogoId})})}"></div></th:block>
+<!-- Caixa do pedido de aumento (modelo 10a, rev. 58): fica até a resposta; a rodada espera. -->
+<div th:if="${aumento != null}" class="janela-fundo" th:with="a=${aumento}, j=${aumento.jogador}">
+<form role="dialog" aria-modal="true" aria-labelledby="t-aumento" class="janela ficha aumento"
+	th:action="@{/jogos/{id}/aumento(id=${v.jogoId})}" method="post">
+<input type="hidden" name="jogador" th:value="${j.id}">
+<div class="janela-topo patrocinio-topo">
+<span class="rotulo" th:text="|Temporada ${a.temporada} · antes da rodada ${a.rodada}|">Temporada</span>
+<h2 id="t-aumento" class="ficha-nome">Pedido de aumento</h2>
+<span class="suave">Um jogador cresceu e quer ganhar pela força nova</span>
+</div>
+<div class="ficha-identidade aumento-jogador">
+<span class="pos grande" th:classappend="|pos-${j.posicao}|" th:text="${j.posicao.name().substring(0, 1)}">M</span>
+<div class="pilha-curta">
+<span class="ficha-nome" th:text="${j.nome}">Nome</span>
+<span class="suave" th:text="|${#strings.capitalize(j.posicao.nome(1))} · sem contrato renovado nesta temporada|">Meio-campista</span>
+</div>
+</div>
+<div class="ficha-destaques">
+<div><span class="rotulo">Força</span><span class="ficha-numero" th:text="${j.forca}">0</span></div>
+<div><span class="rotulo">Salário por rodada</span>
+<span class="ficha-numero neutro aumento-salario" th:text="|${a.moeda.formatar(a.salarioAtual)} → ${a.moeda.formatar(a.salarioPedido)}|">R$ 0 → R$ 0</span>
+<span class="suave" th:text="|+${a.moeda.formatar(a.diferenca())} (${a.percentual()}%) · folha ${a.moeda.formatar(a.folhaAtual)} → ${a.moeda.formatar(a.folhaNova)}|">folha</span></div>
+</div>
+<dl class="resumo ficha-dados">
+<div><dt>Se aceitar</dt><dd th:text="|contrato até o fim de ${a.temporada}; não pode ser vendido nesta rodada|">contrato</dd></div>
+<div><dt>Se recusar</dt><dd th:text="|vai a leilão agora, lance mínimo ${a.moeda.formatar(a.lanceMinimo)}|">leilão</dd></div>
+</dl>
+<div class="estadio-acoes aumento-acoes">
+<button type="submit" name="resposta" value="RECUSAR" class="botao-contorno">Recusar (leilão)</button>
+<button type="submit" name="resposta" value="ACEITAR" class="botao">Aceitar e renovar</button>
+</div>
+<p class="suave aumento-nota">Sem lance no leilão, ele fica com o salário de antes e não pede de novo nesta temporada.</p>
+</form>
+</div>
 <!-- Caixa do patrocínio (modelo 9a, rev. 55): abre sozinha no início do ano e fica até a escolha;
      a rodada 1 só começa depois dela. -->
 <div th:if="${patrocinio != null}" class="janela-fundo" th:with="p=${patrocinio}">

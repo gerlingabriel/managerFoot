@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -30,6 +31,7 @@ import br.com.managerfoot.bancopadrao.PaisPadrao;
 import br.com.managerfoot.bancopadrao.ParametrosBancoPadrao;
 import br.com.managerfoot.contas.Usuario;
 import br.com.managerfoot.dominio.EscalacaoDoTreinador;
+import br.com.managerfoot.economia.CaixaDaRodada;
 import br.com.managerfoot.economia.PropostasPatrocinio;
 import br.com.managerfoot.economia.PropostasPatrocinio.Proposta;
 import br.com.managerfoot.motor.ParametrosMotor;
@@ -208,6 +210,83 @@ class PlantelIT {
 		assertThat(jdbc.sql("""
 				SELECT valor FROM jogo_lancamento WHERE clube_id = :c AND tipo = 'PATROCINIO' AND rodada > 0""")
 			.param("c", clube).query(Long.class).list()).hasSize((int) vitorias).allMatch(v -> v == proposta.porVitoria());
+	}
+
+	@Test
+	void salariosDoUsuarioFicamGravadosEOsDaMaquinaSeguemAForca() {
+		assertThat(jdbc.sql("SELECT count(*) FROM jogo_jogador WHERE clube_id = :c AND forca_salario IS DISTINCT FROM forca")
+			.param("c", clube).query(Long.class).single()).isZero();
+		assertThat(jdbc.sql("""
+				SELECT count(*) FROM jogo_jogador j JOIN jogo_clube c ON c.id = j.clube_id
+				WHERE c.jogo_id = :j AND c.id <> :c AND j.forca_salario IS NOT NULL""")
+			.param("j", jogoId).param("c", clube).query(Long.class).single()).isZero();
+
+		// o salário do contrato vale mesmo com a força mudando: a folha lançada é a da força 10
+		jdbc.sql("UPDATE jogo_jogador SET forca_salario = 10 WHERE clube_id = :c").param("c", clube).update();
+		long jogadores = jdbc.sql("SELECT count(*) FROM jogo_jogador WHERE clube_id = :c").param("c", clube)
+			.query(Long.class).single();
+		rodadas.avancar(jogoId, 1);
+		assertThat(jdbc.sql("SELECT valor FROM jogo_lancamento WHERE clube_id = :c AND rodada = 1 AND tipo = 'SALARIOS'")
+			.param("c", clube).query(Long.class).single()).isEqualTo(-jogadores * CaixaDaRodada.padrao().salario(10));
+	}
+
+	@Test
+	void pedidoDeAumentoTravaARodadaEAceitarRenovaPelaForcaAtual() throws Exception {
+		pedir(post("/jogos/" + jogoId + "/patrocinio").param("proposta", "FIXA"));
+		long jogador = jdbc.sql("SELECT id FROM jogo_jogador WHERE clube_id = :c ORDER BY forca DESC, id LIMIT 1")
+			.param("c", clube).query(Long.class).single();
+		long outro = jdbc.sql("SELECT id FROM jogo_jogador WHERE clube_id = :c ORDER BY forca DESC, id OFFSET 1 LIMIT 1")
+			.param("c", clube).query(Long.class).single();
+		jdbc.sql("UPDATE jogo_jogador SET forca_salario = forca - 8 WHERE id = :j").param("j", jogador).update();
+		jdbc.sql("UPDATE jogo_jogador SET forca_salario = forca - 7 WHERE id = :j").param("j", outro).update();
+		String nome = jdbc.sql("SELECT nome FROM jogo_jogador WHERE id = :j").param("j", jogador).query(String.class).single();
+
+		mvc.perform(get(plantel).with(como(treinador)))
+			.andExpect(content().string(containsString("Pedido de aumento")))
+			.andExpect(content().string(containsString(nome)));
+		pedir(post(jogarRodada()).param("rodada", "1"))
+			.andExpect(flash().attribute("erro", "Responda ao pedido de aumento antes de jogar a rodada."));
+
+		// o pedido é do que mais subiu; responder por outro não faz nada
+		pedir(post("/jogos/" + jogoId + "/aumento").param("jogador", String.valueOf(outro)).param("resposta", "ACEITAR"))
+			.andExpect(flash().attributeCount(0));
+		pedir(post("/jogos/" + jogoId + "/aumento").param("jogador", String.valueOf(jogador)).param("resposta", "ACEITAR"))
+			.andExpect(flash().attributeExists("resultado"));
+
+		assertThat(jdbc.sql("SELECT forca_salario = forca AND contrato_temporada = 1 FROM jogo_jogador WHERE id = :j")
+			.param("j", jogador).query(Boolean.class).single()).isTrue();
+		// um pedido por rodada: o outro só pede depois da rodada
+		mvc.perform(get(plantel).with(como(treinador)))
+			.andExpect(content().string(not(containsString("Pedido de aumento"))));
+		// acabou de renovar: não vende nesta rodada
+		mvc.perform(post("/jogos/" + jogoId + "/mercado/vender").param("jogador", String.valueOf(jogador)).param("minimo", "0")
+			.with(como(treinador)).with(csrf()))
+			.andExpect(flash().attribute("erro", containsString("acabou de renovar")));
+
+		jdbc.sql("DELETE FROM jogo_escalacao WHERE clube_id = :c").param("c", clube).update();
+		rodadas.avancar(jogoId, 1);
+		mvc.perform(get(plantel).with(como(treinador)))
+			.andExpect(content().string(containsString("Pedido de aumento")));
+	}
+
+	@Test
+	void recusarPoeEmLeilaoENaoPedeDeNovoNaTemporada() throws Exception {
+		pedir(post("/jogos/" + jogoId + "/patrocinio").param("proposta", "FIXA"));
+		long jogador = jdbc.sql("""
+				SELECT id FROM jogo_jogador WHERE clube_id = :c AND posicao = 'ATACANTE' ORDER BY forca DESC, id LIMIT 1""")
+			.param("c", clube).query(Long.class).single();
+		jdbc.sql("UPDATE jogo_jogador SET forca_salario = forca - 5 WHERE id = :j").param("j", jogador).update();
+
+		mvc.perform(post("/jogos/" + jogoId + "/aumento").param("jogador", String.valueOf(jogador)).param("resposta", "RECUSAR")
+			.with(como(treinador)).with(csrf()))
+			.andExpect(redirectedUrlPattern("/jogos/" + jogoId + "/leiloes/*"));
+
+		assertThat(jdbc.sql("SELECT count(*) FROM jogo_leilao WHERE jogador_id = :j AND tipo = 'VENDA'").param("j", jogador)
+			.query(Long.class).single()).isEqualTo(1);
+		assertThat(jdbc.sql("SELECT aumento_temporada FROM jogo_jogador WHERE id = :j").param("j", jogador)
+			.query(Integer.class).single()).isEqualTo(1);
+		mvc.perform(get(plantel).with(como(treinador)))
+			.andExpect(content().string(not(containsString("Pedido de aumento"))));
 	}
 
 	private long saldo() {

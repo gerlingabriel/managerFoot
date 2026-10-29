@@ -35,10 +35,13 @@ public class TransferenciaRepositorio {
 			.param("clube", vendedor)
 			.param("jogador", jogadorId)
 			.update();
-		// comprado, o contrato vale até o fim da temporada atual (SPEC §9.5, rev. 42)
+		// comprado, o contrato vale até o fim da temporada atual (SPEC §9.5, rev. 42), com o salário da
+		// força atual no clube de usuário; na máquina o salário segue a força (rev. 58)
 		jdbc.sql("""
 				UPDATE jogo_jogador SET clube_id = :comprador, a_venda = false,
-				       contrato_temporada = (SELECT max(numero) FROM jogo_temporada WHERE jogo_id = :jogo)
+				       contrato_temporada = (SELECT max(numero) FROM jogo_temporada WHERE jogo_id = :jogo),
+				       forca_salario = CASE WHEN EXISTS (SELECT 1 FROM jogo_treinador t WHERE t.clube_id = :comprador)
+				                            THEN forca END
 				WHERE id = :jogador""")
 			.param("comprador", comprador)
 			.param("jogo", jogoId)

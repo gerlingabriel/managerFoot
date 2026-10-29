@@ -50,8 +50,13 @@ public final class CaixaDaRodada {
 
 	/** Salário por rodada do jogador, pela força. */
 	public long salario(Jogador jogador) {
+		return salario(jogador.forca());
+	}
+
+	/** Salário por rodada de um jogador da força dada (a do contrato, rev. 58). */
+	public long salario(int forca) {
 		return Math.round(parametros.salarioReferencia()
-				* Math.pow(parametros.crescimentoSalario(), jogador.forca() - parametros.forcaReferencia()));
+				* Math.pow(parametros.crescimentoSalario(), forca - parametros.forcaReferencia()));
 	}
 
 	public long folha(List<Jogador> plantel) {
@@ -83,6 +88,11 @@ public final class CaixaDaRodada {
 	 * @param publico pagantes do jogo em casa (ignorado fora de casa ou na folga)
 	 */
 	public List<Lancamento> lancamentos(Local local, int prioridadeDivisao, int publico, List<Jogador> plantel) {
+		return lancamentos(local, prioridadeDivisao, publico, folha(plantel));
+	}
+
+	/** Como {@link #lancamentos(Local, int, int, List)}, com a folha já somada (salários gravados, rev. 58). */
+	public List<Lancamento> lancamentos(Local local, int prioridadeDivisao, int publico, long folha) {
 		List<Lancamento> lancamentos = new ArrayList<>();
 		if (local == Local.CASA) {
 			long bilheteria = publico * parametros.ingresso(prioridadeDivisao);
@@ -91,7 +101,7 @@ public final class CaixaDaRodada {
 		} else if (local == Local.FORA) {
 			lancamentos.add(new Lancamento(TipoLancamento.DESLOCAMENTO, -parametros.deslocamento(prioridadeDivisao)));
 		}
-		lancamentos.add(new Lancamento(TipoLancamento.SALARIOS, -folha(plantel)));
+		lancamentos.add(new Lancamento(TipoLancamento.SALARIOS, -folha));
 		return lancamentos;
 	}
 
@@ -99,21 +109,21 @@ public final class CaixaDaRodada {
 	 * Caixa de uma divisão numa rodada: os lançamentos de cada clube, inclusive o da folga.
 	 *
 	 * @param publicos pagantes de cada jogo, pelo id do mandante ({@link PublicoDoJogo})
+	 * @param folhas folha de cada clube por rodada, pelos salários gravados
 	 */
-	public Movimento rodada(Rodada rodada, int prioridadeDivisao, Map<Long, Integer> publicos,
-			Map<Long, List<Jogador>> planteis) {
+	public Movimento rodada(Rodada rodada, int prioridadeDivisao, Map<Long, Integer> publicos, Map<Long, Long> folhas) {
 		Map<Long, Integer> publicoPorMandante = new HashMap<>();
 		Map<Long, List<Lancamento>> lancamentos = new HashMap<>();
 		for (Jogo jogo : rodada.jogos()) {
 			long mandante = jogo.mandante().id();
 			int publico = publicos.get(mandante);
 			publicoPorMandante.put(mandante, publico);
-			lancamentos.put(mandante, lancamentos(Local.CASA, prioridadeDivisao, publico, planteis.get(mandante)));
+			lancamentos.put(mandante, lancamentos(Local.CASA, prioridadeDivisao, publico, folhas.getOrDefault(mandante, 0L)));
 			long visitante = jogo.visitante().id();
-			lancamentos.put(visitante, lancamentos(Local.FORA, prioridadeDivisao, 0, planteis.get(visitante)));
+			lancamentos.put(visitante, lancamentos(Local.FORA, prioridadeDivisao, 0, folhas.getOrDefault(visitante, 0L)));
 		}
-		rodada.folga()
-			.ifPresent(c -> lancamentos.put(c.id(), lancamentos(Local.FOLGA, prioridadeDivisao, 0, planteis.get(c.id()))));
+		rodada.folga().ifPresent(c -> lancamentos.put(c.id(),
+				lancamentos(Local.FOLGA, prioridadeDivisao, 0, folhas.getOrDefault(c.id(), 0L))));
 		return new Movimento(publicoPorMandante, lancamentos);
 	}
 

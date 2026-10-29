@@ -47,14 +47,16 @@ public class RodadaAoVivoRepositorio {
 	private final JogoRepositorio jogos;
 	private final RodadaRepositorio rodadas;
 	private final CaixaRepositorio caixas;
+	private final AumentoRepositorio aumentos;
 	private final int minutos = ParametrosMotor.padrao().minutos();
 
 	public RodadaAoVivoRepositorio(JdbcClient jdbc, JogoRepositorio jogos, RodadaRepositorio rodadas,
-			CaixaRepositorio caixas) {
+			CaixaRepositorio caixas, AumentoRepositorio aumentos) {
 		this.jdbc = jdbc;
 		this.jogos = jogos;
 		this.rodadas = rodadas;
 		this.caixas = caixas;
+		this.aumentos = aumentos;
 	}
 
 	/** Se o jogo tem rodada ao vivo. */
@@ -68,7 +70,8 @@ public class RodadaAoVivoRepositorio {
 	 *
 	 * @throws IllegalStateException se a rodada não é a próxima, se há leilão aberto antes dela ou se a
 	 *         escalação não pode jogar
-	 * @throws PatrocinioPendenteException se um treinador ainda não escolheu o patrocínio da temporada
+	 * @throws DecisaoPendenteException se um treinador ainda não escolheu o patrocínio da temporada ou não
+	 *         respondeu a um pedido de aumento
 	 */
 	@Transactional
 	public void iniciar(long jogoId, long usuarioId, int rodada, Instant agora) {
@@ -106,7 +109,11 @@ public class RodadaAoVivoRepositorio {
 			.single();
 		if (semPatrocinio) {
 			// a rodada 1 só começa depois da escolha do patrocínio (modelo 9a, rev. 55)
-			throw new PatrocinioPendenteException("escolha o patrocínio antes da rodada " + rodada);
+			throw new DecisaoPendenteException("Escolha o patrocínio da temporada antes de jogar a rodada.");
+		}
+		if (aumentos.algumPendente(jogoId)) {
+			// o pedido de aumento espera a resposta (modelo 10a, rev. 58)
+			throw new DecisaoPendenteException("Responda ao pedido de aumento antes de jogar a rodada.");
 		}
 		rodadas.preparar(jogoId, rodada, List.of());
 		jdbc.sql("""

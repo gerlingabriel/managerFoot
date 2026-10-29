@@ -1441,3 +1441,9 @@ a.financas-link:hover, a.financas-link:focus-visible { border-color: var(--desta
 .patrocinio-agora { font: 700 20px 'Barlow Condensed', sans-serif; color: var(--destaque); }
 .patrocinio-regra { font-size: 15px; }
 .patrocinio-nota { font-size: 13px; }
+
+/* Pedido de aumento (modelo 10a, rev. 58). */
+.aumento-jogador { padding: 16px 20px; }
+.aumento-salario { font-size: 30px; }
+.aumento-acoes { padding: 12px 20px; border-top: 1px solid var(--borda); }
+.aumento-nota { margin: 0; padding: 0 20px 14px; font-size: 13px; }

@@ -30,14 +30,16 @@ public class JogosDoTreinadorRepositorio {
 	private final JogoRepositorio jogos;
 	private final TemporadaRepositorio temporadas;
 	private final CaixaRepositorio caixas;
+	private final AumentoRepositorio aumentos;
 	private final int candidatosClubeInicial;
 
 	public JogosDoTreinadorRepositorio(JdbcClient jdbc, JogoRepositorio jogos, TemporadaRepositorio temporadas,
-			CaixaRepositorio caixas, @Value("${managerfoot.jogo.candidatos-clube-inicial}") int candidatosClubeInicial) {
+			CaixaRepositorio caixas, AumentoRepositorio aumentos, @Value("${managerfoot.jogo.candidatos-clube-inicial}") int candidatosClubeInicial) {
 		this.jdbc = jdbc;
 		this.jogos = jogos;
 		this.temporadas = temporadas;
 		this.caixas = caixas;
+		this.aumentos = aumentos;
 		this.candidatosClubeInicial = candidatosClubeInicial;
 	}
 
@@ -60,6 +62,7 @@ public class JogosDoTreinadorRepositorio {
 				candidatosClubeInicial);
 		temporadas.iniciarPrimeiraTemporada(jogoId, new SplittableRandom(semente).nextLong());
 		caixas.pagarPatrocinio(jogoId, Map.of());
+		aumentos.fixarSalarios(jogoId);
 		return new NovoJogo(jogoId, candidatos);
 	}
 
@@ -74,6 +77,7 @@ public class JogosDoTreinadorRepositorio {
 		long jogoId = jogos.criarJogoComClubeEscolhido(paisMoldeId, administradorId, semente, clubeMoldeId);
 		temporadas.iniciarPrimeiraTemporada(jogoId, new SplittableRandom(semente).nextLong());
 		caixas.pagarPatrocinio(jogoId, Map.of());
+		aumentos.fixarSalarios(jogoId);
 		return jogoId;
 	}
 

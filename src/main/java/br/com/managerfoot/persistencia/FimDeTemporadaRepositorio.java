@@ -45,12 +45,13 @@ public class FimDeTemporadaRepositorio {
 	private final LeilaoRepositorio leiloes;
 	private final EstadioRepositorio estadios;
 	private final PatrocinioRepositorio patrocinios;
+	private final AumentoRepositorio aumentos;
 	private final int candidatosClubeInicial;
 	private final EscalacaoMaquina escalacaoMaquina = new EscalacaoMaquina(ParametrosMotor.padrao());
 
 	public FimDeTemporadaRepositorio(JdbcClient jdbc, JogoRepositorio jogos, TemporadaRepositorio temporadas,
 			RodadaRepositorio rodadas, EscalacaoRepositorio escalacoes, CaixaRepositorio caixas, LeilaoRepositorio leiloes,
-			EstadioRepositorio estadios, PatrocinioRepositorio patrocinios, @Value("${managerfoot.jogo.candidatos-clube-inicial}") int candidatosClubeInicial) {
+			EstadioRepositorio estadios, PatrocinioRepositorio patrocinios, AumentoRepositorio aumentos, @Value("${managerfoot.jogo.candidatos-clube-inicial}") int candidatosClubeInicial) {
 		this.jdbc = jdbc;
 		this.jogos = jogos;
 		this.temporadas = temporadas;
@@ -60,6 +61,7 @@ public class FimDeTemporadaRepositorio {
 		this.leiloes = leiloes;
 		this.estadios = estadios;
 		this.patrocinios = patrocinios;
+		this.aumentos = aumentos;
 		this.candidatosClubeInicial = candidatosClubeInicial;
 	}
 
@@ -103,6 +105,8 @@ public class FimDeTemporadaRepositorio {
 			.update();
 
 		Map<Long, Clube> demitidos = demitirDaFila(jogoId, transicao.proxima(), new SplittableRandom(semente ^ MISTURA_FILA));
+		// o clube novo do demitido grava os salários; o antigo passa a readequar como a máquina (rev. 58)
+		aumentos.fixarSalarios(jogoId);
 
 		Temporada nova = Temporada.iniciar(numero + 1, transicao.proxima(), jogos.carregarPlanteis(jogoId), semente);
 		temporadas.gravar(jogoId, nova);

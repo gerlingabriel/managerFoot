@@ -15,7 +15,7 @@
 
 ### Histórico de revisões
 
--   **rev. 58 (2026-10-29):** proposta do pedido de aumento com salário gravado (§9.5) e modelo 10a, aguardando aprovação.
+-   **rev. 58 (2026-10-29):** salário gravado nos clubes de usuário (a máquina readequa), pedido de aumento com intervalo de 5 pontos e modelo 10a aprovados e gravados (V26).
 -   **rev. 57 (2026-10-28):** público, obras e ampliação da máquina gravados no avanço da rodada (V24); janela 6c do estádio; caixa 9a do patrocínio (V25), máquina com a fixa. Usuário aprovou torcida, ocupação, 6 rodadas de obra e as 3 propostas de patrocínio (por acesso na 1ª = terminar entre os 3 primeiros); jogos já salvos mantêm o estádio atual; até a 5ª rodada o público reflete a posição final da temporada passada.
 -   **rev. 56 (2026-10-28):** evolução C aprovada e gravada no avanço da rodada; público pela posição na tabela dos dois clubes e limitado pela força do clube; estádio máximo de 80.000; a máquina amplia quando cresce de força ou sobra dinheiro; a obra leva tempo; simular estádio, público e patrocínio.
 -   **rev. 55 (2026-10-28):** evolução corrigida pelo usuário: cada jogador perde no máximo 1 ponto por partida e o resultado decide quantos perdem (1, 3 ou 5); simulação refeita, nova proposta do agente (crescem 4, 2 ou 0,5 dos que não jogaram, com piso); modelos 6c (estádio) e 9a (patrocínio) aprovados.
@@ -755,7 +755,8 @@ temporadas com promoção e rebaixamento, só máquina):
 - **Gravado (rev. 56):** a evolução roda no avanço de cada rodada, na mesma
   transação, com sorteio pela semente da temporada e da rodada, e grava a
   força de quem mudou. O salário segue a força atual, então a folha muda a
-  cada rodada; o pedido de aumento (§9.5) ainda não existe.
+  cada rodada; desde a rev. 58 isso vale só para a máquina: no clube do
+  usuário o salário fica no contrato e há o pedido de aumento (§9.5).
 
 ### 6.2 Moral do time
 
@@ -1748,20 +1749,28 @@ A máquina oferece um pouco abaixo do preço padrão (§9.4).
   - Quem tem **salário abaixo da força** pede aumento: **um jogador por
     rodada** no clube (a regra do pedido de aumento acima).
   - A máquina sempre renova (§9.4). O saldo negativo vai para o §9.3.
-- **Provisório (rev. 58) — proposta do agente, aguardando aprovação:**
-  - **Salário gravado** no jogador (hoje segue a força a cada rodada). Na
-    compra e na renovação, o salário da força atual. A máquina renova
-    sempre, então nela o salário continua seguindo a força.
-  - **Pedido de aumento** (modelo 10a): depois da rodada em que um jogador
-    do usuário, sem contrato renovado na temporada, fica com salário abaixo
-    do da força, abre no plantel a caixa com força antes e depois, salário
-    pedido e efeito na folha. Um por rodada: o de maior diferença. A rodada
-    seguinte só começa depois da resposta.
-  - **Aceitar:** salário da força atual, contrato até o fim da temporada,
-    não pode ser vendido naquela rodada. **Recusar:** leilão na hora, como a
-    venda pela ficha, com mínimo no preço de tabela −20%; sem lance, fica no
-    clube com o salário antigo e não pede de novo na temporada.
-  - **Em aberto:** quando a força **cai**, o salário cai junto ou fica?
+- **Definido (rev. 58), pelo usuário** (modelo **10a** aprovado, sem mostrar
+  a força de antes):
+  - **Salário gravado** pela força do último contrato nos clubes de usuário:
+    se a força **cai**, o salário **não cai** (o usuário administra). A
+    **máquina readequa** sempre: o salário dela segue a força atual.
+  - **Intervalo:** o jogador só pede aumento quando sobe bastante acima da
+    força do salário ("começou com 10 e está com 15, 16"): **5 pontos**
+    (valor do agente, em `economia.PedidoDeAumento`).
+  - A rodada **espera a resposta**. Objetivo do usuário: times ricos que
+    perdem vendem, e voltam a comprar se ganharem; os inferiores precisam
+    ter dinheiro para comprar (acompanhar nas simulações do mercado).
+  - Aceito como proposto: um pedido por rodada, o de quem mais subiu;
+    aceitar renova até o fim da temporada pela força atual e o jogador não
+    pode ser vendido naquela rodada; recusar põe em leilão na hora com o
+    mínimo no preço −20%; sem lance (ou sem poder sair pelo mínimo da
+    posição), fica com o salário antigo e não pede de novo na temporada.
+- **Gravado (rev. 58, V26):** `jogo_jogador.forca_salario` (nula = segue a
+  força, como na máquina), gravada no início do jogo, na compra, no aumento
+  aceito e no clube novo do treinador demitido; a folha do caixa e das
+  Finanças usa o salário gravado. Caixa 10a no plantel (depois do
+  patrocínio). Jogos salvos: os jogadores dos clubes de usuário ficam com o
+  salário da força que tinham na migração.
 -   Definir limites, prazos, taxas e consequências de inadimplência
     antes da implementação final.
 

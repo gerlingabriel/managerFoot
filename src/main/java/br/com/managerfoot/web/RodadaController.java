@@ -23,7 +23,7 @@ import org.springframework.web.servlet.support.RequestContextUtils;
 import br.com.managerfoot.contas.Usuario;
 import br.com.managerfoot.persistencia.LeilaoRepositorio;
 import br.com.managerfoot.persistencia.LeilaoRepositorio.Etapa;
-import br.com.managerfoot.persistencia.PatrocinioPendenteException;
+import br.com.managerfoot.persistencia.DecisaoPendenteException;
 import br.com.managerfoot.persistencia.PlantelRepositorio;
 import br.com.managerfoot.persistencia.RodadaAoVivoRepositorio;
 import br.com.managerfoot.persistencia.RodadaAoVivoRepositorio.EstadoRodada;
@@ -69,8 +69,8 @@ class RodadaController {
 			}
 			aoVivo.iniciar(jogoId, usuario.id(), rodada, relogio.instant());
 		}
-		catch (PatrocinioPendenteException e) {
-			redirect.addFlashAttribute("erro", "Escolha o patrocínio da temporada antes de jogar a rodada.");
+		catch (DecisaoPendenteException e) {
+			redirect.addFlashAttribute("erro", e.getMessage());
 			return "redirect:/jogos/" + jogoId + "/plantel";
 		}
 		catch (IllegalStateException e) {

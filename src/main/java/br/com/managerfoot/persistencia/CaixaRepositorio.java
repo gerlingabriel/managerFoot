@@ -239,7 +239,7 @@ public class CaixaRepositorio {
 		return new VisaoFinancas(oClube, jogos.ano(jogoId, temporada.numero()), temporada.numero() == 1, situacao.divisao(),
 				situacao.rodadas(), moeda(jogoId), saldo, saldoAnterior, patrocinio, situacao.estadio(), situacao.obraRodadas(),
 				publicoMedio,
-				caixa.ingresso(divisao.prioridade()), caixa.folha(plantel), plantel.size(), extrato);
+				caixa.ingresso(divisao.prioridade()), folhas(jogoId).getOrDefault(clube, 0L), plantel.size(), extrato);
 	}
 
 	/**
@@ -256,10 +256,11 @@ public class CaixaRepositorio {
 		Map<Long, Integer> publicos = partidas.isEmpty() ? Map.of()
 				: publicos(jogoId, temporada, temporadaId,
 						partidas.stream().map(p -> new Partida(p.prioridade(), p.jogo(), p.semente())).toList(), planteis);
+		Map<Long, Long> folhas = folhas(jogoId);
 		for (Temporada.SorteiosDivisao divisao : temporada.divisoes()) {
 			for (Rodada r : divisao.calendario().rodadas()) {
 				if (r.numero() == rodada) {
-					CaixaDaRodada.Movimento movimento = caixa.rodada(r, divisao.prioridade(), publicos, planteis);
+					CaixaDaRodada.Movimento movimento = caixa.rodada(r, divisao.prioridade(), publicos, folhas);
 					movimento.publicoPorMandante().forEach((mandante, pagantes) -> gravarPublico(temporadaId, rodada,
 							mandante, pagantes));
 					movimento.lancamentos().forEach((clube, lancamentos) -> lancar(temporadaId, rodada, clube, lancamentos));
@@ -395,6 +396,23 @@ public class CaixaRepositorio {
 			.param("valor", valor)
 			.param("clube", clubeId)
 			.update();
+	}
+
+	/**
+	 * Folha de cada clube do jogo por rodada, pelos salários gravados (SPEC §9.5, rev. 58): a força do
+	 * contrato nos clubes de usuário; a força atual nos da máquina, que readequam sempre.
+	 */
+	@Transactional(readOnly = true)
+	public Map<Long, Long> folhas(long jogoId) {
+		Map<Long, Long> folhas = new HashMap<>();
+		jdbc.sql("""
+				SELECT j.clube_id, coalesce(j.forca_salario, j.forca) AS forca
+				FROM jogo_jogador j JOIN jogo_clube c ON c.id = j.clube_id WHERE c.jogo_id = :jogo""")
+			.param("jogo", jogoId)
+			.query(rs -> {
+				folhas.merge(rs.getLong("clube_id"), caixa.salario(rs.getInt("forca")), Long::sum);
+			});
+		return folhas;
 	}
 
 	/** Pagamento da ampliação do estádio na rodada, e o saldo do clube. */

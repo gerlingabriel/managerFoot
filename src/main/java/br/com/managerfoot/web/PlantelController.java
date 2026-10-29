@@ -27,6 +27,7 @@ import br.com.managerfoot.dominio.Posicao;
 import br.com.managerfoot.economia.PropostasPatrocinio;
 import br.com.managerfoot.motor.ParametrosMotor;
 import br.com.managerfoot.motor.RegrasPartida;
+import br.com.managerfoot.persistencia.AumentoRepositorio;
 import br.com.managerfoot.persistencia.ClubeNaFilaException;
 import br.com.managerfoot.persistencia.ConsultasRepositorio;
 import br.com.managerfoot.persistencia.FimDeTemporadaRepositorio;
@@ -57,10 +58,11 @@ class PlantelController {
 	private final FimDeTemporadaRepositorio fimDeTemporada;
 	private final JogoRepositorio jogo;
 	private final PatrocinioRepositorio patrocinios;
+	private final AumentoRepositorio aumentos;
 
 	PlantelController(PlantelRepositorio plantel, JogosDoTreinadorRepositorio jogos, RodadaAoVivoRepositorio aoVivo,
 			ConsultasRepositorio consultas, FimDeTemporadaRepositorio fimDeTemporada, JogoRepositorio jogo,
-			PatrocinioRepositorio patrocinios) {
+			PatrocinioRepositorio patrocinios, AumentoRepositorio aumentos) {
 		this.plantel = plantel;
 		this.jogos = jogos;
 		this.aoVivo = aoVivo;
@@ -68,6 +70,7 @@ class PlantelController {
 		this.fimDeTemporada = fimDeTemporada;
 		this.jogo = jogo;
 		this.patrocinios = patrocinios;
+		this.aumentos = aumentos;
 	}
 
 	@GetMapping("/jogos/{jogoId}/plantel")
@@ -103,8 +106,32 @@ class PlantelController {
 			consultas.ficha(jogoId, usuario.id(), ficha).ifPresent(dados -> model.addAttribute("ficha", dados));
 		}
 		// propostas de patrocínio do início do ano: a caixa fica aberta até a escolha (modelo 9a)
-		patrocinios.pendente(jogoId, usuario.id()).ifPresent(p -> model.addAttribute("patrocinio", p));
+		patrocinios.pendente(jogoId, usuario.id()).ifPresentOrElse(p -> model.addAttribute("patrocinio", p),
+				// pedido de aumento: um por rodada, depois do patrocínio (modelo 10a, rev. 58)
+				() -> aumentos.pendente(jogoId, usuario.id()).ifPresent(a -> model.addAttribute("aumento", a)));
 		return "plantel";
+	}
+
+	/**
+	 * Resposta ao pedido de aumento (modelo 10a). Recusar leva ao resultado do leilão; sem leilão, o
+	 * jogador fica com o salário de antes.
+	 */
+	@PostMapping("/jogos/{jogoId}/aumento")
+	String responderAumento(@AuthenticationPrincipal Usuario usuario, @PathVariable long jogoId, @RequestParam long jogador,
+			@RequestParam String resposta, RedirectAttributes redirect) {
+		if ("ACEITAR".equals(resposta)) {
+			if (aumentos.aceitar(jogoId, usuario.id(), jogador)) {
+				redirect.addFlashAttribute("resultado", "Aumento aceito: contrato renovado até o fim da temporada.");
+			}
+		}
+		else if ("RECUSAR".equals(resposta)) {
+			var leilao = aumentos.recusar(jogoId, usuario.id(), jogador);
+			if (leilao.isPresent()) {
+				return "redirect:/jogos/" + jogoId + "/leiloes/" + leilao.get();
+			}
+			redirect.addFlashAttribute("resultado", "Aumento recusado: ele fica com o salário de antes.");
+		}
+		return "redirect:/jogos/" + jogoId + "/plantel";
 	}
 
 	/** Assina a proposta de patrocínio escolhida (modelo 9a); um segundo pedido não paga de novo. */
