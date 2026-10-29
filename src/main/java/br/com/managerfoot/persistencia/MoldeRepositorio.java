@@ -1,5 +1,6 @@
 package br.com.managerfoot.persistencia;
 
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +39,47 @@ public class MoldeRepositorio {
 		return TabelasLiga.inserir(jdbc,
 				"INSERT INTO molde_pais (molde_id, codigo, nome) VALUES (:molde, :codigo, :nome)",
 				Map.of("molde", moldeId, "codigo", codigo, "nome", nome));
+	}
+
+	/** Cria a competição continental de uma região no molde (SPEC §8.3.6), ainda sem vagas. */
+	public long criarContinental(long moldeId, String regiao, String nome) {
+		return TabelasLiga.inserir(jdbc,
+				"INSERT INTO molde_continental (molde_id, regiao, nome) VALUES (:molde, :regiao, :nome)",
+				Map.of("molde", moldeId, "regiao", regiao, "nome", nome));
+	}
+
+	/** Acrescenta as vagas de um país depois das que a competição já tem. */
+	public void adicionarVagas(long continentalId, String codigoPais, int vagas) {
+		jdbc.sql("""
+				INSERT INTO molde_continental_vaga (continental_id, pais_codigo, vagas, ordem)
+				SELECT :continental, :pais, :vagas, count(*) FROM molde_continental_vaga
+				WHERE continental_id = :continental""")
+			.param("continental", continentalId)
+			.param("pais", codigoPais)
+			.param("vagas", vagas)
+			.update();
+	}
+
+	/** Competição continental do molde com as vagas por país, na ordem em que foram gravadas. */
+	public record ContinentalMolde(long id, String regiao, String nome, Map<String, Integer> vagas) {
+	}
+
+	@Transactional(readOnly = true)
+	public List<ContinentalMolde> continentais(long moldeId) {
+		List<ContinentalMolde> semVagas = jdbc
+			.sql("SELECT id, regiao, nome FROM molde_continental WHERE molde_id = :molde ORDER BY id")
+			.param("molde", moldeId)
+			.query((rs, n) -> new ContinentalMolde(rs.getLong("id"), rs.getString("regiao"), rs.getString("nome"),
+					Map.of()))
+			.list();
+		return semVagas.stream().map(c -> {
+			Map<String, Integer> vagas = new LinkedHashMap<>();
+			jdbc.sql("SELECT pais_codigo, vagas FROM molde_continental_vaga WHERE continental_id = :id ORDER BY ordem")
+				.param("id", c.id())
+				.query((rs, n) -> vagas.put(rs.getString("pais_codigo"), rs.getInt("vagas")))
+				.list();
+			return new ContinentalMolde(c.id(), c.regiao(), c.nome(), Collections.unmodifiableMap(vagas));
+		}).toList();
 	}
 
 	/**

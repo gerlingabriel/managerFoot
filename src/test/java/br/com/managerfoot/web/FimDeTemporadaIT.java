@@ -27,7 +27,6 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import br.com.managerfoot.TestcontainersConfiguration;
 import br.com.managerfoot.bancopadrao.GeradorBancoPadrao;
-import br.com.managerfoot.bancopadrao.PaisPadrao;
 import br.com.managerfoot.bancopadrao.ParametrosBancoPadrao;
 import br.com.managerfoot.contas.Usuario;
 import br.com.managerfoot.economia.PropostasPatrocinio;
@@ -78,7 +77,7 @@ class FimDeTemporadaIT {
 	@BeforeEach
 	void temporadaInteiraJogada() {
 		bancoPadrao.carregar(new GeradorBancoPadrao(ParametrosBancoPadrao.padrao(), ParametrosMotor.padrao())
-			.gerar(PaisPadrao.TODOS));
+			.gerarBanco());
 		long portugal = moldes.campeonatosDisponiveis(bancoPadrao.moldeId().orElseThrow()).stream()
 			.filter(c -> c.codigoPais().equals("POR")).findFirst().orElseThrow().paisId();
 		treinador = contas.criarAdministrador("f" + System.nanoTime() + "@exemplo.com", "Gabriel", "senha-boa-1");

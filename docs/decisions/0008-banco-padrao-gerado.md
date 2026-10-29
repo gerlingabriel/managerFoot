@@ -58,3 +58,12 @@ Opção 2.
   edições do usuário nele; nessa hora, decidir se o molde padrão editado
   vira molde pessoal antes da troca.
 
+
+## Adendo (2026-10-29, SPEC rev. 73)
+
+- O banco padrão passou à **versão 3**: além dos 6 países com liga, grava os
+  países que só existem para a competição continental (§8.3.6), como
+  `molde_pais` sem liga (`nome_liga` nulo) e com clubes, e as vagas de cada
+  região em `molde_continental` e `molde_continental_vaga` (V32).
+- Os 6 países com liga são gerados exatamente como na versão 2 (mesma
+  semente, conferido); a troca de versão só acrescenta dados.

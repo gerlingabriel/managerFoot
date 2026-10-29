@@ -26,7 +26,6 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import br.com.managerfoot.TestcontainersConfiguration;
 import br.com.managerfoot.bancopadrao.GeradorBancoPadrao;
-import br.com.managerfoot.bancopadrao.PaisPadrao;
 import br.com.managerfoot.bancopadrao.ParametrosBancoPadrao;
 import br.com.managerfoot.contas.Usuario;
 import br.com.managerfoot.motor.ParametrosMotor;
@@ -63,7 +62,7 @@ class JogosIT {
 	@BeforeEach
 	void carregarBancoPadraoECriarParticipante() {
 		bancoPadrao.carregar(new GeradorBancoPadrao(ParametrosBancoPadrao.padrao(), ParametrosMotor.padrao())
-			.gerar(PaisPadrao.TODOS));
+			.gerarBanco());
 		List<CampeonatoDisponivel> campeonatos = moldes.campeonatosDisponiveis(bancoPadrao.moldeId().orElseThrow());
 		brasil = campeonatos.stream().filter(c -> c.codigoPais().equals("BRA")).findFirst().orElseThrow();
 		String admin = "admin" + System.nanoTime() + "@exemplo.com";

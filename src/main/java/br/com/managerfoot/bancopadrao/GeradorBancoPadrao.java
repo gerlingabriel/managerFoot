@@ -55,6 +55,23 @@ public final class GeradorBancoPadrao {
 	public record EstrangeiroGerado(PaisEstrangeiroPadrao pais, List<ClubeGerado> clubes) {
 	}
 
+	/** Banco padrão inteiro: os países com liga, os gerados só para a continental e as vagas. */
+	public record BancoGerado(List<PaisGerado> paises, List<EstrangeiroGerado> estrangeiros,
+			List<ContinentalPadrao> continentais) {
+
+		public BancoGerado {
+			paises = List.copyOf(paises);
+			estrangeiros = List.copyOf(estrangeiros);
+			continentais = List.copyOf(continentais);
+		}
+	}
+
+	/** O banco padrão da rev. 73: {@link PaisPadrao#TODOS}, {@link PaisEstrangeiroPadrao#TODOS} e as vagas. */
+	public BancoGerado gerarBanco() {
+		return new BancoGerado(gerar(PaisPadrao.TODOS),
+				gerarEstrangeiros(PaisEstrangeiroPadrao.TODOS, ContinentalPadrao.TODAS), ContinentalPadrao.TODAS);
+	}
+
 	public List<PaisGerado> gerar(List<PaisPadrao> paises) {
 		return paises.stream().map(this::gerar).toList();
 	}

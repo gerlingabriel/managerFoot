@@ -7,7 +7,10 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import br.com.managerfoot.bancopadrao.ContinentalPadrao;
+import br.com.managerfoot.bancopadrao.GeradorBancoPadrao.BancoGerado;
 import br.com.managerfoot.bancopadrao.GeradorBancoPadrao.ClubeGerado;
+import br.com.managerfoot.bancopadrao.GeradorBancoPadrao.EstrangeiroGerado;
 import br.com.managerfoot.bancopadrao.GeradorBancoPadrao.PaisGerado;
 import br.com.managerfoot.dominio.Clube;
 import br.com.managerfoot.temporada.FormatoDivisao;
@@ -22,8 +25,11 @@ public class BancoPadraoRepositorio {
 
 	/** Nome do molde que guarda o banco padrão. */
 	public static final String NOME_MOLDE = "Banco padrão";
-	/** Versão do gerador: muda quando o banco gerado muda (rev. 60: 2 divisões e 20 jogadores). */
-	public static final int VERSAO = 2;
+	/**
+	 * Versão do gerador: muda quando o banco gerado muda (2 na rev. 60: 2 divisões e 20 jogadores; 3 na
+	 * rev. 73: países sem liga e vagas da continental).
+	 */
+	public static final int VERSAO = 3;
 
 	private final JdbcClient jdbc;
 	private final MoldeRepositorio moldes;
@@ -41,9 +47,10 @@ public class BancoPadraoRepositorio {
 	public record Carga(long moldeId, boolean criado, boolean substituido) {
 	}
 
-	/** Grava os países gerados num molde novo, ou devolve o que já existe na versão atual. */
+	/** Grava o banco gerado num molde novo, ou devolve o que já existe na versão atual. */
 	@Transactional
-	public Carga carregar(List<PaisGerado> paises) {
+	public Carga carregar(BancoGerado banco) {
+		List<PaisGerado> paises = banco.paises();
 		// duas cargas ao mesmo tempo esperam uma pela outra e a segunda encontra o molde pronto
 		jdbc.sql("SELECT 1 FROM pg_advisory_xact_lock(hashtext('managerfoot.banco-padrao'))").query(Integer.class).single();
 		Optional<Long> existente = moldeId();
@@ -68,6 +75,18 @@ public class BancoPadraoRepositorio {
 				Clube gravado = moldes.adicionarClube(pais, clube.clube(), clube.treinador());
 				moldes.adicionarJogadores(gravado.id(), clube.jogadores());
 			}
+		}
+		// sem liga: os clubes ficam no país e a liga não é criada (SPEC §8.3.3)
+		for (EstrangeiroGerado gerado : banco.estrangeiros()) {
+			long pais = moldes.criarPais(molde, gerado.pais().codigo(), gerado.pais().nome());
+			for (ClubeGerado clube : gerado.clubes()) {
+				Clube gravado = moldes.adicionarClube(pais, clube.clube(), clube.treinador());
+				moldes.adicionarJogadores(gravado.id(), clube.jogadores());
+			}
+		}
+		for (ContinentalPadrao continental : banco.continentais()) {
+			long id = moldes.criarContinental(molde, continental.regiao().name(), continental.nome());
+			continental.vagas().forEach((codigo, vagas) -> moldes.adicionarVagas(id, codigo, vagas));
 		}
 		return new Carga(molde, true, existente.isPresent());
 	}

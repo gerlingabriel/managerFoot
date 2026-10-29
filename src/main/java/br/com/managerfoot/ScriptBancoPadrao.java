@@ -7,7 +7,7 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
 
 import br.com.managerfoot.bancopadrao.GeradorBancoPadrao;
-import br.com.managerfoot.bancopadrao.PaisPadrao;
+import br.com.managerfoot.bancopadrao.GeradorBancoPadrao.BancoGerado;
 import br.com.managerfoot.bancopadrao.ParametrosBancoPadrao;
 import br.com.managerfoot.motor.ParametrosMotor;
 import br.com.managerfoot.persistencia.BancoPadraoRepositorio;
@@ -34,12 +34,14 @@ class ScriptBancoPadrao implements ApplicationRunner {
 			return;
 		}
 		GeradorBancoPadrao gerador = new GeradorBancoPadrao(ParametrosBancoPadrao.padrao(), ParametrosMotor.padrao());
-		BancoPadraoRepositorio.Carga carga = repositorio.carregar(gerador.gerar(PaisPadrao.TODOS));
+		BancoGerado banco = gerador.gerarBanco();
+		BancoPadraoRepositorio.Carga carga = repositorio.carregar(banco);
 		if (carga.substituido()) {
 			LOG.info("Banco padrão de versão antiga substituído pela versão {} no molde {}; jogos já criados não mudam.",
 					BancoPadraoRepositorio.VERSAO, carga.moldeId());
 		} else if (carga.criado()) {
-			LOG.info("Banco padrão gravado no molde {} com {} países.", carga.moldeId(), PaisPadrao.TODOS.size());
+			LOG.info("Banco padrão gravado no molde {} com {} países com liga e {} só para a continental.", carga.moldeId(),
+					banco.paises().size(), banco.estrangeiros().size());
 		} else {
 			LOG.info("Banco padrão já estava carregado no molde {}; nada foi gravado.", carga.moldeId());
 		}
