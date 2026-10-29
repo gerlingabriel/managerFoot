@@ -119,6 +119,28 @@ class LeiloesDaRodadaTest {
 	}
 
 	@Test
+	void ricoComDuasComprasPorRodadaLevaOsDoisLeiloes() {
+		LeiloesDaRodada comRico = new LeiloesDaRodada(
+				new MercadoDaMaquina(ParametrosMercadoMaquina.padrao().comRico(2, 2, false), preco, CaixaDaRodada.padrao()), preco);
+		ClubeNoMercado a = clube(1, 100, 100_000_00L);
+		ClubeNoMercado b = clube(2, 200, 100_000_00L);
+		// 20 jogadores: cabem os dois
+		ClubeNoMercado cheio = clube(3, 300, RICO);
+		ClubeNoMercado comprador = new ClubeNoMercado(cheio.clube(), RICO, cheio.plantel().subList(0, 20));
+		List<Oferta> ofertas = comRico.abrir(List.of(a, b), "BRA");
+
+		List<Desfecho> desfechos = comRico.resolver(ofertas, List.of(a, b, comprador), List.of(), Map.of(), "BRA",
+				new SplittableRandom(1));
+
+		assertThat(desfechos).allSatisfy(d -> assertThat(d.vencedor()).map(Lance::clubeId).contains(3L));
+		// quem já comprou antes da rodada conta como 1 compra: sobra 1
+		List<Desfecho> depois = comRico.resolver(ofertas, List.of(a, b, comprador), List.of(), Map.of(), Set.of(3L), "BRA",
+				new SplittableRandom(1));
+		assertThat(depois.get(0).vencedor()).map(Lance::clubeId).contains(3L);
+		assertThat(depois.get(1).vencedor()).isEmpty();
+	}
+
+	@Test
 	void clubeDaMaquinaQueJaComprouAntesDaRodadaNaoDaLance() {
 		ClubeNoMercado a = clube(1, 100, 100_000_00L);
 		ClubeNoMercado comprador = clube(3, 300, RICO);

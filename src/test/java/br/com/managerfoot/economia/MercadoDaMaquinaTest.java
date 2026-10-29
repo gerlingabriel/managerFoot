@@ -136,6 +136,37 @@ class MercadoDaMaquinaTest {
 		assertThat(novos).hasSize(3).allMatch(j -> j.posicao() == Posicao.MEIO_CAMPISTA);
 	}
 
+	@Test
+	void ricoComDoisLimitesGastaMaisSoComAAlavancaLigada() {
+		List<Jogador> plantel = plantel(23, 17); // limite R$ 437.000
+		MercadoDaMaquina ligado = new MercadoDaMaquina(ParametrosMercadoMaquina.padrao().comRico(2, 2, true),
+				PrecoJogador.padrao(), CaixaDaRodada.padrao());
+		assertThat(ligado.rico(874_000_00L, plantel)).isTrue();
+		assertThat(ligado.rico(873_999_00L, plantel)).isFalse();
+		assertThat(ligado.comprasPorRodada(874_000_00L, plantel)).isEqualTo(2);
+		assertThat(ligado.comprasPorRodada(873_999_00L, plantel)).isEqualTo(1);
+		// no padrão: sempre 1 compra e nenhuma compra direta
+		assertThat(mercado.comprasPorRodada(10_000_000_00L, plantel)).isEqualTo(1);
+		assertThat(mercado.compraDireta(10_000_000_00L, plantel, List.of(jogador(300, Posicao.ATACANTE, 30)), "BRA")).isEmpty();
+	}
+
+	@Test
+	void compraDiretaLevaOMaisForteQueMelhoraOTimeECabeNoCaixa() {
+		MercadoDaMaquina ligado = new MercadoDaMaquina(ParametrosMercadoMaquina.padrao().comRico(2, 1, true),
+				PrecoJogador.padrao(), CaixaDaRodada.padrao());
+		List<Jogador> plantel = plantel(23, 20);
+		List<Jogador> anunciados = List.of(jogador(300, Posicao.ATACANTE, 20), jogador(301, Posicao.ATACANTE, 24),
+				jogador(302, Posicao.MEIO_CAMPISTA, 26));
+		long rico = 100_000_000_00L;
+		assertThat(ligado.compraDireta(rico, plantel, anunciados, "BRA")).map(Jogador::id).contains(302L);
+		// força igual à do time não melhora: não compra
+		assertThat(ligado.compraDireta(rico, plantel, List.of(anunciados.get(0)), "BRA")).isEmpty();
+		// rico, mas sem caixa para o preço cheio com a folga
+		long limiteRico = ligado.limite(plantel) * 2;
+		assertThat(ligado.compraDireta(limiteRico, plantel, List.of(anunciados.get(2)), "BRA")).isEmpty();
+		assertThat(ligado.compraDireta(rico, plantel(Clube.MAXIMO_JOGADORES, 20), anunciados, "BRA")).isEmpty();
+	}
+
 	private static List<Jogador> plantel(int quantidade, int forca) {
 		Posicao[] ordem = { Posicao.GOLEIRO, Posicao.DEFENSOR, Posicao.DEFENSOR, Posicao.MEIO_CAMPISTA,
 				Posicao.MEIO_CAMPISTA, Posicao.ATACANTE };

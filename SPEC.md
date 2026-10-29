@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 63 — 2026-10-29)
+-   **Status:** versão inicial para revisão (rev. 64 — 2026-10-29)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 64 (2026-10-29):** pelo usuário: simular a alavanca "rico gasta mais" (§9.3). Resultado negativo: o rico que gasta fica mais forte e mais rico; parâmetros no código, desligados no padrão.
 -   **rev. 63 (2026-10-29):** pelo usuário: modelos 11a (convite), 11b (aviso de demissão) e 11c (moral na janela do clube) aprovados; 9,8 trocas por temporada na 1ª está bom; regra da surpresa aprovada. Troca de treinador ligada à rodada (V28, ADR 0014).
 -   **rev. 62 (2026-10-29):** pelo usuário: máquina demitida pelas mesmas regras do usuário; recusa passa ao seguinte; sem chamado, o treinador continua; chamado no máximo 12 pontos abaixo; convite depois da rodada e antes do plantel (modelo de tela proposto); pedido de 10 ou 11 demissões por temporada com os fortes demitindo mais. Proposta do agente (provisória, já na rodada): a surpresa vale mais na moral e o retorno à inicial fica mais fraco (§6.2); simulação refeita.
 -   **rev. 61 (2026-10-29):** pelo usuário: vermelho de **0 a 6** e amarelo de **7 a 14** (o amarelo é o período para tentar melhorar); força média confirmada (média dos 11); a máquina também segue a moral; troca de treinadores na demissão (o chamado vai para o clube que demitiu e o demitido fica com o clube dele; entre os 3 clubes inferiores de moral verde, o usuário decide e, sem usuário, vai o mais forte); depois da troca os dois começam com 22; moral visível ao clicar no clube; **salário com ajuste pela faixa de força** (+10% de 45 a 50, +5% de 35 a 44, nada de 25 a 34, −5% de 15 a 24, −10% abaixo de 15), simulado (§9.5). Simulações refeitas.
@@ -1723,6 +1724,42 @@ leilões com lance). Mas os ricos acumulam ainda mais caixa (topo da 1ª com
 25,9 limites em 6 temporadas, antes 18,8), quem vende continua sendo o fundo
 da tabela, e a mobilidade cai de 9% para 6%. As alavancas do mercado
 propostas na rev. 59 continuam aguardando a escolha do usuário.
+
+**Simulação da alavanca "rico gasta mais" (rev. 64, pedida pelo usuário;
+`docs/simulacoes/ciclo-do-mercado.md`).** Rico = saldo de pelo menos 2
+limites (1,5 num cenário). Ele pode fazer mais de 1 compra por rodada e/ou
+comprar pelo preço cheio, depois dos leilões, o jogador mais forte que
+**melhora o time** (força acima da força em campo) entre os 5 ou 6 que cada
+clube da máquina deixa à venda. Saldo no fim da 6ª temporada, em limites:
+
+| Cenário | 1ª topo | 1ª fundo | 2ª topo | 2ª fundo | 1ª leilões sem lance | Mobilidade |
+|---|---|---|---|---|---|---|
+| Atual | 21,7 | 7,4 | 10,9 | 1,5 | 26% | 5% |
+| 2 compras | 21,9 | 7,1 | 10,4 | 1,2 | 26% | 4% |
+| Compra direta | 40,9 | 4,9 | 5,8 | −0,9 | 60% | 3% |
+| 3 compras e compra direta (1,5 limite) | 40,0 | 3,5 | 6,2 | −0,7 | 60% | 4% |
+| 2 compras e compra direta | 42,2 | 3,2 | 5,9 | −0,7 | 66% | 5% |
+
+- **Mais compras sozinhas não mudam nada:** o rico quase nunca acha no
+  leilão um jogador que lhe interesse (quem vende é o fundo, com jogadores
+  fracos).
+- **Com a compra direta o efeito é o contrário do objetivo:** o rico compra
+  melhores, ganha mais público e prêmio e acumula **mais** (topo da 1ª de
+  21,7 para 40 a 42 limites); o fundo da 1ª e a 2ª ficam mais pobres, os
+  leilões da 1ª sem lance passam de 26% para 60%, e num cenário uma liga
+  travou (clube vendido até o plantel mínimo de 14 ficou sem 11 com as
+  suspensões). Versão anterior, sem exigir que o jogador melhore o time: 120
+  a 1.400 compras diretas por temporada (vaivém entre os ricos), com o mesmo
+  acúmulo.
+- **Leitura do agente:** gastar com jogador é investimento que volta (time
+  mais forte rende mais), então não segura o caixa do rico. Para o forte que
+  perde vender é preciso dinheiro **saindo** do jogo ou venda **forçada**: as
+  outras alavancas da rev. 59 ("forte que perde vende", ampliação
+  obrigatória do estádio) ou outra regra do usuário.
+- **No código, desligado no padrão** (o jogo não muda):
+  `ParametrosMercadoMaquina.limitesDoRico/comprasDoRico/ricoCompraDireto`,
+  `MercadoDaMaquina.rico/comprasPorRodada/compraDireta`; `LeiloesDaRodada`
+  conta as compras por clube.
 
 **Definido (rev. 43), pelo usuário:** sem empréstimo, sempre que o caixa
 ficar **negativo** um jogador do clube vai a **leilão sem lance mínimo**.
