@@ -159,14 +159,16 @@ public class CaixaRepositorio {
 			.map(j -> j.mandante().id() == clube ? j.mandante() : j.visitante()).findFirst().orElseThrow();
 		List<Jogador> plantel = jogos.carregarPlanteis(jogoId).getOrDefault(clube, List.of());
 		Situacao situacao = jdbc.sql("""
-				SELECT c.estadio_capacidade, c.forca, t.id AS temporada_id, t.rodadas_processadas, d.nome AS divisao
+				SELECT c.estadio_capacidade, c.forca, c.obra_rodadas, t.id AS temporada_id, t.rodadas_processadas,
+				       d.nome AS divisao
 				FROM jogo_clube c JOIN jogo_divisao d ON d.id = c.divisao_id
 				JOIN jogo_temporada t ON t.jogo_id = c.jogo_id
 				WHERE c.id = :clube ORDER BY t.numero DESC LIMIT 1""")
 			.param("clube", clube)
 			.query((rs, n) -> new Situacao(rs.getObject("estadio_capacidade") == null
 					? publico.estadioInicial(rs.getInt("forca")) : rs.getInt("estadio_capacidade"),
-					rs.getLong("temporada_id"), rs.getInt("rodadas_processadas"), rs.getString("divisao")))
+					(Integer) rs.getObject("obra_rodadas"), rs.getLong("temporada_id"), rs.getInt("rodadas_processadas"),
+					rs.getString("divisao")))
 			.single();
 
 		// modelo 6b (rev. 50): patrocínio (rodada 0) em linha própria; compras, vendas e prêmio na coluna
@@ -233,7 +235,8 @@ public class CaixaRepositorio {
 		Integer publicoMedio = publicos.isEmpty() ? null
 				: (int) Math.round(publicos.values().stream().mapToInt(Integer::intValue).average().orElseThrow());
 		return new VisaoFinancas(oClube, jogos.ano(jogoId, temporada.numero()), temporada.numero() == 1, situacao.divisao(),
-				situacao.rodadas(), moeda(jogoId), saldo, saldoAnterior, patrocinio, situacao.estadio(), publicoMedio,
+				situacao.rodadas(), moeda(jogoId), saldo, saldoAnterior, patrocinio, situacao.estadio(), situacao.obraRodadas(),
+				publicoMedio,
 				caixa.ingresso(divisao.prioridade()), caixa.folha(plantel), plantel.size(), extrato);
 	}
 
@@ -426,7 +429,7 @@ public class CaixaRepositorio {
 	private record Partida(int prioridade, Jogo jogo, long semente) {
 	}
 
-	private record Situacao(int estadio, long temporadaId, int rodadas, String divisao) {
+	private record Situacao(int estadio, Integer obraRodadas, long temporadaId, int rodadas, String divisao) {
 	}
 
 	/**
@@ -464,11 +467,13 @@ public class CaixaRepositorio {
 	 * @param saldoAnterior saldo antes de qualquer lançamento da temporada (o do fim da anterior)
 	 * @param patrocinio patrocínio da temporada, lançado no início
 	 * @param estadio capacidade do estádio
+	 * @param obraRodadas rodadas que faltam da obra de ampliação; nulo sem obra
 	 * @param publicoMedio média dos jogos em casa na temporada; nulo se ainda não houve
 	 * @param folha salários de uma rodada
 	 */
 	public record VisaoFinancas(Clube clube, int temporada, boolean primeiraTemporada, String divisao, int rodadas,
-			Moeda moeda, long saldo, long saldoAnterior, long patrocinio, int estadio, Integer publicoMedio, long ingresso, long folha, int jogadores,
+			Moeda moeda, long saldo, long saldoAnterior, long patrocinio, int estadio, Integer obraRodadas, Integer publicoMedio,
+			long ingresso, long folha, int jogadores,
 			List<LinhaExtrato> extrato) {
 
 		public long receitas() {
@@ -504,6 +509,12 @@ public class CaixaRepositorio {
 		/** Resultado das rodadas: caixa, mercado e prêmio (o patrocínio está no início). */
 		public long resultado() {
 			return receitas() + despesas() + totalMercado();
+		}
+
+		/** Bilheteria média dos jogos em casa; nula sem jogo em casa. */
+		public Long bilheteriaMedia() {
+			long jogos = extrato.stream().filter(l -> Boolean.TRUE.equals(l.emCasa())).count();
+			return jogos == 0 ? null : Math.round(receitas() / (double) jogos);
 		}
 
 		/** Ocupação média do estádio, em %; nula sem jogo em casa. */

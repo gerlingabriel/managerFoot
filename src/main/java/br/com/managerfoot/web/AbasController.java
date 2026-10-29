@@ -17,6 +17,7 @@ import br.com.managerfoot.persistencia.CaixaRepositorio;
 import br.com.managerfoot.persistencia.ClubeNaFilaException;
 import br.com.managerfoot.persistencia.CompraRepositorio;
 import br.com.managerfoot.persistencia.ConsultasRepositorio;
+import br.com.managerfoot.persistencia.EstadioRepositorio;
 import jakarta.servlet.http.HttpServletResponse;
 
 /**
@@ -33,11 +34,14 @@ class AbasController {
 	private final ConsultasRepositorio consultas;
 	private final CaixaRepositorio caixas;
 	private final CompraRepositorio compras;
+	private final EstadioRepositorio estadios;
 
-	AbasController(ConsultasRepositorio consultas, CaixaRepositorio caixas, CompraRepositorio compras) {
+	AbasController(ConsultasRepositorio consultas, CaixaRepositorio caixas, CompraRepositorio compras,
+			EstadioRepositorio estadios) {
 		this.consultas = consultas;
 		this.caixas = caixas;
 		this.compras = compras;
+		this.estadios = estadios;
 	}
 
 	@GetMapping("/jogos/{jogoId}/classificacao")
@@ -85,11 +89,16 @@ class AbasController {
 		return "artilheiros";
 	}
 
+	/** Com {@code estadio}, abre a janela do estádio por cima (modelo 6c, rev. 55). */
 	@GetMapping("/jogos/{jogoId}/financas")
-	String financas(@AuthenticationPrincipal Usuario usuario, @PathVariable long jogoId, Model model) {
+	String financas(@AuthenticationPrincipal Usuario usuario, @PathVariable long jogoId,
+			@RequestParam(name = "estadio", defaultValue = "false") boolean estadio, Model model) {
 		model.addAttribute("usuario", usuario);
 		model.addAttribute("jogoId", jogoId);
 		model.addAttribute("f", caixas.financas(jogoId, usuario.id()));
+		if (estadio) {
+			model.addAttribute("estadio", estadios.janela(jogoId, usuario.id()));
+		}
 		return "financas";
 	}
 

@@ -27,8 +27,10 @@ import br.com.managerfoot.bancopadrao.PaisPadrao;
 import br.com.managerfoot.bancopadrao.ParametrosBancoPadrao;
 import br.com.managerfoot.contas.Usuario;
 import br.com.managerfoot.motor.ParametrosMotor;
+import br.com.managerfoot.economia.AmpliacaoEstadio;
 import br.com.managerfoot.economia.CaixaDaRodada;
 import br.com.managerfoot.economia.Moeda;
+import br.com.managerfoot.economia.ParametrosPublico;
 import br.com.managerfoot.persistencia.BancoPadraoRepositorio;
 import br.com.managerfoot.persistencia.CaixaRepositorio;
 import br.com.managerfoot.persistencia.CaixaRepositorio.LinhaExtrato;
@@ -344,6 +346,54 @@ class AbasIT {
 		assertThat(f.extrato()).isEmpty();
 		assertThat(f.saldo()).isEqualTo(10 * folha + patrocinio(clube)).isEqualTo(f.saldoInicioTemporada());
 		assertThat(f.publicoMedio()).isNull();
+	}
+
+	@Test
+	void janelaDoEstadioAmpliaUmaVezPagaNaHoraERecusaASegundaObra() throws Exception {
+		long clube = jogo.clubeDoTreinador(jogoId, treinador.id()).orElseThrow();
+		AmpliacaoEstadio ampliacao = AmpliacaoEstadio.padrao();
+		jdbc.sql("UPDATE jogo_clube SET estadio_capacidade = 20000, obra_rodadas = NULL, saldo = :s WHERE id = :c")
+			.param("s", 2 * ampliacao.custo()).param("c", clube).update();
+		String preco = Moeda.REAL.formatar(ampliacao.custo());
+
+		mvc.perform(get(base + "/financas?estadio=true").with(como(treinador)))
+			.andExpect(status().isOk())
+			.andExpect(content().string(containsString("Capacidade atual")))
+			.andExpect(content().string(containsString("Ampliar por " + preco)));
+
+		mvc.perform(post(base + "/estadio/ampliar").with(como(treinador)).with(csrf()))
+			.andExpect(status().is3xxRedirection())
+			.andExpect(flash().attributeExists("resultado"));
+
+		assertThat(jdbc.sql("SELECT obra_rodadas FROM jogo_clube WHERE id = :c").param("c", clube).query(Integer.class)
+			.single()).isEqualTo(ParametrosPublico.padrao().rodadasDeObra());
+		assertThat(jdbc.sql("SELECT saldo FROM jogo_clube WHERE id = :c").param("c", clube).query(Long.class).single())
+			.isEqualTo(ampliacao.custo());
+		VisaoFinancas f = caixas.financas(jogoId, treinador.id());
+		assertThat(f.estadio()).isEqualTo(20000);
+		assertThat(f.extrato().getLast().detalhes()).contains("Ampliação do estádio");
+
+		mvc.perform(post(base + "/estadio/ampliar").with(como(treinador)).with(csrf()))
+			.andExpect(flash().attribute("erro", "Obra em andamento."));
+		mvc.perform(get(base + "/financas?estadio=true").with(como(treinador)))
+			.andExpect(content().string(containsString("Obra em andamento")))
+			.andExpect(content().string(not(containsString("Ampliar por"))));
+	}
+
+	@Test
+	void semCaixaOBotaoFicaDesligadoEOServidorRecusa() throws Exception {
+		long clube = jogo.clubeDoTreinador(jogoId, treinador.id()).orElseThrow();
+		jdbc.sql("UPDATE jogo_clube SET obra_rodadas = NULL, saldo = 0 WHERE id = :c").param("c", clube).update();
+
+		mvc.perform(get(base + "/financas?estadio=true").with(como(treinador)))
+			.andExpect(content().string(containsString("Caixa insuficiente")));
+		mvc.perform(post(base + "/estadio/ampliar").with(como(treinador)).with(csrf()))
+			.andExpect(flash().attribute("erro", "Caixa insuficiente."));
+		assertThat(jdbc.sql("SELECT count(*) FROM jogo_lancamento WHERE clube_id = :c AND tipo = 'ESTADIO'")
+			.param("c", clube).query(Long.class).single()).isZero();
+
+		Usuario outro = contas.criarAdministrador("e" + System.nanoTime() + "@exemplo.com", "Outro", "senha-boa-1");
+		mvc.perform(post(base + "/estadio/ampliar").with(como(outro)).with(csrf())).andExpect(status().isNotFound());
 	}
 
 	@Test

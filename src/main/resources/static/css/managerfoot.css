@@ -1417,3 +1417,14 @@ a.link-clube:hover { color: var(--destaque); text-decoration: underline; }
 .historico-treinador { display: block; font-size: 13px; color: var(--texto-suave); }
 .tabela-historico td.seu .historico-treinador { color: var(--destaque); }
 .historico-nota { margin: 0; padding: 12px 16px 14px; font-size: 14px; border-top: 1px solid var(--borda); }
+
+/* Janela do estádio (modelo 6c, rev. 55). */
+a.financas-link { color: var(--texto); text-decoration: none; }
+a.financas-link:hover, a.financas-link:focus-visible { border-color: var(--destaque); }
+.financas-abrir { margin-left: 6px; color: var(--destaque); letter-spacing: 0.04em; text-transform: none; }
+.ficha-numero.neutro { color: var(--texto); }
+.estadio-ampliar { display: flex; flex-direction: column; gap: 10px; padding: 14px 20px 18px; border-top: 1px solid var(--borda); }
+.estadio-ampliar-titulo { font: 600 19px 'Barlow Condensed', sans-serif; text-transform: uppercase; }
+.estadio-ampliar .destaque { color: var(--destaque); }
+.estadio-acoes { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
+.estadio-nota { font-size: 13px; }
