@@ -86,7 +86,7 @@
 <th:block th:if="${j.ultimoLance != null}">
 <span class="lance" th:classappend="${@lances.icone(j.ultimoLance)}" role="img"
 	th:with="tipo=${j.ultimoLance.tipo.name()}"
-	th:attr="aria-label=${tipo == 'GOL' ? 'Gol' : (tipo == 'CARTAO_AMARELO' ? 'Cartão amarelo' : 'Expulsão')}"></span>
+	th:attr="aria-label=${tipo == 'GOL' ? 'Gol' : (tipo == 'CARTAO_AMARELO' ? 'Cartão amarelo' : (tipo == 'LESAO' ? 'Lesão' : 'Expulsão'))}"></span>
 <span class="lance-texto" th:text="${@lances.texto(j.ultimoLance)}">Nome 41'</span>
 </th:block>
 </span>

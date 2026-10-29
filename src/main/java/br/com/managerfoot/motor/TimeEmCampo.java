@@ -104,7 +104,7 @@ final class TimeEmCampo {
 	}
 
 	/**
-	 * Tira o jogador de campo. Se for o goleiro, o defensor de menor força assume o gol; sem
+	 * Tira o jogador de campo, expulso ou lesionado sem substituto. Se for o goleiro, o defensor de menor força assume o gol; sem
 	 * defensores, o jogador de linha de menor força (SPEC §7.3).
 	 */
 	void expulsar(Jogador jogador) {
@@ -182,6 +182,12 @@ final class TimeEmCampo {
 					+ formacao.rotulo() + ")"));
 		linha.set(linha.indexOf(sai), entra);
 		formacao = nova;
+	}
+
+	/** Se a troca de linha manteria uma formação permitida (o goleiro não entra aqui). */
+	boolean trocaDeLinhaPermitida(Jogador sai, Jogador entra) {
+		return sai != goleiro && entra.posicao() != Posicao.GOLEIRO
+				&& formacaoApos(sai.posicao(), entra.posicao()).isPresent();
 	}
 
 	private Optional<Formacao> formacaoApos(Posicao sai, Posicao entra) {

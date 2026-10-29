@@ -15,7 +15,9 @@ import br.com.managerfoot.dominio.Jogador;
 import br.com.managerfoot.dominio.Posicao;
 import br.com.managerfoot.dominio.Temperamento;
 import br.com.managerfoot.motor.EventoPartida;
+import br.com.managerfoot.motor.GravidadeLesao;
 import br.com.managerfoot.motor.Lado;
+import br.com.managerfoot.motor.Lesao;
 import br.com.managerfoot.motor.ResultadoPartida;
 import br.com.managerfoot.motor.TipoEvento;
 
@@ -111,6 +113,38 @@ class DisciplinaTest {
 
 		assertThat(nova.amarelos()).isEmpty();
 		assertThat(nova.suspensaoDe(2)).isEqualTo(2);
+	}
+
+	@Test
+	void lesaoTiraOJogadorPelosJogosSorteadosEContaParaOClube() {
+		ResultadoPartida comLesao = new ResultadoPartida(0, 0, List.of(new EventoPartida(30, Lado.FORA, TipoEvento.LESAO,
+				BIA, false, null, new Lesao(GravidadeLesao.MEDIA, 2, 3))));
+		Map<Lado, Long> clubes = Map.of(Lado.CASA, 10L, Lado.FORA, 20L);
+
+		Disciplina d = Disciplina.vazia().aposPartida(PLANTEIS, comLesao, PADRAO, new SplittableRandom(1), clubes);
+
+		assertThat(d.lesaoDe(2)).isEqualTo(2);
+		assertThat(d.lesionado(2)).isTrue();
+		assertThat(d.indisponivel(2)).isTrue();
+		assertThat(d.suspenso(2)).isFalse();
+		assertThat(d.lesoesDoClube(20)).isEqualTo(1);
+		assertThat(d.lesoesDoClube(10)).isZero();
+
+		Disciplina umJogo = d.aposPartida(PLANTEIS, partida(), PADRAO, new SplittableRandom(1), clubes);
+		assertThat(umJogo.lesaoDe(2)).isEqualTo(1);
+		Disciplina recuperado = umJogo.aposPartida(PLANTEIS, partida(), PADRAO, new SplittableRandom(1), clubes);
+		assertThat(recuperado.indisponivel(2)).isFalse();
+		assertThat(recuperado.lesoesDoClube(20)).isEqualTo(1);
+	}
+
+	@Test
+	void novaTemporadaZeraAsLesoesDosClubesEMantemOsLesionados() {
+		Disciplina d = new Disciplina(Map.of(), Map.of(), Map.of(2L, 3), Map.of(20L, 2));
+
+		Disciplina nova = d.novaTemporada();
+
+		assertThat(nova.lesaoDe(2)).isEqualTo(3);
+		assertThat(nova.lesoesDoClube(20)).isZero();
 	}
 
 	@Test

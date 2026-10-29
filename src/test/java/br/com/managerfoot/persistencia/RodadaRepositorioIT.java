@@ -25,6 +25,8 @@ import br.com.managerfoot.dominio.Jogador;
 import br.com.managerfoot.economia.AmpliacaoEstadio;
 import br.com.managerfoot.economia.ParametrosPublico;
 import br.com.managerfoot.economia.PublicoDoJogo;
+import br.com.managerfoot.motor.EventoPartida;
+import br.com.managerfoot.motor.TipoEvento;
 import br.com.managerfoot.temporada.Classificacao;
 import br.com.managerfoot.temporada.Disciplina;
 import br.com.managerfoot.temporada.LinhaClassificacao;
@@ -85,17 +87,32 @@ class RodadaRepositorioIT {
 	}
 
 	@Test
-	void rodadaMudaAForcaEmNoMaximoUmPontoPorJogadorPelaEvolucao() {
+	void rodadaMudaAForcaEmNoMaximoUmPontoPorJogadorPelaEvolucaoAlemDaLesao() {
 		Map<Long, List<Jogador>> antes = jogos.carregarPlanteis(jogo);
 		RodadaRepositorio.RodadaJogada jogada = rodadas.avancar(jogo, 1);
 
 		Map<Long, List<Jogador>> depois = jogos.carregarPlanteis(jogo);
+		Map<Long, EventoPartida> lesoes = new HashMap<>();
+		jogada.resultado().partidas().forEach(p -> p.resultado().eventos().stream()
+			.filter(e -> e.tipo() == TipoEvento.LESAO)
+			.forEach(e -> lesoes.put(e.jogador().id(), e)));
 		int mudaram = 0;
 		for (var e : antes.entrySet()) {
 			Map<Long, Integer> forcaDepois = new HashMap<>();
 			depois.get(e.getKey()).forEach(j -> forcaDepois.put(j.id(), j.forca()));
 			for (Jogador j : e.getValue()) {
 				int diferenca = forcaDepois.get(j.id()) - j.forca();
+				EventoPartida lesao = lesoes.get(j.id());
+				if (lesao != null) {
+					// a perda da lesão vem depois da evolução, sem passar da força mínima (SPEC §7.5)
+					int esperada = j.forca() - lesao.lesao().perdaForca();
+					assertThat(forcaDepois.get(j.id())).isBetween(Math.max(Jogador.FORCA_MINIMA, esperada - 1),
+							Math.max(Jogador.FORCA_MINIMA, esperada + 1));
+					assertThat(jdbc.sql("SELECT lesao FROM jogo_jogador WHERE id = ?").param(j.id()).query(Integer.class)
+						.single()).isEqualTo(lesao.lesao().jogos());
+					mudaram++;
+					continue;
+				}
 				assertThat(diferenca).isBetween(-1, 1);
 				mudaram += diferenca != 0 ? 1 : 0;
 			}

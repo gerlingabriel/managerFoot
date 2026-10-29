@@ -102,6 +102,32 @@ class ProcessamentoRodadaTest {
 	}
 
 	@Test
+	void lesionadoNaoJogaECumpreUmJogoFora() {
+		Jogo jogo = TEMPORADA.divisoes().getFirst().calendario().rodadas().getFirst().jogos().getFirst();
+		Jogador lesionado = PLANTEIS.get(jogo.mandante().id()).getLast();
+		Disciplina comLesao = new Disciplina(Map.of(), Map.of(), Map.of(lesionado.id(), 2), Map.of());
+
+		ProcessamentoRodada.Resultado r = processamento.jogar(TEMPORADA, 1, PLANTEIS, comLesao, Map.of());
+
+		assertThat(r.partidas().stream().flatMap(p -> p.resultado().eventos().stream()))
+			.noneMatch(e -> e.jogador().id() == lesionado.id());
+		assertThat(r.disciplina().lesaoDe(lesionado.id())).isEqualTo(1);
+	}
+
+	@Test
+	void clubeQueJaTeveDuasLesoesNaTemporadaNaoSeLesionaMais() {
+		Map<Long, Integer> todosNoLimite = new HashMap<>();
+		PLANTEIS.keySet().forEach(clube -> todosNoLimite.put(clube, 2));
+		Disciplina noLimite = new Disciplina(Map.of(), Map.of(), Map.of(), todosNoLimite);
+		Temporada temporada = TEMPORADA;
+		for (int rodada = 1; rodada <= 10; rodada++) {
+			ProcessamentoRodada.Resultado r = processamento.jogar(temporada, rodada, PLANTEIS, noLimite, Map.of());
+			assertThat(r.partidas().stream().flatMap(p -> p.resultado().eventos().stream()))
+				.noneMatch(e -> e.tipo() == TipoEvento.LESAO);
+		}
+	}
+
+	@Test
 	void rodadaInexistenteERecusada() {
 		assertThatIllegalArgumentException()
 			.isThrownBy(() -> processamento.jogar(TEMPORADA, 99, PLANTEIS, Disciplina.vazia(), Map.of()));

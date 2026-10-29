@@ -40,7 +40,7 @@ public class RodadaRepositorio {
 
 	/** Eventos gravados; os demais (finalizações sem gol, substituições) ficam só na partida. */
 	private static final Set<TipoEvento> EVENTOS_GRAVADOS = Set.of(TipoEvento.GOL, TipoEvento.CARTAO_AMARELO,
-			TipoEvento.SEGUNDO_AMARELO, TipoEvento.CARTAO_VERMELHO);
+			TipoEvento.SEGUNDO_AMARELO, TipoEvento.CARTAO_VERMELHO, TipoEvento.LESAO);
 
 	private final JdbcClient jdbc;
 	private final JogoRepositorio jogos;
@@ -201,7 +201,7 @@ public class RodadaRepositorio {
 		escalacoes.carregarDoJogo(jogoId).forEach((clubeId, escalacao) -> {
 			try {
 				doTreinador.put(clubeId, escalacao.escalacao(planteis.getOrDefault(clubeId, List.of()), antes::suspenso,
-						ParametrosMotor.padrao().penalti().fatorGoleiroImprovisado()));
+						antes::lesionado, ParametrosMotor.padrao().penalti().fatorGoleiroImprovisado()));
 			}
 			catch (IllegalStateException e) {
 				throw new IllegalStateException("o clube " + clubeId + " não pode jogar a rodada " + rodada + ": "
@@ -275,30 +275,45 @@ public class RodadaRepositorio {
 
 	private void gravarDisciplina(Map<Long, List<Jogador>> planteis, Disciplina antes, Disciplina depois) {
 		planteis.values().stream().flatMap(List::stream).mapToLong(Jogador::id).forEach(id -> {
-			if (antes.amarelosDe(id) != depois.amarelosDe(id) || antes.suspensaoDe(id) != depois.suspensaoDe(id)) {
-				jdbc.sql("UPDATE jogo_jogador SET amarelos = :amarelos, suspensao = :suspensao WHERE id = :jogador")
+			if (antes.amarelosDe(id) != depois.amarelosDe(id) || antes.suspensaoDe(id) != depois.suspensaoDe(id)
+					|| antes.lesaoDe(id) != depois.lesaoDe(id)) {
+				jdbc.sql("UPDATE jogo_jogador SET amarelos = :amarelos, suspensao = :suspensao, lesao = :lesao WHERE id = :jogador")
 					.param("amarelos", depois.amarelosDe(id))
 					.param("suspensao", depois.suspensaoDe(id))
+					.param("lesao", depois.lesaoDe(id))
 					.param("jogador", id)
 					.update();
 			}
 		});
 	}
 
+	/** Amarelos, suspensões e lesões dos jogadores; as lesões dos clubes contam os eventos da temporada atual. */
 	private Disciplina carregarDisciplina(long jogoId) {
 		Map<Long, Integer> amarelos = new HashMap<>();
 		Map<Long, Integer> suspensoes = new HashMap<>();
+		Map<Long, Integer> lesoes = new HashMap<>();
 		jdbc.sql("""
-				SELECT j.id, j.amarelos, j.suspensao FROM jogo_jogador j JOIN jogo_clube c ON c.id = j.clube_id
-				WHERE c.jogo_id = :jogo AND (j.amarelos > 0 OR j.suspensao > 0)""")
+				SELECT j.id, j.amarelos, j.suspensao, j.lesao FROM jogo_jogador j JOIN jogo_clube c ON c.id = j.clube_id
+				WHERE c.jogo_id = :jogo AND (j.amarelos > 0 OR j.suspensao > 0 OR j.lesao > 0)""")
 			.param("jogo", jogoId)
-			.query((rs, n) -> new LinhaDisciplina(rs.getLong("id"), rs.getInt("amarelos"), rs.getInt("suspensao")))
+			.query((rs, n) -> new LinhaDisciplina(rs.getLong("id"), rs.getInt("amarelos"), rs.getInt("suspensao"),
+					rs.getInt("lesao")))
 			.list()
 			.forEach(l -> {
 				amarelos.put(l.jogadorId(), l.amarelos());
 				suspensoes.put(l.jogadorId(), l.suspensao());
+				lesoes.put(l.jogadorId(), l.lesao());
 			});
-		return new Disciplina(amarelos, suspensoes);
+		Map<Long, Integer> lesoesDosClubes = new HashMap<>();
+		jdbc.sql("""
+				SELECT e.clube_id, count(*) AS lesoes FROM jogo_evento e JOIN jogo_partida p ON p.id = e.partida_id
+				WHERE p.temporada_id = :temporada AND e.tipo = 'LESAO'
+				GROUP BY e.clube_id""")
+			.param("temporada", temporadaAtual(jogoId, false).id())
+			.query((rs, n) -> Map.entry(rs.getLong("clube_id"), rs.getInt("lesoes")))
+			.list()
+			.forEach(l -> lesoesDosClubes.put(l.getKey(), l.getValue()));
+		return new Disciplina(amarelos, suspensoes, lesoes, lesoesDosClubes);
 	}
 
 	/** Só os clubes que já jogaram; os demais têm a moral inicial. */
@@ -329,6 +344,6 @@ public class RodadaRepositorio {
 	private record LinhaTemporada(long id, int rodadasProcessadas) {
 	}
 
-	private record LinhaDisciplina(long jogadorId, int amarelos, int suspensao) {
+	private record LinhaDisciplina(long jogadorId, int amarelos, int suspensao, int lesao) {
 	}
 }

@@ -29,15 +29,17 @@ import br.com.managerfoot.dominio.Formacao;
  * @param penalti pênaltis e goleiro improvisado
  * @param sorte efeito da sorte e do azar da temporada
  * @param asterisco efeitos do asterisco
+ * @param lesao lesões (SPEC §7.5)
  */
 public record ParametrosMotor(int minutos, double chancePorMinuto, double fatorMando, double conversaoBase,
 		double sensibilidadeForca, double expoenteMeias, double expoenteAtacantes, double expoenteDefensores,
 		double fatorPorGolMarcado, double conversaoMinima, double conversaoMaxima,
 		double proporcaoDefesa, double proporcaoTrave, Map<Formacao, PesosFinalizador> pesosFinalizador,
 		ParametrosDisciplina disciplina, ParametrosPenalti penalti, ParametrosSorte sorte,
-		ParametrosAsterisco asterisco) {
+		ParametrosAsterisco asterisco, ParametrosLesao lesao) {
 
 	public ParametrosMotor {
+		Objects.requireNonNull(lesao, "parâmetros de lesão são obrigatórios");
 		Objects.requireNonNull(disciplina, "parâmetros de disciplina são obrigatórios");
 		Objects.requireNonNull(penalti, "parâmetros de pênalti são obrigatórios");
 		Objects.requireNonNull(sorte, "parâmetros de sorte são obrigatórios");
@@ -84,7 +86,7 @@ public record ParametrosMotor(int minutos, double chancePorMinuto, double fatorM
 		// calibrado na Etapa 1d: docs/simulacoes/calibracao-motor.md
 		return new ParametrosMotor(90, 0.15, 1.45, 0.23, 0.95, 0.5, 0.55, 1.25, 0.85, 0.10, 0.35, 0.5, 0.1, pesos,
 				ParametrosDisciplina.padrao(), ParametrosPenalti.padrao(), ParametrosSorte.padrao(),
-				ParametrosAsterisco.padrao());
+				ParametrosAsterisco.padrao(), ParametrosLesao.padrao());
 	}
 
 	/** Cópia com outro efeito de sorte (calibração e testes). */
@@ -92,7 +94,7 @@ public record ParametrosMotor(int minutos, double chancePorMinuto, double fatorM
 		return new ParametrosMotor(minutos, chancePorMinuto, fatorMando, conversaoBase, sensibilidadeForca,
 				expoenteMeias, expoenteAtacantes, expoenteDefensores, fatorPorGolMarcado, conversaoMinima,
 				conversaoMaxima, proporcaoDefesa, proporcaoTrave, pesosFinalizador, disciplina, penalti, novaSorte,
-				asterisco);
+				asterisco, lesao);
 	}
 
 	/** Cópia com outros efeitos do asterisco (calibração e testes). */
@@ -100,7 +102,15 @@ public record ParametrosMotor(int minutos, double chancePorMinuto, double fatorM
 		return new ParametrosMotor(minutos, chancePorMinuto, fatorMando, conversaoBase, sensibilidadeForca,
 				expoenteMeias, expoenteAtacantes, expoenteDefensores, fatorPorGolMarcado, conversaoMinima,
 				conversaoMaxima, proporcaoDefesa, proporcaoTrave, pesosFinalizador, disciplina, penalti, sorte,
-				novoAsterisco);
+				novoAsterisco, lesao);
+	}
+
+	/** Cópia com outras lesões (simulação e testes). */
+	public ParametrosMotor comLesao(ParametrosLesao novaLesao) {
+		return new ParametrosMotor(minutos, chancePorMinuto, fatorMando, conversaoBase, sensibilidadeForca,
+				expoenteMeias, expoenteAtacantes, expoenteDefensores, fatorPorGolMarcado, conversaoMinima,
+				conversaoMaxima, proporcaoDefesa, proporcaoTrave, pesosFinalizador, disciplina, penalti, sorte,
+				asterisco, novaLesao);
 	}
 
 	private static void exigirProbabilidade(String nome, double valor) {

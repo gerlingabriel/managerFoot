@@ -37,7 +37,7 @@
 <span class="lance-meio">
 <span class="lance-minuto" th:text="|${l.minuto}'|">0'</span>
 <span class="lance" th:classappend="${@lances.icone(l)}" role="img"
-	th:attr="aria-label=|${tipo == 'GOL' ? 'Gol' : (tipo == 'CARTAO_AMARELO' ? 'Cartão amarelo' : 'Expulsão')} de ${l.jogador.nome}|"></span>
+	th:attr="aria-label=|${tipo == 'GOL' ? 'Gol' : (tipo == 'CARTAO_AMARELO' ? 'Cartão amarelo' : (tipo == 'LESAO' ? 'Lesão' : 'Expulsão'))} de ${l.jogador.nome}|"></span>
 </span>
 <span class="lance-fora" th:text="${casa} ? '' : |${l.jogador.nome}${l.penalti ? ' (pên.)' : ''}|">Nome</span>
 </div>
@@ -51,6 +51,8 @@
 <h3 id="t-subs" class="titulo-coluna" th:text="|${meu.clube.nome} · ${meu.formacao.rotulo()}|">Clube · 4-4-2</h3>
 <span class="suave"><span th:text="|substituições: ${meu.substituicoesFeitas} de ${meu.substituicoesMaximas}|">substituições</span><span th:each="t : ${meu.substituicoes}" th:text="| · ${@lances.substituicao(t)}|"></span></span>
 </div>
+<p th:if="${meu.lesionado != null}" role="alert" class="alerta janela-erro"
+	th:text="|${meu.lesionado.nome} se lesionou. Escolha quem entra no lugar dele; se continuar sem trocar, a troca é automática.|">Fulano se lesionou.</p>
 <form th:action="@{/jogos/{id}/rodada/substituir(id=${e.jogoId})}" method="post" class="janela-troca"
 	th:attr="hx-get=@{/jogos/{id}/rodada(id=${e.jogoId})}" hx-trigger="change" hx-params="janela,sai,entra"
 	hx-select="#quadro" hx-target="#quadro" hx-swap="outerHTML">
@@ -59,10 +61,11 @@
 <fieldset class="lista-troca em-campo">
 <legend class="oculto">Em campo: escolha quem sai</legend>
 <label th:each="j : ${meu.emCampo}" class="troca-linha sai">
-<input type="radio" name="sai" th:value="${j.id}" th:checked="${sai == j.id}" class="oculto">
+<input type="radio" name="sai" th:value="${j.id}" th:checked="${sai == j.id or (sai == null and meu.lesionado != null and meu.lesionado.id == j.id)}" class="oculto">
 <span class="troca-pos" th:text="${j.posicao.name().substring(0, 1)}">G</span>
 <span class="troca-nome"><span th:text="${j.nome}">Nome</span><span th:if="${j.asterisco}" class="asterisco">★</span></span>
 <span th:if="${meu.amarelados.contains(j.id)}" class="lance amarelo" role="img" aria-label="Cartão amarelo"></span>
+<span th:if="${meu.lesionado != null and meu.lesionado.id == j.id}" class="lance lesao" role="img" aria-label="Lesionado"></span>
 <span class="troca-forca" th:text="${j.forca}">0</span>
 </label>
 </fieldset>

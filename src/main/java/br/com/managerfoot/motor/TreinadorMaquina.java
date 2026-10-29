@@ -8,8 +8,8 @@ import br.com.managerfoot.dominio.Jogador;
 import br.com.managerfoot.dominio.Posicao;
 
 /**
- * Decisões do treinador controlado pela máquina durante a partida. Por ora só reage ao goleiro
- * expulso (SPEC §7.4.1); substituição por lesão entra junto com as lesões.
+ * Decisões do treinador controlado pela máquina durante a partida: reage ao goleiro expulso
+ * (SPEC §7.4.1) e substitui o lesionado (SPEC §7.5).
  */
 final class TreinadorMaquina {
 
@@ -37,6 +37,32 @@ final class TreinadorMaquina {
 		return maisFraco(time.jogadoresNa(Posicao.ATACANTE))
 			.or(() -> maisFraco(time.jogadoresNa(Posicao.MEIO_CAMPISTA)))
 			.map(sai -> new Troca(sai, goleiroReserva.get()));
+	}
+
+	/**
+	 * Substituto do lesionado (provisório): goleiro pelo goleiro reserva mais forte; jogador de linha
+	 * pelo reserva mais forte da mesma posição ou, sem ele, pelo reserva de linha mais forte que
+	 * mantenha uma formação permitida. Vazio sem substituições ou sem reserva que sirva: o time fica
+	 * com um a menos.
+	 */
+	static Optional<Troca> aposLesao(TimeEmCampo time, Jogador lesionado) {
+		if (time.substituicoesRestantes() <= 0) {
+			return Optional.empty();
+		}
+		Comparator<Jogador> maisForte = Comparator.comparingInt(Jogador::forca).reversed()
+			.thenComparingLong(Jogador::id);
+		List<Jogador> banco = time.reservasDisponiveis().stream().sorted(maisForte).toList();
+		if (lesionado == time.goleiro()) {
+			return banco.stream()
+				.filter(j -> j.posicao() == Posicao.GOLEIRO)
+				.findFirst()
+				.map(entra -> new Troca(lesionado, entra));
+		}
+		return banco.stream()
+			.filter(j -> j.posicao() == lesionado.posicao())
+			.findFirst()
+			.or(() -> banco.stream().filter(j -> time.trocaDeLinhaPermitida(lesionado, j)).findFirst())
+			.map(entra -> new Troca(lesionado, entra));
 	}
 
 	private static Optional<Jogador> maisFraco(List<Jogador> jogadores) {

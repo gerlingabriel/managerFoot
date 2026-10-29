@@ -58,19 +58,19 @@ public class EscalacaoRepositorio {
 	}
 
 	/**
-	 * Tira das escalações do jogo os jogadores suspensos, que passam para fora do banco (SPEC §10.3,
-	 * rev. 34). O treinador completa o time antes da próxima rodada.
+	 * Tira das escalações do jogo os jogadores suspensos e os lesionados (SPEC §7.5), que passam para
+	 * fora do banco (SPEC §10.3, rev. 34). O treinador completa o time antes da próxima rodada.
 	 */
 	@Transactional(propagation = Propagation.MANDATORY)
 	public void retirarSuspensos(long jogoId) {
 		jdbc.sql("""
 				DELETE FROM jogo_escalacao_jogador ej USING jogo_jogador j, jogo_clube c
-				WHERE j.id = ej.jogador_id AND c.id = j.clube_id AND c.jogo_id = :jogo AND j.suspensao > 0""")
+				WHERE j.id = ej.jogador_id AND c.id = j.clube_id AND c.jogo_id = :jogo AND (j.suspensao > 0 OR j.lesao > 0)""")
 			.param("jogo", jogoId)
 			.update();
 		jdbc.sql("""
 				UPDATE jogo_escalacao e SET batedor_id = NULL FROM jogo_jogador j, jogo_clube c
-				WHERE j.id = e.batedor_id AND c.id = j.clube_id AND c.jogo_id = :jogo AND j.suspensao > 0""")
+				WHERE j.id = e.batedor_id AND c.id = j.clube_id AND c.jogo_id = :jogo AND (j.suspensao > 0 OR j.lesao > 0)""")
 			.param("jogo", jogoId)
 			.update();
 	}

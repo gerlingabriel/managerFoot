@@ -180,7 +180,7 @@ public class FimDeTemporadaRepositorio {
 				.param("jogo", jogoId)
 				.param("usuario", treinador.getKey())
 				.update();
-			Set<Long> suspensos = new HashSet<>(jdbc.sql("SELECT id FROM jogo_jogador WHERE clube_id = :c AND suspensao > 0")
+			Set<Long> suspensos = new HashSet<>(jdbc.sql("SELECT id FROM jogo_jogador WHERE clube_id = :c AND (suspensao > 0 OR lesao > 0)")
 				.param("c", novo.id()).query(Long.class).list());
 			List<Jogador> disponiveis = jogos.carregarPlanteis(jogoId).get(novo.id()).stream()
 				.filter(j -> !suspensos.contains(j.id())).toList();

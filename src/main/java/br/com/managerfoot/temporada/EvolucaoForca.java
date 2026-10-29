@@ -67,7 +67,8 @@ public final class EvolucaoForca {
 
 	/**
 	 * O plantel do clube que jogou no {@code lado} da partida: jogaram os titulares e quem entrou; o
-	 * banco são as reservas que não entraram.
+	 * banco são as reservas que não entraram. Depois da evolução, o lesionado perde a força sorteada
+	 * na lesão (SPEC §7.5), sem passar da força mínima.
 	 */
 	public List<Jogador> aposPartida(List<Jogador> plantel, Escalacao escalacao, ResultadoPartida resultado, Lado lado,
 			int teto, int forcaDoClube, RandomGenerator aleatorio) {
@@ -83,7 +84,18 @@ public final class EvolucaoForca {
 		banco.removeAll(jogaram);
 		int golsPro = lado == Lado.CASA ? resultado.golsCasa() : resultado.golsFora();
 		int golsContra = lado == Lado.CASA ? resultado.golsFora() : resultado.golsCasa();
-		return aposPartida(plantel, jogaram, banco, Desfecho.de(golsPro, golsContra), teto, forcaDoClube, aleatorio);
+		Map<Long, Integer> perdas = new HashMap<>();
+		for (EventoPartida e : resultado.eventos()) {
+			if (e.tipo() == TipoEvento.LESAO && e.lado() == lado) {
+				perdas.merge(e.jogador().id(), e.lesao().perdaForca(), Integer::sum);
+			}
+		}
+		return aposPartida(plantel, jogaram, banco, Desfecho.de(golsPro, golsContra), teto, forcaDoClube, aleatorio)
+			.stream()
+			.map(j -> perdas.containsKey(j.id())
+					? j.comForca(Math.max(Jogador.FORCA_MINIMA, j.forca() - perdas.get(j.id())))
+					: j)
+			.toList();
 	}
 
 	/** Sorteia quantos: a parte inteira certa e mais um com a chance da parte fracionária. */

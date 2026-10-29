@@ -2,9 +2,12 @@ package br.com.managerfoot.motor;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.random.RandomGenerator;
 
@@ -22,7 +25,10 @@ import br.com.managerfoot.dominio.Temperamento;
  * <li>pode haver um pênalti ou uma finalização. Meio contra meio decide qual time tem a jogada (o
  * mandante recebe {@code fatorMando}); o finalizador sai de um setor conforme a formação e, dentro
  * dele, com peso pela força; ataque contra defesa e finalizador contra goleiro decidem o gol;</li>
- * <li>cada time pode receber um cartão, com o infrator sorteado pela roleta de temperamento.</li>
+ * <li>cada time pode receber um cartão, com o infrator sorteado pela roleta de temperamento;</li>
+ * <li>cada time pode ter um lesionado (SPEC §7.5), também sorteado pelo temperamento, até o limite da
+ * temporada. Na máquina a troca é na hora; no usuário o lesionado espera a troca dele até o início
+ * do minuto seguinte e, sem ela, a máquina decide.</li>
  * </ol>
  * A sorte da temporada (SPEC §5.3.1) dá ao beneficiado uma chance extra de finalização por minuto
  * e tira domínio do prejudicado. O asterisco (SPEC §5.3) aumenta a chance de ser o finalizador e de
@@ -44,6 +50,8 @@ public final class Partida {
 	private final Set<Lado> ladosDaMaquina;
 	private final CondicoesPartida condicoes;
 	private final List<EventoPartida> eventos = new ArrayList<>();
+	private final Map<Lado, Integer> lesoes = new EnumMap<>(Lado.class);
+	private final Map<Lado, Jogador> lesionadoAguardando = new EnumMap<>(Lado.class);
 	private int minuto;
 	private int golsCasa;
 	private int golsFora;
@@ -91,6 +99,7 @@ public final class Partida {
 	/** Sem checar o fim: a máquina pode reagir a uma expulsão ocorrida no último minuto. */
 	private EventoPartida registrarSubstituicao(Lado lado, Jogador sai, Jogador entra) {
 		time(lado).substituir(sai, entra);
+		lesionadoAguardando.remove(lado, sai);
 		EventoPartida evento = EventoPartida.substituicao(minuto, lado, entra, sai);
 		eventos.add(evento);
 		return evento;
@@ -117,13 +126,25 @@ public final class Partida {
 		return time(lado).formacao();
 	}
 
+	/** Lesionado do time do usuário ainda em campo, esperando a troca (SPEC §7.5). */
+	public Optional<Jogador> lesionadoAguardandoTroca(Lado lado) {
+		return Optional.ofNullable(lesionadoAguardando.get(lado));
+	}
+
 	/** Avança um minuto e devolve os eventos ocorridos nele. */
 	public List<EventoPartida> avancarMinuto() {
 		if (terminada()) {
 			throw new IllegalStateException("a partida já terminou no minuto " + minuto);
 		}
-		minuto++;
 		int antes = eventos.size();
+		// o usuário não trocou o lesionado: a máquina decide, ainda no minuto da lesão
+		for (Lado lado : Lado.values()) {
+			Jogador lesionado = lesionadoAguardando.remove(lado);
+			if (lesionado != null) {
+				tirarLesionado(lado, lesionado);
+			}
+		}
+		minuto++;
 		if (aleatorio.nextDouble() < parametros.penalti().penaltisPorMinuto()) {
 			cobrarPenalti(sortearQuemDomina());
 		} else if (aleatorio.nextDouble() < parametros.chancePorMinuto()) {
@@ -137,6 +158,8 @@ public final class Partida {
 		}
 		verificarCartao(Lado.CASA);
 		verificarCartao(Lado.FORA);
+		verificarLesao(Lado.CASA);
+		verificarLesao(Lado.FORA);
 		return List.copyOf(eventos.subList(antes, eventos.size()));
 	}
 
@@ -246,6 +269,32 @@ public final class Partida {
 		if (tipo.expulsao() && eraGoleiro && ladosDaMaquina.contains(lado)) {
 			TreinadorMaquina.aposGoleiroExpulso(time).ifPresent(t -> registrarSubstituicao(lado, t.sai(), t.entra()));
 		}
+	}
+
+	private void verificarLesao(Lado lado) {
+		ParametrosLesao parametrosLesao = parametros.lesao();
+		TimeEmCampo time = time(lado);
+		List<Jogador> emCampo = time.emCampo();
+		if (lesoes.getOrDefault(lado, 0) >= condicoes.lesoesPermitidas(lado, parametrosLesao.limitePorTemporada())
+				|| emCampo.size() < MINIMO_EM_CAMPO_PARA_CARTAO
+				|| aleatorio.nextDouble() >= parametrosLesao.lesoesPorMinuto()) {
+			return;
+		}
+		Jogador lesionado = Sorteio.ponderado(emCampo, j -> parametrosLesao.peso(j.temperamento()), aleatorio);
+		lesoes.merge(lado, 1, Integer::sum);
+		eventos.add(EventoPartida.lesao(minuto, lado, lesionado, parametrosLesao.sortear(aleatorio)));
+		if (ladosDaMaquina.contains(lado)) {
+			tirarLesionado(lado, lesionado);
+		} else {
+			lesionadoAguardando.put(lado, lesionado);
+		}
+	}
+
+	/** Troca automática do lesionado; sem troca possível, ele sai e o time fica com um a menos. */
+	private void tirarLesionado(Lado lado, Jogador lesionado) {
+		TimeEmCampo time = time(lado);
+		TreinadorMaquina.aposLesao(time, lesionado)
+			.ifPresentOrElse(t -> registrarSubstituicao(lado, t.sai(), t.entra()), () -> time.expulsar(lesionado));
 	}
 
 	private Jogador sortearFinalizador(TimeEmCampo time) {

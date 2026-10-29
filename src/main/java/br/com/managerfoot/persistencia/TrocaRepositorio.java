@@ -299,7 +299,7 @@ public class TrocaRepositorio {
 			if (!deUsuario) {
 				continue;
 			}
-			Set<Long> suspensos = new HashSet<>(jdbc.sql("SELECT id FROM jogo_jogador WHERE clube_id = :c AND suspensao > 0")
+			Set<Long> suspensos = new HashSet<>(jdbc.sql("SELECT id FROM jogo_jogador WHERE clube_id = :c AND (suspensao > 0 OR lesao > 0)")
 				.param("c", clube).query(Long.class).list());
 			List<Jogador> disponiveis = planteis.getOrDefault(clube, List.of()).stream()
 				.filter(j -> !suspensos.contains(j.id())).toList();

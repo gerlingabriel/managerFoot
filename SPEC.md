@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 68 — 2026-10-29)
+-   **Status:** versão inicial para revisão (rev. 69 — 2026-10-29)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 69 (2026-10-29):** pelo usuário: lesões no máximo 2 por clube por temporada, gravidade leve/média/grave com jogos fora e perda de força (§7.5), temperamento calmo > educado > normal > ansioso > violento, substituição do usuário na hora e automática na máquina; copa com 32 clubes (2 divisões) ou 16 (1 divisão), quadro fixo de rodadas da liga, final depois da liga em campo neutro com bilheteria 50/50 e prêmio do campeão e do vice (§8.2).
 -   **rev. 68 (2026-10-29):** pelo usuário: plantel mínimo de 14 nas vendas mantido (evitar o time incompleto), mas com menos de 11 a partida começa como se fosse com expulsos; sem goleiro disponível, o usuário joga com um jogador de linha no gol, como a máquina (§9.3).
 -   **rev. 67 (2026-10-29):** time com um a menos da §9.3 implementado: com menos de 11 disponíveis o clube joga com as vagas vazias, como se começasse com expulsos. Agente: mínimo de 7 para começar (regra do futebol) e o usuário só joga incompleto se ninguém disponível cabe nas vagas abertas (Provisório).
 -   **rev. 66 (2026-10-29):** pelo usuário: salário com a faixa da força em campo do clube, +20% e +10% em cima e deflação embaixo se preciso; preço sem faixa (só força e asterisco); máquina com caixa completa o plantel até 23 comprando até jogador fraco. Agente escolheu −30%/−15% embaixo pela simulação. Ligado no jogo (§9.3, §9.5); prêmio volta a R$ 3,968 mi e +5.000 lugares a R$ 1,587 mi.
@@ -1217,9 +1218,53 @@ temporada, mas deve haver limite de cinco lesões por clube por
 temporada, se essa regra for mantida. - O aumento sazonal de risco deve
 ser reiniciado ao fim da temporada.
 
-**Em aberto:** definir o que conta como lesão por temporada (evento ou
-jogador lesionado), gravidade, duração, recuperação e se o limite de
-cinco é absoluto.
+**Definido (rev. 69), pelo usuário** (substitui o limite de cinco e o
+aumento sazonal de risco acima):
+- **No máximo 2 lesões por clube por temporada** (limite absoluto; cada
+  lesão conta, mesmo que seja do mesmo jogador). Zera na virada da temporada.
+- **Gravidade:** jogos fora e perda de força permanente, sorteados dentro da
+  faixa:
+
+  | Gravidade | Jogos fora | Perda de força |
+  |---|---|---|
+  | Leve | 1 a 3 | 1 a 3 |
+  | Média | 3 a 6 | 3 a 6 |
+  | Grave | 5 a 9 | 5 a 9 |
+
+- **Quem se lesiona:** sorteio entre os que estão em campo, com peso pelo
+  temperamento: **calmo** maior, **educado** um pouco menor, **normal**
+  menor, depois **ansioso** e **violento** (o menor).
+- **Na partida:** o lesionado sai na hora. No clube do usuário a partida
+  pausa e abre a janela de substituição; na máquina a troca é automática.
+  Sem substituição possível, o time fica com um a menos (como na expulsão).
+- Lesionado não pode ser escalado enquanto tiver jogos fora a cumprir
+  (como o suspenso); os jogos contam nas partidas do clube.
+
+**Provisório (agente):** taxa de 1,5 lesão por clube numa temporada de 38
+rodadas, antes do limite; proporção leve 60%, média 30%, grave 10%; pesos
+de temperamento 5/4/3/2/1; a perda de força vem depois da evolução da
+partida (§6.1), não deixa o jogador abaixo da força mínima e não volta;
+lesionado em campo no último minuto não pausa (não há mais troca).
+Substituto automático: goleiro pelo goleiro reserva; jogador de linha pelo
+reserva mais forte da mesma posição ou, sem ele, pelo de linha mais forte
+que mantenha uma formação permitida.
+
+**Implementado (rev. 69).** Simulação (`docs/simulacoes/lesoes.md`, uma
+temporada de cada país do banco padrão, 10 sementes):
+
+| Taxa | Lesões por clube | Clubes com 0 / 1 / 2 | Jogos fora por lesão | Força perdida por clube |
+|---|---|---|---|---|
+| 1,0 | 0,82 | 43% / 32% / 25% | 3,3 | 2,7 |
+| **1,5 (escolhida)** | **1,12** | **30% / 28% / 42%** | **3,3** | **3,6** |
+| 2,0 | 1,35 | 21% / 22% / 57% | 3,3 | 4,4 |
+| 3,0 | 1,60 | 13% / 15% / 73% | 3,2 | 5,1 |
+
+Calmos são 20% dos planteis e 30% das lesões; violentos, 7% e 2%. Nenhum
+time ficou incompleto por lesão. Na rodada ao vivo, a lesão no clube do
+usuário para o relógio no minuto dela e abre a janela do jogo com o
+lesionado marcado para sair; "Continuar" sem trocar deixa a troca para a
+máquina. O lesionado aparece no plantel ("lesionado · N jogos") e não pode
+ser escalado.
 
 ### 7.6 Metas de calibração do motor
 
@@ -1421,6 +1466,36 @@ continentais e Mundial):**
 - A proporção da bilheteria compartilhada (hipótese: 50/50).
 - Para excluir equipes, se "mais fraca" significa menor força cadastrada,
   menor força atual ou pior classificação.
+
+**Definido (rev. 69), pelo usuário — copa nacional:**
+- **Tamanho pelo número de divisões:** liga com 2 divisões começa nos
+  **16 avos (32 clubes)**; com 1 divisão, nas **oitavas (16 clubes)**. Quem
+  passar do número fica de fora pela regra do "mais fraco" acima.
+- **Quadro fixo**, pelas rodadas da liga (vale para qualquer tamanho de
+  liga, já que toda divisão tem pelo menos 28 rodadas):
+
+  | Fase | Ida depois da rodada | Volta depois da rodada |
+  |---|---|---|
+  | 16 avos | 3 | 5 |
+  | Oitavas | 10 | 12 |
+  | Quartas | 18 | 20 |
+  | Semifinal | 26 | 28 |
+  | Final (jogo único) | depois da última rodada da liga | — |
+
+  Com 1 divisão a copa começa nas oitavas (depois da 10ª).
+- **Final:** campo neutro, bilheteria dividida **50/50**. O público é
+  médio-alto e também depende da posição dos dois clubes nos campeonatos.
+- **Prêmio:** o campeão recebe um prêmio e o vice outro.
+
+**Em aberto (copa):**
+- Gol fora de casa no ida e volta (hipótese: não existe; empate no
+  agregado vai à prorrogação e aos pênaltis).
+- Quem joga a ida em casa (hipótese: sorteio).
+- Valores do prêmio do campeão e do vice.
+- Se "mais fraco" é a força em campo atual, a força do clube ou a
+  classificação.
+- Liga de 1 divisão com menos de 16 clubes (hipótese: a maior potência de 2
+  que cabe, entrando na fase correspondente do quadro).
 
 Quando não houver participantes controlados por usuários em uma partida
 da copa, poderá ser usado um processamento rápido, sem simulação visual
@@ -2692,7 +2767,7 @@ começa depois que a anterior estiver testada.
   amarelo/vermelho e expulsão.
 - Simulador em lote (ferramenta de desenvolvimento) com relatório de
   placares, mando, táticas e cartões.
-- Lesões e asterisco só depois que as decisões em aberto forem tomadas.
+- Lesões e asterisco só depois que as decisões em aberto forem tomadas. **Lesões concluídas na rev. 69** (motor, banco com a migração V29, pausa na rodada ao vivo e plantel).
 
 ### Etapa 2 — Liga e turno (domínio puro)
 - Validação de clubes (§4.1).

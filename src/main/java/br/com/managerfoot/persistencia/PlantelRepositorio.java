@@ -76,13 +76,15 @@ public class PlantelRepositorio {
 			.query(String.class).single();
 
 		List<LinhaJogador> linhas = plantel.stream().map(j -> {
-			Situacao s = situacoes.getOrDefault(j.id(), new Situacao(0, 0, 0));
-			return new LinhaJogador(j, escalacao.lugarDe(j.id()), s.gols(), s.amarelos(), s.suspensao() > 0,
+			Situacao s = situacoes.getOrDefault(j.id(), Situacao.NENHUMA);
+			return new LinhaJogador(j, escalacao.lugarDe(j.id()), s.gols(), s.amarelos(), s.suspensao() > 0, s.lesao(),
 					j.nacionalidade().equals(paisDoClube) ? null : j.nacionalidade());
 		}).toList();
-		LongPredicate suspenso = id -> situacoes.containsKey(id) && situacoes.get(id).suspensao() > 0;
-		List<String> problemas = escalacao.problemas(plantel, suspenso);
-		String goleiroImprovisado = escalacao.goleiroImprovisado(plantel, suspenso).map(Jogador::nome).orElse(null);
+		LongPredicate suspenso = id -> situacoes.getOrDefault(id, Situacao.NENHUMA).suspensao() > 0;
+		LongPredicate lesionado = id -> situacoes.getOrDefault(id, Situacao.NENHUMA).lesao() > 0;
+		List<String> problemas = escalacao.problemas(plantel, suspenso, lesionado);
+		String goleiroImprovisado = escalacao.goleiroImprovisado(plantel, suspenso.or(lesionado)).map(Jogador::nome)
+			.orElse(null);
 
 		int processadas = rodadas.rodadasProcessadas(jogoId);
 		int total = rodadas.totalDeRodadas(jogoId);
@@ -148,8 +150,12 @@ public class PlantelRepositorio {
 		if (jogadorId != null) {
 			Jogador jogador = plantel.stream().filter(j -> j.id() == jogadorId).findFirst()
 				.orElseThrow(() -> new IllegalArgumentException("Este jogador não é do seu clube."));
-			if (lugar != Lugar.FORA && situacoes(clube).getOrDefault(jogadorId, new Situacao(0, 0, 0)).suspensao() > 0) {
+			Situacao situacao = situacoes(clube).getOrDefault(jogadorId, Situacao.NENHUMA);
+			if (lugar != Lugar.FORA && situacao.suspensao() > 0) {
 				throw new IllegalArgumentException(jogador.nome() + " está suspenso e não pode ser escalado.");
+			}
+			if (lugar != Lugar.FORA && situacao.lesao() > 0) {
+				throw new IllegalArgumentException(jogador.nome() + " está lesionado e não pode ser escalado.");
 			}
 		}
 		escalacoes.gravar(clube, mudanca.apply(escalacao(clube, plantel)));
@@ -164,18 +170,18 @@ public class PlantelRepositorio {
 	private EscalacaoDoTreinador escalacao(long clube, List<Jogador> plantel) {
 		return escalacoes.carregar(clube).orElseGet(() -> {
 			EscalacaoDoTreinador daMaquina = EscalacaoDoTreinador.de(new EscalacaoMaquina(ParametrosMotor.padrao())
-				.escalar(plantel.stream().filter(j -> situacoes(clube).getOrDefault(j.id(), new Situacao(0, 0, 0))
-					.suspensao() == 0).toList()));
+				.escalar(plantel.stream().filter(j -> situacoes(clube).getOrDefault(j.id(), Situacao.NENHUMA)
+					.disponivel()).toList()));
 			escalacoes.gravar(clube, daMaquina);
 			return daMaquina;
 		});
 	}
 
-	/** Gols na temporada atual, amarelos e suspensão de cada jogador do clube. */
+	/** Gols na temporada atual, amarelos, suspensão e lesão de cada jogador do clube. */
 	private Map<Long, Situacao> situacoes(long clube) {
 		Map<Long, Situacao> situacoes = new HashMap<>();
 		jdbc.sql("""
-				SELECT j.id, j.amarelos, j.suspensao,
+				SELECT j.id, j.amarelos, j.suspensao, j.lesao,
 				       (SELECT count(*) FROM jogo_evento e JOIN jogo_partida p ON p.id = e.partida_id
 				        WHERE e.jogador_id = j.id AND e.tipo = 'GOL'
 				          AND p.temporada_id = (SELECT max(t.id) FROM jogo_temporada t JOIN jogo_clube c ON c.jogo_id = t.jogo_id
@@ -183,7 +189,8 @@ public class PlantelRepositorio {
 				FROM jogo_jogador j WHERE j.clube_id = :clube""")
 			.param("clube", clube)
 			.query(rs -> {
-				situacoes.put(rs.getLong("id"), new Situacao(rs.getInt("gols"), rs.getInt("amarelos"), rs.getInt("suspensao")));
+				situacoes.put(rs.getLong("id"), new Situacao(rs.getInt("gols"), rs.getInt("amarelos"), rs.getInt("suspensao"),
+						rs.getInt("lesao")));
 			});
 		return situacoes;
 	}
@@ -192,7 +199,13 @@ public class PlantelRepositorio {
 		return jogo.mandante().id() == clube || jogo.visitante().id() == clube;
 	}
 
-	private record Situacao(int gols, int amarelos, int suspensao) {
+	private record Situacao(int gols, int amarelos, int suspensao, int lesao) {
+
+		static final Situacao NENHUMA = new Situacao(0, 0, 0, 0);
+
+		boolean disponivel() {
+			return suspensao == 0 && lesao == 0;
+		}
 	}
 
 	/**
@@ -200,7 +213,8 @@ public class PlantelRepositorio {
 	 *
 	 * @param estrangeiro sigla do país, se não é o país do clube
 	 */
-	public record LinhaJogador(Jogador jogador, Lugar lugar, int gols, int amarelos, boolean suspenso,
+	/** @param lesao jogos fora por lesão a cumprir (SPEC §7.5); zero se não está lesionado */
+	public record LinhaJogador(Jogador jogador, Lugar lugar, int gols, int amarelos, boolean suspenso, int lesao,
 			String estrangeiro) {
 	}
 

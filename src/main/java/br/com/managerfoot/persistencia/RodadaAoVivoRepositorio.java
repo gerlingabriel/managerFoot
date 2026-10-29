@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.OptionalDouble;
 import java.util.Set;
 
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -40,7 +41,7 @@ import br.com.managerfoot.temporada.Velocidade;
 public class RodadaAoVivoRepositorio {
 
 	private static final Set<TipoEvento> LANCES = Set.of(TipoEvento.GOL, TipoEvento.CARTAO_AMARELO,
-			TipoEvento.SEGUNDO_AMARELO, TipoEvento.CARTAO_VERMELHO);
+			TipoEvento.SEGUNDO_AMARELO, TipoEvento.CARTAO_VERMELHO, TipoEvento.LESAO);
 	private static final Set<TipoEvento> EXPULSOES = Set.of(TipoEvento.SEGUNDO_AMARELO, TipoEvento.CARTAO_VERMELHO);
 
 	private final JdbcClient jdbc;
@@ -149,13 +150,49 @@ public class RodadaAoVivoRepositorio {
 		RodadaAoVivo rodada = rodadas.preparar(jogoId, linha.get().rodada(), substituicoes);
 		Map<Integer, List<PartidaDaRodada>> porDivisao = porDivisao(rodada);
 		RelogioRodada relogio = relogio(porDivisao);
-		double progresso = progresso(linha.get(), relogio, velocidade, agora);
+		Linha atual = linha.get();
+		double progresso = progresso(atual, relogio, velocidade, agora);
+		if (atual.andandoDesde() != null) {
+			OptionalDouble lesao = lesaoDoUsuario(rodada, porDivisao, clube, atual.lesaoAte(), progresso);
+			if (lesao.isPresent()) {
+				// lesão no clube do usuário: o relógio para no minuto dela e a janela abre (SPEC §7.5, rev. 69)
+				progresso = lesao.getAsDouble();
+				gravarRelogio(jogoId, progresso, null);
+				jdbc.sql("UPDATE jogo_rodada_ao_vivo SET lesao_ate = :ate WHERE jogo_id = :jogo")
+					.param("ate", progresso)
+					.param("jogo", jogoId)
+					.update();
+				atual = new Linha(atual.rodada(), progresso, null, progresso);
+			}
+		}
 		boolean terminada = relogio.terminado(progresso);
 		if (terminada) {
-			finalizar(jogoId, linha.get().rodada(), substituicoes);
+			finalizar(jogoId, atual.rodada(), substituicoes);
 		}
-		return Optional.of(montar(jogoId, clube, linha.get(), rodada, porDivisao, relogio, progresso, terminada,
+		return Optional.of(montar(jogoId, clube, atual, rodada, porDivisao, relogio, progresso, terminada,
 				velocidade));
+	}
+
+	/**
+	 * Progresso da primeira lesão do clube do usuário entre a última que já pausou e o progresso dado;
+	 * lesão no último minuto não pausa (não há mais substituição).
+	 */
+	private OptionalDouble lesaoDoUsuario(RodadaAoVivo rodada, Map<Integer, List<PartidaDaRodada>> porDivisao, long clube,
+			double lesaoAte, double progresso) {
+		List<Integer> prioridades = new ArrayList<>(porDivisao.keySet());
+		for (PartidaDaRodada p : rodada.partidas()) {
+			Lado lado = p.jogo().mandante().id() == clube ? Lado.CASA : p.jogo().visitante().id() == clube ? Lado.FORA : null;
+			if (lado == null) {
+				continue;
+			}
+			double inicio = prioridades.indexOf(p.prioridade()) * (double) minutos;
+			return rodada.noMinuto(p, Integer.MAX_VALUE).resultado().eventos().stream()
+				.filter(e -> e.tipo() == TipoEvento.LESAO && e.lado() == lado && e.minuto() < minutos)
+				.mapToDouble(e -> inicio + e.minuto())
+				.filter(g -> g > lesaoAte && g <= progresso)
+				.min();
+		}
+		return OptionalDouble.empty();
 	}
 
 	/** Pausa o relógio, só durante a divisão do usuário (rev. 30). */
@@ -297,7 +334,7 @@ public class RodadaAoVivoRepositorio {
 			times.add(new TimeNaJanela(p.clube(lado), jogo.formacaoAtual(lado), jogo.emCampo(lado),
 					lado == doUsuario ? jogo.reservasDisponiveis(lado) : List.of(), maximo - jogo.substituicoesRestantes(lado),
 					maximo, eventos.stream().filter(e -> e.lado() == lado && e.tipo() == TipoEvento.SUBSTITUICAO).toList(),
-					amarelados));
+					amarelados, jogo.lesionadoAguardandoTroca(lado).orElse(null)));
 		}
 		return Optional.of(new JanelaJogo(p.jogo().mandante().id(), minuto, linha.get().andandoDesde() == null,
 				placar(rodada, p, minuto, clube, caixas.publicos(jogoId, List.of(p))), eventos.stream().filter(e -> LANCES.contains(e.tipo())).toList(), doUsuario,
@@ -350,8 +387,9 @@ public class RodadaAoVivoRepositorio {
 				WHERE j.id = :jogo GROUP BY j.ano_inicial""").param("jogo", jogoId).query(Integer.class).single();
 		boolean som = jdbc.sql("SELECT som_gols FROM jogo_treinador WHERE jogo_id = :jogo AND clube_id = :clube")
 			.param("jogo", jogoId).param("clube", clube).query(Boolean.class).single();
+		Long janelaLesao = !terminada && linha.pausadaNaLesao() && doUsuario != null ? doUsuario.mandante().id() : null;
 		return new EstadoRodada(jogoId, temporada, linha.rodada(), divisoes, atual, minuto, linha.andandoDesde() == null,
-				terminada, velocidade, relogio.comUsuario().get(atual), placares, doUsuario, som);
+				terminada, velocidade, relogio.comUsuario().get(atual), placares, doUsuario, som, janelaLesao);
 	}
 
 	private static PlacarAoVivo placar(RodadaAoVivo rodada, PartidaDaRodada p, int minuto, long clube,
@@ -397,11 +435,12 @@ public class RodadaAoVivoRepositorio {
 	}
 
 	private Optional<Linha> linha(long jogoId) {
-		return jdbc.sql("SELECT rodada, progresso, andando_desde FROM jogo_rodada_ao_vivo WHERE jogo_id = :jogo")
+		return jdbc.sql("SELECT rodada, progresso, andando_desde, lesao_ate FROM jogo_rodada_ao_vivo WHERE jogo_id = :jogo")
 			.param("jogo", jogoId)
 			.query((rs, n) -> {
 				OffsetDateTime desde = rs.getObject("andando_desde", OffsetDateTime.class);
-				return new Linha(rs.getInt("rodada"), rs.getDouble("progresso"), desde == null ? null : desde.toInstant());
+				return new Linha(rs.getInt("rodada"), rs.getDouble("progresso"), desde == null ? null : desde.toInstant(),
+						rs.getDouble("lesao_ate"));
 			})
 			.optional();
 	}
@@ -429,16 +468,24 @@ public class RodadaAoVivoRepositorio {
 			.orElseThrow(() -> new NoSuchElementException("jogo " + jogoId + " não encontrado"));
 	}
 
-	private record Linha(int rodada, double progresso, Instant andandoDesde) {
+	/** @param lesaoAte progresso da última lesão do usuário que já pausou a rodada */
+	private record Linha(int rodada, double progresso, Instant andandoDesde, double lesaoAte) {
+
+		/** Parada na lesão, esperando a troca do usuário. */
+		boolean pausadaNaLesao() {
+			return andandoDesde == null && lesaoAte > 0 && progresso == lesaoAte;
+		}
 	}
 
 	/**
 	 * Um lado na janela do jogo.
 	 *
 	 * @param banco reservas que ainda podem entrar; vazio no clube que não é do usuário
+	 * @param lesionado lesionado em campo esperando a troca do usuário (SPEC §7.5); nulo se não há
 	 */
 	public record TimeNaJanela(Clube clube, Formacao formacao, List<Jogador> emCampo, List<Jogador> banco,
-			int substituicoesFeitas, int substituicoesMaximas, List<EventoPartida> substituicoes, Set<Long> amarelados) {
+			int substituicoesFeitas, int substituicoesMaximas, List<EventoPartida> substituicoes, Set<Long> amarelados,
+			Jogador lesionado) {
 	}
 
 	/**
@@ -481,12 +528,14 @@ public class RodadaAoVivoRepositorio {
 	 * @param temporada ano da temporada
 	 * @param divisaoAtual índice em {@code divisoes} da divisão em jogo
 	 * @param comUsuario se a divisão em jogo tem clube do usuário (só ela tem velocidade e pausa)
+	 * @param janelaLesao mandante do jogo do usuário quando a rodada parou numa lesão dele (a janela abre
+	 *        sozinha); nulo nos outros casos
 	 * @param jogoDoUsuario o jogo do clube do usuário até onde ele já foi jogado; nulo na folga
 	 * @param somGols se a tela toca o som dos gols (SPEC §10.4)
 	 */
 	public record EstadoRodada(long jogoId, int temporada, int rodada, List<DivisaoNaRodada> divisoes, int divisaoAtual,
 			int minuto, boolean pausada, boolean terminada, Velocidade velocidade, boolean comUsuario,
-			List<PlacarAoVivo> partidas, PlacarAoVivo jogoDoUsuario, boolean somGols) {
+			List<PlacarAoVivo> partidas, PlacarAoVivo jogoDoUsuario, boolean somGols, Long janelaLesao) {
 
 		/** Gols da divisão em jogo até o minuto: a tela toca o som quando o número sobe. */
 		public int golsNaDivisao() {

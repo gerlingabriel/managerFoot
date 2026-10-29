@@ -84,6 +84,15 @@ public record EscalacaoDoTreinador(Formacao formacao, Set<Long> titulares, Set<L
 	 * @param suspenso diz se o jogador está suspenso para a próxima partida
 	 */
 	public List<String> problemas(List<Jogador> plantel, LongPredicate suspenso) {
+		return problemas(plantel, suspenso, id -> false);
+	}
+
+	/**
+	 * Como {@link #problemas(List, LongPredicate)}, com os lesionados (SPEC §7.5), que também não
+	 * podem jogar.
+	 */
+	public List<String> problemas(List<Jogador> plantel, LongPredicate suspenso, LongPredicate lesionado) {
+		LongPredicate indisponivel = suspenso.or(lesionado);
 		Map<Long, Jogador> porId = plantel.stream().collect(Collectors.toMap(Jogador::id, Function.identity()));
 		List<String> problemas = new ArrayList<>();
 		for (long id : todos()) {
@@ -92,16 +101,18 @@ public record EscalacaoDoTreinador(Formacao formacao, Set<Long> titulares, Set<L
 				problemas.add("o jogador " + id + " não é do clube");
 			} else if (suspenso.test(id)) {
 				problemas.add(jogador.nome() + " está suspenso");
+			} else if (lesionado.test(id)) {
+				problemas.add(jogador.nome() + " está lesionado");
 			}
 		}
 		if (batedor != null && !titulares.contains(batedor) && !reservas.contains(batedor)) {
 			problemas.add("o batedor de pênalti precisa estar entre os titulares ou no banco");
 		}
 		if (problemas.isEmpty()) {
-			Optional<Jogador> improvisado = goleiroImprovisado(plantel, suspenso);
+			Optional<Jogador> improvisado = goleiroImprovisado(plantel, indisponivel);
 			List<Jogador> doTime = emCampo(porId, improvisado, 1);
 			List<Jogador> banco = jogadores(reservas, porId);
-			problemas.addAll(ninguemCabeNasVagas(plantel, suspenso, doTime)
+			problemas.addAll(ninguemCabeNasVagas(plantel, indisponivel, doTime)
 					? Escalacao.problemasPermitindoBuracos(formacao, doTime, banco)
 					: Escalacao.problemas(formacao, doTime, banco));
 			if (!problemas.isEmpty() && improvisado.isPresent()) {
@@ -115,9 +126,11 @@ public record EscalacaoDoTreinador(Formacao formacao, Set<Long> titulares, Set<L
 	 * Sem goleiro disponível no plantel (SPEC §9.3, rev. 68): o defensor mais fraco entre os
 	 * titulares vai para o gol; sem defensores, o jogador de linha mais fraco. É a mesma regra da
 	 * máquina ({@code EscalacaoMaquina}). Vazio se há goleiro que possa jogar.
+	 *
+	 * @param indisponivel suspenso ou lesionado
 	 */
-	public Optional<Jogador> goleiroImprovisado(List<Jogador> plantel, LongPredicate suspenso) {
-		if (plantel.stream().anyMatch(j -> j.posicao() == Posicao.GOLEIRO && !suspenso.test(j.id()))) {
+	public Optional<Jogador> goleiroImprovisado(List<Jogador> plantel, LongPredicate indisponivel) {
+		if (plantel.stream().anyMatch(j -> j.posicao() == Posicao.GOLEIRO && !indisponivel.test(j.id()))) {
 			return Optional.empty();
 		}
 		List<Jogador> doTime = plantel.stream().filter(j -> titulares.contains(j.id())).toList();
@@ -136,12 +149,19 @@ public record EscalacaoDoTreinador(Formacao formacao, Set<Long> titulares, Set<L
 	 * @throws IllegalStateException com os {@link #problemas}, se ela não pode jogar
 	 */
 	public Escalacao escalacao(List<Jogador> plantel, LongPredicate suspenso, double fatorGoleiroImprovisado) {
-		List<String> problemas = problemas(plantel, suspenso);
+		return escalacao(plantel, suspenso, id -> false, fatorGoleiroImprovisado);
+	}
+
+	/** Como {@link #escalacao(List, LongPredicate, double)}, com os lesionados. */
+	public Escalacao escalacao(List<Jogador> plantel, LongPredicate suspenso, LongPredicate lesionado,
+			double fatorGoleiroImprovisado) {
+		List<String> problemas = problemas(plantel, suspenso, lesionado);
 		if (!problemas.isEmpty()) {
 			throw new IllegalStateException("escalação inválida: " + String.join("; ", problemas));
 		}
 		Map<Long, Jogador> porId = plantel.stream().collect(Collectors.toMap(Jogador::id, Function.identity()));
-		List<Jogador> doTime = emCampo(porId, goleiroImprovisado(plantel, suspenso), fatorGoleiroImprovisado);
+		List<Jogador> doTime = emCampo(porId, goleiroImprovisado(plantel, suspenso.or(lesionado)),
+				fatorGoleiroImprovisado);
 		Jogador oBatedor = batedor == null ? null
 				: doTime.stream().filter(j -> j.id() == batedor).findFirst().orElse(porId.get(batedor));
 		return new Escalacao(formacao, doTime, jogadores(reservas, porId), oBatedor);
@@ -160,11 +180,11 @@ public record EscalacaoDoTreinador(Formacao formacao, Set<Long> titulares, Set<L
 	 * Time com um a menos (SPEC §9.3): só pode jogar incompleto se nenhum jogador disponível fora
 	 * dos titulares é da posição de uma vaga vazia.
 	 */
-	private boolean ninguemCabeNasVagas(List<Jogador> plantel, LongPredicate suspenso, List<Jogador> doTime) {
+	private boolean ninguemCabeNasVagas(List<Jogador> plantel, LongPredicate indisponivel, List<Jogador> doTime) {
 		Map<Posicao, Long> emCampo = doTime.stream()
 			.collect(Collectors.groupingBy(Jogador::posicao, Collectors.counting()));
 		return plantel.stream()
-			.filter(j -> !titulares.contains(j.id()) && !suspenso.test(j.id()))
+			.filter(j -> !titulares.contains(j.id()) && !indisponivel.test(j.id()))
 			.noneMatch(j -> emCampo.getOrDefault(j.posicao(), 0L) < formacao.quantidade(j.posicao()));
 	}
 

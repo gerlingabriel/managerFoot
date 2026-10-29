@@ -9,9 +9,17 @@ import java.util.SplittableRandom;
 
 import org.junit.jupiter.api.Test;
 
+import br.com.managerfoot.dominio.Escalacao;
+import br.com.managerfoot.dominio.Formacao;
 import br.com.managerfoot.dominio.Jogador;
 import br.com.managerfoot.dominio.Posicao;
 import br.com.managerfoot.dominio.Temperamento;
+import br.com.managerfoot.motor.EventoPartida;
+import br.com.managerfoot.motor.GravidadeLesao;
+import br.com.managerfoot.motor.Lado;
+import br.com.managerfoot.motor.Lesao;
+import br.com.managerfoot.motor.ResultadoPartida;
+import br.com.managerfoot.motor.TipoEvento;
 import br.com.managerfoot.temporada.ParametrosEvolucao.Desfecho;
 
 class EvolucaoForcaTest {
@@ -83,6 +91,33 @@ class EvolucaoForcaTest {
 	}
 
 	/** 23 jogadores com a mesma força, ids 1 a 23. */
+	@Test
+	void lesionadoPerdeAForcaDaLesaoSemPassarDaMinima() {
+		List<Jogador> titulares = new ArrayList<>();
+		Posicao[] posicoes = { Posicao.GOLEIRO, Posicao.DEFENSOR, Posicao.DEFENSOR, Posicao.DEFENSOR, Posicao.DEFENSOR,
+				Posicao.MEIO_CAMPISTA, Posicao.MEIO_CAMPISTA, Posicao.MEIO_CAMPISTA, Posicao.MEIO_CAMPISTA,
+				Posicao.ATACANTE, Posicao.ATACANTE };
+		for (int i = 0; i < posicoes.length; i++) {
+			titulares.add(new Jogador(i + 1, "J" + (i + 1), posicoes[i], i == 10 ? 4 : 30, Temperamento.NORMAL, "BRA"));
+		}
+		Escalacao escalacao = new Escalacao(Formacao.F_4_4_2, titulares);
+		ResultadoPartida resultado = new ResultadoPartida(0, 0, List.of(
+				new EventoPartida(20, Lado.CASA, TipoEvento.LESAO, titulares.get(4), false, null,
+						new Lesao(GravidadeLesao.GRAVE, 6, 9)),
+				new EventoPartida(50, Lado.CASA, TipoEvento.LESAO, titulares.get(10), false, null,
+						new Lesao(GravidadeLesao.MEDIA, 4, 6)),
+				new EventoPartida(60, Lado.FORA, TipoEvento.LESAO, titulares.get(1), false, null,
+						new Lesao(GravidadeLesao.LEVE, 1, 3))));
+
+		List<Jogador> depois = evolucao.aposPartida(titulares, escalacao, resultado, Lado.CASA, 50, 30,
+				new SplittableRandom(1));
+
+		assertThat(depois.get(4).forca()).isBetween(20, 21);
+		assertThat(depois.get(10).forca()).isEqualTo(Jogador.FORCA_MINIMA);
+		// a lesão do outro lado não é deste clube
+		assertThat(depois.get(1).forca()).isBetween(29, 30);
+	}
+
 	private static List<Jogador> plantel(int forca) {
 		List<Jogador> p = new ArrayList<>();
 		for (long id = 1; id <= 23; id++) {

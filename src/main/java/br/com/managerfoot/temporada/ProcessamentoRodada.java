@@ -54,11 +54,13 @@ public final class ProcessamentoRodada {
 	private final RegrasPartida regras;
 	private final ParametrosSuspensao suspensao;
 	private final ParametrosMoral parametrosMoral;
+	private final int limiteLesoes;
 
 	public ProcessamentoRodada(ParametrosMotor parametrosMotor, RegrasPartida regras, ParametrosSuspensao suspensao,
 			ParametrosMoral parametrosMoral) {
 		this.motor = new MotorPartida(parametrosMotor);
 		this.escalacao = new EscalacaoMaquina(parametrosMotor);
+		this.limiteLesoes = parametrosMotor.lesao().limitePorTemporada();
 		this.regras = Objects.requireNonNull(regras);
 		this.suspensao = Objects.requireNonNull(suspensao);
 		this.parametrosMoral = Objects.requireNonNull(parametrosMoral);
@@ -120,7 +122,9 @@ public final class ProcessamentoRodada {
 				CondicoesPartida condicoes = new CondicoesPartida(
 						Map.of(Lado.CASA, divisao.sorte().de(jogo.mandante()), Lado.FORA,
 								divisao.sorte().de(jogo.visitante())),
-						divisao.bonus().bonusExtra());
+						divisao.bonus().bonusExtra(),
+						Map.of(Lado.CASA, lesoesPermitidas(disciplina, jogo.mandante()), Lado.FORA,
+								lesoesPermitidas(disciplina, jogo.visitante())));
 				Set<Lado> doUsuario = EnumSet.noneOf(Lado.class);
 				if (escalacoes.containsKey(jogo.mandante().id())) {
 					doUsuario.add(Lado.CASA);
@@ -140,9 +144,14 @@ public final class ProcessamentoRodada {
 				aleatorio.nextLong(), substituicoes);
 	}
 
+	/** Lesões que o clube ainda pode ter na temporada (SPEC §7.5). */
+	private int lesoesPermitidas(Disciplina disciplina, Clube clube) {
+		return Math.max(0, limiteLesoes - disciplina.lesoesDoClube(clube.id()));
+	}
+
 	/**
-	 * A escalação do treinador, se houver, ou a da máquina com quem não está suspenso; nas duas, o
-	 * asterisco temporário da temporada.
+	 * A escalação do treinador, se houver, ou a da máquina com quem não está suspenso nem lesionado;
+	 * nas duas, o asterisco temporário da temporada.
 	 */
 	private Escalacao escalar(Clube clube, Temporada.SorteiosDivisao divisao, Map<Long, List<Jogador>> planteis,
 			Disciplina disciplina, Map<Long, Escalacao> escalacoes) {
@@ -150,16 +159,18 @@ public final class ProcessamentoRodada {
 		if (doTreinador != null) {
 			List<Jogador> suspensos = new ArrayList<>(doTreinador.titulares());
 			suspensos.addAll(doTreinador.reservas());
-			suspensos.removeIf(j -> !disciplina.suspenso(j.id()));
+			suspensos.removeIf(j -> !disciplina.indisponivel(j.id()));
 			if (!suspensos.isEmpty()) {
-				throw new IllegalStateException(clube.nome() + ": " + suspensos.getFirst().nome() + " está suspenso");
+				Jogador fora = suspensos.getFirst();
+				throw new IllegalStateException(clube.nome() + ": " + fora.nome() + " está "
+						+ (disciplina.suspenso(fora.id()) ? "suspenso" : "lesionado"));
 			}
 			return new Escalacao(doTreinador.formacao(), doTreinador.titulares().stream().map(divisao.bonus()::aplicar).toList(),
 					doTreinador.reservas().stream().map(divisao.bonus()::aplicar).toList(),
 					doTreinador.batedorPreferido().map(divisao.bonus()::aplicar).orElse(null));
 		}
 		List<Jogador> disponiveis = plantel(clube, planteis).stream()
-			.filter(j -> !disciplina.suspenso(j.id()))
+			.filter(j -> !disciplina.indisponivel(j.id()))
 			.map(divisao.bonus()::aplicar)
 			.toList();
 		try {

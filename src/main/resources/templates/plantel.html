@@ -124,6 +124,7 @@
 <span th:if="${j.asterisco}" class="asterisco" title="jogador com asterisco">★</span>
 <span th:if="${l.estrangeiro}" class="sigla-pais" th:text="${l.estrangeiro}" th:title="|estrangeiro (${l.estrangeiro})|">ARG</span>
 <span th:if="${l.suspenso}" class="suspenso">suspenso</span>
+<span th:if="${l.lesao > 0}" class="suspenso" th:text="|lesionado · ${l.lesao} ${l.lesao == 1 ? 'jogo' : 'jogos'}|">lesionado · 2 jogos</span>
 </td>
 <td class="num forca" th:text="${j.forca}">0</td>
 <td class="temperamento" th:text="${#strings.capitalize(#strings.toLowerCase(j.temperamento.name()))}">Normal</td>
@@ -132,8 +133,8 @@
 <td>
 <form th:action="@{/jogos/{id}/plantel/jogador/{j}(id=${v.jogoId},j=${j.id})}" method="post" class="lugar" role="group"
 	th:attr="aria-label=|Lugar de ${j.nome}|">
-<button type="submit" name="lugar" value="TITULAR" title="Titular" aria-label="Titular" th:attr="aria-pressed=${l.lugar.name() == 'TITULAR'}" th:disabled="${l.suspenso}">T</button>
-<button type="submit" name="lugar" value="BANCO" title="Banco" aria-label="Banco" th:attr="aria-pressed=${l.lugar.name() == 'BANCO'}" th:disabled="${l.suspenso}">B</button>
+<button type="submit" name="lugar" value="TITULAR" title="Titular" aria-label="Titular" th:attr="aria-pressed=${l.lugar.name() == 'TITULAR'}" th:disabled="${l.suspenso or l.lesao > 0}">T</button>
+<button type="submit" name="lugar" value="BANCO" title="Banco" aria-label="Banco" th:attr="aria-pressed=${l.lugar.name() == 'BANCO'}" th:disabled="${l.suspenso or l.lesao > 0}">B</button>
 <button type="submit" name="lugar" value="FORA" title="Fora do banco" aria-label="Fora do banco" th:attr="aria-pressed=${l.lugar.name() == 'FORA'}">–</button>
 </form>
 </td>

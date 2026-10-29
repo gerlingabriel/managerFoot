@@ -120,6 +120,10 @@ class RodadaController {
 		model.addAttribute("usuario", usuario);
 		model.addAttribute("e", estado.get());
 		model.addAttribute("velocidades", Velocidade.values());
+		if (janela == null) {
+			// lesão no clube do usuário: a rodada parou e a janela do jogo abre sozinha (SPEC §7.5, rev. 69)
+			janela = estado.get().janelaLesao();
+		}
 		if (janela != null && estado.get().comUsuario()) {
 			aoVivo.janela(jogoId, usuario.id(), janela, sai, entra, agora).ifPresent(j -> {
 				model.addAttribute("janela", j);

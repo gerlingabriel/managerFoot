@@ -15,11 +15,12 @@ public class Lances {
 		return lance.jogador().nome() + " " + lance.minuto() + "'" + (lance.penalti() ? " (pên.)" : "");
 	}
 
-	/** Classe do ícone: gol, amarelo ou vermelho (o segundo amarelo também é expulsão). */
+	/** Classe do ícone: gol, amarelo, lesão ou vermelho (o segundo amarelo também é expulsão). */
 	public String icone(EventoPartida lance) {
 		return switch (lance.tipo()) {
 			case GOL -> "gol";
 			case CARTAO_AMARELO -> "amarelo";
+			case LESAO -> "lesao";
 			default -> "vermelho";
 		};
 	}

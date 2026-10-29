@@ -109,3 +109,21 @@
   no servidor).
 - Para a rede (Etapa 5), a mesma estrutura serve. Falta decidir quem pode
   pausar (§11.3).
+
+## Adendo (rev. 69): lesão do usuário pausa a rodada
+
+- **Contexto:** o usuário definiu que a lesão no clube dele abre a
+  substituição (SPEC §7.5). O relógio anda pelo tempo, então a lesão pode
+  ser "atravessada" entre duas consultas do quadro.
+- **Decisão:** a cada consulta, o servidor refaz a partida do usuário pela
+  semente e procura a primeira lesão dele entre a última que já pausou
+  (`jogo_rodada_ao_vivo.lesao_ate`, migração V29) e o progresso atual. Se
+  houver, o relógio volta para o minuto dela e para; o quadro abre a janela
+  sozinho. Na partida, o lesionado fica em campo até o início do minuto
+  seguinte esperando a troca do usuário; sem ela, a máquina troca (a mesma
+  regra vale ao refazer a partida, então o resultado continua
+  reproduzível).
+- **Consequência:** a consulta do quadro simula a partida do usuário até o
+  fim uma vez a mais (custo pequeno). Pausar pelo clique e mudar a
+  velocidade não procuram a lesão; a consulta seguinte a encontra e volta o
+  relógio para ela.

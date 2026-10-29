@@ -7,19 +7,24 @@ import br.com.managerfoot.dominio.Jogador;
  *
  * @param penalti a finalização foi uma cobrança de pênalti
  * @param substituido em uma {@link TipoEvento#SUBSTITUICAO}, quem saiu; nos demais eventos, nulo
+ * @param lesao em uma {@link TipoEvento#LESAO}, a gravidade sorteada; nos demais eventos, nula
  */
 public record EventoPartida(int minuto, Lado lado, TipoEvento tipo, Jogador jogador, boolean penalti,
-		Jogador substituido) {
+		Jogador substituido, Lesao lesao) {
 
 	public EventoPartida(int minuto, Lado lado, TipoEvento tipo, Jogador jogador) {
-		this(minuto, lado, tipo, jogador, false, null);
+		this(minuto, lado, tipo, jogador, false, null, null);
 	}
 
 	public EventoPartida(int minuto, Lado lado, TipoEvento tipo, Jogador jogador, boolean penalti) {
-		this(minuto, lado, tipo, jogador, penalti, null);
+		this(minuto, lado, tipo, jogador, penalti, null, null);
 	}
 
 	static EventoPartida substituicao(int minuto, Lado lado, Jogador entrou, Jogador saiu) {
-		return new EventoPartida(minuto, lado, TipoEvento.SUBSTITUICAO, entrou, false, saiu);
+		return new EventoPartida(minuto, lado, TipoEvento.SUBSTITUICAO, entrou, false, saiu, null);
+	}
+
+	static EventoPartida lesao(int minuto, Lado lado, Jogador lesionado, Lesao lesao) {
+		return new EventoPartida(minuto, lado, TipoEvento.LESAO, lesionado, false, null, lesao);
 	}
 }

@@ -23,8 +23,12 @@ import br.com.managerfoot.dominio.EscalacaoDoTreinador;
 import br.com.managerfoot.dominio.Jogador;
 import br.com.managerfoot.dominio.Lugar;
 import br.com.managerfoot.dominio.Posicao;
+import br.com.managerfoot.motor.EventoPartida;
+import br.com.managerfoot.motor.Lado;
+import br.com.managerfoot.motor.TipoEvento;
 import br.com.managerfoot.persistencia.RodadaAoVivoRepositorio.EstadoRodada;
 import br.com.managerfoot.persistencia.RodadaAoVivoRepositorio.Situacao;
+import br.com.managerfoot.temporada.RodadaAoVivo;
 import br.com.managerfoot.temporada.Velocidade;
 
 /** Migração V13 e {@link RodadaAoVivoRepositorio}, com o relógio controlado pelo teste. */
@@ -193,6 +197,68 @@ class RodadaAoVivoRepositorioIT {
 
 		assertThatThrownBy(() -> aoVivo.estado(jogo, outro, T0))
 			.isInstanceOf(NoSuchElementException.class);
+	}
+
+	@Test
+	void lesaoNoClubeDoUsuarioParaARodadaEAbreAJanelaComOLesionado() {
+		EventoPartida lesao = sementeComLesaoDoUsuarioNaRodada1();
+		aoVivo.iniciar(jogo, usuario, 1, T0);
+
+		// bem depois do minuto da lesão: o relógio voltou para ele e parou
+		EstadoRodada parada = estado(200);
+		assertThat(parada.pausada()).isTrue();
+		assertThat(parada.minuto()).isEqualTo(lesao.minuto());
+		long mandante = parada.jogoDoUsuario().mandante().id();
+		assertThat(parada.janelaLesao()).isEqualTo(mandante);
+		RodadaAoVivoRepositorio.JanelaJogo janela = aoVivo.janela(jogo, usuario, mandante, null, null, T0.plusSeconds(200))
+			.orElseThrow();
+		RodadaAoVivoRepositorio.TimeNaJanela meu = janela.doUsuario() == Lado.CASA ? janela.casa() : janela.fora();
+		assertThat(meu.lesionado().id()).isEqualTo(lesao.jogador().id());
+		assertThat(janela.lances()).anyMatch(e -> e.tipo() == TipoEvento.LESAO);
+
+		// "Continuar" sem trocar: a máquina troca e a rodada não para de novo na mesma lesão
+		// na velocidade normal (0,5 s por minuto), 0,6 s depois é o minuto seguinte
+		Instant continuou = T0.plusSeconds(201);
+		aoVivo.continuar(jogo, usuario, continuou);
+		Instant minutoSeguinte = continuou.plusMillis(600);
+		EstadoRodada seguinte = aoVivo.estado(jogo, usuario, minutoSeguinte).orElseThrow();
+		assertThat(seguinte.janelaLesao()).isNull();
+		assertThat(seguinte.pausada()).isFalse();
+		assertThat(seguinte.minuto()).isEqualTo(lesao.minuto() + 1);
+		RodadaAoVivoRepositorio.JanelaJogo depois = aoVivo.janela(jogo, usuario, mandante, null, null, minutoSeguinte)
+			.orElseThrow();
+		RodadaAoVivoRepositorio.TimeNaJanela meuDepois = depois.doUsuario() == Lado.CASA ? depois.casa() : depois.fora();
+		assertThat(meuDepois.lesionado()).isNull();
+		assertThat(meuDepois.emCampo()).noneMatch(j -> j.id() == lesao.jogador().id());
+	}
+
+	/**
+	 * Recria o jogo com a primeira semente de temporada em que o clube do usuário tem uma lesão na
+	 * rodada 1 (antes do minuto 88, para o minuto seguinte ainda ser da mesma divisão), e devolve a lesão.
+	 */
+	private EventoPartida sementeComLesaoDoUsuarioNaRodada1() {
+		for (long semente = 0; semente < 400; semente++) {
+			jogo = LigaDeTeste.criarJogo(moldes, jogos, contas);
+			temporadas.iniciarPrimeiraTemporada(jogo, semente);
+			usuario = jdbc.sql("SELECT usuario_id FROM jogo_treinador WHERE jogo_id = :j").param("j", jogo)
+				.query(Long.class).single();
+			clube = jogos.clubeDoTreinador(jogo, usuario).orElseThrow();
+			RodadaAoVivo rodada = rodadas.preparar(jogo, 1, List.of());
+			for (RodadaAoVivo.PartidaDaRodada p : rodada.partidas()) {
+				Lado lado = p.jogo().mandante().id() == clube ? Lado.CASA
+						: p.jogo().visitante().id() == clube ? Lado.FORA : null;
+				if (lado == null) {
+					continue;
+				}
+				var lesao = rodada.noMinuto(p, Integer.MAX_VALUE).resultado().eventos().stream()
+					.filter(e -> e.tipo() == TipoEvento.LESAO && e.lado() == lado && e.minuto() < 88)
+					.findFirst();
+				if (lesao.isPresent()) {
+					return lesao.get();
+				}
+			}
+		}
+		throw new AssertionError("nenhuma semente com lesão do usuário na rodada 1");
 	}
 
 	private EstadoRodada estado(long segundos) {

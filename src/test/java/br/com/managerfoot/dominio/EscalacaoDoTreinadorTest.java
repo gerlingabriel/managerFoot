@@ -49,6 +49,16 @@ class EscalacaoDoTreinadorTest {
 	}
 
 	@Test
+	void lesionadoNaoPodeJogar() {
+		EscalacaoDoTreinador escalacao = EscalacaoDoTreinador.de(DA_MAQUINA);
+
+		assertThat(escalacao.problemas(PLANTEL, id -> false, id -> id == 19)).containsExactly("J19 está lesionado");
+		assertThatIllegalStateException()
+			.isThrownBy(() -> escalacao.escalacao(PLANTEL, id -> false, id -> id == 19, 0.5))
+			.withMessageContaining("J19 está lesionado");
+	}
+
+	@Test
 	void semTiraDoTimeEDoPenalti() {
 		EscalacaoDoTreinador sem = EscalacaoDoTreinador.de(DA_MAQUINA).sem(Set.of(18L, 2L));
 

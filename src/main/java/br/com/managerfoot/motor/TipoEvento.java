@@ -1,6 +1,6 @@
 package br.com.managerfoot.motor;
 
-/** Eventos da partida: desfechos de finalização (referência Elifoot 98), cartões e substituições. */
+/** Eventos da partida: desfechos de finalização (referência Elifoot 98), cartões, substituições e lesões. */
 public enum TipoEvento {
 	GOL,
 	DEFESA,
@@ -12,7 +12,9 @@ public enum TipoEvento {
 	/** Vermelho direto: expulsão (suspensão sorteada de 1 a 3 jogos). */
 	CARTAO_VERMELHO,
 	/** O jogador do evento entrou no lugar de {@link EventoPartida#substituido()}. */
-	SUBSTITUICAO;
+	SUBSTITUICAO,
+	/** O jogador do evento se lesionou e sai de campo (SPEC §7.5); detalhes em {@link EventoPartida#lesao()}. */
+	LESAO;
 
 	public boolean expulsao() {
 		return this == SEGUNDO_AMARELO || this == CARTAO_VERMELHO;

@@ -146,7 +146,8 @@ public final class RodadaAoVivo {
 			List<Long> jogadores = new ArrayList<>();
 			planteis.getOrDefault(partida.jogo().mandante().id(), List.of()).forEach(j -> jogadores.add(j.id()));
 			planteis.getOrDefault(partida.jogo().visitante().id(), List.of()).forEach(j -> jogadores.add(j.id()));
-			depois = depois.aposPartida(jogadores, resultado, suspensao, aleatorio);
+			depois = depois.aposPartida(jogadores, resultado, suspensao, aleatorio,
+					Map.of(Lado.CASA, partida.jogo().mandante().id(), Lado.FORA, partida.jogo().visitante().id()));
 			double forcaCasa = Clube.forcaEmCampo(planteis.getOrDefault(partida.jogo().mandante().id(), List.of()));
 			double forcaFora = Clube.forcaEmCampo(planteis.getOrDefault(partida.jogo().visitante().id(), List.of()));
 			atualizarMoral(novaMoral, partida.jogo().mandante(), true, resultado.golsCasa(), resultado.golsFora(), forcaCasa,

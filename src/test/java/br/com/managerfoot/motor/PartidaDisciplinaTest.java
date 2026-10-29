@@ -99,14 +99,14 @@ class PartidaDisciplinaTest {
 
 		for (long s = 0; s < PARTIDAS; s++) {
 			List<EventoPartida> eventos = motor.simular(casa, fora, s).eventos();
-			boolean escolhidoExpulso = false;
+			boolean escolhidoSaiu = false;
 			for (EventoPartida e : eventos) {
-				if (e.tipo().expulsao() && e.jogador().equals(escolhido)) {
-					escolhidoExpulso = true;
+				if ((e.tipo().expulsao() || e.tipo() == TipoEvento.LESAO) && e.jogador().equals(escolhido)) {
+					escolhidoSaiu = true;
 				}
 				if (e.penalti() && e.lado() == Lado.CASA) {
 					penaltisDaCasa++;
-					if (!escolhidoExpulso) {
+					if (!escolhidoSaiu) {
 						assertThat(e.jogador()).isEqualTo(escolhido);
 					}
 				}
