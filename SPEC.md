@@ -15,7 +15,7 @@
 
 ### Histórico de revisões
 
--   **rev. 70 (2026-10-29):** pelo usuário: sem gol fora de casa (empate no placar somado vai à prorrogação e aos pênaltis), mando da ida por sorteio, prêmio da copa igual ao do campeão da 1ª divisão e metade para o vice, "mais fraco" é a força em campo no início da temporada, liga de 1 divisão com menos de 16 clubes usa a maior potência de 2 (§8.2). Domínio da copa e prorrogação/pênaltis no motor feitos; propostas do agente marcadas Provisório; simulação em `docs/simulacoes/copa.md`.
+-   **rev. 70 (2026-10-29):** pelo usuário: partida de copa com os efeitos da liga menos o salário, na mesma tela da rodada, título no Histórico e não no ranking; sem gol fora de casa (empate no placar somado vai à prorrogação e aos pênaltis), mando da ida por sorteio, prêmio da copa igual ao do campeão da 1ª divisão e metade para o vice, "mais fraco" é a força em campo no início da temporada, liga de 1 divisão com menos de 16 clubes usa a maior potência de 2 (§8.2). Domínio da copa e prorrogação/pênaltis no motor feitos; propostas do agente marcadas Provisório; simulação em `docs/simulacoes/copa.md`.
 -   **rev. 69 (2026-10-29):** pelo usuário: lesões no máximo 2 por clube por temporada, gravidade leve/média/grave com jogos fora e perda de força (§7.5), temperamento calmo > educado > normal > ansioso > violento, substituição do usuário na hora e automática na máquina; copa com 32 clubes (2 divisões) ou 16 (1 divisão), quadro fixo de rodadas da liga, final depois da liga em campo neutro com bilheteria 50/50 e prêmio do campeão e do vice (§8.2).
 -   **rev. 68 (2026-10-29):** pelo usuário: plantel mínimo de 14 nas vendas mantido (evitar o time incompleto), mas com menos de 11 a partida começa como se fosse com expulsos; sem goleiro disponível, o usuário joga com um jogador de linha no gol, como a máquina (§9.3).
 -   **rev. 67 (2026-10-29):** time com um a menos da §9.3 implementado: com menos de 11 disponíveis o clube joga com as vagas vazias, como se começasse com expulsos. Agente: mínimo de 7 para começar (regra do futebol) e o usuário só joga incompleto se ninguém disponível cabe nas vagas abertas (Provisório).
@@ -1518,9 +1518,17 @@ existirem.
   fraco vence 44% dos confrontos equilibrados (menos de 3 de diferença) e
   14% com 8 ou mais; o mais forte dos inscritos ganha 18% das copas.
 
-**Em aberto (copa) — antes de ligar à rodada:** ver a pergunta da parte 2
-(efeitos da partida de copa em caixa, público, moral, evolução e
-demissões; exibição ao vivo; título no ranking de treinadores).
+**Definido (rev. 70), pelo usuário — partida de copa na temporada:**
+- **Efeitos iguais aos da liga, sem salário:** o mandante fica com a
+  bilheteria da ida e da volta (público pela mesma conta da liga); moral,
+  desgaste e evolução de força, bônus de vitória do patrocínio e demissão
+  pela moral também valem. O salário continua só nas rodadas da liga.
+- **Tela:** a mesma da rodada, minuto a minuto, com pausa e substituições;
+  com prorrogação o relógio vai até 120 e os pênaltis aparecem no placar
+  final (ex.: 1 x 1, pên. 4 x 3). Se o clube do usuário já saiu da copa, a
+  etapa passa rápido, como uma divisão sem usuário.
+- **Título:** entra na aba Histórico (coluna Copa, com clube e treinador);
+  o ranking de treinadores continua contando só a liga da 1ª divisão.
 
 Quando não houver participantes controlados por usuários em uma partida
 da copa, poderá ser usado um processamento rápido, sem simulação visual

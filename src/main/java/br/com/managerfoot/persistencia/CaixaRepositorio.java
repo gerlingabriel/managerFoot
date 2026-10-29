@@ -201,7 +201,7 @@ public class CaixaRepositorio {
 		Map<Integer, Integer> publicos = new HashMap<>();
 		jdbc.sql("""
 				SELECT rodada, publico FROM jogo_partida
-				WHERE temporada_id = :temporada AND mandante_id = :clube AND publico IS NOT NULL""")
+				WHERE temporada_id = :temporada AND mandante_id = :clube AND publico IS NOT NULL AND confronto_id IS NULL""")
 			.param("temporada", situacao.temporadaId())
 			.param("clube", clube)
 			.query(rs -> {
@@ -465,7 +465,7 @@ public class CaixaRepositorio {
 	private void gravarPublico(long temporadaId, int rodada, long mandanteId, int publico) {
 		jdbc.sql("""
 				UPDATE jogo_partida SET publico = :publico
-				WHERE temporada_id = :temporada AND rodada = :rodada AND mandante_id = :mandante""")
+				WHERE temporada_id = :temporada AND rodada = :rodada AND mandante_id = :mandante AND confronto_id IS NULL""")
 			.param("publico", publico)
 			.param("temporada", temporadaId)
 			.param("rodada", rodada)

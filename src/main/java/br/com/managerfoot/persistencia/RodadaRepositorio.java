@@ -242,7 +242,7 @@ public class RodadaRepositorio {
 		long partidaId = jdbc.sql("""
 				UPDATE jogo_partida SET gols_mandante = :gm, gols_visitante = :gv, semente = :semente
 				WHERE temporada_id = :temporada AND rodada = :rodada AND mandante_id = :mandante
-				  AND visitante_id = :visitante AND gols_mandante IS NULL
+				  AND visitante_id = :visitante AND gols_mandante IS NULL AND confronto_id IS NULL
 				RETURNING id""")
 			.param("gm", partida.resultado().golsCasa())
 			.param("gv", partida.resultado().golsFora())

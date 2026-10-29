@@ -33,11 +33,14 @@ public class TemporadaRepositorio {
 	private final JdbcClient jdbc;
 	private final JogoRepositorio jogos;
 	private final MercadoRepositorio mercado;
+	private final CopaRepositorio copas;
 
-	public TemporadaRepositorio(JdbcClient jdbc, JogoRepositorio jogos, MercadoRepositorio mercado) {
+	public TemporadaRepositorio(JdbcClient jdbc, JogoRepositorio jogos, MercadoRepositorio mercado,
+			CopaRepositorio copas) {
 		this.jdbc = jdbc;
 		this.jogos = jogos;
 		this.mercado = mercado;
+		this.copas = copas;
 	}
 
 	/**
@@ -61,7 +64,7 @@ public class TemporadaRepositorio {
 	}
 
 	/**
-	 * Grava a temporada e seus sorteios e completa os jogadores à venda da máquina; quem chama abre a
+	 * Grava a temporada e seus sorteios, sorteia a copa (SPEC §8.2) e completa os jogadores à venda da máquina; quem chama abre a
 	 * transação, trava o jogo e já pôs os treinadores nos clubes da nova temporada.
 	 */
 	@Transactional(propagation = Propagation.MANDATORY)
@@ -95,6 +98,7 @@ public class TemporadaRepositorio {
 			inserirBonus(temporadaId, divisaoId, sorteios.bonus().asteriscoTemporario(), false);
 			inserirBonus(temporadaId, divisaoId, sorteios.bonus().bonusExtra(), true);
 		}
+		copas.criar(jogoId, temporadaId, semente);
 		mercado.reporAVenda(jogoId, MercadoRepositorio.semente(semente, 0));
 	}
 
@@ -125,7 +129,7 @@ public class TemporadaRepositorio {
 		Map<Integer, List<Jogo>> jogosPorPrioridade = new TreeMap<>();
 		jdbc.sql("""
 				SELECT divisao_id, rodada, mandante_id, visitante_id FROM jogo_partida
-				WHERE temporada_id = :temporada ORDER BY divisao_id, rodada, id""")
+				WHERE temporada_id = :temporada AND confronto_id IS NULL ORDER BY divisao_id, rodada, id""")
 			.param("temporada", linha.id())
 			.query((rs, n) -> Map.entry(prioridades.get(rs.getLong("divisao_id")), new Jogo(rs.getInt("rodada"),
 					clubes.get(rs.getLong("mandante_id")), clubes.get(rs.getLong("visitante_id")))))

@@ -77,7 +77,7 @@ class TemporadaRepositorioIT {
 		assertThat(iniciada.divisoes())
 			.allMatch(d -> d.bonus().asteriscoTemporario().size() + d.bonus().bonusExtra().size() == 15);
 		assertThat(contar("SELECT count(*) FROM jogo_partida p JOIN jogo_temporada t ON t.id = p.temporada_id "
-				+ "WHERE t.jogo_id = ?")).isEqualTo(16 * 15 + 17 * 16);
+				+ "WHERE t.jogo_id = ? AND p.confronto_id IS NULL")).isEqualTo(16 * 15 + 17 * 16);
 	}
 
 	@Test
