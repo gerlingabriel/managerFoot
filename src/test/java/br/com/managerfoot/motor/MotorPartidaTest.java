@@ -93,4 +93,26 @@ class MotorPartidaTest {
 		assertThat(vitoriasForte).isGreaterThan(vitoriasFraco * 3);
 		assertThat(vitoriasFraco).isPositive();
 	}
+
+	@Test
+	void timeQueComecaComUmAMenosPerdeMaisSemPerderSempre() {
+		// SPEC §9.3: com menos de 11 disponíveis, o time joga como se começasse com um expulso
+		Escalacao completo = escalacao(Formacao.F_4_4_2, 25, 1);
+		Escalacao incompleto = new Escalacao(Formacao.F_4_4_2, completo.titulares().subList(0, 10));
+		Escalacao adversario = escalacao(Formacao.F_4_4_2, 25, 100);
+		int golsCompleto = 0;
+		int golsIncompleto = 0;
+		int vitoriasIncompleto = 0;
+		for (long s = 0; s < 1000; s++) {
+			golsCompleto += motor.simular(completo, adversario, s).golsCasa();
+			ResultadoPartida r = motor.simular(incompleto, adversario, s);
+			golsIncompleto += r.golsCasa();
+			if (r.golsCasa() > r.golsFora()) {
+				vitoriasIncompleto++;
+			}
+		}
+		assertThat(incompleto.incompleta()).isTrue();
+		assertThat(golsIncompleto).isLessThan(golsCompleto);
+		assertThat(vitoriasIncompleto).isPositive();
+	}
 }

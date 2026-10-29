@@ -99,7 +99,7 @@ public final class ProcessamentoRodada {
 	 *
 	 * @param substituicoes as já feitas pelos treinadores nesta rodada
 	 * @throws IllegalArgumentException se nenhuma divisão tem a rodada
-	 * @throws IllegalStateException se uma escalação tem jogador suspenso ou um clube não tem 11
+	 * @throws IllegalStateException se uma escalação tem jogador suspenso ou um clube não tem o mínimo para começar
 	 */
 	public RodadaAoVivo preparar(Temporada temporada, int rodada, Map<Long, List<Jogador>> planteis,
 			Disciplina disciplina, Map<Long, Escalacao> escalacoes, List<RodadaAoVivo.Substituicao> substituicoes) {

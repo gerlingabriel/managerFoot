@@ -16,8 +16,8 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import br.com.managerfoot.dominio.Clube;
+import br.com.managerfoot.dominio.Escalacao;
 import br.com.managerfoot.dominio.EscalacaoDoTreinador;
-import br.com.managerfoot.dominio.Formacao;
 import br.com.managerfoot.dominio.Jogador;
 import br.com.managerfoot.dominio.Moral;
 import br.com.managerfoot.dominio.ParametrosMoral;
@@ -303,7 +303,7 @@ public class TrocaRepositorio {
 				.param("c", clube).query(Long.class).list());
 			List<Jogador> disponiveis = planteis.getOrDefault(clube, List.of()).stream()
 				.filter(j -> !suspensos.contains(j.id())).toList();
-			if (disponiveis.size() >= Formacao.TITULARES) {
+			if (disponiveis.size() >= Escalacao.MINIMO_TITULARES) {
 				escalacoes.gravar(clube, EscalacaoDoTreinador.de(escalacaoMaquina.escalar(disponiveis)));
 			}
 		}

@@ -96,9 +96,26 @@ public record EscalacaoDoTreinador(Formacao formacao, Set<Long> titulares, Set<L
 			problemas.add("o batedor de pênalti precisa estar entre os titulares ou no banco");
 		}
 		if (problemas.isEmpty()) {
-			problemas.addAll(Escalacao.problemas(formacao, jogadores(titulares, porId), jogadores(reservas, porId)));
+			List<Jogador> doTime = jogadores(titulares, porId);
+			List<Jogador> banco = jogadores(reservas, porId);
+			problemas.addAll(ninguemCabeNasVagas(plantel, suspenso)
+					? Escalacao.problemasPermitindoBuracos(formacao, doTime, banco)
+					: Escalacao.problemas(formacao, doTime, banco));
 		}
 		return problemas;
+	}
+
+	/**
+	 * Time com um a menos (SPEC §9.3): só pode jogar incompleto se nenhum jogador disponível fora
+	 * dos titulares é da posição de uma vaga vazia.
+	 */
+	private boolean ninguemCabeNasVagas(List<Jogador> plantel, LongPredicate suspenso) {
+		Map<Posicao, Long> emCampo = plantel.stream()
+			.filter(j -> titulares.contains(j.id()))
+			.collect(Collectors.groupingBy(Jogador::posicao, Collectors.counting()));
+		return plantel.stream()
+			.filter(j -> !titulares.contains(j.id()) && !suspenso.test(j.id()))
+			.noneMatch(j -> emCampo.getOrDefault(j.posicao(), 0L) < formacao.quantidade(j.posicao()));
 	}
 
 	/**

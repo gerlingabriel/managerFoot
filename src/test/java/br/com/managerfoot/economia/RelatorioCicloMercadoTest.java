@@ -85,7 +85,7 @@ class RelatorioCicloMercadoTest {
 					try {
 						sim.simular(PaisPadrao.TODOS.get(p), gerados.get(p), semente);
 					} catch (IllegalStateException e) {
-						// um clube ficou sem 11 disponíveis: a rodada travaria no jogo
+						// um clube ficou sem o mínimo de 7 disponíveis: a rodada travaria no jogo
 						sim.travadas++;
 					}
 				}
@@ -137,7 +137,7 @@ class RelatorioCicloMercadoTest {
 				.append(pct(s.mudaramDeTerco / (double) Math.max(1, s.clubesNaMobilidade))).append(" | ").append(s.travadas)
 				.append(" de ").append(PaisPadrao.TODOS.size() * SEMENTES).append(" |\n");
 		}
-		md.append("\n*Ligas travadas*: liga × semente em que um clube ficou sem 11 disponíveis (vendas até o plantel mínimo de 14 ")
+		md.append("\n*Ligas travadas*: liga × semente em que um clube ficou sem 7 disponíveis (vendas até o plantel mínimo de 14 ")
 			.append("mais suspensões); a simulação dessa liga para ali e as medidas contam só as temporadas jogadas.\n\n")
 			.append("As tabelas abaixo são do cenário \"").append(CENARIOS.get(DETALHADO).nome()).append("\".\n\n");
 		return md.toString();

@@ -14,7 +14,7 @@ Gerado por `RelatorioCicloMercadoTest` (ferramenta de desenvolvimento). As 6 lig
 | Pelo clube −20/−10/0/+10/+20, preço sem faixa, plantel até 23 | 14,2 | 8,1 | 8,6 | 14,8 | 10,2 | 2,9 | 7% | 22,2 / 18,5 | 34% / 21% | 1,8 | 5% | 0 de 18 |
 | Escolhido (rev. 66): pelo clube −30/−15/0/+10/+20, preço sem faixa, plantel até 23 | 14,5 | 7,9 | 8,9 | 16,0 | 12,0 | 3,3 | 5% | 22,2 / 18,4 | 33% / 22% | 1,8 | 6% | 0 de 18 |
 
-*Ligas travadas*: liga × semente em que um clube ficou sem 11 disponíveis (vendas até o plantel mínimo de 14 mais suspensões); a simulação dessa liga para ali e as medidas contam só as temporadas jogadas.
+*Ligas travadas*: liga × semente em que um clube ficou sem 7 disponíveis (vendas até o plantel mínimo de 14 mais suspensões); a simulação dessa liga para ali e as medidas contam só as temporadas jogadas.
 
 As tabelas abaixo são do cenário "Escolhido (rev. 66): pelo clube −30/−15/0/+10/+20, preço sem faixa, plantel até 23".
 

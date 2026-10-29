@@ -34,13 +34,38 @@ class EscalacaoTest {
 	}
 
 	@Test
-	void recusaMenosDeOnzeTitulares() {
+	void semGoleiroERecusada() {
 		List<Jogador> titulares = new ArrayList<>(titularesPara(Formacao.F_4_4_2, 20));
 		titulares.removeIf(j -> j.posicao() == Posicao.GOLEIRO);
 
 		assertThatIllegalArgumentException().isThrownBy(() -> new Escalacao(Formacao.F_4_4_2, titulares))
-			.withMessageContaining("são necessários 11 titulares, mas há 10")
 			.withMessageContaining("faltam 1 goleiro");
+		assertThat(Escalacao.problemas(Formacao.F_4_4_2, titulares, List.of()))
+			.contains("são necessários 11 titulares, mas há 10");
+	}
+
+	@Test
+	void comMenosDeOnzeAVagaFicaVaziaComoUmExpulso() {
+		List<Jogador> titulares = new ArrayList<>(titularesPara(Formacao.F_4_4_2, 20));
+		titulares.remove(titulares.stream().filter(j -> j.posicao() == Posicao.ATACANTE).findFirst().orElseThrow());
+
+		Escalacao escalacao = new Escalacao(Formacao.F_4_4_2, titulares);
+
+		assertThat(escalacao.incompleta()).isTrue();
+		assertThat(escalacao.jogadoresNa(Posicao.ATACANTE)).hasSize(1);
+		assertThat(Escalacao.problemas(Formacao.F_4_4_2, titulares, List.of()))
+			.containsExactly("são necessários 11 titulares, mas há 10", "faltam 1 atacante");
+		assertThat(Escalacao.problemasPermitindoBuracos(Formacao.F_4_4_2, titulares, List.of())).isEmpty();
+	}
+
+	@Test
+	void recusaMenosDeSeteTitulares() {
+		List<Jogador> titulares = new ArrayList<>(titularesPara(Formacao.F_4_4_2, 20));
+		titulares.removeIf(j -> j.posicao() == Posicao.MEIO_CAMPISTA);
+		titulares.removeFirst();
+
+		assertThatIllegalArgumentException().isThrownBy(() -> new Escalacao(Formacao.F_4_4_2, titulares))
+			.withMessageContaining("são necessários de 7 a 11 titulares, mas há 6");
 	}
 
 	@Test

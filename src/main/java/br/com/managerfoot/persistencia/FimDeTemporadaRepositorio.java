@@ -15,8 +15,8 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import br.com.managerfoot.dominio.Clube;
+import br.com.managerfoot.dominio.Escalacao;
 import br.com.managerfoot.dominio.EscalacaoDoTreinador;
-import br.com.managerfoot.dominio.Formacao;
 import br.com.managerfoot.dominio.Jogador;
 import br.com.managerfoot.motor.EscalacaoMaquina;
 import br.com.managerfoot.motor.ParametrosMotor;
@@ -184,7 +184,7 @@ public class FimDeTemporadaRepositorio {
 				.param("c", novo.id()).query(Long.class).list());
 			List<Jogador> disponiveis = jogos.carregarPlanteis(jogoId).get(novo.id()).stream()
 				.filter(j -> !suspensos.contains(j.id())).toList();
-			if (disponiveis.size() >= Formacao.TITULARES) {
+			if (disponiveis.size() >= Escalacao.MINIMO_TITULARES) {
 				escalacoes.gravar(novo.id(), EscalacaoDoTreinador.de(escalacaoMaquina.escalar(disponiveis)));
 			}
 			treinadores.put(treinador.getKey(), novo.id());

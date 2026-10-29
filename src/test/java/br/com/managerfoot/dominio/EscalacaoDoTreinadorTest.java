@@ -60,6 +60,28 @@ class EscalacaoDoTreinadorTest {
 	}
 
 	@Test
+	void semAtacanteDisponivelJogaComUmAMenos() {
+		// atacantes 18 a 23: o 18 está no time incompleto e os outros 5 estão suspensos (o 20 sai do banco)
+		EscalacaoDoTreinador semUm = EscalacaoDoTreinador.de(DA_MAQUINA).sem(Set.of(19L, 20L));
+
+		assertThat(semUm.problemas(PLANTEL, id -> id >= 19)).isEmpty();
+		Escalacao escalacao = semUm.escalacao(PLANTEL, id -> id >= 19);
+		assertThat(escalacao.incompleta()).isTrue();
+		assertThat(escalacao.titulares()).hasSize(10);
+		// o banco (goleiro, defensor e meia) não cabe na vaga do ataque
+		assertThat(escalacao.reservas()).hasSize(3);
+	}
+
+	@Test
+	void naoJogaComUmAMenosSeHaQuemCaibaNaVaga() {
+		// o 20 está no banco e o 21 fora: qualquer um deles completa o ataque
+		EscalacaoDoTreinador semUm = EscalacaoDoTreinador.de(DA_MAQUINA).sem(Set.of(19L));
+
+		assertThat(semUm.problemas(PLANTEL, id -> id == 19 || id >= 22))
+			.containsExactly("são necessários 11 titulares, mas há 10", "faltam 1 atacante");
+	}
+
+	@Test
 	void batedorPrecisaEstarNoTimeEJogadorNaoEstaEmDoisLugares() {
 		EscalacaoDoTreinador escalacao = EscalacaoDoTreinador.de(DA_MAQUINA);
 		EscalacaoDoTreinador batedorDeFora = new EscalacaoDoTreinador(Formacao.F_4_4_2, escalacao.titulares(),

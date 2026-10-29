@@ -108,10 +108,26 @@ class ProcessamentoRodadaTest {
 	}
 
 	@Test
-	void clubeSemOnzeDisponiveisFalhaComONomeDoClube() {
+	void clubeComDezDisponiveisJogaComUmAMenos() {
 		Map<Long, List<Jogador>> curtos = new HashMap<>(PLANTEIS);
 		Jogo jogo = TEMPORADA.divisoes().getFirst().calendario().rodadas().getFirst().jogos().getFirst();
 		curtos.put(jogo.mandante().id(), PLANTEIS.get(jogo.mandante().id()).subList(0, 10));
+
+		RodadaAoVivo.PartidaDaRodada partida = processamento
+			.preparar(TEMPORADA, 1, curtos, Disciplina.vazia(), Map.of(), List.of())
+			.partidas()
+			.stream()
+			.filter(p -> p.jogo().equals(jogo))
+			.findFirst()
+			.orElseThrow();
+		assertThat(partida.casa().titulares()).hasSize(10);
+	}
+
+	@Test
+	void clubeSemOMinimoParaComecarFalhaComONomeDoClube() {
+		Map<Long, List<Jogador>> curtos = new HashMap<>(PLANTEIS);
+		Jogo jogo = TEMPORADA.divisoes().getFirst().calendario().rodadas().getFirst().jogos().getFirst();
+		curtos.put(jogo.mandante().id(), PLANTEIS.get(jogo.mandante().id()).subList(0, 6));
 
 		assertThatIllegalStateException()
 			.isThrownBy(() -> processamento.jogar(TEMPORADA, 1, curtos, Disciplina.vazia(), Map.of()))

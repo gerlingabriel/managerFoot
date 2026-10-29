@@ -27,6 +27,8 @@ import br.com.managerfoot.dominio.Posicao;
  * (ou o jogador de linha mais fraco) vai para o gol com a força reduzida como no goleiro expulso;
  * vagas de linha vão para os mais fortes que sobraram. O improvisado mantém o id e entra com a
  * posição em que atua.</li>
+ * <li>Com menos de 11 disponíveis, todos jogam e as vagas que sobram ficam vazias, como se o time
+ * começasse com expulsos (SPEC §9.3).</li>
  * </ul>
  */
 public final class EscalacaoMaquina {
@@ -46,11 +48,11 @@ public final class EscalacaoMaquina {
 
 	/**
 	 * @param disponiveis quem pode jogar (sem suspensos), já com o asterisco temporário da temporada
-	 * @throws IllegalStateException se houver menos de 11 jogadores disponíveis
+	 * @throws IllegalStateException se houver menos de {@link Escalacao#MINIMO_TITULARES} disponíveis
 	 */
 	public Escalacao escalar(List<Jogador> disponiveis) {
-		if (disponiveis.size() < Formacao.TITULARES) {
-			throw new IllegalStateException("são necessários " + Formacao.TITULARES
+		if (disponiveis.size() < Escalacao.MINIMO_TITULARES) {
+			throw new IllegalStateException("são necessários " + Escalacao.MINIMO_TITULARES
 					+ " jogadores disponíveis para escalar, mas há " + disponiveis.size());
 		}
 		Map<Posicao, List<Jogador>> porPosicao = porPosicao(disponiveis);
@@ -129,7 +131,7 @@ public final class EscalacaoMaquina {
 		sobras.sort(Comparator.comparing((Jogador j) -> j.posicao() == Posicao.GOLEIRO).thenComparing(MAIS_FORTE));
 		for (Posicao posicao : List.of(Posicao.DEFENSOR, Posicao.MEIO_CAMPISTA, Posicao.ATACANTE)) {
 			List<Jogador> setor = escalados.get(posicao);
-			while (setor.size() < formacao.quantidade(posicao)) {
+			while (setor.size() < formacao.quantidade(posicao) && !sobras.isEmpty()) {
 				Jogador completa = sobras.removeFirst();
 				setor.add(comoPosicao(completa, posicao, completa.forca()));
 			}

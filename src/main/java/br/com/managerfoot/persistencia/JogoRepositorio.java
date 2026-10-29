@@ -19,8 +19,8 @@ import br.com.managerfoot.contas.AcessoNegadoException;
 import br.com.managerfoot.contas.Papel;
 import br.com.managerfoot.contas.Usuario;
 import br.com.managerfoot.dominio.Clube;
+import br.com.managerfoot.dominio.Escalacao;
 import br.com.managerfoot.dominio.EscalacaoDoTreinador;
-import br.com.managerfoot.dominio.Formacao;
 import br.com.managerfoot.dominio.Jogador;
 import br.com.managerfoot.motor.EscalacaoMaquina;
 import br.com.managerfoot.motor.ParametrosMotor;
@@ -193,7 +193,7 @@ public class JogoRepositorio {
 			.update();
 		List<Jogador> plantel = TabelasLiga.JOGO.carregarPlantel(jdbc, clubeId);
 		// elenco abaixo de 11 ainda está em aberto (SPEC §9.3): sem escalação gravada, como os da máquina
-		if (plantel.size() >= Formacao.TITULARES) {
+		if (plantel.size() >= Escalacao.MINIMO_TITULARES) {
 			escalacoes.gravar(clubeId, EscalacaoDoTreinador.de(escalacaoMaquina.escalar(plantel)));
 		}
 	}

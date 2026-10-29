@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 66 — 2026-10-29)
+-   **Status:** versão inicial para revisão (rev. 67 — 2026-10-29)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 67 (2026-10-29):** time com um a menos da §9.3 implementado: com menos de 11 disponíveis o clube joga com as vagas vazias, como se começasse com expulsos. Agente: mínimo de 7 para começar (regra do futebol) e o usuário só joga incompleto se ninguém disponível cabe nas vagas abertas (Provisório).
 -   **rev. 66 (2026-10-29):** pelo usuário: salário com a faixa da força em campo do clube, +20% e +10% em cima e deflação embaixo se preciso; preço sem faixa (só força e asterisco); máquina com caixa completa o plantel até 23 comprando até jogador fraco. Agente escolheu −30%/−15% embaixo pela simulação. Ligado no jogo (§9.3, §9.5); prêmio volta a R$ 3,968 mi e +5.000 lugares a R$ 1,587 mi.
 -   **rev. 65 (2026-10-29):** pelo usuário: o rico faz só 1 compra por rodada; a máquina compra só por leilão e a compra direta é só do usuário (código da rev. 64 retirado); simular a "inflação" (faixa da rev. 61) pela força do clube que compra, não do jogador (§9.3).
 -   **rev. 64 (2026-10-29):** pelo usuário: simular a alavanca "rico gasta mais" (§9.3). Resultado negativo: o rico que gasta fica mais forte e mais rico; parâmetros no código, desligados no padrão.
@@ -1711,8 +1712,24 @@ posições secundárias.
 
 Quando o clube estiver no elenco mínimo e um jogador estiver suspenso ou lesionado, poderá escalar com um jogador a menos. Nesse caso, a partida é simulada como se o time já começasse com um expulso.
 
-**Provisório (rev. 59), proposta do agente:** enquanto o time com um a
-menos não existe, nenhuma venda (leilão da máquina, anúncio para compra
+**Implementado (rev. 67).** Com menos de 11 disponíveis (suspensos,
+depois lesionados), o clube joga com quem tem, e as vagas da formação que
+sobram ficam vazias, como na expulsão (§7.3): não há substituto para elas.
+- **Máquina:** todos os disponíveis jogam, na formação de menor falta; sem
+  goleiro, o defensor mais fraco vai para o gol (regra já usada no plantel
+  incompleto).
+- **Usuário:** o plantel aceita menos de 11 titulares só se nenhum
+  disponível fora do time é da posição de uma vaga vazia; caso contrário a
+  tela pede para completar ("faltam 1 atacante"). Jogador de outra posição
+  pode ficar no banco.
+- **Provisório (agente):** com menos de **7** disponíveis a partida não
+  começa (regra do futebol) e a rodada para com erro, como antes acontecia
+  com menos de 11; com o plantel mínimo de 14 isso exige 8 suspensos ao
+  mesmo tempo. Sem goleiro disponível o usuário ainda não pode escalar
+  (falta improvisar um jogador de linha no gol, como a máquina faz).
+
+**Provisório (rev. 59), proposta do agente:** antes do time com um a
+menos, nenhuma venda (leilão da máquina, anúncio para compra
 direta, venda do usuário ou venda por caixa negativo) deixa o plantel com
 menos de **14** jogadores (`ParametrosMercadoMaquina.plantelMinimo`). A
 simulação do ciclo do mercado mostrou clubes da 3ª vendendo até 11 e

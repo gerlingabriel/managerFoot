@@ -112,11 +112,42 @@ class EscalacaoMaquinaTest {
 	}
 
 	@Test
-	void menosDeOnzeDisponiveisERecusado() {
+	void comDezDisponiveisTodosJogamEUmaVagaFicaVazia() {
 		List<Jogador> plantel = new ArrayList<>(jogadores(Posicao.GOLEIRO, 30));
-		plantel.addAll(jogadores(Posicao.DEFENSOR, 30, 30, 30, 30, 30, 30, 30, 30, 30));
+		plantel.addAll(jogadores(Posicao.DEFENSOR, 30, 30, 30, 30));
+		plantel.addAll(jogadores(Posicao.MEIO_CAMPISTA, 30, 30, 30, 30));
+		plantel.addAll(jogadores(Posicao.ATACANTE, 30));
 
-		assertThatIllegalStateException().isThrownBy(() -> maquina.escalar(plantel)).withMessageContaining("há 10");
+		Escalacao escalacao = maquina.escalar(plantel);
+
+		assertThat(escalacao.incompleta()).isTrue();
+		assertThat(escalacao.titulares()).hasSize(10);
+		assertThat(escalacao.reservas()).isEmpty();
+		assertThat(escalacao.jogadoresNa(Posicao.GOLEIRO)).hasSize(1);
+		for (Posicao posicao : Posicao.values()) {
+			assertThat(escalacao.jogadoresNa(posicao).size()).isLessThanOrEqualTo(escalacao.formacao().quantidade(posicao));
+		}
+	}
+
+	@Test
+	void semGoleiroEComDezODefensorMaisFracoVaiProGol() {
+		List<Jogador> plantel = new ArrayList<>(jogadores(Posicao.DEFENSOR, 30, 30, 30, 30, 18));
+		plantel.addAll(jogadores(Posicao.MEIO_CAMPISTA, 30, 30, 30));
+		plantel.addAll(jogadores(Posicao.ATACANTE, 30, 30));
+		long idDoMaisFraco = plantel.get(4).id();
+
+		Escalacao escalacao = maquina.escalar(plantel);
+
+		assertThat(escalacao.titulares()).hasSize(10);
+		assertThat(escalacao.jogadoresNa(Posicao.GOLEIRO).getFirst().id()).isEqualTo(idDoMaisFraco);
+	}
+
+	@Test
+	void menosDeSeteDisponiveisERecusado() {
+		List<Jogador> plantel = new ArrayList<>(jogadores(Posicao.GOLEIRO, 30));
+		plantel.addAll(jogadores(Posicao.DEFENSOR, 30, 30, 30, 30, 30));
+
+		assertThatIllegalStateException().isThrownBy(() -> maquina.escalar(plantel)).withMessageContaining("há 6");
 	}
 
 	private List<Jogador> jogadores(Posicao posicao, int... forcas) {
