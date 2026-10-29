@@ -20,6 +20,38 @@ class PublicoDoJogoTest {
 	private final PublicoDoJogo publico = PublicoDoJogo.padrao();
 
 	@Test
+	void jogoDeCopaUsaAPosicaoDeCadaUmNaPropriaDivisao() {
+		int forca = 40;
+		int estadio = publico.estadioInicial(forca);
+		SplittableRandom aleatorio = new SplittableRandom(1);
+		int lideres = 0;
+		int doFundo = 0;
+		for (int i = 0; i < 200; i++) {
+			lideres += publico.publicoNaCopa(estadio, forca, 0, 0, 20, 38, SEM, SEM, aleatorio);
+			doFundo += publico.publicoNaCopa(estadio, forca, 1, 1, 20, 38, SEM, SEM, aleatorio);
+		}
+		assertThat(lideres).isGreaterThan(doFundo * 2);
+		assertThat(publico.publicoNaCopa(estadio, forca, 0, 0, 20, 38, SEM, SEM, new SplittableRandom(3)))
+			.isLessThanOrEqualTo(estadio);
+	}
+
+	@Test
+	void finalEnchePelasDuasTorcidasENuncaFicaAbaixoDoMedioAlto() {
+		int estadio = publico.estadioInicial(45);
+		SplittableRandom aleatorio = new SplittableRandom(2);
+		for (int i = 0; i < 100; i++) {
+			assertThat(publico.publicoNaFinal(estadio, 45, 44, 0, 0.1, aleatorio)).isEqualTo(estadio);
+		}
+		// dois clubes fracos do fundo: as torcidas somadas, pelo menos o médio-alto delas
+		int pequeno = publico.estadioInicial(20);
+		int torcidas = publico.torcida(20) * 2;
+		for (int i = 0; i < 100; i++) {
+			int final_ = publico.publicoNaFinal(pequeno * 3, 20, 20, 1, 1, aleatorio);
+			assertThat(final_).isGreaterThanOrEqualTo((int) Math.min(pequeno * 3, torcidas * (0.6 - 0.08)));
+		}
+	}
+
+	@Test
 	void liderContraOSegundoEncheOMeioFicaPelaMetadeEOFundoBemAbaixoMesmoContraOLider() {
 		int forca = 40;
 		int estadio = publico.estadioInicial(forca);

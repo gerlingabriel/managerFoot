@@ -190,6 +190,36 @@ class RodadaIT {
 	}
 
 	@Test
+	void etapaDaCopaDepoisDaRodada3PelaMesmaTela() throws Exception {
+		// a máquina escala o clube do treinador: suspensões não param as rodadas do teste
+		jdbc.sql("DELETE FROM jogo_escalacao e USING jogo_clube c WHERE c.id = e.clube_id AND c.jogo_id = :j")
+			.param("j", jogoId).update();
+		for (int r = 1; r <= 3; r++) {
+			rodadas.avancar(jogoId, r);
+		}
+		mvc.perform(get(plantel).with(como(treinador)))
+			.andExpect(content().string(containsString("Próximo jogo · Copa · 16 avos de final · ida")))
+			.andExpect(content().string(containsString("Confirmar e jogar a copa")))
+			.andExpect(content().string(containsString("name=\"etapa\" value=\"0\"")));
+		// a rodada 4 da liga espera a copa
+		mvc.perform(post(rodada).param("rodada", "4").with(como(treinador)).with(csrf()))
+			.andExpect(flash().attribute("erro", "Antes da rodada 4, jogue a copa."));
+
+		mvc.perform(post(rodada).param("rodada", "4").param("etapa", "0").with(como(treinador)).with(csrf()))
+			.andExpect(redirectedUrl(rodada));
+		mvc.perform(get(rodada).with(como(treinador)))
+			.andExpect(content().string(containsString("Copa · 16 avos de final · ida")));
+		agora(3_600);
+		MockHttpSession sessao = new MockHttpSession();
+		mvc.perform(get(rodada).header("HX-Request", "true").session(sessao).with(como(treinador)))
+			.andExpect(header().string("HX-Redirect", plantel));
+		mvc.perform(get(plantel).session(sessao).with(como(treinador)))
+			.andExpect(content().string(containsString("Copa · 16 avos de final · ida: ")))
+			.andExpect(content().string(containsString("Próximo jogo · Rodada 4")));
+		assertThat(rodadas.proximo(jogoId)).isEqualTo(new RodadaRepositorio.Proximo.Liga(4));
+	}
+
+	@Test
 	void fimSemHtmxRedirecionaComOPlacar() throws Exception {
 		mvc.perform(post(rodada).param("rodada", "1").with(como(treinador)).with(csrf()));
 		agora(3_600);

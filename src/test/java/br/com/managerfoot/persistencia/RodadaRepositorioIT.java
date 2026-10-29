@@ -176,7 +176,7 @@ class RodadaRepositorioIT {
 			.param(clube).query(Long.class).single()).isEqualTo(-AmpliacaoEstadio.padrao().custo());
 
 		for (int rodada = 3; rodada < 2 + parametros.rodadasDeObra(); rodada++) {
-			rodadas.avancar(jogo, rodada);
+			RodadasDeTeste.jogarRodada(rodadas, jogo, rodada);
 		}
 		assertThat(estadio(clube)).isEqualTo(500);
 		assertThat(obra(clube)).isEqualTo(1);
@@ -247,7 +247,7 @@ class RodadaRepositorioIT {
 	@Test
 	void temporadaInteiraFechaClassificacaoECartoes() {
 		for (int rodada = 1; rodada <= 30; rodada++) {
-			rodadas.avancar(jogo, rodada);
+			RodadasDeTeste.jogarRodada(rodadas, jogo, rodada);
 		}
 
 		assertThatThrownBy(() -> rodadas.avancar(jogo, 31)).isInstanceOf(IllegalStateException.class)

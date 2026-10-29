@@ -21,19 +21,22 @@ package br.com.managerfoot.economia;
  * @param capacidadeMaxima limite do estádio para todos
  * @param bloco lugares de cada ampliação
  * @param rodadasDeObra rodadas até os lugares novos valerem
+ * @param ocupacaoMinimaFinal fração das duas torcidas, no mínimo, na final da copa em campo neutro
+ *        ("médio-alto", rev. 69; valor do agente, provisório)
  */
 public record ParametrosPublico(double estadioInicialSobreTorcida, double ocupacaoLider, double ocupacaoUltimo,
 		double bonusAdversario, double bonusDecisivo, int rodadasDecisivas, int rodadaTabelaInteira, double ocupacaoInicio,
-		double variacao, double ocupacaoMinima, int capacidadeMaxima, int bloco, int rodadasDeObra) {
+		double variacao, double ocupacaoMinima, int capacidadeMaxima, int bloco, int rodadasDeObra,
+		double ocupacaoMinimaFinal) {
 
 	public ParametrosPublico {
 		if (estadioInicialSobreTorcida <= 0 || ocupacaoLider < ocupacaoUltimo || rodadaTabelaInteira < 1 || bloco < 1
-				|| capacidadeMaxima < bloco || rodadasDeObra < 0) {
+				|| capacidadeMaxima < bloco || rodadasDeObra < 0 || ocupacaoMinimaFinal < 0) {
 			throw new IllegalArgumentException("parâmetros de público inválidos");
 		}
 	}
 
 	public static ParametrosPublico padrao() {
-		return new ParametrosPublico(0.75, 0.75, 0.15, 0.15, 0.15, 3, 5, 0.45, 0.08, 0.05, 80_000, 5_000, 6);
+		return new ParametrosPublico(0.75, 0.75, 0.15, 0.15, 0.15, 3, 5, 0.45, 0.08, 0.05, 80_000, 5_000, 6, 0.6);
 	}
 }

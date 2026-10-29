@@ -85,6 +85,16 @@ public class PatrocinioRepositorio {
 	/** Proposta por vitória: paga cada vitória da rodada jogada. */
 	@Transactional(propagation = Propagation.MANDATORY)
 	public void pagarVitorias(long temporadaId, int rodada, List<ProcessamentoRodada.PartidaJogada> partidas) {
+		pagarVitorias(temporadaId, rodada, partidas, Competicao.LIGA);
+	}
+
+	/**
+	 * Como {@link #pagarVitorias(long, int, List)}, na competição das partidas. Na copa vale o placar da
+	 * partida com a prorrogação; a disputa de pênaltis não conta como vitória.
+	 */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void pagarVitorias(long temporadaId, int rodada, List<ProcessamentoRodada.PartidaJogada> partidas,
+			Competicao competicao) {
 		Map<Long, Proposta> contratos = contratos(temporadaId, Tipo.POR_VITORIA);
 		if (contratos.isEmpty()) {
 			return;
@@ -98,7 +108,7 @@ public class PatrocinioRepositorio {
 			long vencedor = casa > fora ? p.jogo().mandante().id() : p.jogo().visitante().id();
 			Proposta proposta = contratos.get(vencedor);
 			if (proposta != null && proposta.porVitoria() > 0) {
-				caixas.lancarPatrocinio(temporadaId, rodada, vencedor, proposta.porVitoria());
+				caixas.lancarPatrocinio(temporadaId, rodada, vencedor, proposta.porVitoria(), competicao);
 			}
 		}
 	}

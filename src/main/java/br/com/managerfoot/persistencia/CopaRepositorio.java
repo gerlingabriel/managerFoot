@@ -125,6 +125,28 @@ public class CopaRepositorio {
 		return nova;
 	}
 
+	/**
+	 * Grava o campeão e o vice da copa da temporada no histórico (SPEC §8.1.1, rev. 70), com o treinador
+	 * do campeão: o usuário ou, sem usuário, o da máquina.
+	 */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void gravarCampeao(long jogoId, int temporada, Clube campeao, Clube vice) {
+		jdbc.sql("""
+				INSERT INTO jogo_campeao_copa (jogo_id, temporada, ano, clube_id, clube_nome, vice_id, vice_nome, usuario_id,
+				                               treinador_maquina_id)
+				SELECT j.id, :temporada, j.ano_inicial + :temporada - 1, c.id, c.nome, v.id, v.nome,
+				       (SELECT t.usuario_id FROM jogo_treinador t WHERE t.clube_id = c.id),
+				       CASE WHEN NOT EXISTS (SELECT 1 FROM jogo_treinador t WHERE t.clube_id = c.id)
+				            THEN (SELECT m.id FROM jogo_treinador_maquina m WHERE m.clube_id = c.id) END
+				FROM jogo j JOIN jogo_clube c ON c.id = :campeao JOIN jogo_clube v ON v.id = :vice
+				WHERE j.id = :jogo""")
+			.param("temporada", temporada)
+			.param("campeao", campeao.id())
+			.param("vice", vice.id())
+			.param("jogo", jogoId)
+			.update();
+	}
+
 	private void inserirConfrontos(long temporadaId, List<ConfrontoCopa> confrontos, int ultimaRodada) {
 		Map<FaseCopa, Map<Copa.Perna, Integer>> rodadas = new HashMap<>();
 		Copa.quadro(FaseCopa.DEZESSEIS_AVOS, ultimaRodada, parametros)

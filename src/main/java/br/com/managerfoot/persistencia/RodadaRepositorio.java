@@ -22,6 +22,9 @@ import br.com.managerfoot.motor.ParametrosMotor;
 import br.com.managerfoot.motor.TipoEvento;
 import br.com.managerfoot.temporada.Classificacao;
 import br.com.managerfoot.temporada.ConfiguracaoLiga;
+import br.com.managerfoot.temporada.Copa;
+import br.com.managerfoot.temporada.FaseCopa;
+import br.com.managerfoot.temporada.PlacarCopa;
 import br.com.managerfoot.temporada.Disciplina;
 import br.com.managerfoot.temporada.EvolucaoForca;
 import br.com.managerfoot.temporada.Jogo;
@@ -52,13 +55,14 @@ public class RodadaRepositorio {
 	private final EstadioRepositorio estadios;
 	private final PatrocinioRepositorio patrocinios;
 	private final TrocaRepositorio trocas;
+	private final CopaRepositorio copas;
 	private final ProcessamentoRodada processamento = ProcessamentoRodada.padrao();
 	private final EvolucaoForca evolucao = EvolucaoForca.padrao();
 
 	public RodadaRepositorio(JdbcClient jdbc, JogoRepositorio jogos, TemporadaRepositorio temporadas,
 			EscalacaoRepositorio escalacoes, CaixaRepositorio caixas, MercadoRepositorio mercado,
 			ClassificacaoRepositorio classificacoes, EstadioRepositorio estadios, PatrocinioRepositorio patrocinios,
-			TrocaRepositorio trocas) {
+			TrocaRepositorio trocas, CopaRepositorio copas) {
 		this.jdbc = jdbc;
 		this.jogos = jogos;
 		this.temporadas = temporadas;
@@ -69,6 +73,45 @@ public class RodadaRepositorio {
 		this.estadios = estadios;
 		this.patrocinios = patrocinios;
 		this.trocas = trocas;
+		this.copas = copas;
+	}
+
+	/** O que a temporada atual joga a seguir (SPEC §8.2): uma rodada da liga, uma etapa da copa ou nada. */
+	public sealed interface Proximo {
+
+		/** A rodada da liga seguinte à última processada. */
+		record Liga(int rodada) implements Proximo {
+		}
+
+		/**
+		 * Uma etapa da copa, jogada depois da rodada da liga {@code etapa.depoisDaRodada()}.
+		 *
+		 * @param indice posição da etapa no quadro da copa
+		 */
+		record EtapaCopa(int indice, Copa.Etapa etapa) implements Proximo {
+		}
+
+		/** Liga e copa terminadas: falta o fim de temporada. */
+		record Fim() implements Proximo {
+		}
+	}
+
+	/** O que a temporada atual joga a seguir. */
+	@Transactional(readOnly = true)
+	public Proximo proximo(long jogoId) {
+		return proximo(jogoId, temporadaAtual(jogoId, false));
+	}
+
+	/** A etapa da copa depois da rodada R vem antes da rodada R + 1; a final, depois da última. */
+	private Proximo proximo(long jogoId, LinhaTemporada linha) {
+		List<Copa.Etapa> quadro = copas.quadro(jogoId, linha.id());
+		if (linha.etapasCopa() < quadro.size() && quadro.get(linha.etapasCopa()).depoisDaRodada() <= linha.rodadasProcessadas()) {
+			return new Proximo.EtapaCopa(linha.etapasCopa(), quadro.get(linha.etapasCopa()));
+		}
+		if (linha.rodadasProcessadas() < totalDeRodadas(linha)) {
+			return new Proximo.Liga(linha.rodadasProcessadas() + 1);
+		}
+		return new Proximo.Fim();
 	}
 
 	/**
@@ -102,6 +145,10 @@ public class RodadaRepositorio {
 		if (rodada > total) {
 			throw new IllegalStateException("a temporada do jogo " + jogoId + " já teve as " + total + " rodadas jogadas");
 		}
+		if (proximo(jogoId, linha) instanceof Proximo.EtapaCopa(int indice, Copa.Etapa etapa)) {
+			throw new IllegalStateException("o jogo " + jogoId + " joga antes a etapa " + indice + " da copa ("
+					+ etapa.fase().nome() + ")");
+		}
 
 		Map<Long, List<Jogador>> planteis = jogos.carregarPlanteis(jogoId);
 		Disciplina antes = carregarDisciplina(jogoId);
@@ -117,24 +164,10 @@ public class RodadaRepositorio {
 		escalacoes.retirarSuspensos(jogoId);
 		caixas.lancarRodada(jogoId, linha.id(), temporada, rodada, resultado.partidas(), planteis);
 		patrocinios.pagarVitorias(linha.id(), rodada, resultado.partidas());
-		evoluir(jogoId, temporada, rodada, aoVivo, resultado, planteis);
+		evoluir(jogoId, new SplittableRandom(temporada.semente() * 41 + rodada), aoVivo, resultado, planteis);
 		estadios.avancarObras(jogoId, linha.id(), rodada, planteis);
 		mercado.reporAVenda(jogoId, MercadoRepositorio.semente(temporada.semente(), rodada));
-		resultado.moral().forEach((clubeId, moral) -> {
-			if (!moral.equals(moralAntes.get(clubeId))) {
-				jdbc.sql("UPDATE jogo_clube SET moral = :moral WHERE id = :clube")
-					.param("moral", moral.valor())
-					.param("clube", clubeId)
-					.update();
-			}
-		});
-		// demissões pela moral e trocas de treinador, depois de gravada a moral (SPEC §5.4, rev. 62)
-		Set<Long> jogaram = new HashSet<>();
-		resultado.partidas().forEach(p -> {
-			jogaram.add(p.jogo().mandante().id());
-			jogaram.add(p.jogo().visitante().id());
-		});
-		trocas.demitirDepoisDaRodada(jogoId, linha.id(), rodada, moralAntes, jogaram);
+		gravarMoralEDemitir(jogoId, linha.id(), rodada, moralAntes, resultado);
 
 		int atualizadas = jdbc.sql("""
 				UPDATE jogo_temporada SET rodadas_processadas = :rodada
@@ -150,24 +183,105 @@ public class RodadaRepositorio {
 	}
 
 	/**
-	 * Evolução de força depois das partidas (SPEC §6.1, rev. 55): quem jogou se desgasta, quem não
-	 * jogou pode crescer. Grava só quem mudou. Sorteio pela semente da temporada e da rodada.
+	 * Avança a etapa da copa (SPEC §8.2, rev. 70) e grava placares com prorrogação e pênaltis, gols,
+	 * cartões, suspensões, lesões, moral, o caixa sem salário, o patrocínio por vitória, a evolução de
+	 * força e as demissões, como numa rodada da liga. Terminada a fase, cria a seguinte. Cada etapa é
+	 * processada uma só vez.
+	 *
+	 * @param indice a etapa que quem pede espera jogar: a {@link Proximo.EtapaCopa} da temporada
+	 * @throws IllegalStateException se a etapa não é a próxima ou se a escalação de um treinador não
+	 *         pode jogar
 	 */
-	private void evoluir(long jogoId, Temporada temporada, int rodada, RodadaAoVivo aoVivo,
+	@Transactional
+	public EtapaJogada avancarCopa(long jogoId, int indice, List<RodadaAoVivo.Substituicao> substituicoes) {
+		LinhaTemporada linha = temporadaAtual(jogoId, true);
+		if (!(proximo(jogoId, linha) instanceof Proximo.EtapaCopa(int esperado, Copa.Etapa etapa)) || esperado != indice) {
+			throw new IllegalStateException("a etapa " + indice + " da copa não é a próxima do jogo " + jogoId);
+		}
+		Map<Long, List<Jogador>> planteis = jogos.carregarPlanteis(jogoId);
+		Disciplina antes = carregarDisciplina(jogoId);
+		Map<Long, Moral> moralAntes = carregarMoral(jogoId);
+		Temporada temporada = temporadas.carregarAtual(jogoId);
+		Copa copa = copas.carregar(jogoId, linha.id()).orElseThrow();
+		List<Copa.PartidaCopa> jogosDaEtapa = copa.partidas(etapa);
+		RodadaAoVivo aoVivo = prepararCopa(temporada, indice, jogosDaEtapa, jogoId, planteis, antes, substituicoes);
+		ProcessamentoRodada.Resultado resultado = aoVivo.finalizar(moralAntes);
+
+		for (int i = 0; i < jogosDaEtapa.size(); i++) {
+			Copa.PartidaCopa partida = jogosDaEtapa.get(i);
+			ProcessamentoRodada.PartidaJogada jogada = resultado.partidas().get(i);
+			PlacarCopa placar = new PlacarCopa(jogada.resultado().golsCasa(), jogada.resultado().golsFora(),
+					jogada.resultado().prorrogacao(), jogada.resultado().penaltis()
+						.map(d -> new PlacarCopa.Penaltis(d.gols(Lado.CASA), d.gols(Lado.FORA))));
+			copa = copa.comPlacar(etapa.fase(), partida.confronto().ordem(), partida.perna(), placar);
+			gravarPartida(linha.id(), jogada, placar);
+		}
+		int rodada = etapa.depoisDaRodada();
+		gravarDisciplina(planteis, antes, resultado.disciplina());
+		escalacoes.retirarSuspensos(jogoId);
+		caixas.lancarCopa(jogoId, linha.id(), temporada, resultado.partidas(), etapa.fase() == FaseCopa.FINAL, planteis);
+		patrocinios.pagarVitorias(linha.id(), rodada, resultado.partidas(), Competicao.COPA);
+		evoluir(jogoId, new SplittableRandom(temporada.semente() * 43 + indice), aoVivo, resultado, planteis);
+		gravarMoralEDemitir(jogoId, linha.id(), rodada, moralAntes, resultado);
+
+		int atualizadas = jdbc.sql("""
+				UPDATE jogo_temporada SET etapas_copa_processadas = :etapa
+				WHERE id = :temporada AND etapas_copa_processadas = :anterior""")
+			.param("etapa", indice + 1)
+			.param("temporada", linha.id())
+			.param("anterior", indice)
+			.update();
+		if (atualizadas != 1) {
+			throw new IllegalStateException("a etapa " + indice + " da copa do jogo " + jogoId + " já foi processada");
+		}
+		copa = copas.avancarFase(linha.id(), copa, temporada.semente());
+		if (copa.campeao().isPresent()) {
+			caixas.pagarPremiosDaCopa(jogoId, linha.id(), rodada, copa.campeao().get(), copa.vice().orElseThrow());
+			copas.gravarCampeao(jogoId, temporada.numero(), copa.campeao().get(), copa.vice().orElseThrow());
+		}
+		return new EtapaJogada(indice, etapa, resultado, copa);
+	}
+
+	/**
+	 * Grava a moral de quem mudou e então as demissões pela moral e as trocas de treinador (SPEC §5.4,
+	 * rev. 62).
+	 */
+	private void gravarMoralEDemitir(long jogoId, long temporadaId, int rodada, Map<Long, Moral> moralAntes,
+			ProcessamentoRodada.Resultado resultado) {
+		resultado.moral().forEach((clubeId, moral) -> {
+			if (!moral.equals(moralAntes.get(clubeId))) {
+				jdbc.sql("UPDATE jogo_clube SET moral = :moral WHERE id = :clube")
+					.param("moral", moral.valor())
+					.param("clube", clubeId)
+					.update();
+			}
+		});
+		Set<Long> jogaram = new HashSet<>();
+		resultado.partidas().forEach(p -> {
+			jogaram.add(p.jogo().mandante().id());
+			jogaram.add(p.jogo().visitante().id());
+		});
+		trocas.demitirDepoisDaRodada(jogoId, temporadaId, rodada, moralAntes, jogaram);
+	}
+
+	/**
+	 * Evolução de força depois das partidas (SPEC §6.1, rev. 55): quem jogou se desgasta, quem não
+	 * jogou pode crescer. Grava só quem mudou. O teto é o da divisão de cada clube.
+	 */
+	private void evoluir(long jogoId, SplittableRandom aleatorio, RodadaAoVivo aoVivo,
 			ProcessamentoRodada.Resultado resultado, Map<Long, List<Jogador>> planteis) {
 		ConfiguracaoLiga liga = jogos.carregarLiga(jogoId);
-		Map<Integer, Integer> tetos = new HashMap<>();
-		liga.divisoes().forEach(d -> tetos.put(d.prioridade(), d.limiteForca()));
-		SplittableRandom aleatorio = new SplittableRandom(temporada.semente() * 41 + rodada);
+		Map<Long, Integer> tetos = new HashMap<>();
+		liga.divisoes().forEach(d -> d.clubes().forEach(c -> tetos.put(c.id(), d.limiteForca())));
 		for (int i = 0; i < aoVivo.partidas().size(); i++) {
 			RodadaAoVivo.PartidaDaRodada partida = aoVivo.partidas().get(i);
 			ProcessamentoRodada.PartidaJogada jogada = resultado.partidas().get(i);
 			if (!partida.jogo().equals(jogada.jogo())) {
-				throw new IllegalStateException("partidas fora de ordem na rodada " + rodada);
+				throw new IllegalStateException("partidas fora de ordem na rodada " + jogada.jogo().rodada());
 			}
-			int teto = tetos.get(partida.prioridade());
 			for (Lado lado : Lado.values()) {
 				Clube clube = partida.clube(lado);
+				int teto = tetos.get(clube.id());
 				List<Jogador> plantel = planteis.getOrDefault(clube.id(), List.of());
 				List<Jogador> depois = evolucao.aposPartida(plantel, lado == Lado.CASA ? partida.casa() : partida.fora(),
 						jogada.resultado(), lado, teto, clube.forca(), aleatorio);
@@ -197,6 +311,36 @@ public class RodadaRepositorio {
 
 	private RodadaAoVivo preparar(Temporada temporada, int rodada, long jogoId, Map<Long, List<Jogador>> planteis, Disciplina antes,
 			List<RodadaAoVivo.Substituicao> substituicoes) {
+		return processamento.preparar(temporada, rodada, planteis, antes,
+				escalacoesDosTreinadores(jogoId, "a rodada " + rodada, planteis, antes), substituicoes);
+	}
+
+	/**
+	 * A etapa da copa pronta para jogar ao vivo, como {@link #preparar(long, int, List)}. Não grava
+	 * nada.
+	 *
+	 * @throws IllegalStateException se a etapa não é a próxima ou a escalação de um treinador não pode jogar
+	 */
+	@Transactional(readOnly = true)
+	public RodadaAoVivo prepararCopa(long jogoId, int indice, List<RodadaAoVivo.Substituicao> substituicoes) {
+		LinhaTemporada linha = temporadaAtual(jogoId, false);
+		if (!(proximo(jogoId, linha) instanceof Proximo.EtapaCopa(int esperado, Copa.Etapa etapa)) || esperado != indice) {
+			throw new IllegalStateException("a etapa " + indice + " da copa não é a próxima do jogo " + jogoId);
+		}
+		Copa copa = copas.carregar(jogoId, linha.id()).orElseThrow();
+		return prepararCopa(temporadas.carregarAtual(jogoId), indice, copa.partidas(etapa), jogoId,
+				jogos.carregarPlanteis(jogoId), carregarDisciplina(jogoId), substituicoes);
+	}
+
+	private RodadaAoVivo prepararCopa(Temporada temporada, int indice, List<Copa.PartidaCopa> jogosDaEtapa, long jogoId,
+			Map<Long, List<Jogador>> planteis, Disciplina antes, List<RodadaAoVivo.Substituicao> substituicoes) {
+		return processamento.prepararCopa(temporada, indice, jogosDaEtapa, planteis, antes,
+				escalacoesDosTreinadores(jogoId, "a copa", planteis, antes), substituicoes);
+	}
+
+	/** A escalação gravada de cada treinador, sem suspensos e lesionados. */
+	private Map<Long, Escalacao> escalacoesDosTreinadores(long jogoId, String oQue, Map<Long, List<Jogador>> planteis,
+			Disciplina antes) {
 		Map<Long, Escalacao> doTreinador = new HashMap<>();
 		escalacoes.carregarDoJogo(jogoId).forEach((clubeId, escalacao) -> {
 			try {
@@ -204,12 +348,16 @@ public class RodadaRepositorio {
 						antes::lesionado, ParametrosMotor.padrao().penalti().fatorGoleiroImprovisado()));
 			}
 			catch (IllegalStateException e) {
-				throw new IllegalStateException("o clube " + clubeId + " não pode jogar a rodada " + rodada + ": "
-						+ e.getMessage(), e);
+				throw new IllegalStateException("o clube " + clubeId + " não pode jogar " + oQue + ": " + e.getMessage(), e);
 			}
 		});
-		return processamento.preparar(temporada, rodada, planteis, antes, doTreinador,
-				substituicoes);
+		return doTreinador;
+	}
+
+	/** As partidas da etapa da copa na temporada atual; vazia se não há copa ou a etapa já foi jogada. */
+	@Transactional(readOnly = true)
+	public List<Copa.PartidaCopa> partidasDaEtapa(long jogoId, Copa.Etapa etapa) {
+		return copas.carregar(jogoId, temporadaAtual(jogoId, false).id()).map(c -> c.partidas(etapa)).orElse(List.of());
 	}
 
 	/** Rodadas já jogadas na temporada atual. */
@@ -231,19 +379,29 @@ public class RodadaRepositorio {
 	}
 
 	private int totalDeRodadas(LinhaTemporada linha) {
-		return jdbc.sql("SELECT coalesce(max(rodada), 0) FROM jogo_partida WHERE temporada_id = :temporada")
+		return jdbc.sql("SELECT coalesce(max(rodada), 0) FROM jogo_partida WHERE temporada_id = :temporada AND confronto_id IS NULL")
 			.param("temporada", linha.id())
 			.query(Integer.class)
 			.single();
 	}
 
 	private void gravarPartida(long temporadaId, ProcessamentoRodada.PartidaJogada partida) {
+		gravarPartida(temporadaId, partida, null);
+	}
+
+	/** @param copa o placar da partida da copa, com prorrogação e pênaltis; nulo na liga */
+	private void gravarPartida(long temporadaId, ProcessamentoRodada.PartidaJogada partida, PlacarCopa copa) {
 		Jogo jogo = partida.jogo();
 		long partidaId = jdbc.sql("""
-				UPDATE jogo_partida SET gols_mandante = :gm, gols_visitante = :gv, semente = :semente
+				UPDATE jogo_partida SET gols_mandante = :gm, gols_visitante = :gv, semente = :semente,
+				       prorrogacao = :prorrogacao, penaltis_mandante = :pm, penaltis_visitante = :pv
 				WHERE temporada_id = :temporada AND rodada = :rodada AND mandante_id = :mandante
-				  AND visitante_id = :visitante AND gols_mandante IS NULL AND confronto_id IS NULL
+				  AND visitante_id = :visitante AND gols_mandante IS NULL AND (confronto_id IS NOT NULL) = :copa
 				RETURNING id""")
+			.param("prorrogacao", copa != null && copa.prorrogacao())
+			.param("pm", copa == null ? null : copa.penaltis().map(PlacarCopa.Penaltis::mandante).orElse(null))
+			.param("pv", copa == null ? null : copa.penaltis().map(PlacarCopa.Penaltis::visitante).orElse(null))
+			.param("copa", copa != null)
 			.param("gm", partida.resultado().golsCasa())
 			.param("gv", partida.resultado().golsFora())
 			.param("semente", partida.semente())
@@ -329,10 +487,11 @@ public class RodadaRepositorio {
 
 	private LinhaTemporada temporadaAtual(long jogoId, boolean travar) {
 		return jdbc.sql("""
-				SELECT id, rodadas_processadas FROM jogo_temporada WHERE jogo_id = :jogo
+				SELECT id, rodadas_processadas, etapas_copa_processadas FROM jogo_temporada WHERE jogo_id = :jogo
 				ORDER BY numero DESC LIMIT 1""" + (travar ? " FOR UPDATE" : ""))
 			.param("jogo", jogoId)
-			.query((rs, n) -> new LinhaTemporada(rs.getLong("id"), rs.getInt("rodadas_processadas")))
+			.query((rs, n) -> new LinhaTemporada(rs.getLong("id"), rs.getInt("rodadas_processadas"),
+					rs.getInt("etapas_copa_processadas")))
 			.optional()
 			.orElseThrow(() -> new NoSuchElementException("o jogo " + jogoId + " não existe ou não tem temporada"));
 	}
@@ -341,7 +500,11 @@ public class RodadaRepositorio {
 	public record RodadaJogada(int numero, ProcessamentoRodada.Resultado resultado) {
 	}
 
-	private record LinhaTemporada(long id, int rodadasProcessadas) {
+	/** Etapa da copa jogada pelo avanço, com a copa depois dela (e da fase seguinte, se criada). */
+	public record EtapaJogada(int indice, Copa.Etapa etapa, ProcessamentoRodada.Resultado resultado, Copa copa) {
+	}
+
+	private record LinhaTemporada(long id, int rodadasProcessadas, int etapasCopa) {
 	}
 
 	private record LinhaDisciplina(long jogadorId, int amarelos, int suspensao, int lesao) {

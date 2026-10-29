@@ -26,3 +26,4 @@ consideradas, decisão e consequências.
 | [0012](0012-leiloes-da-rodada.md) | Leilões da máquina antes da rodada | Aceita |
 | [0013](0013-treinadores-da-maquina.md) | Treinadores da máquina e histórico | Aceita |
 | [0014](0014-troca-de-treinador.md) | Troca de treinador pela moral no banco | Aceita |
+| [0015](0015-copa-na-temporada.md) | Copa nacional entre as rodadas da liga | Aceita |

@@ -57,8 +57,48 @@ public final class PublicoDoJogo {
 	/** Fração da torcida esperada no jogo, antes do sorteio. */
 	public double ocupacao(int posicaoMandante, int posicaoVisitante, int clubes, int rodada, int rodadas,
 			OptionalDouble anteriorMandante, OptionalDouble anteriorVisitante) {
-		double pelaTabela = pelaPosicao(relativa(posicaoMandante, clubes), relativa(posicaoVisitante, clubes));
-		if (rodada > rodadas - parametros.rodadasDecisivas() && posicaoMandante <= 2 && posicaoVisitante <= 2) {
+		boolean decisivo = rodada > rodadas - parametros.rodadasDecisivas() && posicaoMandante <= 2 && posicaoVisitante <= 2;
+		return ocupacao(relativa(posicaoMandante, clubes), relativa(posicaoVisitante, clubes), decisivo, rodada, rodadas,
+				anteriorMandante, anteriorVisitante);
+	}
+
+	/**
+	 * Público da ida ou da volta da copa (SPEC §8.2, rev. 70): a conta da liga, com a posição de cada
+	 * clube na própria divisão ({@link #relativa(int, int)}) e sem o bônus do jogo decisivo da liga.
+	 *
+	 * @param rodada a rodada da liga depois da qual o jogo é disputado
+	 * @param rodadas total de rodadas da divisão do mandante
+	 */
+	public int publicoNaCopa(int capacidade, double forcaMandante, double relativaMandante, double relativaVisitante,
+			int rodada, int rodadas, OptionalDouble anteriorMandante, OptionalDouble anteriorVisitante,
+			RandomGenerator aleatorio) {
+		double ocupacao = ocupacao(relativaMandante, relativaVisitante, false, rodada + 1, rodadas, anteriorMandante,
+				anteriorVisitante) + (aleatorio.nextDouble() * 2 - 1) * parametros.variacao();
+		int publico = (int) Math.round(torcida(forcaMandante) * Math.max(0, ocupacao));
+		return Math.clamp(publico, (int) Math.round(capacidade * parametros.ocupacaoMinima()), capacidade);
+	}
+
+	/**
+	 * Público da final da copa em campo neutro (SPEC §8.2, rev. 69; proposta do agente, provisória): as
+	 * duas torcidas, no maior estádio dos dois, com a média da ocupação pela posição de cada um mais o
+	 * bônus do jogo decisivo, e nunca abaixo de {@link ParametrosPublico#ocupacaoMinimaFinal()}.
+	 *
+	 * @param capacidade o maior estádio dos dois finalistas
+	 */
+	public int publicoNaFinal(int capacidade, double forcaA, double forcaB, double relativaA, double relativaB,
+			RandomGenerator aleatorio) {
+		double pelaTabela = (pelaPosicao(relativaA, relativaB) + pelaPosicao(relativaB, relativaA)) / 2
+				+ parametros.bonusDecisivo();
+		double ocupacao = Math.max(parametros.ocupacaoMinimaFinal(), pelaTabela)
+				+ (aleatorio.nextDouble() * 2 - 1) * parametros.variacao();
+		int publico = (int) Math.round((torcida(forcaA) + torcida(forcaB)) * Math.max(0, ocupacao));
+		return Math.clamp(publico, (int) Math.round(capacidade * parametros.ocupacaoMinima()), capacidade);
+	}
+
+	private double ocupacao(double relativaMandante, double relativaVisitante, boolean decisivo, int rodada, int rodadas,
+			OptionalDouble anteriorMandante, OptionalDouble anteriorVisitante) {
+		double pelaTabela = pelaPosicao(relativaMandante, relativaVisitante);
+		if (decisivo) {
 			pelaTabela += parametros.bonusDecisivo();
 		}
 		// sem temporada passada (1ª do jogo), a ocupação de início

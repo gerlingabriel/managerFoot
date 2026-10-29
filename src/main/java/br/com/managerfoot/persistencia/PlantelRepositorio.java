@@ -23,6 +23,7 @@ import br.com.managerfoot.dominio.ParametrosMoral;
 import br.com.managerfoot.motor.EscalacaoMaquina;
 import br.com.managerfoot.motor.ParametrosMotor;
 import br.com.managerfoot.temporada.Classificacao;
+import br.com.managerfoot.temporada.Copa;
 import br.com.managerfoot.temporada.Jogo;
 import br.com.managerfoot.temporada.LinhaClassificacao;
 import br.com.managerfoot.temporada.Temporada;
@@ -103,13 +104,26 @@ public class PlantelRepositorio {
 			.query((rs, n) -> rs.getObject("moral") == null ? Moral.inicial(parametrosMoral) : new Moral(rs.getInt("moral")))
 			.single();
 
-		Optional<Jogo> proximo = processadas >= total ? Optional.empty()
-				: divisao.calendario().jogos().stream().filter(j -> j.rodada() == processadas + 1 && envolve(j, clube))
-					.findFirst();
+		RodadaRepositorio.Proximo seguinte = rodadas.proximo(jogoId);
+		Optional<Jogo> proximo;
+		String etapaCopa = null;
+		Integer indiceCopa = null;
+		if (seguinte instanceof RodadaRepositorio.Proximo.EtapaCopa(int indice, Copa.Etapa etapa)) {
+			// a etapa da copa vem antes da próxima rodada da liga (SPEC §8.2, rev. 70)
+			etapaCopa = "Copa · " + etapa.nome();
+			indiceCopa = indice;
+			proximo = rodadas.partidasDaEtapa(jogoId, etapa).stream().map(Copa.PartidaCopa::jogo).filter(j -> envolve(j, clube))
+				.findFirst();
+		} else {
+			proximo = processadas >= total ? Optional.empty()
+					: divisao.calendario().jogos().stream().filter(j -> j.rodada() == processadas + 1 && envolve(j, clube))
+						.findFirst();
+		}
 
 		return Optional.of(new VisaoPlantel(jogoId, temporada.numero(), jogos.ano(jogoId, temporada.numero()), oClube, nomeDivisao, classificacao.linhas().indexOf(linha) + 1,
 				linha.pontos(), linha.jogos(), moral.valor(), parametrosMoral.maximo(), moral.faixa(parametrosMoral),
-				processadas + 1, processadas >= total, proximo.map(j -> j.mandante().id() == clube).orElse(null),
+				processadas + 1, seguinte instanceof RodadaRepositorio.Proximo.Fim, etapaCopa, indiceCopa,
+				proximo.map(j -> j.mandante().id() == clube).orElse(null),
 				proximo.map(j -> j.mandante().id() == clube ? j.visitante() : j.mandante()).orElse(null), escalacao,
 				linhas, problemas, goleiroImprovisado, caixas.saldo(clube, plantel), caixas.moeda(jogoId)));
 	}
@@ -223,12 +237,15 @@ public class PlantelRepositorio {
 	 *
 	 * @param temporada número da temporada, enviado pela tela no fim dela
 	 * @param ano ano da temporada, mostrado na tela
-	 * @param emCasa nulo quando não há próximo jogo (folga ou temporada encerrada)
+	 * @param etapaCopa nome da etapa da copa que vem antes da próxima rodada; nulo se a próxima é da liga
+	 * @param indiceCopa índice da etapa no quadro da copa, para o pedido de jogá-la; nulo se a próxima é da liga
+	 * @param emCasa nulo quando não há próximo jogo (folga, fora da etapa da copa ou temporada encerrada)
 	 * @param adversario nulo quando não há próximo jogo
 	 * @param saldo caixa do clube em centavos de Real, para saber se pode contratar (rev. 39)
 	 */
 	public record VisaoPlantel(long jogoId, int temporada, int ano, Clube clube, String divisao, int posicao, int pontos, int jogos,
-			int moral, int moralMaxima, Moral.Faixa faixaMoral, int rodada, boolean temporadaEncerrada, Boolean emCasa,
+			int moral, int moralMaxima, Moral.Faixa faixaMoral, int rodada, boolean temporadaEncerrada, String etapaCopa,
+			Integer indiceCopa, Boolean emCasa,
 			Clube adversario, EscalacaoDoTreinador escalacao, List<LinhaJogador> jogadores, List<String> problemas,
 			String goleiroImprovisado, long saldo, Moeda moeda) {
 	}

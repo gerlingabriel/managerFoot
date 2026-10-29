@@ -42,6 +42,7 @@ import br.com.managerfoot.persistencia.JogoRepositorio;
 import br.com.managerfoot.persistencia.JogosDoTreinadorRepositorio;
 import br.com.managerfoot.persistencia.MoldeRepositorio;
 import br.com.managerfoot.persistencia.RodadaRepositorio;
+import br.com.managerfoot.persistencia.RodadasDeTeste;
 
 /** Plantel e tática (SPEC §10.3, rev. 34) pela tela, com o banco padrão. */
 @Import(TestcontainersConfiguration.class)
@@ -201,7 +202,7 @@ class PlantelIT {
 		// cada vitória paga o valor da proposta na rodada dela
 		jdbc.sql("DELETE FROM jogo_escalacao WHERE clube_id = :c").param("c", clube).update();
 		for (int rodada = 1; rodada <= 4; rodada++) {
-			rodadas.avancar(jogoId, rodada);
+			RodadasDeTeste.jogarRodada(rodadas, jogoId, rodada);
 		}
 		long vitorias = jdbc.sql("""
 				SELECT count(*) FROM jogo_partida

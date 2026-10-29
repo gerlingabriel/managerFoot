@@ -58,15 +58,21 @@ class RodadaController {
 
 	/**
 	 * "Confirmar e jogar rodada" (SPEC §10.3): antes, os leilões da máquina (SPEC §9.4, rev. 41;
-	 * modelo 7b); sem leilão pendente, começa a rodada ao vivo. Repetir não começa outra.
+	 * modelo 7b); sem leilão pendente, começa a rodada ao vivo. Com {@code etapa}, começa a etapa da
+	 * copa (SPEC §8.2, rev. 70), sem leilões. Repetir não começa outra.
 	 */
 	@PostMapping("/jogos/{jogoId}/rodada")
 	String iniciar(@AuthenticationPrincipal Usuario usuario, @PathVariable long jogoId, @RequestParam("rodada") int rodada,
-			RedirectAttributes redirect) {
+			@RequestParam(name = "etapa", required = false) Integer etapa, RedirectAttributes redirect) {
 		PlantelRepositorio.VisaoPlantel visao = plantel.visao(jogoId, usuario.id()).orElseThrow(NoSuchElementException::new);
 		// clique repetido numa rodada já jogada: a escalação pode ter mudado depois (suspensão), mas o aviso é este
 		if (rodada < visao.rodada()) {
 			redirect.addFlashAttribute("erro", "A rodada " + rodada + " já foi jogada. Confira o plantel.");
+			return "redirect:/jogos/" + jogoId + "/plantel";
+		}
+		if (etapa == null && visao.indiceCopa() != null) {
+			// página antiga: a etapa da copa vem antes da rodada da liga (SPEC §8.2, rev. 70)
+			redirect.addFlashAttribute("erro", "Antes da rodada " + rodada + ", jogue a copa.");
 			return "redirect:/jogos/" + jogoId + "/plantel";
 		}
 		if (!visao.problemas().isEmpty()) {
@@ -79,6 +85,10 @@ class RodadaController {
 			return "redirect:/jogos/" + jogoId + "/plantel";
 		}
 		try {
+			if (etapa != null) {
+				aoVivo.iniciarCopa(jogoId, usuario.id(), etapa, relogio.instant());
+				return "redirect:/jogos/" + jogoId + "/rodada";
+			}
 			if (leiloes.preparar(jogoId, usuario.id(), rodada) != Etapa.RODADA) {
 				return "redirect:/jogos/" + jogoId + "/leiloes";
 			}
@@ -89,7 +99,8 @@ class RodadaController {
 			return "redirect:/jogos/" + jogoId + "/plantel";
 		}
 		catch (IllegalStateException e) {
-			redirect.addFlashAttribute("erro", "A rodada " + rodada + " já foi jogada. Confira o plantel.");
+			redirect.addFlashAttribute("erro", (etapa != null ? "Esta etapa da copa" : "A rodada " + rodada)
+					+ " já foi jogada. Confira o plantel.");
 			return "redirect:/jogos/" + jogoId + "/plantel";
 		}
 		return "redirect:/jogos/" + jogoId + "/rodada";
@@ -108,9 +119,9 @@ class RodadaController {
 		if (estado.isEmpty() || estado.get().terminada()) {
 			String plantel = "/jogos/" + jogoId + "/plantel";
 			estado.map(EstadoRodada::jogoDoUsuario).ifPresentOrElse(
-					jogo -> guardarResultado(request, response, plantel, resultado(estado.get().rodada(), jogo)),
-					() -> estado.ifPresent(e -> guardarResultado(request, response, plantel,
-							"Rodada " + e.rodada() + ": seu clube folgou.")));
+					jogo -> guardarResultado(request, response, plantel, resultado(estado.get(), jogo)),
+					() -> estado.ifPresent(e -> guardarResultado(request, response, plantel, e.copa() != null
+							? e.copa() + ": seu clube não jogou." : "Rodada " + e.rodada() + ": seu clube folgou.")));
 			if (htmx != null) {
 				response.setHeader("HX-Redirect", plantel);
 				return null;
@@ -186,9 +197,11 @@ class RodadaController {
 		response.sendError(HttpStatus.NOT_FOUND.value());
 	}
 
-	static String resultado(int rodada, PlacarAoVivo jogo) {
-		return "Rodada " + rodada + ": " + jogo.mandante().nome() + " " + jogo.golsCasa() + " x " + jogo.golsFora() + " "
-				+ jogo.visitante().nome();
+	static String resultado(EstadoRodada estado, PlacarAoVivo jogo) {
+		String placar = jogo.golsCasa() + " x " + jogo.golsFora();
+		String penaltis = jogo.penaltisCasa() == null ? "" : " (pên. " + jogo.penaltisCasa() + " x " + jogo.penaltisFora() + ")";
+		return (estado.copa() != null ? estado.copa() : "Rodada " + estado.rodada()) + ": " + jogo.mandante().nome() + " "
+				+ placar + " " + jogo.visitante().nome() + penaltis;
 	}
 
 	/** Mensagem para a próxima tela, também quando o redirecionamento é feito pelo HTMX. */

@@ -1518,6 +1518,19 @@ existirem.
   fraco vence 44% dos confrontos equilibrados (menos de 3 de diferença) e
   14% com 8 ou mais; o mais forte dos inscritos ganha 18% das copas.
 
+**Gravado (rev. 70, V30 e V31, `docs/decisions/0015`):** copa sorteada no
+início de cada temporada nova (jogos salvos seguem sem copa até a próxima
+temporada); etapas jogadas entre as rodadas da liga pela mesma tela;
+prêmio e campeão gravados ao fim da final; o fim de temporada espera a
+final. **Provisório, proposta do agente:** a final tem as duas torcidas no
+maior estádio dos dois finalistas, com ocupação mínima de 60% delas e o
+ingresso da 1ª divisão; na ida e na volta, o ingresso é o da divisão do
+mandante e o deslocamento, o da divisão do visitante. Com o clube fora da
+etapa, o usuário ainda clica "Confirmar e jogar a copa" e a etapa corre
+rápida. Textos do plantel ("Próximo jogo · Copa · Oitavas de final ·
+ida", "Seu clube não joga") e do quadro ("Pênaltis 4 x 3") feitos sem
+modelo, a aprovar junto com as telas da copa.
+
 **Definido (rev. 70), pelo usuário — partida de copa na temporada:**
 - **Efeitos iguais aos da liga, sem salário:** o mandante fica com a
   bilheteria da ida e da volta (público pela mesma conta da liga); moral,

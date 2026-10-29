@@ -38,6 +38,7 @@ import br.com.managerfoot.persistencia.JogoRepositorio;
 import br.com.managerfoot.persistencia.JogosDoTreinadorRepositorio;
 import br.com.managerfoot.persistencia.MoldeRepositorio;
 import br.com.managerfoot.persistencia.RodadaRepositorio;
+import br.com.managerfoot.persistencia.RodadasDeTeste;
 import br.com.managerfoot.temporada.Classificacao;
 
 /** Fim de temporada na tela: o usuário só confirma (SPEC §15, 3c.4), com o banco padrão. */
@@ -87,7 +88,7 @@ class FimDeTemporadaIT {
 		jdbc.sql("DELETE FROM jogo_escalacao e USING jogo_clube c WHERE c.id = e.clube_id AND c.jogo_id = :j")
 			.param("j", jogoId).update();
 		for (int rodada = 1; rodada <= rodadas.totalDeRodadas(jogoId); rodada++) {
-			rodadas.avancar(jogoId, rodada);
+			RodadasDeTeste.jogarRodada(rodadas, jogoId, rodada);
 		}
 	}
 

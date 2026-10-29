@@ -87,9 +87,86 @@ public class CaixaRepositorio {
 		if (partidas.isEmpty()) {
 			return Map.of();
 		}
+		if (partidas.getFirst().prioridade() == ProcessamentoRodada.PRIORIDADE_COPA) {
+			return publicosDaCopa(jogoId, temporadas.carregarAtual(jogoId), temporadaAtual(jogoId), partidas.stream()
+				.map(p -> new Partida(p.prioridade(), p.jogo(), p.semente()))
+				.toList(), partidas.stream().anyMatch(p -> p.condicoes().decisivo().filter(d -> d.campoNeutro()).isPresent()),
+					jogos.carregarPlanteis(jogoId));
+		}
 		return publicos(jogoId, temporadas.carregarAtual(jogoId), temporadaAtual(jogoId),
 				partidas.stream().map(p -> new Partida(p.prioridade(), p.jogo(), p.semente())).toList(),
 				jogos.carregarPlanteis(jogoId));
+	}
+
+	/**
+	 * Público da copa (SPEC §8.2, rev. 70): na ida e na volta, a conta da liga com a posição de cada
+	 * clube na própria divisão depois da rodada da etapa; na final, as duas torcidas no maior estádio
+	 * dos dois.
+	 */
+	private Map<Long, Integer> publicosDaCopa(long jogoId, Temporada temporada, long temporadaId, List<Partida> partidas,
+			boolean finalDaCopa, Map<Long, List<Jogador>> planteis) {
+		int rodada = partidas.getFirst().jogo().rodada();
+		Map<Integer, Classificacao> tabela = classificacoes.calcular(temporada, temporadaId, rodada + 1);
+		Map<Long, Integer> estadios = new HashMap<>();
+		Map<Long, OptionalDouble> anteriores = new HashMap<>();
+		carregarEstadios(jogoId, estadios, anteriores);
+		Map<Long, Integer> publicos = new HashMap<>();
+		for (Partida p : partidas) {
+			Clube mandante = p.jogo().mandante();
+			Clube visitante = p.jogo().visitante();
+			Temporada.SorteiosDivisao divisaoMandante = ProcessamentoRodada.divisaoDe(temporada, mandante);
+			double relativaMandante = relativa(tabela.get(divisaoMandante.prioridade()), mandante.id());
+			double relativaVisitante = relativa(tabela.get(ProcessamentoRodada.divisaoDe(temporada, visitante).prioridade()),
+					visitante.id());
+			double forcaMandante = MercadoDaMaquina.forcaEmCampo(planteis.getOrDefault(mandante.id(), List.of()));
+			SplittableRandom aleatorio = new SplittableRandom(~p.semente());
+			int pagantes = finalDaCopa
+					? publico.publicoNaFinal(Math.max(estadios.get(mandante.id()), estadios.get(visitante.id())), forcaMandante,
+							MercadoDaMaquina.forcaEmCampo(planteis.getOrDefault(visitante.id(), List.of())), relativaMandante,
+							relativaVisitante, aleatorio)
+					: publico.publicoNaCopa(estadios.get(mandante.id()), forcaMandante, relativaMandante, relativaVisitante,
+							rodada, divisaoMandante.calendario().rodadas().size(), anteriores.get(mandante.id()),
+							anteriores.get(visitante.id()), aleatorio);
+			publicos.put(mandante.id(), pagantes);
+		}
+		return publicos;
+	}
+
+	private static double relativa(Classificacao classificacao, long clubeId) {
+		return PublicoDoJogo.relativa(posicao(classificacao, clubeId), classificacao.linhas().size());
+	}
+
+	/**
+	 * Lança o caixa de uma etapa da copa jogada (SPEC §8.2, rev. 70): público e bilheteria do mandante
+	 * na ida e na volta, deslocamento do visitante e, na final, a bilheteria dividida; sem salário.
+	 *
+	 * @param finalDaCopa a etapa é a final, em campo neutro
+	 * @param planteis os planteis que jogaram, antes da evolução de força
+	 */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void lancarCopa(long jogoId, long temporadaId, Temporada temporada, List<ProcessamentoRodada.PartidaJogada> partidas,
+			boolean finalDaCopa, Map<Long, List<Jogador>> planteis) {
+		abrirCaixas(jogoId, planteis);
+		Map<Long, Integer> publicos = publicosDaCopa(jogoId, temporada, temporadaId,
+				partidas.stream().map(p -> new Partida(p.prioridade(), p.jogo(), p.semente())).toList(), finalDaCopa, planteis);
+		for (ProcessamentoRodada.PartidaJogada p : partidas) {
+			Jogo jogo = p.jogo();
+			int pagantes = publicos.get(jogo.mandante().id());
+			jdbc.sql("""
+					UPDATE jogo_partida SET publico = :publico
+					WHERE temporada_id = :temporada AND rodada = :rodada AND mandante_id = :mandante
+					  AND visitante_id = :visitante AND confronto_id IS NOT NULL""")
+				.param("publico", pagantes)
+				.param("temporada", temporadaId)
+				.param("rodada", jogo.rodada())
+				.param("mandante", jogo.mandante().id())
+				.param("visitante", jogo.visitante().id())
+				.update();
+			Map<Long, List<Lancamento>> lancamentos = finalDaCopa ? caixa.finalDaCopa(jogo, pagantes)
+					: caixa.jogoDeCopa(jogo, ProcessamentoRodada.divisaoDe(temporada, jogo.mandante()).prioridade(),
+							ProcessamentoRodada.divisaoDe(temporada, jogo.visitante()).prioridade(), pagantes);
+			lancamentos.forEach((clube, l) -> lancar(temporadaId, jogo.rodada(), clube, l, Competicao.COPA));
+		}
 	}
 
 	/**
@@ -103,18 +180,7 @@ public class CaixaRepositorio {
 		Map<Integer, Classificacao> tabela = classificacoes.calcular(temporada, temporadaId, rodada);
 		Map<Long, Integer> estadios = new HashMap<>();
 		Map<Long, OptionalDouble> anteriores = new HashMap<>();
-		jdbc.sql("""
-				SELECT id, forca, estadio_capacidade, posicao_anterior, clubes_divisao_anterior
-				FROM jogo_clube WHERE jogo_id = :jogo""")
-			.param("jogo", jogoId)
-			.query(rs -> {
-				long id = rs.getLong("id");
-				estadios.put(id, rs.getObject("estadio_capacidade") == null ? publico.estadioInicial(rs.getInt("forca"))
-						: rs.getInt("estadio_capacidade"));
-				anteriores.put(id, rs.getObject("posicao_anterior") == null ? OptionalDouble.empty()
-						: OptionalDouble.of(PublicoDoJogo.relativa(rs.getInt("posicao_anterior"),
-								rs.getInt("clubes_divisao_anterior"))));
-			});
+		carregarEstadios(jogoId, estadios, anteriores);
 		Map<Long, Integer> publicos = new HashMap<>();
 		for (Partida p : partidas) {
 			Classificacao classificacao = tabela.get(p.prioridade());
@@ -128,6 +194,22 @@ public class CaixaRepositorio {
 					anteriores.get(visitante), new SplittableRandom(~p.semente())));
 		}
 		return publicos;
+	}
+
+	/** Estádio de cada clube (o inicial, se o caixa ainda não foi aberto) e a posição final da temporada passada. */
+	private void carregarEstadios(long jogoId, Map<Long, Integer> estadios, Map<Long, OptionalDouble> anteriores) {
+		jdbc.sql("""
+				SELECT id, forca, estadio_capacidade, posicao_anterior, clubes_divisao_anterior
+				FROM jogo_clube WHERE jogo_id = :jogo""")
+			.param("jogo", jogoId)
+			.query(rs -> {
+				long id = rs.getLong("id");
+				estadios.put(id, rs.getObject("estadio_capacidade") == null ? publico.estadioInicial(rs.getInt("forca"))
+						: rs.getInt("estadio_capacidade"));
+				anteriores.put(id, rs.getObject("posicao_anterior") == null ? OptionalDouble.empty()
+						: OptionalDouble.of(PublicoDoJogo.relativa(rs.getInt("posicao_anterior"),
+								rs.getInt("clubes_divisao_anterior"))));
+			});
 	}
 
 	private static int posicao(Classificacao classificacao, long clubeId) {
@@ -176,7 +258,7 @@ public class CaixaRepositorio {
 		Map<Integer, Map<TipoLancamento, Long>> porRodada = new TreeMap<>();
 		Map<Integer, List<String>> detalhes = new HashMap<>();
 		jdbc.sql("""
-				SELECT l.rodada, l.tipo, l.valor, jj.nome, jj.posicao, jj.forca
+				SELECT l.rodada, l.tipo, l.valor, l.competicao, jj.nome, jj.posicao, jj.forca
 				FROM jogo_lancamento l LEFT JOIN jogo_jogador jj ON jj.id = l.jogador_id
 				WHERE l.clube_id = :clube AND l.temporada_id = :temporada
 				ORDER BY l.rodada, l.id""")
@@ -189,7 +271,7 @@ public class CaixaRepositorio {
 				String detalhe = switch (tipo) {
 					case COMPRA, VENDA -> (tipo == TipoLancamento.COMPRA ? "Compra: " : "Venda: ") + rs.getString("nome")
 							+ " (" + sigla(rs.getString("posicao")) + ", " + rs.getInt("forca") + ")";
-					case PREMIO -> "Prêmio da liga";
+					case PREMIO -> "COPA".equals(rs.getString("competicao")) ? "Prêmio da copa" : "Prêmio da liga";
 					case ESTADIO -> "Ampliação do estádio";
 					case PATROCINIO -> rodada == 0 ? null : "Patrocínio";
 					default -> null;
@@ -324,10 +406,17 @@ public class CaixaRepositorio {
 	 */
 	@Transactional(propagation = Propagation.MANDATORY)
 	public void lancarPatrocinio(long temporadaId, int rodada, long clubeId, long valor) {
+		lancarPatrocinio(temporadaId, rodada, clubeId, valor, Competicao.LIGA);
+	}
+
+	/** Como {@link #lancarPatrocinio(long, int, long, long)}, na competição da partida vencida. */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void lancarPatrocinio(long temporadaId, int rodada, long clubeId, long valor, Competicao competicao) {
 		jdbc.sql("""
-				INSERT INTO jogo_lancamento (clube_id, temporada_id, rodada, tipo, valor)
-				VALUES (:clube, :temporada, :rodada, 'PATROCINIO', :valor)
+				INSERT INTO jogo_lancamento (clube_id, temporada_id, rodada, tipo, valor, competicao)
+				VALUES (:clube, :temporada, :rodada, 'PATROCINIO', :valor, :competicao)
 				ON CONFLICT ON CONSTRAINT uq_jogo_lancamento DO UPDATE SET valor = jogo_lancamento.valor + EXCLUDED.valor""")
+			.param("competicao", competicao.name())
 			.param("clube", clubeId)
 			.param("temporada", temporadaId)
 			.param("rodada", rodada)
@@ -363,6 +452,19 @@ public class CaixaRepositorio {
 				}
 			}
 		});
+	}
+
+	/**
+	 * Prêmio da copa (SPEC §8.2, rev. 70): o campeão recebe o mesmo que o campeão da 1ª divisão e o
+	 * vice, metade; lançado na rodada da final.
+	 */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void pagarPremiosDaCopa(long jogoId, long temporadaId, int rodada, Clube campeao, Clube vice) {
+		int teto = jogos.carregarLiga(jogoId).divisoes().getFirst().limiteForca();
+		lancar(temporadaId, rodada, campeao.id(), List.of(new Lancamento(TipoLancamento.PREMIO, premiacao.premioDaCopa(1, teto))),
+				Competicao.COPA);
+		lancar(temporadaId, rodada, vice.id(), List.of(new Lancamento(TipoLancamento.PREMIO, premiacao.premioDaCopa(2, teto))),
+				Competicao.COPA);
 	}
 
 	private long temporadaAtual(long jogoId) {
@@ -474,10 +576,15 @@ public class CaixaRepositorio {
 	}
 
 	private void lancar(long temporadaId, int rodada, long clubeId, List<Lancamento> lancamentos) {
+		lancar(temporadaId, rodada, clubeId, lancamentos, Competicao.LIGA);
+	}
+
+	private void lancar(long temporadaId, int rodada, long clubeId, List<Lancamento> lancamentos, Competicao competicao) {
 		for (Lancamento l : lancamentos) {
 			jdbc.sql("""
-					INSERT INTO jogo_lancamento (clube_id, temporada_id, rodada, tipo, valor)
-					VALUES (:clube, :temporada, :rodada, :tipo, :valor)""")
+					INSERT INTO jogo_lancamento (clube_id, temporada_id, rodada, tipo, valor, competicao)
+					VALUES (:clube, :temporada, :rodada, :tipo, :valor, :competicao)""")
+				.param("competicao", competicao.name())
 				.param("clube", clubeId)
 				.param("temporada", temporadaId)
 				.param("rodada", rodada)

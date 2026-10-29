@@ -77,7 +77,7 @@ class FimDeTemporadaRepositorioIT {
 	@Test
 	void caixaNegativoVendeUmJogadorNoInicioDaTemporadaMesmoComTodosRenovados() {
 		for (int rodada = 1; rodada <= 30; rodada++) {
-			rodadas.avancar(jogo, rodada);
+			RodadasDeTeste.jogarRodada(rodadas, jogo, rodada);
 		}
 		long clube = jdbc.sql("SELECT clube_id FROM jogo_treinador WHERE jogo_id = ?").param(jogo).query(Long.class).single();
 		// renovados na temporada 1: na 2 ficam sem contrato e qualquer um pode ir a leilão
@@ -101,7 +101,7 @@ class FimDeTemporadaRepositorioIT {
 	@Test
 	void fimDaTemporadaPromoveRebaixaZeraAmarelosEIniciaASeguinte() {
 		for (int rodada = 1; rodada <= 30; rodada++) {
-			rodadas.avancar(jogo, rodada);
+			RodadasDeTeste.jogarRodada(rodadas, jogo, rodada);
 		}
 		ConfiguracaoLiga liga = jogos.carregarLiga(jogo);
 		List<String> lideres = rodadas.classificacao(jogo).values().stream()
@@ -157,7 +157,7 @@ class FimDeTemporadaRepositorioIT {
 		int limiteA = liga.divisoes().get(0).limiteForca();
 		int limiteB = liga.divisoes().get(1).limiteForca();
 		assertThat(contar("SELECT count(*) FROM jogo_lancamento l JOIN jogo_temporada t ON t.id = l.temporada_id "
-				+ "WHERE t.jogo_id = ? AND t.numero = 1 AND l.tipo = 'PREMIO' AND l.rodada = 30")).isEqualTo(3 + 3);
+				+ "WHERE t.jogo_id = ? AND t.numero = 1 AND l.tipo = 'PREMIO' AND l.rodada = 30 AND l.competicao = 'LIGA'")).isEqualTo(3 + 3);
 		assertThat(lancamento(lideres.get(0), 1, "PREMIO")).isEqualTo(premiacao.premio(1, limiteA));
 		assertThat(lancamento(lideres.get(1), 1, "PREMIO")).isEqualTo(premiacao.premio(1, limiteB));
 		assertThat(contar("SELECT count(*) FROM jogo_lancamento l JOIN jogo_temporada t ON t.id = l.temporada_id "
@@ -190,7 +190,8 @@ class FimDeTemporadaRepositorioIT {
 		return jdbc.sql("""
 				SELECT l.valor FROM jogo_lancamento l JOIN jogo_temporada t ON t.id = l.temporada_id
 				JOIN jogo_clube c ON c.id = l.clube_id
-				WHERE t.jogo_id = :jogo AND t.numero = :temporada AND c.nome = :clube AND l.tipo = :tipo""")
+				WHERE t.jogo_id = :jogo AND t.numero = :temporada AND c.nome = :clube AND l.tipo = :tipo
+				  AND l.competicao = 'LIGA'""")
 			.param("jogo", jogo)
 			.param("temporada", temporada)
 			.param("clube", clube)
@@ -215,7 +216,7 @@ class FimDeTemporadaRepositorioIT {
 	@Test
 	void treinadorComClubeNaFilaEhDemitidoEAssumeUmDosMaisFracosDaUltimaDivisao() {
 		for (int rodada = 1; rodada <= 30; rodada++) {
-			rodadas.avancar(jogo, rodada);
+			RodadasDeTeste.jogarRodada(rodadas, jogo, rodada);
 		}
 		long usuario = jdbc.sql("SELECT usuario_id FROM jogo_treinador WHERE jogo_id = :j").param("j", jogo)
 			.query(Long.class).single();

@@ -25,6 +25,27 @@ class CaixaDaRodadaTest {
 	private final CaixaDaRodada caixa = CaixaDaRodada.padrao();
 
 	@Test
+	void jogoDeCopaNaoPagaSalarioEFinalDivideABilheteria() {
+		Clube a = new Clube(1, "A", 40);
+		Clube b = new Clube(2, "B", 20);
+		Jogo jogo = new Jogo(10, a, b);
+		Map<Long, List<Lancamento>> copa = caixa.jogoDeCopa(jogo, 1, 2, 1001);
+		assertThat(copa.get(1L)).extracting(Lancamento::tipo)
+			.containsExactly(TipoLancamento.BILHETERIA, TipoLancamento.CUSTO_DO_JOGO);
+		assertThat(copa.get(1L).getFirst().valor()).isEqualTo(1001 * caixa.ingresso(1));
+		assertThat(copa.get(2L)).extracting(Lancamento::tipo).containsExactly(TipoLancamento.DESLOCAMENTO);
+
+		Map<Long, List<Lancamento>> fim = caixa.finalDaCopa(jogo, 1001);
+		long total = 1001 * caixa.ingresso(1);
+		long bilheteriaA = fim.get(1L).getFirst().valor();
+		long bilheteriaB = fim.get(2L).getFirst().valor();
+		assertThat(bilheteriaA + bilheteriaB).isEqualTo(total);
+		assertThat(Math.abs(bilheteriaA - bilheteriaB)).isLessThanOrEqualTo(1);
+		assertThat(fim.values()).allMatch(l -> l.stream().noneMatch(x -> x.tipo() == TipoLancamento.SALARIOS
+				|| x.tipo() == TipoLancamento.DESLOCAMENTO));
+	}
+
+	@Test
 	void estadioVaiDoMinimoAoMaximoEmMultiplosDe500() {
 		assertThat(caixa.capacidadeInicial(5)).isEqualTo(5_000);
 		assertThat(caixa.capacidadeInicial(12)).isEqualTo(5_000);

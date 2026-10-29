@@ -153,6 +153,38 @@ public final class CaixaDaRodada {
 		return new Movimento(publicoPorMandante, lancamentos);
 	}
 
+	/**
+	 * Lançamentos de um jogo de ida ou volta da copa (SPEC §8.2, rev. 70): os da liga sem o salário,
+	 * que só sai nas rodadas da liga. O ingresso é o da divisão do mandante e o deslocamento, o da
+	 * divisão do visitante.
+	 */
+	public Map<Long, List<Lancamento>> jogoDeCopa(Jogo jogo, int prioridadeMandante, int prioridadeVisitante, int publico) {
+		long bilheteria = publico * parametros.ingresso(prioridadeMandante);
+		return Map.of(jogo.mandante().id(),
+				List.of(new Lancamento(TipoLancamento.BILHETERIA, bilheteria),
+						new Lancamento(TipoLancamento.CUSTO_DO_JOGO, -Math.round(bilheteria * parametros.custoDoJogo()))),
+				jogo.visitante().id(),
+				List.of(new Lancamento(TipoLancamento.DESLOCAMENTO, -parametros.deslocamento(prioridadeVisitante))));
+	}
+
+	/**
+	 * Lançamentos da final da copa em campo neutro (SPEC §8.2, rev. 69): bilheteria e custo do jogo
+	 * divididos meio a meio, com o ingresso da 1ª divisão; sem salário nem deslocamento. O centavo
+	 * ímpar fica com o primeiro do jogo.
+	 */
+	public Map<Long, List<Lancamento>> finalDaCopa(Jogo jogo, int publico) {
+		long bilheteria = publico * parametros.ingresso(1);
+		long custo = Math.round(bilheteria * parametros.custoDoJogo());
+		long metadeBilheteria = bilheteria / 2;
+		long metadeCusto = custo / 2;
+		return Map.of(jogo.mandante().id(),
+				List.of(new Lancamento(TipoLancamento.BILHETERIA, bilheteria - metadeBilheteria),
+						new Lancamento(TipoLancamento.CUSTO_DO_JOGO, -(custo - metadeCusto))),
+				jogo.visitante().id(),
+				List.of(new Lancamento(TipoLancamento.BILHETERIA, metadeBilheteria),
+						new Lancamento(TipoLancamento.CUSTO_DO_JOGO, -metadeCusto)));
+	}
+
 	/** Público de cada jogo pelo id do mandante e lançamentos de cada clube pelo id. */
 	public record Movimento(Map<Long, Integer> publicoPorMandante, Map<Long, List<Lancamento>> lancamentos) {
 

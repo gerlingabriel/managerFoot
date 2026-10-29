@@ -34,6 +34,15 @@ public record Copa(List<ConfrontoCopa> confrontos) {
 
 	/** Uma etapa do quadro: as partidas de uma fase jogadas depois de uma rodada da liga. */
 	public record Etapa(int depoisDaRodada, FaseCopa fase, Perna perna) {
+
+		/** Nome para a tela: "Oitavas de final · ida", "Final". */
+		public String nome() {
+			return switch (perna) {
+				case IDA -> fase.nome() + " · ida";
+				case VOLTA -> fase.nome() + " · volta";
+				case JOGO_UNICO -> fase.nome();
+			};
+		}
 	}
 
 	/**

@@ -99,7 +99,7 @@ class EscalacaoRepositorioIT {
 		Set<Long> doClube = plantel.stream().map(Jogador::id).collect(Collectors.toSet());
 
 		for (int rodada = 1; rodada <= 6; rodada++) {
-			rodadas.avancar(jogo, rodada);
+			RodadasDeTeste.jogarRodada(rodadas, jogo, rodada);
 			// recompõe o time se alguém foi suspenso, para a próxima rodada poder sair
 			escalacoes.gravar(clube, escalacao);
 			jdbc.sql("UPDATE jogo_jogador SET suspensao = 0 WHERE clube_id = :clube").param("clube", clube).update();

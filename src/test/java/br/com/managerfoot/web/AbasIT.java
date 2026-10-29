@@ -48,6 +48,7 @@ import br.com.managerfoot.persistencia.JogosDoTreinadorRepositorio;
 import br.com.managerfoot.persistencia.MoldeRepositorio;
 import br.com.managerfoot.persistencia.PatrocinioRepositorio;
 import br.com.managerfoot.persistencia.RodadaRepositorio;
+import br.com.managerfoot.persistencia.RodadasDeTeste;
 
 /** Abas Classificação e Artilheiros e a ficha do jogador (SPEC §10.3, rev. 16), com o banco padrão. */
 @Import(TestcontainersConfiguration.class)
@@ -109,7 +110,7 @@ class AbasIT {
 		jdbc.sql("DELETE FROM jogo_escalacao e USING jogo_clube c WHERE c.id = e.clube_id AND c.jogo_id = :j")
 			.param("j", jogoId).update();
 		for (int rodada = 1; rodada <= 3; rodada++) {
-			rodadas.avancar(jogoId, rodada);
+			RodadasDeTeste.jogarRodada(rodadas, jogoId, rodada);
 		}
 		base = "/jogos/" + jogoId;
 	}

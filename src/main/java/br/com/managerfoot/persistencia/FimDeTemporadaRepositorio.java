@@ -72,7 +72,7 @@ public class FimDeTemporadaRepositorio {
 	 * @param temporadaAtual a temporada que quem pede espera encerrar; um pedido repetido é recusado
 	 * @return a transição e a nova temporada
 	 * @throws NoSuchElementException se o jogo não existe ou não tem temporada
-	 * @throws IllegalStateException se a temporada não é a atual ou ainda tem rodadas a jogar
+	 * @throws IllegalStateException se a temporada não é a atual ou ainda tem rodadas ou etapas da copa a jogar
 	 */
 	@Transactional
 	public NovaTemporada avancarTemporada(long jogoId, int temporadaAtual, long semente) {
@@ -87,6 +87,10 @@ public class FimDeTemporadaRepositorio {
 		if (jogadas < total) {
 			throw new IllegalStateException("a temporada " + numero + " do jogo " + jogoId + " ainda tem "
 					+ (total - jogadas) + " rodada(s) a jogar");
+		}
+		if (rodadas.proximo(jogoId) instanceof RodadaRepositorio.Proximo.EtapaCopa etapa) {
+			throw new IllegalStateException("a temporada " + numero + " do jogo " + jogoId + " ainda tem a "
+					+ etapa.etapa().fase().nome() + " da copa a jogar");
 		}
 
 		Map<Integer, Classificacao> finais = rodadas.classificacao(jogoId);
