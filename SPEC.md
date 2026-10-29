@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 72 — 2026-10-29)
+-   **Status:** versão inicial para revisão (rev. 73 — 2026-10-29)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 73 (2026-10-29):** pelo usuário: provisórios da rev. 72 aprovados (vagas da América do Sul e da Europa, grupos, oitavas, quadro de rodadas, efeitos e prêmio); a força dos países estrangeiros varia por país (ex.: Argentina mais forte que Venezuela). Agente: níveis de força dos países gerados marcados Provisório, a conferir por simulação (§8.3.6).
 -   **rev. 72 (2026-10-29):** pelo usuário: competição continental só da região do país jogado, fase de grupos + mata-mata com 32 clubes e vagas padrão somando 32 (sem fase preliminar), estrangeiros gerados pelo banco padrão, vagas do país jogado pela liga anterior com o campeão da copa ocupando uma delas, sem vaga extra do campeão continental (§8.3.6). Agente: vagas padrão da América do Sul e da Europa (com fonte), grupos, oitavas e quadro de rodadas marcados Provisório.
 -   **rev. 71 (2026-10-29):** pelo usuário: modelos 12a a 12f da copa aprovados (aba Copa, etapa ao vivo com "Ida · total" e prorrogação, próximo jogo no plantel, calendário, coluna Copa no Histórico, linhas da copa no extrato com o quadro "Copa na temporada"); as propostas provisórias da rev. 70 (chave fixa, prorrogação, ordem dos batedores, público da final, clique na etapa sem o clube) passam a Definido (§8.2).
 -   **rev. 70 (2026-10-29):** pelo usuário: partida de copa com os efeitos da liga menos o salário, na mesma tela da rodada, título no Histórico e não no ranking; sem gol fora de casa (empate no placar somado vai à prorrogação e aos pênaltis), mando da ida por sorteio, prêmio da copa igual ao do campeão da 1ª divisão e metade para o vice, "mais fraco" é a força em campo no início da temporada, liga de 1 divisão com menos de 16 clubes usa a maior potência de 2 (§8.2). Domínio da copa e prorrogação/pênaltis no motor feitos; propostas do agente marcadas Provisório; simulação em `docs/simulacoes/copa.md`.
@@ -1691,7 +1692,8 @@ Se a ausência de representantes impedir a realização do formato previsto, o s
 - **Sem vaga extra** para o campeão continental anterior: ele só entra se
   classificar pelo seu país.
 
-**Provisório (rev. 72), proposta do agente — a ajustar:**
+**Definido (rev. 73), pelo usuário — as propostas da rev. 72 abaixo foram
+aprovadas** (vagas, clubes gerados, grupos, oitavas, quadro e efeitos):
 - **Vagas padrão** (somam 32). Base: a fase de grupos real, com fonte e data:
   - **América do Sul** — Libertadores 2026 (Wikipedia, "2026 Copa
     Libertadores", seção de vagas, consultada em 2026-10-29: 28 vagas diretas
@@ -1711,8 +1713,20 @@ Se a ausência de representantes impedir a realização do formato previsto, o s
 - **Clubes estrangeiros gerados:** o dobro das vagas do país (para a escolha
   por força com sorteio variar), com a faixa de força da 1ª divisão do
   banco padrão (rev. 31). Não evoluem, não têm caixa nem mercado.
-  **Em aberto:** força relativa entre países (ex.: Venezuela mais fraca que
-  Brasil) — decidir por simulação.
+  ~~**Em aberto:** força relativa entre países~~ — **Definido (rev. 73), pelo
+  usuário:** a força varia por país (a Argentina é mais forte que a
+  Venezuela). Os países jogáveis do banco padrão (Brasil, Argentina,
+  Inglaterra, Espanha, Itália, Portugal) já têm liga própria e entram com os
+  clubes da 1ª divisão deles; só os outros são gerados.
+  **Provisório (rev. 73), proposta do agente — níveis dos países gerados**,
+  faixa de força dos clubes, a conferir por simulação quando a continental
+  rodar:
+
+  | Nível | Faixa | Países |
+  |---|---|---|
+  | A | 35 a 50 (a da 1ª divisão) | Alemanha, França |
+  | B | 31 a 45 | Uruguai, Colômbia, Chile, Equador, Paraguai, Bélgica, Países Baixos, Turquia |
+  | C | 27 a 40 | Bolívia, Peru, Venezuela, Grécia, Tchéquia, Polônia, Noruega |
 - **Grupos:** 8 grupos de 4, turno e returno; sorteio em 4 potes de 8 pela
   força em campo, sem dois clubes do mesmo país no grupo quando possível.
   Desempate: pontos, saldo, gols pró, sorteio. Passam os 2 primeiros.

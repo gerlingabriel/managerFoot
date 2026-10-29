@@ -25,11 +25,14 @@ import br.com.managerfoot.dominio.Temperamento;
  * @param pesoSoNome peso de só o nome
  * @param pesoSoSobrenome peso de só o sobrenome
  * @param cores cores dos escudos, no formato #RRGGBB
+ * @param faixasEstrangeiros faixa de força dos clubes dos países gerados só para a continental, por
+ *        nível (rev. 73, provisório)
  */
 public record ParametrosBancoPadrao(long semente, List<FaixaForca> faixas, Map<Posicao, Integer> composicao,
 		int variacaoTitulares, int quedaReservasMinima, int quedaReservasMaxima, int maximoAsteriscos,
 		double chanceAsteriscoMaisFraco, double chanceAsteriscoMaisForte, Map<Temperamento, Integer> pesosTemperamento,
-		int pesoNomeComposto, int pesoSoNome, int pesoSoSobrenome, List<String> cores) {
+		int pesoNomeComposto, int pesoSoNome, int pesoSoSobrenome, List<String> cores,
+		Map<NivelEstrangeiro, FaixaForca> faixasEstrangeiros) {
 
 	/** Faixa de força dos clubes de uma divisão do banco padrão. */
 	public record FaixaForca(int minima, int maxima) {
@@ -43,6 +46,10 @@ public record ParametrosBancoPadrao(long semente, List<FaixaForca> faixas, Map<P
 		composicao = Map.copyOf(composicao);
 		pesosTemperamento = Map.copyOf(pesosTemperamento);
 		cores = List.copyOf(cores);
+		faixasEstrangeiros = Map.copyOf(faixasEstrangeiros);
+		if (faixasEstrangeiros.keySet().size() != NivelEstrangeiro.values().length) {
+			throw new IllegalArgumentException("todo nível de estrangeiro precisa de faixa: " + faixasEstrangeiros);
+		}
 		if (pesosTemperamento.keySet().size() != Temperamento.values().length) {
 			throw new IllegalArgumentException("todo temperamento precisa de peso: " + pesosTemperamento);
 		}
@@ -50,6 +57,10 @@ public record ParametrosBancoPadrao(long semente, List<FaixaForca> faixas, Map<P
 			throw new IllegalArgumentException("os escudos precisam de ao menos duas cores");
 		}
 	}
+
+	/** Níveis da rev. 73: A com a faixa da 1ª divisão, B e C abaixo (a conferir por simulação). */
+	public static final Map<NivelEstrangeiro, FaixaForca> FAIXAS_ESTRANGEIROS = Map.of(NivelEstrangeiro.A,
+			FAIXAS.getFirst(), NivelEstrangeiro.B, new FaixaForca(31, 45), NivelEstrangeiro.C, new FaixaForca(27, 40));
 
 	public static ParametrosBancoPadrao padrao() {
 		return new ParametrosBancoPadrao(19980101L, FAIXAS,
@@ -59,6 +70,7 @@ public record ParametrosBancoPadrao(long semente, List<FaixaForca> faixas, Map<P
 						13, Temperamento.VIOLENTO, 7),
 				40, 30, 30,
 				List.of("#FFFFFF", "#000000", "#C8102E", "#003DA5", "#00843D", "#FFD100", "#6CACE4", "#7A263A",
-						"#F57C00", "#5B2C83", "#1B365D", "#8A8D8F"));
+						"#F57C00", "#5B2C83", "#1B365D", "#8A8D8F"),
+				FAIXAS_ESTRANGEIROS);
 	}
 }

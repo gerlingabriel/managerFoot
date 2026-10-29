@@ -29,6 +29,8 @@ import br.com.managerfoot.temporada.FormatoDivisao;
  * última e, por serem os mais fracos, são os que a distribuição manda para a fila.</li>
  * <li>A força do clube é a média dos 11 que a máquina escalaria (rev. 31).</li>
  * <li>Todos os jogadores são do país do clube (rev. 32); estrangeiros entram pelo editor.</li>
+ * <li>Os países sem liga da continental (rev. 73) só têm clubes, espalhados pela faixa do nível do
+ * país.</li>
  * </ul>
  */
 public final class GeradorBancoPadrao {
@@ -47,6 +49,10 @@ public final class GeradorBancoPadrao {
 
 	/** País com todos os clubes necessários, do mais forte ao mais fraco. */
 	public record PaisGerado(PaisPadrao pais, List<ClubeGerado> clubes) {
+	}
+
+	/** País gerado só para a competição continental, do clube mais forte ao mais fraco (rev. 73). */
+	public record EstrangeiroGerado(PaisEstrangeiroPadrao pais, List<ClubeGerado> clubes) {
 	}
 
 	public List<PaisGerado> gerar(List<PaisPadrao> paises) {
@@ -68,18 +74,47 @@ public final class GeradorBancoPadrao {
 			ParametrosBancoPadrao.FaixaForca faixa = parametros.faixas().get(i);
 			for (int k = 0; k < quantidade; k++) {
 				int forca = forcaNaFaixa(faixa, k, quantidade, aleatorio);
-				Clube clube = new Clube(clubes.size() + 1, nomeDoClube(pais, nomesUsados, aleatorio), forca,
+				Clube clube = new Clube(clubes.size() + 1, nomeDoClube(pais.nome(), pais.modelosClube(), pais.lugares(),
+						pais.clubesNecessarios(), nomesUsados, aleatorio), forca,
 						escudo(aleatorio));
-				clubes.add(new ClubeGerado(clube, null, plantel(pais, forca, faixa.maxima(), aleatorio)));
+				clubes.add(new ClubeGerado(clube, null,
+						plantel(pais.idioma(), pais.codigo(), forca, faixa.maxima(), aleatorio)));
 			}
 		}
-		// gerador próprio: os treinadores (rev. 54) não mudam os clubes e planteis já gerados
+		return new PaisGerado(pais, comTreinadores(pais.idioma(), clubes, aleatorio));
+	}
+
+	/** Os clubes do país sem liga, na faixa do nível dele, com a sequência própria do país. */
+	public EstrangeiroGerado gerar(PaisEstrangeiroPadrao pais, int quantidade) {
+		SplittableRandom aleatorio = new SplittableRandom(parametros.semente() * 31 + pais.codigo().hashCode());
+		ParametrosBancoPadrao.FaixaForca faixa = parametros.faixasEstrangeiros().get(pais.nivel());
+		Set<String> nomesUsados = new HashSet<>();
+		List<ClubeGerado> clubes = new ArrayList<>();
+		for (int k = 0; k < quantidade; k++) {
+			int forca = forcaNaFaixa(faixa, k, quantidade, aleatorio);
+			Clube clube = new Clube(clubes.size() + 1,
+					nomeDoClube(pais.nome(), pais.modelosClube(), pais.lugares(), quantidade, nomesUsados, aleatorio), forca,
+					escudo(aleatorio));
+			clubes.add(new ClubeGerado(clube, null, plantel(pais.idioma(), pais.codigo(), forca, faixa.maxima(), aleatorio)));
+		}
+		return new EstrangeiroGerado(pais, comTreinadores(pais.idioma(), clubes, aleatorio));
+	}
+
+	/** Os países sem liga das competições, cada um com os clubes que {@code continentais} pedem. */
+	public List<EstrangeiroGerado> gerarEstrangeiros(List<PaisEstrangeiroPadrao> paises,
+			List<ContinentalPadrao> continentais) {
+		return paises.stream()
+			.map(p -> gerar(p, continentais.stream().mapToInt(c -> c.clubesGerados(p.codigo())).sum()))
+			.toList();
+	}
+
+	/** Gerador próprio: os treinadores (rev. 54) não mudam os clubes e planteis já gerados. */
+	private static List<ClubeGerado> comTreinadores(Idioma idioma, List<ClubeGerado> clubes, SplittableRandom aleatorio) {
 		SplittableRandom paraTreinadores = new SplittableRandom(~aleatorio.nextLong());
 		Set<String> treinadores = new HashSet<>();
-		List<ClubeGerado> comTreinador = clubes.stream()
-			.map(c -> new ClubeGerado(c.clube(), nomeDoTreinador(pais.idioma(), treinadores, paraTreinadores), c.jogadores()))
+		return clubes.stream()
+			.map(c -> new ClubeGerado(c.clube(), nomeDoTreinador(idioma, treinadores, paraTreinadores), c.jogadores()))
 			.toList();
-		return new PaisGerado(pais, comTreinador);
 	}
 
 	/** Do topo ao pé da faixa, em passos iguais, com ±1 de sorteio para não ficar uma escada perfeita. */
@@ -90,16 +125,17 @@ public final class GeradorBancoPadrao {
 		return limitar(base + aleatorio.nextInt(-1, 2), faixa.minima(), faixa.maxima());
 	}
 
-	private String nomeDoClube(PaisPadrao pais, Set<String> usados, SplittableRandom aleatorio) {
-		int combinacoes = pais.modelosClube().size() * pais.lugares().size();
+	private static String nomeDoClube(String pais, List<String> modelos, List<String> lugares, int necessarios,
+			Set<String> usados, SplittableRandom aleatorio) {
+		int combinacoes = modelos.size() * lugares.size();
 		for (int tentativa = 0; tentativa < combinacoes * 4; tentativa++) {
-			String nome = sortear(pais.modelosClube(), aleatorio).formatted(sortear(pais.lugares(), aleatorio));
+			String nome = sortear(modelos, aleatorio).formatted(sortear(lugares, aleatorio));
 			if (usados.add(nome)) {
 				return nome;
 			}
 		}
-		throw new IllegalStateException("faltam nomes de clube para " + pais.nome() + ": " + combinacoes
-				+ " combinações para " + pais.clubesNecessarios() + " clubes");
+		throw new IllegalStateException("faltam nomes de clube para " + pais + ": " + combinacoes + " combinações para "
+				+ necessarios + " clubes");
 	}
 
 	private Escudo escudo(SplittableRandom aleatorio) {
@@ -116,7 +152,8 @@ public final class GeradorBancoPadrao {
 	 * Os 4-4-2 mais fortes nascem perto da força do clube e os demais abaixo; depois a força dos
 	 * titulares que a máquina escolhe é ajustada, de 1 em 1, até a média bater com a do clube.
 	 */
-	private List<Jogador> plantel(PaisPadrao pais, int forcaClube, int teto, SplittableRandom aleatorio) {
+	private List<Jogador> plantel(Idioma idioma, String nacionalidade, int forcaClube, int teto,
+			SplittableRandom aleatorio) {
 		Map<Posicao, Integer> titulares = Map.of(Posicao.GOLEIRO, 1, Posicao.DEFENSOR, 4, Posicao.MEIO_CAMPISTA, 4,
 				Posicao.ATACANTE, 2);
 		Set<String> nomes = new HashSet<>();
@@ -127,9 +164,8 @@ public final class GeradorBancoPadrao {
 				int desvio = k < titulares.get(posicao)
 						? aleatorio.nextInt(-parametros.variacaoTitulares(), parametros.variacaoTitulares() + 1)
 						: -aleatorio.nextInt(parametros.quedaReservasMinima(), parametros.quedaReservasMaxima() + 1);
-				jogadores.add(new Jogador(jogadores.size() + 1, nomeDoJogador(pais.idioma(), nomes, aleatorio), posicao,
-						limitar(forcaClube + desvio, Jogador.FORCA_MINIMA, teto), temperamento(aleatorio),
-						pais.codigo()));
+				jogadores.add(new Jogador(jogadores.size() + 1, nomeDoJogador(idioma, nomes, aleatorio), posicao,
+						limitar(forcaClube + desvio, Jogador.FORCA_MINIMA, teto), temperamento(aleatorio), nacionalidade));
 			}
 		}
 		jogadores = asteriscos(jogadores, forcaClube, aleatorio);
