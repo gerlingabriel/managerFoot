@@ -63,30 +63,30 @@ class MoralTest {
 	}
 
 	@Test
-	void padraoComecaEm22ComVerdeDe15AmareloDe8EVermelhoAte7() {
+	void padraoComecaEm22ComVerdeDe15AmareloDe7EVermelhoAte6() {
 		ParametrosMoral padrao = ParametrosMoral.padrao();
 		assertThat(Moral.inicial(padrao).valor()).isEqualTo(22);
 		assertThat(new Moral(30).faixa(padrao)).isEqualTo(Moral.Faixa.VERDE);
 		assertThat(new Moral(15).faixa(padrao)).isEqualTo(Moral.Faixa.VERDE);
 		assertThat(new Moral(14).faixa(padrao)).isEqualTo(Moral.Faixa.AMARELO);
-		assertThat(new Moral(8).faixa(padrao)).isEqualTo(Moral.Faixa.AMARELO);
-		assertThat(new Moral(7).faixa(padrao)).isEqualTo(Moral.Faixa.VERMELHO);
+		assertThat(new Moral(7).faixa(padrao)).isEqualTo(Moral.Faixa.AMARELO);
+		assertThat(new Moral(6).faixa(padrao)).isEqualTo(Moral.Faixa.VERMELHO);
 		assertThat(new Moral(0).faixa(padrao)).isEqualTo(Moral.Faixa.VERMELHO);
 	}
 
 	@Test
 	void quemEntraNoVermelhoEhDemitidoSeOJogoSeguinteNaoTiraDoVermelho() {
 		ParametrosMoral padrao = ParametrosMoral.padrao();
-		// 9 + derrota em casa (-3) + (22 - 9) / 12 = 7
-		Moral entrouNoVermelho = new Moral(9).aposJogo(true, 0, 1, padrao);
-		assertThat(entrouNoVermelho).isEqualTo(new Moral(7));
+		// 8 + derrota em casa (-3) + (22 - 8) / 12 = 6
+		Moral entrouNoVermelho = new Moral(8).aposJogo(true, 0, 1, padrao);
+		assertThat(entrouNoVermelho).isEqualTo(new Moral(6));
 		// o jogo que leva ao vermelho não demite
-		assertThat(new Moral(9).demite(entrouNoVermelho, padrao)).isFalse();
+		assertThat(new Moral(8).demite(entrouNoVermelho, padrao)).isFalse();
 
-		// vitória em casa (10) e empate fora (8) voltam ao amarelo e salvam
+		// vitória em casa (9) e empate fora (7) voltam ao amarelo e salvam
 		assertThat(entrouNoVermelho.demite(entrouNoVermelho.aposJogo(true, 2, 0, padrao), padrao)).isFalse();
 		assertThat(entrouNoVermelho.demite(entrouNoVermelho.aposJogo(false, 1, 1, padrao), padrao)).isFalse();
-		// derrota (6) e empate em casa (7) não saem do vermelho e demitem
+		// derrota (5) e empate em casa (6) não saem do vermelho e demitem
 		assertThat(entrouNoVermelho.demite(entrouNoVermelho.aposJogo(false, 0, 1, padrao), padrao)).isTrue();
 		assertThat(entrouNoVermelho.demite(entrouNoVermelho.aposJogo(true, 1, 1, padrao), padrao)).isTrue();
 		// vitória que não basta para sair do vermelho também demite

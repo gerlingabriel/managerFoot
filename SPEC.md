@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 60 — 2026-10-29)
+-   **Status:** versão inicial para revisão (rev. 61 — 2026-10-29)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 61 (2026-10-29):** pelo usuário: vermelho de **0 a 6** e amarelo de **7 a 14** (o amarelo é o período para tentar melhorar); força média confirmada (média dos 11); a máquina também segue a moral; troca de treinadores na demissão (o chamado vai para o clube que demitiu e o demitido fica com o clube dele; entre os 3 clubes inferiores de moral verde, o usuário decide e, sem usuário, vai o mais forte); depois da troca os dois começam com 22; moral visível ao clicar no clube; **salário com ajuste pela faixa de força** (+10% de 45 a 50, +5% de 35 a 44, nada de 25 a 34, −5% de 15 a 24, −10% abaixo de 15), simulado (§9.5). Simulações refeitas.
 -   **rev. 60 (2026-10-29):** pelo usuário: no máximo **2 divisões** por país (a 3ª saiu do banco padrão); elenco gerado com **20 jogadores** (máximo continua 25); moral começa em **22**, com verde de 15 a 30, amarelo de 8 a 14 e vermelho de 0 a 7; usuário no vermelho tem um jogo decisivo antes da demissão; demissão na máquina chama treinador de clube mais fraco com moral verde, e o usuário chamado recebe convite (§5.4). Banco padrão versionado (V27): a carga troca o molde antigo; jogos já salvos não mudam. Simulações refeitas (`ciclo-do-mercado.md`, `temporada.md`) e nova `docs/simulacoes/demissao.md`.
 -   **rev. 59 (2026-10-29):** regra do usuário para a demissão do usuário (troca com treinador da máquina, §5.4); moral sem efeito na partida (§6.2); plantel mínimo de 14 nas vendas (provisório, §9.3); simulação do ciclo do mercado com a economia atual (`docs/simulacoes/ciclo-do-mercado.md`).
 -   **rev. 58 (2026-10-29):** salário gravado nos clubes de usuário (a máquina readequa), pedido de aumento com intervalo de 5 pontos e modelo 10a aprovados e gravados (V26).
@@ -716,8 +717,10 @@ sorteio provisório da rev. 36 para o usuário que cai para a fila):
     8 (salva) e empate em casa fica em 7 (demite).
   - Regra no domínio: `Moral.demite` (estava vermelho antes do jogo e
     continua depois). Ainda não ligada ao avanço da rodada.
-- **Força média** = força do clube, a média dos 11 em campo (§4.3). Leitura
-  do agente de "força da média do time"; confirmar.
+  - Rev. 61: com o vermelho de 0 a 6, o exemplo fica: de 6, empate fora vai
+    a 7 (salva) e empate em casa fica em 6 (demite).
+- **Força média** = força do clube, a média dos 11 em campo (§4.3).
+  Confirmado pelo usuário na rev. 61.
 
 **Definido (rev. 60), pelo usuário — troca quando a máquina demite:**
 - Quando um treinador da máquina é demitido, é chamado o treinador de um
@@ -729,18 +732,34 @@ sorteio provisório da rev. 36 para o usuário que cai para a fila):
   treinador da fila** (sem clube), mas de preferência um treinador **com
   clube**.
 - **Clube demitido com força acima de 10:** só treinador **com clube**.
+- ~~**Em aberto:** gatilho da máquina; destino do demitido; ordem dos
+  candidatos e recusa; moral depois da troca.~~ **Respondido na rev. 61:**
+
+**Definido (rev. 61), pelo usuário — a troca:**
+- **A máquina também tem moral** (cada clube já tem a sua) e ela aparece ao
+  clicar no clube (janela do clube; tela: mockup antes, §10).
+- **Troca de verdade:** ex.: o clube A (força 35) demite Fulano; o clube de
+  força 29 tem Beltrano com moral verde; Beltrano vai para A e Fulano fica
+  com o clube de força 29.
+- **Escolha do chamado:** entre os clubes de força inferior com moral verde,
+  os **3 mais fortes**. Se um deles for de **usuário**, o usuário decide
+  (convite); se não, vai o de **maior força**.
+- **Depois da troca os dois começam com 22** (a moral inicial,
+  `ParametrosMoral.inicial`, ajustável).
+- **Leituras do agente (confirmar):**
+  - A máquina demite pela mesma regra do jogo decisivo do usuário ("a
+    máquina também deveria ter moral"). Na simulação, com o vermelho até 6,
+    são 5,6 a 12,8 demissões por divisão por temporada, quase todas nos
+    clubes mais fracos (`docs/simulacoes/demissao.md`).
+  - "Os 3 de verde" = os 3 mais fortes entre os inferiores de moral verde.
+  - Usuário que recusa: vai o mais forte dos outros (da máquina) entre os 3;
+    se todos os 3 forem usuários e todos recusarem, o próximo inferior de
+    moral verde. Usuário entre os 3 tem prioridade mesmo que não seja o mais
+    forte.
+  - Sem candidato de moral verde (força acima de 10): o treinador da
+    máquina **não** é demitido e continua (como o usuário da rev. 59); com
+    força até 10, entra um treinador da fila e o demitido vai para a fila.
 - **Em aberto (perguntado ao usuário):**
-  - Quando a máquina demite: a mesma regra do jogo decisivo do usuário? A
-    simulação (`docs/simulacoes/demissao.md`, regra valendo para todos)
-    mostra 7 a 15 demissões por divisão por temporada, quase todas nos 5 ou 6
-    clubes mais fracos.
-  - "Troca": o demitido vai para o clube mais fraco que perdeu o treinador
-    ou para a fila de treinadores sem clube?
-  - Usuário que recusa o convite: chama o próximo candidato? Qual é a ordem
-    entre vários clubes inferiores com moral verde (o mais forte deles? o de
-    moral mais alta? sorteio?)
-  - Moral depois da troca: cada treinador começa com 22 no clube novo (§6.2,
-    "ao assumir um time") ou o clube mantém a moral que tinha?
   - Usuário no clube mais fraco da última divisão (onde o jogo começa,
     §3.2): demitido e sem clube inferior para trocar, ele continua no clube
     (rev. 59). A simulação mostra que esse clube cai no vermelho quase toda
@@ -853,9 +872,11 @@ aprovados.
 Vermelho: 0 a 5.~~
 
 **Definido (rev. 60), pelo usuário — faixas:** verde de **15 a 30**,
-amarelo de **8 a 14**, vermelho de **0 a 7** (`ParametrosMoral.padrao()`).
-- **Conflito a confirmar:** a mensagem também dizia "para ficar moral
-  vermelho depois dos 12". Foi aplicada a tabela explícita (vermelho até 7).
+~~amarelo de **8 a 14**, vermelho de **0 a 7**~~ amarelo de **7 a 14**,
+vermelho de **0 a 6** (rev. 61, `ParametrosMoral.padrao()`).
+- ~~**Conflito a confirmar:** "vermelho depois dos 12".~~ Resolvido na rev.
+  61: o vermelho fica perto do zero ("11 ficaria muito longe") e o amarelo
+  é o período para administrar e tentar melhorar.
 - Jogos já salvos: clube sem jogo ainda começa em 22; quem já jogou mantém a
   moral gravada, agora lida com as faixas novas.
 - Simulação (`docs/simulacoes/temporada.md`, refeita): com início em 22, a
@@ -1257,7 +1278,7 @@ os cartões de um time todo calmo (antes, 2,8 vezes).
 -   ~~**Em aberto:** os valores.~~ **Definido (rev. 45), pelo usuário —
     prêmio da liga:**
     - **Campeão:** o preço de **2 jogadores de força 50 com asterisco**
-      (R$ 3.968.000 com a tabela de preço atual).
+      (~~R$ 3.968.000~~ R$ 4.364.000 com a tabela de preço atual, rev. 61).
     - **2º:** 30% menos que o campeão (70%). **3º:** 10% do prêmio do
       campeão. Do 4º em diante, nada.
     - **Definido (rev. 46), pelo usuário:** a força dos jogadores do prêmio
@@ -1583,7 +1604,7 @@ reajustados por nova simulação (`docs/simulacoes/economia-caixa.md`):
     - **Resultado:** topo da tabela 72–79% do estádio, meio 45–48%, fundo
       22–26%; líder contra o 2º 84–95%; só 3–8% dos jogos passam de 90%. Um
       clube de força 30 com 80.000 lugares não passa de ~23.000 pagantes.
-    - **Ampliação:** 5.000 lugares por R$ 1.587.000, valem depois de **6
+    - **Ampliação:** 5.000 lugares por ~~R$ 1.587.000~~ R$ 1.746.000 (rev. 61), valem depois de **6
       rodadas de obra**, uma obra por vez, até 80.000. A **máquina** amplia
       quando o jogo grande (líder contra o 2º) já passa do estádio com o
       bloco novo e sobram 1,5 limite de caixa; ou, com 3 limites sobrando,
@@ -1874,6 +1895,47 @@ A máquina oferece um pouco abaixo do preço padrão (§9.4).
   Finanças usa o salário gravado. Caixa 10a no plantel (depois do
   patrocínio). Jogos salvos: os jogadores dos clubes de usuário ficam com o
   salário da força que tinham na migração.
+- **Definido (rev. 61), pelo usuário — ajuste do salário pela força**
+  ("times fortes teriam que estar sempre ganhando para manter o time e times
+  pequenos teriam jogadores mais baratos e podendo comprar"), sobre o
+  salário da §9.1 (`ParametrosEconomia.faixasSalario`):
+
+  | Força | Ajuste |
+  |---|---|
+  | 45 a 50 | +10% |
+  | 35 a 44 | +5% |
+  | 25 a 34 | nenhum |
+  | 15 a 24 | −5% |
+  | abaixo de 15 | −10% |
+
+  - O preço do jogador segue o salário (80 rodadas, §9.4), então o
+    jogador forte fica mais caro e o fraco mais barato. O prêmio da liga e
+    o patrocínio (preço do jogador do teto da divisão, §9.6) e a ampliação
+    do estádio (preço do jogador de força 50, §9.2) também mudam: prêmio
+    do campeão da 1ª de R$ 3,968 mi para **R$ 4,364 mi**; +5.000 lugares de
+    R$ 1,587 mi para **R$ 1,746 mi**. Na 2ª (teto 30) nada muda.
+  - Jogos salvos: o salário é calculado pela força (ou pela força do
+    contrato), então o ajuste vale também para eles a partir da próxima
+    rodada.
+  - **Simulação** (`docs/simulacoes/ciclo-do-mercado.md`, 6 ligas × 3
+    sementes × 6 temporadas). Saldo no fim da 6ª temporada, em limites
+    (10 rodadas da folha):
+
+    | Ajuste (abaixo de 15 / 15–24 / 25–34 / 35–44 / 45–50) | 1ª topo | 1ª fundo | 2ª topo | 2ª fundo | 1ª leilões sem lance | Mobilidade |
+    |---|---|---|---|---|---|---|
+    | Sem ajuste (rev. 60) | 25,9 | 8,4 | 9,9 | 0,7 | 27% | 6% |
+    | **−10 / −5 / 0 / +5 / +10 (usuário)** | **21,7** | **7,4** | **10,9** | **1,5** | **26%** | **5%** |
+    | −20 / −10 / 0 / +20 / +40 | 13,6 | 7,8 | 11,6 | 2,1 | 30% | 5% |
+    | −30 / −15 / 0 / +30 / +60 | 10,2 | 7,6 | 12,8 | 2,0 | 39% | 4% |
+    | −20 / −10 / 0 / +30 / +80 | 7,7 | 6,8 | 11,2 | 1,9 | 42% | 5% |
+
+  - **Conclusão do agente:** os valores do usuário vão na direção certa
+    (topo da 1ª acumula menos, fundo da 2ª melhora), mas o salário sozinho
+    não faz o forte que perde vender nem aumenta a mobilidade: ajustes
+    maiores só deixam mais leilões da 1ª sem lance. Ficam os valores do
+    usuário. A causa do acúmulo é a regra de gastos da máquina (só compra
+    em leilão, um por rodada, e só com folga de 5 rodadas da folha, §9.4) —
+    é a pergunta das alavancas do mercado (rev. 59), ainda em aberto.
 -   Definir limites, prazos, taxas e consequências de inadimplência
     antes da implementação final.
 

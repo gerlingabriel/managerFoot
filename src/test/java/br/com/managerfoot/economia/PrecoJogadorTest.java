@@ -14,9 +14,9 @@ class PrecoJogadorTest {
 
 	@Test
 	void precoSegueOSalarioEOLeilaoComecaVintePorCentoAbaixo() {
-		// força 17: salário de R$ 2.000 por rodada, 80 rodadas
-		assertThat(preco.preco(jogador(17), "BRA")).isEqualTo(160_000_00L);
-		assertThat(preco.lanceInicialLeilao(jogador(17), "BRA")).isEqualTo(128_000_00L);
+		// força 17: salário de R$ 1.900 por rodada, 80 rodadas
+		assertThat(preco.preco(jogador(17), "BRA")).isEqualTo(152_000_00L);
+		assertThat(preco.lanceInicialLeilao(jogador(17), "BRA")).isEqualTo(122_000_00L);
 	}
 
 	@Test
@@ -33,17 +33,17 @@ class PrecoJogadorTest {
 
 	@Test
 	void estrangeiroSaiVinteECincoPorCentoMaisBarato() {
-		// R$ 160.000 do nacional menos 25%; no leilão, mais 20% abaixo
-		assertThat(preco.preco(jogador(17), "ARG")).isEqualTo(120_000_00L);
-		assertThat(preco.lanceInicialLeilao(jogador(17), "ARG")).isEqualTo(96_000_00L);
+		// R$ 152.000 do nacional menos 25%; no leilão, mais 20% abaixo
+		assertThat(preco.preco(jogador(17), "ARG")).isEqualTo(114_000_00L);
+		assertThat(preco.lanceInicialLeilao(jogador(17), "ARG")).isEqualTo(91_000_00L);
 	}
 
 	@Test
 	void asteriscoSaiVinteECincoPorCentoMaisCaroEOLeilaoComecaAbaixo() {
-		assertThat(preco.preco(jogador(17).comAsterisco(true), "BRA")).isEqualTo(200_000_00L);
-		assertThat(preco.lanceInicialLeilao(jogador(17).comAsterisco(true), "BRA")).isEqualTo(160_000_00L);
-		// estrangeiro com asterisco: os dois ajustes se combinam (160.000 × 0,75 × 1,25)
-		assertThat(preco.preco(jogador(17).comAsterisco(true), "ARG")).isEqualTo(150_000_00L);
+		assertThat(preco.preco(jogador(17).comAsterisco(true), "BRA")).isEqualTo(190_000_00L);
+		assertThat(preco.lanceInicialLeilao(jogador(17).comAsterisco(true), "BRA")).isEqualTo(152_000_00L);
+		// estrangeiro com asterisco: os dois ajustes se combinam (152.000 × 0,75 × 1,25 = 142.500)
+		assertThat(preco.preco(jogador(17).comAsterisco(true), "ARG")).isEqualTo(143_000_00L);
 	}
 
 	private static Jogador jogador(int forca) {

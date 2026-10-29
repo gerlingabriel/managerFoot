@@ -25,8 +25,8 @@ public record ParametrosMoral(int minimo, int maximo, int inicial, int vitoriaEm
 		}
 	}
 
-	/** Escala 0-30, início 22, faixas verde 15-30 / amarelo 8-14 / vermelho 0-7 (rev. 60), retorno leve (divisor 12). */
+	/** Escala 0-30, início 22, faixas verde 15-30 / amarelo 7-14 / vermelho 0-6 (rev. 61), retorno leve (divisor 12). */
 	public static ParametrosMoral padrao() {
-		return new ParametrosMoral(0, 30, 22, 2, 3, -1, 0, -3, -2, 15, 8, 12);
+		return new ParametrosMoral(0, 30, 22, 2, 3, -1, 0, -3, -2, 15, 7, 12);
 	}
 }

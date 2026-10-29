@@ -34,11 +34,18 @@ class CaixaDaRodadaTest {
 	}
 
 	@Test
-	void salarioCresceComAForca() {
-		assertThat(caixa.salario(jogador(17))).isEqualTo(2_000_00L);
-		assertThat(caixa.salario(jogador(18))).isEqualTo(2_144_00L);
-		assertThat(caixa.folha(List.of(jogador(17), jogador(17)))).isEqualTo(4_000_00L);
-		assertThat(caixa.saldoInicial(List.of(jogador(17)))).isEqualTo(20_000_00L);
+	void salarioCresceComAForcaEComAFaixa() {
+		// referência R$ 2.000 na força 17, × 1,072 por ponto; faixa de 15 a 24: −5%
+		assertThat(caixa.salario(jogador(17))).isEqualTo(1_900_00L);
+		assertThat(caixa.salario(jogador(18))).isEqualTo(2_036_80L);
+		assertThat(caixa.folha(List.of(jogador(17), jogador(17)))).isEqualTo(3_800_00L);
+		assertThat(caixa.saldoInicial(List.of(jogador(17)))).isEqualTo(19_000_00L);
+		// faixas: abaixo de 15 −10%, 25 a 34 sem ajuste, 35 a 44 +5%, 45 a 50 +10%
+		assertThat(caixa.salario(14)).isEqualTo(Math.round(2_000_00L * Math.pow(1.072, -3) * 0.90));
+		assertThat(caixa.salario(25)).isEqualTo(Math.round(2_000_00L * Math.pow(1.072, 8)));
+		assertThat(caixa.salario(44)).isEqualTo(Math.round(2_000_00L * Math.pow(1.072, 27) * 1.05));
+		assertThat(caixa.salario(45)).isEqualTo(Math.round(2_000_00L * Math.pow(1.072, 28) * 1.10));
+		assertThat(IntStream.rangeClosed(Jogador.FORCA_MINIMA, Jogador.FORCA_MAXIMA).mapToLong(caixa::salario)).isSorted();
 	}
 
 	@Test
@@ -63,11 +70,11 @@ class CaixaDaRodadaTest {
 
 		assertThat(caixa.lancamentos(Local.CASA, 1, 1_000, plantel)).containsExactly(
 				new Lancamento(TipoLancamento.BILHETERIA, 40_000_00L), new Lancamento(TipoLancamento.CUSTO_DO_JOGO, -6_000_00L),
-				new Lancamento(TipoLancamento.SALARIOS, -2_000_00L));
+				new Lancamento(TipoLancamento.SALARIOS, -1_900_00L));
 		assertThat(caixa.lancamentos(Local.FORA, 2, 0, plantel)).containsExactly(
-				new Lancamento(TipoLancamento.DESLOCAMENTO, -30_000_00L), new Lancamento(TipoLancamento.SALARIOS, -2_000_00L));
+				new Lancamento(TipoLancamento.DESLOCAMENTO, -30_000_00L), new Lancamento(TipoLancamento.SALARIOS, -1_900_00L));
 		assertThat(caixa.lancamentos(Local.FOLGA, 3, 0, plantel))
-			.containsExactly(new Lancamento(TipoLancamento.SALARIOS, -2_000_00L));
+			.containsExactly(new Lancamento(TipoLancamento.SALARIOS, -1_900_00L));
 	}
 
 	@Test

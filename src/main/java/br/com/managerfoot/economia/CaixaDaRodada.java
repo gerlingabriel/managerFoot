@@ -53,10 +53,14 @@ public final class CaixaDaRodada {
 		return salario(jogador.forca());
 	}
 
-	/** Salário por rodada de um jogador da força dada (a do contrato, rev. 58). */
+	/**
+	 * Salário por rodada de um jogador da força dada (a do contrato, rev. 58), com o ajuste da faixa de
+	 * força (rev. 61).
+	 */
 	public long salario(int forca) {
 		return Math.round(parametros.salarioReferencia()
-				* Math.pow(parametros.crescimentoSalario(), forca - parametros.forcaReferencia()));
+				* Math.pow(parametros.crescimentoSalario(), forca - parametros.forcaReferencia())
+				* parametros.fatorSalario(forca));
 	}
 
 	public long folha(List<Jogador> plantel) {

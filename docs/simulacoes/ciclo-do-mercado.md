@@ -8,16 +8,16 @@ Gerado por `RelatorioCicloMercadoTest` (ferramenta de desenvolvimento). As 6 lig
 
 | Riqueza | Topo | Meio | Fundo |
 |---|---|---|---|
-| Rico | 0,0 | 0,1 | 3,2 |
-| Médio | 0,0 | 0,2 | 2,1 |
-| Pobre | 0,4 | 0,7 | 4,1 |
+| Rico | 0,0 | 0,1 | 2,7 |
+| Médio | 0,0 | 0,1 | 2,0 |
+| Pobre | 0,4 | 0,6 | 4,1 |
 
 ## Para onde vão os jogadores: divisão do vendedor × do comprador (% das vendas)
 
 | Vendedor \ comprador | 1ª | 2ª | 3ª |
 |---|---|---|---|
-| 1ª | 21% | 5% | 0% |
-| 2ª | 9% | 65% | 0% |
+| 1ª | 23% | 4% | 0% |
+| 2ª | 10% | 63% | 0% |
 | 3ª | 0% | 0% | 0% |
 
 ## Na mesma divisão: terço do vendedor × do comprador (% das vendas na mesma divisão)
@@ -25,8 +25,8 @@ Gerado por `RelatorioCicloMercadoTest` (ferramenta de desenvolvimento). As 6 lig
 | Vendedor \ comprador | Topo | Meio | Fundo |
 |---|---|---|---|
 | Topo | 1% | 1% | 1% |
-| Meio | 5% | 3% | 2% |
-| Fundo | 31% | 45% | 12% |
+| Meio | 4% | 3% | 2% |
+| Fundo | 29% | 46% | 14% |
 
 ## Quem consegue comprar: clubes que dão lance por leilão aberto, por terço da tabela
 
@@ -34,8 +34,8 @@ Gerado por `RelatorioCicloMercadoTest` (ferramenta de desenvolvimento). As 6 lig
 
 | Divisão | Leilões | Sem lance | Topo | Meio | Fundo | Pago / preço | Força do vendido − força do comprador |
 |---|---|---|---|---|---|---|---|
-| 1ª | 610 | 27% | 2% | 5% | 9% | 94% | -2,4 |
-| 2ª | 1780 | 26% | 25% | 23% | 9% | 93% | -3,2 |
+| 1ª | 603 | 26% | 2% | 6% | 10% | 94% | -2,9 |
+| 2ª | 1555 | 22% | 29% | 30% | 13% | 93% | -3,2 |
 
 *Leilões*: pela divisão do vendedor. *Topo/Meio/Fundo*: pela divisão de quem dá o lance.
 
@@ -43,19 +43,19 @@ Gerado por `RelatorioCicloMercadoTest` (ferramenta de desenvolvimento). As 6 lig
 
 | Divisão | Temporada | Topo | Meio | Fundo | Clubes negativos | Jogadores trocados por clube |
 |---|---|---|---|---|---|---|
-| 1ª | 1 | 4,5 | 2,7 | 1,4 | 0% | 1,2 |
-| 1ª | 2 | 8,5 | 4,5 | 2,5 | 0% | 0,5 |
-| 1ª | 3 | 12,8 | 6,4 | 4,0 | 0% | 0,4 |
-| 1ª | 4 | 16,9 | 8,4 | 5,1 | 0% | 0,3 |
-| 1ª | 5 | 21,7 | 10,1 | 6,1 | 0% | 0,2 |
-| 1ª | 6 | 25,9 | 11,4 | 8,4 | 0% | 0,2 |
-| 2ª | 1 | 4,0 | 2,3 | 1,3 | 0% | 1,7 |
-| 2ª | 2 | 6,6 | 2,9 | 1,4 | 0% | 1,4 |
-| 2ª | 3 | 6,6 | 3,5 | 1,4 | 2% | 1,4 |
-| 2ª | 4 | 8,6 | 3,8 | 1,2 | 5% | 1,2 |
-| 2ª | 5 | 8,9 | 3,8 | 1,2 | 6% | 0,9 |
-| 2ª | 6 | 9,9 | 4,4 | 0,7 | 10% | 0,6 |
+| 1ª | 1 | 4,1 | 2,5 | 1,4 | 0% | 1,2 |
+| 1ª | 2 | 7,3 | 4,1 | 2,5 | 0% | 0,6 |
+| 1ª | 3 | 10,9 | 5,6 | 3,9 | 0% | 0,4 |
+| 1ª | 4 | 14,4 | 7,5 | 5,5 | 0% | 0,3 |
+| 1ª | 5 | 18,2 | 8,9 | 6,1 | 0% | 0,2 |
+| 1ª | 6 | 21,7 | 10,5 | 7,4 | 0% | 0,2 |
+| 2ª | 1 | 4,2 | 2,4 | 1,4 | 0% | 1,6 |
+| 2ª | 2 | 6,6 | 3,5 | 1,5 | 0% | 1,3 |
+| 2ª | 3 | 7,6 | 3,8 | 1,7 | 1% | 1,1 |
+| 2ª | 4 | 8,9 | 4,2 | 1,4 | 3% | 1,1 |
+| 2ª | 5 | 10,4 | 4,5 | 1,5 | 6% | 0,8 |
+| 2ª | 6 | 10,9 | 5,5 | 1,5 | 9% | 0,6 |
 
 ## Mobilidade
 
-Clubes que mudaram de terço de força em campo no país entre o início e o fim das 6 temporadas: 6%.
+Clubes que mudaram de terço de força em campo no país entre o início e o fim das 6 temporadas: 5%.
