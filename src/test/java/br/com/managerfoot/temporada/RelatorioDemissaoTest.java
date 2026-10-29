@@ -27,8 +27,9 @@ import br.com.managerfoot.motor.ResultadoPartida;
 
 /**
  * Gera {@code docs/simulacoes/demissao.md} (rev. 60): com que frequência a regra de demissão pela
- * moral ({@link Moral#demite}) demitiria o treinador de cada clube, se valesse para todos. Depois da
- * demissão o clube recomeça com a moral inicial (novo treinador, SPEC §6.2). Mesma simplificação de
+ * moral ({@link Moral#demite}) demitiria o treinador de cada clube, se valesse para todos, e como
+ * fica a troca (rev. 61, {@link TrocaDeTreinador}): o chamado vem de um clube inferior de moral verde,
+ * os dois trocam de clube e recomeçam com a moral inicial; sem chamado, o treinador fica. Mesma simplificação de
  * {@link RelatorioTemporadaTest}: 4-4-2 com os 11 na força do clube. Executar com
  * {@code ./mvnw test -Dgroups=simulacao -Dsurefire.excludedGroups=none -Dtest=RelatorioDemissaoTest}.
  */
@@ -41,6 +42,7 @@ class RelatorioDemissaoTest {
 
 	private final ParametrosMoral parametros = ParametrosMoral.padrao();
 	private final MotorPartida motor = new MotorPartida(ParametrosMotor.padrao());
+	private final TrocaDeTreinador troca = TrocaDeTreinador.padrao();
 
 	@Test
 	void gerarRelatorio() throws IOException {
@@ -54,8 +56,11 @@ class RelatorioDemissaoTest {
 			.append(", amarelo de ").append(parametros.limiteAmarelo()).append(" a ").append(parametros.limiteVerde() - 1)
 			.append(", vermelho de ").append(parametros.minimo()).append(" a ").append(parametros.limiteAmarelo() - 1)
 			.append(". Ao entrar no vermelho, o jogo seguinte é decisivo: se depois dele a moral continua vermelha, ")
-			.append("o treinador é demitido. Aqui a regra vale para **todos** os clubes, para medir a frequência. ")
-			.append("Depois da demissão o clube volta à moral inicial (novo treinador).\n\n");
+			.append("o treinador é demitido. Aqui a regra vale para **todos** os clubes, para medir a frequência.\n\n");
+		md.append("**Troca (rev. 61):** é chamado o treinador de um clube de força inferior com moral verde (entre os ")
+			.append("3 mais fortes, o de maior força; aqui não há usuário). Os dois trocam de clube e os dois clubes ")
+			.append("voltam à moral inicial. Sem chamado (nenhum inferior de moral verde), o treinador fica e a moral ")
+			.append("segue: o jogo seguinte no vermelho é decisivo de novo.\n\n");
 		md.append("**Simplificação:** cada clube joga em 4-4-2 com os 11 na força do clube, sem evolução de força nem ")
 			.append("mercado, como em `temporada.md`.\n\n");
 		cenario(md, "Cenário A: forças de 50 a 12, de 2 em 2", 2);
@@ -74,6 +79,10 @@ class RelatorioDemissaoTest {
 			escalacoes.put(clube, escalacao(clube));
 		}
 		int[] demissoes = new int[CLUBES];
+		int[] semChamado = new int[CLUBES];
+		int[] cedeu = new int[CLUBES];
+		long totalSemChamado = 0;
+		double somaDiferenca = 0;
 		int[] temporadasComDemissao = new int[CLUBES];
 		long[] rodadaPrimeira = new long[CLUBES];
 		int[] entradasNoVermelho = new int[CLUBES];
@@ -105,13 +114,30 @@ class RelatorioDemissaoTest {
 							salvos[i]++;
 						}
 						if (antes.demite(depois, parametros)) {
+							List<TrocaDeTreinador.Candidato> candidatos = new ArrayList<>();
+							for (Clube outro : clubes) {
+								if (outro != clube) {
+									candidatos.add(new TrocaDeTreinador.Candidato(outro.id(), outro.forca(), moral.get(outro), false));
+								}
+							}
+							List<TrocaDeTreinador.Candidato> chamados = troca.chamados(clube.forca(), candidatos);
+							if (chamados.isEmpty()) {
+								semChamado[i]++;
+								totalSemChamado++;
+								moral.put(clube, depois);
+								continue;
+							}
+							Clube chamado = clubes.get((int) chamados.get(0).clubeId() - 1);
+							cedeu[clubes.indexOf(chamado)]++;
+							somaDiferenca += clube.forca() - chamado.forca();
+							moral.put(chamado, troca.moralDepoisDaTroca());
 							demissoes[i]++;
 							totalDemissoes++;
 							demissoesPorRodada[rodada.numero()]++;
 							if (naTemporada[i]++ == 0) {
 								rodadaPrimeira[i] += rodada.numero();
 							}
-							depois = Moral.inicial(parametros);
+							depois = troca.moralDepoisDaTroca();
 						}
 						moral.put(clube, depois);
 					}
@@ -125,11 +151,15 @@ class RelatorioDemissaoTest {
 		}
 
 		md.append("## ").append(titulo).append("\n\n");
-		md.append("Demissões por temporada na divisão (média): **").append(f((double) totalDemissoes / TEMPORADAS, 1))
-			.append("**.\n\n");
-		md.append("| Força | Demissões por temporada | Temporadas com demissão | Rodada da 1ª demissão (média) ")
-			.append("| Entradas no vermelho por temporada | Saídas do vermelho no jogo decisivo |\n");
-		md.append("|---|---|---|---|---|---|\n");
+		md.append("Trocas por temporada na divisão (média): **").append(f((double) totalDemissoes / TEMPORADAS, 1))
+			.append("**; diferença média de força entre o clube que demitiu e o que cedeu o treinador: **")
+			.append(f(totalDemissoes == 0 ? 0 : somaDiferenca / totalDemissoes, 1))
+			.append("**. Jogos decisivos perdidos sem ninguém para chamar (o treinador fica): **")
+			.append(f((double) totalSemChamado / TEMPORADAS, 1)).append("** por temporada.\n\n");
+		md.append("| Força | Trocas por temporada | Temporadas com troca | Rodada da 1ª troca (média) ")
+			.append("| Entradas no vermelho por temporada | Saídas do vermelho no jogo decisivo ")
+			.append("| Decisivos perdidos sem chamado | Vezes que cedeu o treinador |\n");
+		md.append("|---|---|---|---|---|---|---|---|\n");
 		for (int i = 0; i < CLUBES; i++) {
 			md.append("| ").append(clubes.get(i).forca())
 				.append(" | ").append(f((double) demissoes[i] / TEMPORADAS, 2))
@@ -137,9 +167,11 @@ class RelatorioDemissaoTest {
 				.append(" | ").append(temporadasComDemissao[i] == 0 ? "–" : f((double) rodadaPrimeira[i] / temporadasComDemissao[i], 1))
 				.append(" | ").append(f((double) entradasNoVermelho[i] / TEMPORADAS, 2))
 				.append(" | ").append(entradasNoVermelho[i] == 0 ? "–" : f(100.0 * salvos[i] / entradasNoVermelho[i], 0) + "%")
+				.append(" | ").append(f((double) semChamado[i] / TEMPORADAS, 2))
+				.append(" | ").append(f((double) cedeu[i] / TEMPORADAS, 2))
 				.append(" |\n");
 		}
-		md.append("\nDemissões por trecho da temporada (% do total): ");
+		md.append("\nTrocas por trecho da temporada (% do total): ");
 		int rodadas = demissoesPorRodada.length - 1;
 		List<String> trechos = new ArrayList<>();
 		for (int inicio = 1; inicio <= rodadas; inicio += 10) {

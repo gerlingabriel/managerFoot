@@ -759,6 +759,21 @@ sorteio provisório da rev. 36 para o usuário que cai para a fila):
   - Sem candidato de moral verde (força acima de 10): o treinador da
     máquina **não** é demitido e continua (como o usuário da rev. 59); com
     força até 10, entra um treinador da fila e o demitido vai para a fila.
+- **No domínio (rev. 61):** `temporada.TrocaDeTreinador` (ordem dos chamados,
+  treinador sem clube até força 10, moral 22 depois da troca). Ainda não
+  ligada à rodada.
+- **Simulação da troca** (`docs/simulacoes/demissao.md`, regra para todos,
+  sem usuário): quem cai no vermelho são os clubes do fundo, e abaixo deles
+  quase nunca há clube de moral verde. No cenário A (forças de 50 a 12) há
+  só **1,0 troca por temporada** na divisão; os 5 clubes mais fracos
+  perdem 10 a 28 jogos decisivos por temporada sem ninguém para chamar e
+  ficam no vermelho quase o ano todo. No cenário B (50 a 31, apertado) são
+  2,5 trocas, com o mesmo efeito no último (9 decisivos sem chamado).
+- **Em aberto (perguntado ao usuário, rev. 61):** o que fazer quando não há
+  clube inferior de moral verde (o caso comum no fundo): o treinador fica
+  (como hoje), aceitar moral amarela, chamar o clube **superior** mais
+  próximo de moral verde, ou usar um treinador sem clube também acima da
+  força 10?
 - **Em aberto (perguntado ao usuário):**
   - Usuário no clube mais fraco da última divisão (onde o jogo começa,
     §3.2): demitido e sem clube inferior para trocar, ele continua no clube
