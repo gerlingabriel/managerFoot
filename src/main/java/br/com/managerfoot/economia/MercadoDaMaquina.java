@@ -54,10 +54,14 @@ public final class MercadoDaMaquina {
 			.max(Comparator.comparingLong((Jogador j) -> preco.preco(j, paisDaLiga)).thenComparingLong(Jogador::id));
 	}
 
-	/** A saída do jogador não deixa a posição dele abaixo do elenco mínimo (SPEC §9.3). */
+	/**
+	 * A saída do jogador não deixa a posição dele abaixo do elenco mínimo (SPEC §9.3) nem o plantel
+	 * abaixo do plantel mínimo (rev. 59).
+	 */
 	public boolean podeSair(List<Jogador> plantel, Jogador jogador) {
-		return plantel.stream().filter(o -> o.posicao() == jogador.posicao()).count()
-				> parametros.elencoMinimo().getOrDefault(jogador.posicao(), 0);
+		return plantel.size() > parametros.plantelMinimo()
+				&& plantel.stream().filter(o -> o.posicao() == jogador.posicao()).count()
+						> parametros.elencoMinimo().getOrDefault(jogador.posicao(), 0);
 	}
 
 	/**
@@ -82,6 +86,8 @@ public final class MercadoDaMaquina {
 		List<Jogador> candidatos = new ArrayList<>(plantel.stream().filter(j -> !jaAVenda.contains(j.id()))
 			.sorted(Comparator.comparingLong(Jogador::id)).toList());
 		List<Jogador> novos = new ArrayList<>();
+		// vendidos todos os anunciados, o plantel não fica abaixo do mínimo
+		alvo = Math.min(alvo, plantel.size() - parametros.plantelMinimo());
 		while (jaAVenda.size() + novos.size() < alvo && !candidatos.isEmpty()) {
 			Jogador j = candidatos.remove(aleatorio.nextInt(candidatos.size()));
 			if (sobra.get(j.posicao()) > 0) {

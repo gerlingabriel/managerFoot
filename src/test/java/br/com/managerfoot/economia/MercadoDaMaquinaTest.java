@@ -55,8 +55,13 @@ class MercadoDaMaquinaTest {
 		assertThat(mercado.jogadorParaVender(minimo, "BRA")).isEmpty();
 		assertThat(minimo).noneMatch(j -> mercado.podeSair(minimo, j));
 		minimo.add(jogador(32, Posicao.ATACANTE, 20));
+		// 12 jogadores: abaixo do plantel mínimo de 14, ninguém sai (rev. 59)
+		assertThat(mercado.podeSair(minimo, minimo.get(minimo.size() - 1))).isFalse();
+		for (int i = 0; i < 3; i++) {
+			minimo.add(jogador(40 + i, Posicao.MEIO_CAMPISTA, 20));
+		}
 		assertThat(mercado.podeSair(minimo, minimo.get(0))).isFalse();
-		assertThat(mercado.podeSair(minimo, minimo.get(minimo.size() - 1))).isTrue();
+		assertThat(mercado.podeSair(minimo, minimo.get(12))).isTrue();
 	}
 
 	@Test
@@ -115,13 +120,14 @@ class MercadoDaMaquinaTest {
 
 	@Test
 	void anunciadosNaoDeixamPosicaoAbaixoDoElencoMinimo() {
-		// 1 goleiro, 4 defensores, 4 meias, 2 atacantes e 3 meias a mais: só os 3 meias extras podem sair
+		// 1 goleiro, 4 defensores, 4 meias, 2 atacantes e 6 meias a mais (17): só meias saem, e só 3,
+		// para o plantel não ficar abaixo de 14
 		List<Jogador> plantel = new ArrayList<>();
 		plantel.add(jogador(1, Posicao.GOLEIRO, 20));
 		for (int i = 0; i < 4; i++) {
 			plantel.add(jogador(10 + i, Posicao.DEFENSOR, 20));
 		}
-		for (int i = 0; i < 7; i++) {
+		for (int i = 0; i < 10; i++) {
 			plantel.add(jogador(20 + i, Posicao.MEIO_CAMPISTA, 20));
 		}
 		plantel.add(jogador(30, Posicao.ATACANTE, 20));

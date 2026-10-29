@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 58 — 2026-10-29)
+-   **Status:** versão inicial para revisão (rev. 59 — 2026-10-29)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 59 (2026-10-29):** regra do usuário para a demissão do usuário (troca com treinador da máquina, §5.4); moral sem efeito na partida (§6.2); plantel mínimo de 14 nas vendas (provisório, §9.3); simulação do ciclo do mercado com a economia atual (`docs/simulacoes/ciclo-do-mercado.md`).
 -   **rev. 58 (2026-10-29):** salário gravado nos clubes de usuário (a máquina readequa), pedido de aumento com intervalo de 5 pontos e modelo 10a aprovados e gravados (V26).
 -   **rev. 57 (2026-10-28):** público, obras e ampliação da máquina gravados no avanço da rodada (V24); janela 6c do estádio; caixa 9a do patrocínio (V25), máquina com a fixa. Usuário aprovou torcida, ocupação, 6 rodadas de obra e as 3 propostas de patrocínio (por acesso na 1ª = terminar entre os 3 primeiros); jogos já salvos mantêm o estádio atual; até a 5ª rodada o público reflete a posição final da temporada passada.
 -   **rev. 56 (2026-10-28):** evolução C aprovada e gravada no avanço da rodada; público pela posição na tabela dos dois clubes e limitado pela força do clube; estádio máximo de 80.000; a máquina amplia quando cresce de força ou sobra dinheiro; a obra leva tempo; simular estádio, público e patrocínio.
@@ -678,6 +679,23 @@ moral.
 disponibilidade. As regras atuais são exemplos de intenção, não um
 algoritmo completo.
 
+**Definido (rev. 59), pelo usuário — demissão do usuário** (substitui o
+sorteio provisório da rev. 36 para o usuário que cai para a fila):
+- O usuário demitido **não** sorteia um clube novo; ele **troca** com um
+  treinador da máquina.
+- **Clube do usuário com força média até 10:** se houver um clube de força
+  **inferior** cujo treinador tem **moral verde**, os dois trocam de clube.
+  Se não houver, um **treinador sem clube** assume o clube do usuário, e o
+  usuário fica **sem clube** até um clube da máquina de força até 10 demitir
+  o treinador; então o usuário assume esse clube automaticamente.
+- **Clube do usuário com força média acima de 10:** só pode trocar com
+  treinadores **com clube** e de força **inferior**. Se não houver, o
+  usuário **continua no clube** até a troca ser possível.
+- **Em aberto (perguntado ao usuário):** o que dispara a demissão do
+  usuário (moral vermelha? queda para a fila?); quando a máquina demite o
+  próprio treinador; se "força média" é a força em campo (média dos 11);
+  se o usuário sem clube assiste às rodadas.
+
 ## 6. Progressão de força e moral
 
 ### 6.1 Evolução dos jogadores
@@ -794,6 +812,12 @@ provisórios, a moral **satura nos extremos** ao longo de 38 rodadas.
 
 Se a moral for usada para demitir treinadores, isso causaria demissões
 demais.
+
+**Definido (rev. 59), pelo usuário:** a moral vai de 0 a 30 e **não
+influencia a partida** (força com moral alta desequilibraria ainda mais);
+pode servir a outras coisas, como a demissão (§5.4). Hoje o motor não usa a
+moral. **Em aberto:** o usuário disse "até 18 ele seria verde"; a faixa
+verde atual começa em 15 (a moral inicial é 18).
 
 **Definido (rev. 15): correção leve.** O usuário pediu para melhorar, mas
 não muito, porque o Elifoot 98 é sobre assumir times e ser demitido.
@@ -1544,6 +1568,14 @@ formar uma equipe. Definir como tratar jogadores lesionados, suspensos e
 posições secundárias.
 
 Quando o clube estiver no elenco mínimo e um jogador estiver suspenso ou lesionado, poderá escalar com um jogador a menos. Nesse caso, a partida é simulada como se o time já começasse com um expulso.
+
+**Provisório (rev. 59), proposta do agente:** enquanto o time com um a
+menos não existe, nenhuma venda (leilão da máquina, anúncio para compra
+direta, venda do usuário ou venda por caixa negativo) deixa o plantel com
+menos de **14** jogadores (`ParametrosMercadoMaquina.plantelMinimo`). A
+simulação do ciclo do mercado mostrou clubes da 3ª vendendo até 11 e
+ficando com 10 disponíveis por suspensão, o que travaria o avanço da
+rodada.
 
 **Definido (rev. 43), pelo usuário:** sem empréstimo, sempre que o caixa
 ficar **negativo** um jogador do clube vai a **leilão sem lance mínimo**.

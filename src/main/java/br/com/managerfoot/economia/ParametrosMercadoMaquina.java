@@ -15,6 +15,8 @@ import br.com.managerfoot.dominio.Posicao;
  * @param acrescimoPelaForca quanto a mais oferece o clube mais forte, proporcional à força dele na
  *        escala até a força máxima (usuário: preferência "pela força do time"; proposta: até 5%)
  * @param elencoMinimo jogadores por posição que a máquina não vende (proposta do §9.3)
+ * @param plantelMinimo nenhuma venda deixa o plantel com menos que isto: 11 mais reservas para as
+ *        suspensões, enquanto o time com um a menos (§9.3) não existe (proposta do agente, rev. 59: 14)
  * @param interesseAbaixoDoTime a máquina só dá lance em jogador com força de pelo menos a força em
  *        campo do clube menos este valor (proposta: 5)
  * @param folgaNaCompra rodadas da folha que precisam sobrar acima do limite depois de pagar uma
@@ -24,12 +26,12 @@ import br.com.managerfoot.dominio.Posicao;
  * @param aVendaMaximo até quantos o sorteio completa
  */
 public record ParametrosMercadoMaquina(int rodadasDeFolhaNoLimite, double descontoLance, double acrescimoPelaForca,
-		Map<Posicao, Integer> elencoMinimo, int interesseAbaixoDoTime, int folgaNaCompra,
+		Map<Posicao, Integer> elencoMinimo, int plantelMinimo, int interesseAbaixoDoTime, int folgaNaCompra,
 		int aVendaMinimo, int aVendaMaximo) {
 
 	public ParametrosMercadoMaquina {
 		if (rodadasDeFolhaNoLimite < 0 || descontoLance < 0 || descontoLance >= 1 || acrescimoPelaForca < 0
-				|| interesseAbaixoDoTime < 0 || folgaNaCompra < 0 || aVendaMinimo < 0 || aVendaMaximo < aVendaMinimo) {
+				|| plantelMinimo < 0 || interesseAbaixoDoTime < 0 || folgaNaCompra < 0 || aVendaMinimo < 0 || aVendaMaximo < aVendaMinimo) {
 			throw new IllegalArgumentException("parâmetros do mercado da máquina inválidos");
 		}
 		elencoMinimo = Map.copyOf(elencoMinimo);
@@ -41,6 +43,6 @@ public record ParametrosMercadoMaquina(int rodadasDeFolhaNoLimite, double descon
 		minimo.put(Posicao.DEFENSOR, 4);
 		minimo.put(Posicao.MEIO_CAMPISTA, 4);
 		minimo.put(Posicao.ATACANTE, 2);
-		return new ParametrosMercadoMaquina(10, 0.10, 0.05, minimo, 5, 5, 5, 6);
+		return new ParametrosMercadoMaquina(10, 0.10, 0.05, minimo, 14, 5, 5, 5, 6);
 	}
 }
