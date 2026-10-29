@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.OptionalDouble;
 import java.util.SplittableRandom;
 
 import org.junit.jupiter.api.Test;
@@ -14,6 +15,8 @@ import br.com.managerfoot.dominio.Temperamento;
 
 class PublicoDoJogoTest {
 
+	private static final OptionalDouble SEM = OptionalDouble.empty();
+
 	private final PublicoDoJogo publico = PublicoDoJogo.padrao();
 
 	@Test
@@ -21,10 +24,10 @@ class PublicoDoJogoTest {
 		int forca = 40;
 		int estadio = publico.estadioInicial(forca);
 		double torcida = publico.torcida(forca);
-		assertThat(publico.ocupacao(1, 2, 20, 20, 38) * torcida / estadio).isGreaterThanOrEqualTo(1.0);
+		assertThat(publico.ocupacao(1, 2, 20, 20, 38, SEM, SEM) * torcida / estadio).isGreaterThanOrEqualTo(1.0);
 		// na força cadastrada; com a evolução a força em campo cai e a simulação dá perto de 47%
-		assertThat(publico.ocupacao(10, 15, 20, 20, 38) * torcida / estadio).isBetween(0.4, 0.7);
-		assertThat(publico.ocupacao(20, 1, 20, 20, 38) * torcida / estadio).isLessThan(0.3);
+		assertThat(publico.ocupacao(10, 15, 20, 20, 38, SEM, SEM) * torcida / estadio).isBetween(0.4, 0.7);
+		assertThat(publico.ocupacao(20, 1, 20, 20, 38, SEM, SEM) * torcida / estadio).isLessThan(0.3);
 	}
 
 	@Test
@@ -32,15 +35,32 @@ class PublicoDoJogoTest {
 		assertThat(publico.estadioInicial(Jogador.FORCA_MAXIMA)).isLessThan(ParametrosPublico.padrao().capacidadeMaxima());
 		// clube de força 30 com o estádio máximo: mesmo líder contra o 2º na última rodada
 		for (int s = 0; s < 200; s++) {
-			int pagantes = publico.publico(80_000, 30, 1, 2, 20, 38, 38, new SplittableRandom(s));
+			int pagantes = publico.publico(80_000, 30, 1, 2, 20, 38, 38, SEM, SEM, new SplittableRandom(s));
 			assertThat(pagantes).isLessThan(40_000);
 		}
 	}
 
 	@Test
-	void noComecoDaTemporadaATabelaValeMenos() {
-		assertThat(publico.ocupacao(20, 1, 20, 1, 38)).isEqualTo(ParametrosPublico.padrao().ocupacaoInicio());
-		assertThat(publico.ocupacao(1, 2, 20, 1, 38)).isEqualTo(ParametrosPublico.padrao().ocupacaoInicio());
+	void naPrimeiraTemporadaOComecoNaoDependeDaTabela() {
+		assertThat(publico.ocupacao(20, 1, 20, 1, 38, SEM, SEM)).isEqualTo(ParametrosPublico.padrao().ocupacaoInicio());
+		assertThat(publico.ocupacao(1, 2, 20, 1, 38, SEM, SEM)).isEqualTo(ParametrosPublico.padrao().ocupacaoInicio());
+	}
+
+	@Test
+	void noComecoDaTemporadaValeAPosicaoFinalDaPassadaEDaRodada5EmDianteATabela() {
+		OptionalDouble campeao = OptionalDouble.of(PublicoDoJogo.relativa(1, 20));
+		OptionalDouble lanterna = OptionalDouble.of(PublicoDoJogo.relativa(20, 20));
+		// rodada 1: o campeão passado lota mais que o lanterna passado, qualquer que seja a tabela
+		double campeaoEmCasa = publico.ocupacao(20, 19, 20, 1, 38, campeao, lanterna);
+		double lanternaEmCasa = publico.ocupacao(1, 2, 20, 1, 38, lanterna, campeao);
+		assertThat(campeaoEmCasa).isGreaterThan(lanternaEmCasa);
+		assertThat(campeaoEmCasa).isEqualTo(ParametrosPublico.padrao().ocupacaoLider());
+		// rodada 5: só a tabela atual
+		assertThat(publico.ocupacao(20, 19, 20, 5, 38, campeao, lanterna))
+			.isEqualTo(publico.ocupacao(20, 19, 20, 5, 38, lanterna, campeao));
+		// no meio do caminho, entre os dois
+		assertThat(publico.ocupacao(20, 19, 20, 3, 38, campeao, lanterna)).isBetween(publico.ocupacao(20, 19, 20, 5, 38, SEM, SEM),
+				campeaoEmCasa);
 	}
 
 	@Test

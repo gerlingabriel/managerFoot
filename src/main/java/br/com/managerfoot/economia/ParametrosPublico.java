@@ -14,8 +14,8 @@ package br.com.managerfoot.economia;
  * @param bonusDecisivo soma no jogo entre os dois primeiros nas últimas {@code rodadasDecisivas}
  * @param rodadasDecisivas últimas rodadas da temporada em que vale o bônus decisivo
  * @param rodadaTabelaInteira a partir desta rodada a posição vale inteira; antes, mistura com a
- *        ocupação de início
- * @param ocupacaoInicio fração da torcida antes de a tabela valer
+ *        ocupação pela posição final da temporada passada
+ * @param ocupacaoInicio fração da torcida antes de a tabela valer na 1ª temporada do jogo
  * @param variacao sorteio uniforme de ± esta fração na ocupação
  * @param ocupacaoMinima fração mínima do estádio
  * @param capacidadeMaxima limite do estádio para todos

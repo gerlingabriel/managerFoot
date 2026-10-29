@@ -1,5 +1,6 @@
 package br.com.managerfoot.economia;
 
+import java.util.OptionalDouble;
 import java.util.random.RandomGenerator;
 
 /**
@@ -7,7 +8,8 @@ import java.util.random.RandomGenerator;
  * vai ao estádio depende da posição dele na tabela e da do adversário. O líder que recebe o 2º enche
  * o estádio do tamanho inicial; o meio da tabela fica perto da metade; o fim, bem abaixo, mesmo
  * recebendo o líder. Só um jogo decisivo no fim da temporada passa da torcida comum. Nunca passa da
- * capacidade. Domínio puro.
+ * capacidade. Até a rodada em que a tabela vale inteira, o público reflete a posição final da
+ * temporada passada (rev. 57). Domínio puro.
  */
 public final class PublicoDoJogo {
 
@@ -40,30 +42,40 @@ public final class PublicoDoJogo {
 	 * @param clubes clubes da divisão
 	 * @param rodada rodada que vai ser jogada
 	 * @param rodadas total de rodadas da divisão
+	 * @param anteriorMandante posição final da temporada passada, de {@link #relativa(int, int)}; vazia na
+	 *        1ª temporada
+	 * @param anteriorVisitante idem
 	 */
 	public int publico(int capacidade, double forcaMandante, int posicaoMandante, int posicaoVisitante, int clubes, int rodada,
-			int rodadas, RandomGenerator aleatorio) {
-		double ocupacao = ocupacao(posicaoMandante, posicaoVisitante, clubes, rodada, rodadas)
+			int rodadas, OptionalDouble anteriorMandante, OptionalDouble anteriorVisitante, RandomGenerator aleatorio) {
+		double ocupacao = ocupacao(posicaoMandante, posicaoVisitante, clubes, rodada, rodadas, anteriorMandante, anteriorVisitante)
 				+ (aleatorio.nextDouble() * 2 - 1) * parametros.variacao();
 		int publico = (int) Math.round(torcida(forcaMandante) * Math.max(0, ocupacao));
 		return Math.clamp(publico, (int) Math.round(capacidade * parametros.ocupacaoMinima()), capacidade);
 	}
 
 	/** Fração da torcida esperada no jogo, antes do sorteio. */
-	public double ocupacao(int posicaoMandante, int posicaoVisitante, int clubes, int rodada, int rodadas) {
-		double pMandante = relativa(posicaoMandante, clubes);
-		double pVisitante = relativa(posicaoVisitante, clubes);
-		double pelaTabela = parametros.ocupacaoLider() - (parametros.ocupacaoLider() - parametros.ocupacaoUltimo()) * pMandante
-				+ parametros.bonusAdversario() * (1 - pVisitante) * (1 - pMandante);
+	public double ocupacao(int posicaoMandante, int posicaoVisitante, int clubes, int rodada, int rodadas,
+			OptionalDouble anteriorMandante, OptionalDouble anteriorVisitante) {
+		double pelaTabela = pelaPosicao(relativa(posicaoMandante, clubes), relativa(posicaoVisitante, clubes));
 		if (rodada > rodadas - parametros.rodadasDecisivas() && posicaoMandante <= 2 && posicaoVisitante <= 2) {
 			pelaTabela += parametros.bonusDecisivo();
 		}
+		// sem temporada passada (1ª do jogo), a ocupação de início
+		double inicio = anteriorMandante.isPresent() && anteriorVisitante.isPresent()
+				? pelaPosicao(anteriorMandante.getAsDouble(), anteriorVisitante.getAsDouble())
+				: parametros.ocupacaoInicio();
 		double peso = Math.min(1, (rodada - 1) / (double) (parametros.rodadaTabelaInteira() - 1));
-		return parametros.ocupacaoInicio() * (1 - peso) + pelaTabela * peso;
+		return inicio * (1 - peso) + pelaTabela * peso;
 	}
 
-	/** 0 para o líder, 1 para o último. */
-	private static double relativa(int posicao, int clubes) {
+	private double pelaPosicao(double pMandante, double pVisitante) {
+		return parametros.ocupacaoLider() - (parametros.ocupacaoLider() - parametros.ocupacaoUltimo()) * pMandante
+				+ parametros.bonusAdversario() * (1 - pVisitante) * (1 - pMandante);
+	}
+
+	/** 0 para o líder, 1 para o último. Serve também para a posição final na divisão da temporada passada. */
+	public static double relativa(int posicao, int clubes) {
 		return clubes <= 1 ? 0 : (posicao - 1) / (double) (clubes - 1);
 	}
 }

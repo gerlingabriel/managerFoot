@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.OptionalDouble;
 import java.util.SplittableRandom;
 import java.util.TreeMap;
 
@@ -88,7 +89,8 @@ class RelatorioEstadioTest {
 			.append(pct(parametros.bonusAdversario())).append(", menos quanto pior o mandante (o último não ganha nada); nas ")
 			.append(parametros.rodadasDecisivas()).append(" últimas rodadas, 1º contra 2º soma mais ")
 			.append(pct(parametros.bonusDecisivo())).append(". Antes da rodada ").append(parametros.rodadaTabelaInteira())
-			.append(" a tabela vale menos (mistura com ").append(pct(parametros.ocupacaoInicio())).append("). Sorteio de ±")
+			.append(" a tabela atual vale menos: mistura com a mesma conta feita pela posição final da temporada passada (na ")
+			.append("1ª temporada, com ").append(pct(parametros.ocupacaoInicio())).append("). Sorteio de ±")
 			.append(pct(parametros.variacao())).append(". Nunca passa do estádio.\n")
 			.append("- **Ampliação**: ").append(mil(parametros.bloco())).append(" lugares por ").append(real(ampliacao.custo()))
 			.append(" (preço de um jogador de força 50), valem depois de ").append(parametros.rodadasDeObra())
@@ -176,6 +178,12 @@ class RelatorioEstadioTest {
 					saldoInicio.put(c.id(), saldo.get(c.id()));
 				}
 			}
+			// posição final da temporada passada, na divisão em que estava (vazia na 1ª temporada)
+			Map<Long, OptionalDouble> anterior = new HashMap<>();
+			divisaoDe.keySet().forEach(id -> {
+				int[] a = posicaoAnterior.get(id);
+				anterior.put(id, a == null ? OptionalDouble.empty() : OptionalDouble.of(PublicoDoJogo.relativa(a[0], a[1])));
+			});
 			Map<Integer, List<ResultadoJogo>> resultados = new HashMap<>();
 			int rodadas = temporada.divisoes().stream().mapToInt(d -> d.calendario().rodadas().size()).max().orElse(0);
 			for (int r = 1; r <= rodadas; r++) {
@@ -198,7 +206,7 @@ class RelatorioEstadioTest {
 							int pm = posicao.get(m);
 							int pv = posicao.get(jogo.visitante().id());
 							int pagantes = publico.publico(estadio.get(m), emCampo(planteis.get(m)), pm, pv, d.clubes().size(), r,
-									total, aleatorio);
+									total, anterior.get(m), anterior.get(jogo.visitante().id()), aleatorio);
 							medirPublico(d, r, pm, pv, pagantes, estadio.get(m), emCampo(planteis.get(m)));
 							lancar(saldo, bilheteria, m, caixa.lancamentos(Local.CASA, d.prioridade(), pagantes, planteis.get(m)));
 							long v = jogo.visitante().id();

@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 56 — 2026-10-28)
+-   **Status:** versão inicial para revisão (rev. 57 — 2026-10-28)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 57 (2026-10-28):** usuário aprovou torcida, ocupação, 6 rodadas de obra e as 3 propostas de patrocínio (por acesso na 1ª = terminar entre os 3 primeiros); jogos já salvos mantêm o estádio atual; até a 5ª rodada o público reflete a posição final da temporada passada.
 -   **rev. 56 (2026-10-28):** evolução C aprovada e gravada no avanço da rodada; público pela posição na tabela dos dois clubes e limitado pela força do clube; estádio máximo de 80.000; a máquina amplia quando cresce de força ou sobra dinheiro; a obra leva tempo; simular estádio, público e patrocínio.
 -   **rev. 55 (2026-10-28):** evolução corrigida pelo usuário: cada jogador perde no máximo 1 ponto por partida e o resultado decide quantos perdem (1, 3 ou 5); simulação refeita, nova proposta do agente (crescem 4, 2 ou 0,5 dos que não jogaram, com piso); modelos 6c (estádio) e 9a (patrocínio) aprovados.
 -   **rev. 54 (2026-10-28):** modelo 8a (histórico) aprovado; um treinador por clube, obrigatório ao criar ou editar clube; patrocínio volta à caixa de escolha da rev. 40; estádio até 120.000 lugares para todos, com janela nas finanças (capacidade, ingresso fixo por clube e divisão, ampliação de 5.000 lugares pelo preço de um jogador de força 50); regra de evolução de força descrita pelo usuário e simulada (`docs/simulacoes/evolucao-forca.md`), proposta do agente aguardando aprovação. Gravados os treinadores da máquina e a aba Histórico (V23).
@@ -1474,7 +1475,9 @@ reajustados por nova simulação (`docs/simulacoes/economia-caixa.md`):
     amplia: olha a força; se o clube cresceu de força, amplia; senão, deixa
     como está; se está com muito dinheiro, amplia um pouco. A **obra leva
     tempo** (prazo a definir pelo agente).
--   **Provisório (rev. 56) — proposta do agente, aguardando aprovação**
+-   **Definido (rev. 57) — proposta do agente da rev. 56, aprovada pelo
+    usuário** ("sim, aprovado"); 1ª temporada do jogo com 45% no início e
+    promovido/rebaixado pela posição na divisão anterior são **Provisório**
     (`economia.PublicoDoJogo`, `economia.AmpliacaoEstadio`, valores em
     `economia.ParametrosPublico`; simulação em
     `docs/simulacoes/estadio-publico-patrocinio.md`, 6 ligas × 3 sementes ×
@@ -1497,6 +1500,8 @@ reajustados por nova simulação (`docs/simulacoes/economia-caixa.md`):
       bloco novo e sobram 1,5 limite de caixa; ou, com 3 limites sobrando,
       até 105% da torcida. Na simulação, a 1ª amplia 0,6 vez por clube na 1ª
       temporada e 0,1 depois; a 2ª e a 3ª quase nunca.
+    - **Jogos já salvos (rev. 57, pelo usuário):** mantêm o estádio que os
+      clubes têm; o estádio inicial de 75% vale só para jogos novos.
     - **Atenção:** sem o mercado na simulação, 40% dos clubes da 3ª terminam
       a temporada com saldo negativo (o fundo da tabela arrecada metade do
       que arrecadava); no jogo, esses clubes vendem jogadores (§9.3).
@@ -1771,15 +1776,16 @@ na temporada anterior.
   vitória; menor à vista mais um bônus se subir de divisão). A caixa abre no
   plantel e a rodada 1 só começa depois da escolha. Os valores das propostas
   ainda serão simulados.
-- **Provisório (rev. 56) — valores das propostas, aguardando aprovação**
+- **Definido (rev. 57) — valores das propostas da rev. 56, aprovados pelo
+  usuário** ("gostei desses bônus do patrocínio")
   (`economia.PropostasPatrocinio`, mesma simulação):
   - **Fixa:** o valor da tabela, à vista.
   - **Por vitória:** 60% à vista e o resto dividido pelas vitórias de quem
     vence 37% dos jogos (na 1ª com 20 clubes, cerca de R$ 5.600 por vitória
     para quem recebe R$ 197 mil de tabela).
   - **Por acesso:** 50% à vista e mais 1,5 vez a tabela se subir; **na 1ª
-    divisão, se ficar entre os 3 primeiros** (proposta do agente: não há
-    para onde subir).
+    divisão, se ficar entre os 3 primeiros** (proposta do agente aprovada:
+    não há para onde subir).
   - **Resultado:** no meio da tabela a fixa e a por vitória pagam o mesmo; no
     topo, por vitória e por acesso pagam 20–30% mais; no fundo, a fixa é
     sempre a melhor. Nenhuma proposta é sempre a melhor.
