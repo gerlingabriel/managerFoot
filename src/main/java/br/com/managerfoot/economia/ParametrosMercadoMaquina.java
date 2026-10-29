@@ -24,20 +24,14 @@ import br.com.managerfoot.dominio.Posicao;
  * @param aVendaMinimo quando o clube tem menos que isto à venda para compra direta, sorteia mais
  *        (usuário: "uns 5 ou 6")
  * @param aVendaMaximo até quantos o sorteio completa
- * @param limitesDoRico a partir de quantos limites de caixa o clube é rico e passa a gastar mais
- *        (alavanca do mercado, rev. 64, proposta do agente: 2)
- * @param comprasDoRico compras por rodada do clube rico; os outros fazem 1 (no padrão, 1: desligado)
- * @param ricoCompraDireto o clube rico também compra pelo preço cheio jogadores que os outros clubes
- *        da máquina deixam à venda (no padrão, desligado)
  */
 public record ParametrosMercadoMaquina(int rodadasDeFolhaNoLimite, double descontoLance, double acrescimoPelaForca,
 		Map<Posicao, Integer> elencoMinimo, int plantelMinimo, int interesseAbaixoDoTime, int folgaNaCompra,
-		int aVendaMinimo, int aVendaMaximo, double limitesDoRico, int comprasDoRico, boolean ricoCompraDireto) {
+		int aVendaMinimo, int aVendaMaximo) {
 
 	public ParametrosMercadoMaquina {
 		if (rodadasDeFolhaNoLimite < 0 || descontoLance < 0 || descontoLance >= 1 || acrescimoPelaForca < 0
-				|| plantelMinimo < 0 || interesseAbaixoDoTime < 0 || folgaNaCompra < 0 || aVendaMinimo < 0 || aVendaMaximo < aVendaMinimo
-				|| limitesDoRico < 0 || comprasDoRico < 1) {
+				|| plantelMinimo < 0 || interesseAbaixoDoTime < 0 || folgaNaCompra < 0 || aVendaMinimo < 0 || aVendaMaximo < aVendaMinimo) {
 			throw new IllegalArgumentException("parâmetros do mercado da máquina inválidos");
 		}
 		elencoMinimo = Map.copyOf(elencoMinimo);
@@ -49,12 +43,6 @@ public record ParametrosMercadoMaquina(int rodadasDeFolhaNoLimite, double descon
 		minimo.put(Posicao.DEFENSOR, 4);
 		minimo.put(Posicao.MEIO_CAMPISTA, 4);
 		minimo.put(Posicao.ATACANTE, 2);
-		return new ParametrosMercadoMaquina(10, 0.10, 0.05, minimo, 14, 5, 5, 5, 6, 2, 1, false);
-	}
-
-	/** Os mesmos valores com o rico gastando mais (rev. 64, aguardando aprovação). */
-	public ParametrosMercadoMaquina comRico(double limites, int compras, boolean compraDireto) {
-		return new ParametrosMercadoMaquina(rodadasDeFolhaNoLimite, descontoLance, acrescimoPelaForca, elencoMinimo,
-				plantelMinimo, interesseAbaixoDoTime, folgaNaCompra, aVendaMinimo, aVendaMaximo, limites, compras, compraDireto);
+		return new ParametrosMercadoMaquina(10, 0.10, 0.05, minimo, 14, 5, 5, 5, 6);
 	}
 }

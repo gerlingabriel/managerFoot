@@ -103,41 +103,6 @@ public final class MercadoDaMaquina {
 		return Clube.forcaEmCampo(plantel);
 	}
 
-	/** O clube tem caixa de rico: pelo menos {@code limitesDoRico} limites (rev. 64). */
-	public boolean rico(long saldo, List<Jogador> plantel) {
-		return saldo >= limite(plantel) * parametros.limitesDoRico();
-	}
-
-	/** Quantas compras o clube pode fazer na rodada: mais quando é rico (rev. 64). */
-	public int comprasPorRodada(long saldo, List<Jogador> plantel) {
-		return rico(saldo, plantel) ? parametros.comprasDoRico() : 1;
-	}
-
-	/**
-	 * Compra direta do clube rico (rev. 64, proposta): entre os jogadores que os outros clubes deixam à
-	 * venda, o mais forte acima da força em campo do time (pelo preço cheio, só se melhora o time) que
-	 * cabe no caixa com a folga. Vazio se
-	 * a alavanca está desligada ou se o clube não é rico.
-	 *
-	 * @param anunciados jogadores à venda dos outros clubes, com o preço da compra direta
-	 */
-	public Optional<Jogador> compraDireta(long saldo, List<Jogador> plantel, List<Jogador> anunciados, String paisDaLiga) {
-		if (!parametros.ricoCompraDireto() || !rico(saldo, plantel) || plantel.size() >= Clube.MAXIMO_JOGADORES) {
-			return Optional.empty();
-		}
-		return anunciados.stream()
-			.filter(j -> j.forca() > forcaEmCampo(plantel))
-			.filter(j -> cabeNoCaixa(saldo, plantel, j, preco.preco(j, paisDaLiga)))
-			.max(Comparator.comparingInt(Jogador::forca).thenComparing(Comparator.comparingLong(Jogador::id).reversed()));
-	}
-
-	/** Pago o valor, o caixa fica acima do limite com a folga, já com o novo salário. */
-	private boolean cabeNoCaixa(long saldo, List<Jogador> plantel, Jogador alvo, long valor) {
-		List<Jogador> depois = new ArrayList<>(plantel);
-		depois.add(alvo);
-		return saldo - valor >= limite(depois) + caixa.folha(depois) * parametros.folgaNaCompra();
-	}
-
 	/**
 	 * Lance da máquina num leilão: um pouco abaixo do preço, um pouco mais para o clube mais forte.
 	 * Vazio se o jogador é fraco demais para o time, se o plantel está cheio, se o lance fica abaixo
@@ -154,8 +119,11 @@ public final class MercadoDaMaquina {
 		}
 		double fator = 1 - parametros.descontoLance()
 				+ parametros.acrescimoPelaForca() * clube.forca() / Jogador.FORCA_MAXIMA;
-		long valor = preco.redondo(Math.round(preco.preco(alvo, paisDaLiga) * fator));
-		if (valor < lanceMinimo || !cabeNoCaixa(saldo, plantel, alvo, valor)) {
+		long valor = preco.redondo(Math.round(preco.preco(alvo, paisDaLiga, forcaEmCampo(plantel)) * fator));
+		List<Jogador> depois = new ArrayList<>(plantel);
+		depois.add(alvo);
+		long reserva = limite(depois) + caixa.folha(depois) * parametros.folgaNaCompra();
+		if (valor < lanceMinimo || saldo - valor < reserva) {
 			return Optional.empty();
 		}
 		return Optional.of(valor);

@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 64 — 2026-10-29)
+-   **Status:** versão inicial para revisão (rev. 65 — 2026-10-29)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 65 (2026-10-29):** pelo usuário: o rico faz só 1 compra por rodada; a máquina compra só por leilão e a compra direta é só do usuário (código da rev. 64 retirado); simular a "inflação" (faixa da rev. 61) pela força do clube que compra, não do jogador (§9.3).
 -   **rev. 64 (2026-10-29):** pelo usuário: simular a alavanca "rico gasta mais" (§9.3). Resultado negativo: o rico que gasta fica mais forte e mais rico; parâmetros no código, desligados no padrão.
 -   **rev. 63 (2026-10-29):** pelo usuário: modelos 11a (convite), 11b (aviso de demissão) e 11c (moral na janela do clube) aprovados; 9,8 trocas por temporada na 1ª está bom; regra da surpresa aprovada. Troca de treinador ligada à rodada (V28, ADR 0014).
 -   **rev. 62 (2026-10-29):** pelo usuário: máquina demitida pelas mesmas regras do usuário; recusa passa ao seguinte; sem chamado, o treinador continua; chamado no máximo 12 pontos abaixo; convite depois da rodada e antes do plantel (modelo de tela proposto); pedido de 10 ou 11 demissões por temporada com os fortes demitindo mais. Proposta do agente (provisória, já na rodada): a surpresa vale mais na moral e o retorno à inicial fica mais fraco (§6.2); simulação refeita.
@@ -1756,10 +1757,47 @@ clube da máquina deixa à venda. Saldo no fim da 6ª temporada, em limites:
   perde vender é preciso dinheiro **saindo** do jogo ou venda **forçada**: as
   outras alavancas da rev. 59 ("forte que perde vende", ampliação
   obrigatória do estádio) ou outra regra do usuário.
+- **Retirado na rev. 65** pelo usuário: o rico não precisa de mais compras
+  por rodada, e a máquina só compra por leilão (compra direta só do usuário,
+  como na rev. 43). O código da rev. 64 foi desfeito.
+
+**Definido (rev. 65), pelo usuário:** o rico deve gastar mais **nas compras
+de leilão**, e a "inflação" (a faixa da rev. 61) deve ser **pela força do
+clube, não do jogador**: quando um clube de força 35 compra um jogador de um
+clube de força 50, paga só a faixa dele (+5%), e não a do jogador.
+
+**Simulação (rev. 65, `docs/simulacoes/ciclo-do-mercado.md`).** *Preço pelo
+comprador*: o preço sai do salário sem faixa e leva a faixa da força em
+campo de quem compra; o lance inicial do leilão (preço −20%) fica sem faixa.
+*Salário pelo clube* (leitura do agente, a confirmar): todos os jogadores do
+clube recebem com a faixa da força em campo do clube. *Faixas maiores*:
+35–44 +20% e 45–50 +40% (as de baixo iguais). Saldo no fim da 6ª temporada,
+em limites:
+
+| Cenário | 1ª topo | 1ª fundo | 2ª topo | 2ª fundo | Leilões sem lance 1ª / 2ª | Mobilidade |
+|---|---|---|---|---|---|---|
+| Atual (faixa pelo jogador) | 21,7 | 7,4 | 10,9 | 1,5 | 26% / 22% | 5% |
+| Preço pelo comprador | 21,4 | 7,1 | 11,2 | 1,1 | 26% / 20% | 6% |
+| Preço pelo comprador e salário pelo clube | 21,6 | 7,8 | 10,8 | 1,3 | 26% / 19% | 4% |
+| Preço pelo comprador, faixas maiores | 13,5 | 6,5 | 11,2 | 1,5 | 40% / 21% | 5% |
+| Preço e salário pelo clube, faixas maiores | 13,8 | 6,9 | 10,5 | 1,0 | 43% / 19% | 5% |
+
+- Com as faixas de ±10% do usuário, a regra quase não muda o caixa: o rico
+  compra pouco em leilão (quem vende é o fundo, com jogadores fracos que não
+  lhe interessam), então pagar mais por compra pesa pouco.
+- Com faixas maiores o topo da 1ª acumula bem menos (21,7 → 13,5), mas
+  sobretudo pelo salário mais caro dos fortes, e os leilões da 1ª sem lance
+  sobem de 26% para 40%. A mobilidade não muda.
+- Em 1 de 18 ligas, em alguns cenários, um clube vendido até o plantel mínimo
+  de 14 ficou sem 11 disponíveis com as suspensões: no jogo isso travaria a
+  rodada (o time com um a menos da §9.3 ainda não existe).
 - **No código, desligado no padrão** (o jogo não muda):
-  `ParametrosMercadoMaquina.limitesDoRico/comprasDoRico/ricoCompraDireto`,
-  `MercadoDaMaquina.rico/comprasPorRodada/compraDireta`; `LeiloesDaRodada`
-  conta as compras por clube.
+  `ParametrosMercado.precoPeloComprador`, `ParametrosEconomia.salarioPeloClube`,
+  `PrecoJogador.preco(jogador, país, forçaDoComprador)`. Prêmio e ampliação do
+  estádio continuam com os mesmos valores.
+- **Aguardando o usuário:** ligar ou não; faixa no salário pelo clube ou pelo
+  jogador; manter ±10% ou faixas maiores; preço da compra direta do usuário
+  também pela força do clube dele.
 
 **Definido (rev. 43), pelo usuário:** sem empréstimo, sempre que o caixa
 ficar **negativo** um jogador do clube vai a **leilão sem lance mínimo**.

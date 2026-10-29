@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.random.RandomGenerator;
 
+import br.com.managerfoot.dominio.Clube;
 import br.com.managerfoot.dominio.Jogador;
 import br.com.managerfoot.dominio.Moral;
 import br.com.managerfoot.dominio.ParametrosMoral;
@@ -58,12 +59,28 @@ public final class CaixaDaRodada {
 	 * força (rev. 61).
 	 */
 	public long salario(int forca) {
-		return Math.round(parametros.salarioReferencia()
-				* Math.pow(parametros.crescimentoSalario(), forca - parametros.forcaReferencia())
-				* parametros.fatorSalario(forca));
+		return Math.round(salarioSemFaixa(forca) * parametros.fatorSalario(forca));
 	}
 
+	/** Salário da força dada sem o ajuste da faixa (rev. 65). */
+	public double salarioSemFaixa(int forca) {
+		return parametros.salarioReferencia() * Math.pow(parametros.crescimentoSalario(), forca - parametros.forcaReferencia());
+	}
+
+	/** Ajuste da faixa para a força dada, de jogador ou de clube (rev. 61 e 65). */
+	public double fatorDaFaixa(double forca) {
+		return parametros.fatorSalario(forca);
+	}
+
+	/**
+	 * Folha por rodada. Com o salário pelo clube (rev. 65), a faixa é a da força em campo do clube,
+	 * a mesma para todos os jogadores.
+	 */
 	public long folha(List<Jogador> plantel) {
+		if (parametros.salarioPeloClube()) {
+			double fator = fatorDaFaixa(Clube.forcaEmCampo(plantel));
+			return plantel.stream().mapToLong(j -> Math.round(salarioSemFaixa(j.forca()) * fator)).sum();
+		}
 		return plantel.stream().mapToLong(this::salario).sum();
 	}
 

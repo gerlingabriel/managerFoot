@@ -78,8 +78,7 @@ public final class LeiloesDaRodada {
 	/**
 	 * Resolve os leilões na ordem dada. O lance de um humano só vale se for pelo menos o mínimo, maior
 	 * que zero, e se o caixa e o plantel ainda comportarem a compra depois dos leilões que ele já
-	 * levou. Cada clube da máquina compra no máximo 1 por rodada (o rico, as compras do rico, rev. 64)
-	 * e não dá lance no próprio jogador.
+	 * levou. Cada clube da máquina compra no máximo 1 por rodada e não dá lance no próprio jogador.
 	 *
 	 * @param daMaquina clubes da máquina que estão nas divisões
 	 * @param humanos clubes dos treinadores humanos
@@ -95,8 +94,7 @@ public final class LeiloesDaRodada {
 	 * Como {@link #resolver(List, List, List, Map, String, RandomGenerator)}, sem lance dos clubes da
 	 * máquina que já compraram antes da mesma rodada.
 	 *
-	 * @param jaCompraram ids dos clubes da máquina que já levaram um jogador antes desta rodada (contam
-	 *        como 1 compra)
+	 * @param jaCompraram ids dos clubes da máquina que já levaram um jogador antes desta rodada
 	 */
 	public List<Desfecho> resolver(List<Oferta> ofertas, List<ClubeNoMercado> daMaquina, List<ClubeNoMercado> humanos,
 			Map<Long, List<Lance>> lancesHumanos, Set<Long> jaCompraram, String paisDaLiga, RandomGenerator aleatorio) {
@@ -110,8 +108,7 @@ public final class LeiloesDaRodada {
 		Set<Long> idsHumanos = new HashSet<>();
 		humanos.forEach(c -> idsHumanos.add(c.clube().id()));
 		List<Long> compradoresDaMaquina = ordenados(daMaquina).stream().map(c -> c.clube().id()).toList();
-		Map<Long, Integer> compraram = new HashMap<>();
-		jaCompraram.forEach(id -> compraram.put(id, 1));
+		Set<Long> compraram = new HashSet<>(jaCompraram);
 		List<Desfecho> desfechos = new ArrayList<>();
 		for (Oferta oferta : ofertas) {
 			Jogador jogador = oferta.jogador();
@@ -125,11 +122,10 @@ public final class LeiloesDaRodada {
 				}
 			}
 			for (long comprador : compradoresDaMaquina) {
-				Estado e = estados.get(comprador);
-				if (comprador == oferta.vendedorId()
-						|| compraram.getOrDefault(comprador, 0) >= mercado.comprasPorRodada(e.saldo, e.plantel)) {
+				if (comprador == oferta.vendedorId() || compraram.contains(comprador)) {
 					continue;
 				}
+				Estado e = estados.get(comprador);
 				mercado.lance(e.clube, e.saldo, e.plantel, jogador, paisDaLiga, oferta.lanceMinimo())
 					.ifPresent(v -> lances.add(new Lance(comprador, v)));
 			}
@@ -144,7 +140,7 @@ public final class LeiloesDaRodada {
 				comprador.plantel.add(jogador);
 				comprador.saldo -= v.valor();
 				if (!idsHumanos.contains(v.clubeId())) {
-					compraram.merge(v.clubeId(), 1, Integer::sum);
+					compraram.add(v.clubeId());
 				}
 			});
 			desfechos.add(new Desfecho(oferta, List.copyOf(lances), vencedor, empate));

@@ -6,13 +6,10 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Optional;
 import java.util.OptionalDouble;
-import java.util.Set;
 import java.util.SplittableRandom;
 
 import org.junit.jupiter.api.Tag;
@@ -24,6 +21,8 @@ import br.com.managerfoot.bancopadrao.ParametrosBancoPadrao;
 import br.com.managerfoot.dominio.Clube;
 import br.com.managerfoot.dominio.Jogador;
 import br.com.managerfoot.dominio.Moral;
+import br.com.managerfoot.dominio.ParametrosMoral;
+import br.com.managerfoot.economia.ParametrosEconomia.FaixaSalario;
 import br.com.managerfoot.economia.CaixaDaRodada.Local;
 import br.com.managerfoot.economia.LeiloesDaRodada.ClubeNoMercado;
 import br.com.managerfoot.economia.LeiloesDaRodada.Desfecho;
@@ -49,7 +48,7 @@ import br.com.managerfoot.temporada.TransicaoTemporada;
  * prêmio e patrocínio fixo) e os leilões da máquina antes de cada rodada, com as mesmas classes do
  * jogo ({@link LeiloesDaRodada}). Mede quem vende, quem compra e quem consegue dar lance, para ver se
  * os clubes ricos que caem vendem e se os de baixo têm dinheiro para comprar (objetivo do usuário,
- * rev. 58). Só máquina. Na rev. 64 compara cenários da alavanca "rico gasta mais". Executar com
+ * rev. 58). Só máquina. Na rev. 65 compara cenários da inflação pela força do clube. Executar com
  * {@code ./mvnw test -Dgroups=simulacao -Dsurefire.excludedGroups=none -Dtest=RelatorioCicloMercadoTest}.
  */
 @Tag("simulacao")
@@ -61,13 +60,17 @@ class RelatorioCicloMercadoTest {
 	private static final String[] TERCOS = { "Topo", "Meio", "Fundo" };
 	private static final String[] RIQUEZA = { "Rico", "Médio", "Pobre" };
 
-	/** Cenários das alavancas do mercado (rev. 64): o primeiro é o jogo atual, o último é a proposta. */
+	private static final List<FaixaSalario> FAIXAS_DO_USUARIO = ParametrosEconomia.padrao().faixasSalario();
+	private static final List<FaixaSalario> FAIXAS_MAIORES = List.of(new FaixaSalario(0, 0.90), new FaixaSalario(15, 0.95),
+			new FaixaSalario(25, 1.0), new FaixaSalario(35, 1.20), new FaixaSalario(45, 1.40));
+
+	/** Cenários da inflação pela força (rev. 65): o primeiro é o jogo atual. */
 	private static final List<Cenario> CENARIOS = List.of(
-			new Cenario("Atual: 1 compra, só leilão", ParametrosMercadoMaquina.padrao()),
-			new Cenario("Rico (2 limites): 2 compras", ParametrosMercadoMaquina.padrao().comRico(2, 2, false)),
-			new Cenario("Rico (2 limites): compra direta", ParametrosMercadoMaquina.padrao().comRico(2, 1, true)),
-			new Cenario("Rico (1,5 limite): 3 compras e compra direta", ParametrosMercadoMaquina.padrao().comRico(1.5, 3, true)),
-			new Cenario("Rico (2 limites): 2 compras e compra direta", ParametrosMercadoMaquina.padrao().comRico(2, 2, true)));
+			new Cenario("Atual: faixa pelo jogador no salário e no preço", false, false, FAIXAS_DO_USUARIO),
+			new Cenario("Preço pelo comprador; salário pelo jogador", true, false, FAIXAS_DO_USUARIO),
+			new Cenario("Preço pelo comprador; salário pelo clube", true, true, FAIXAS_DO_USUARIO),
+			new Cenario("Preço pelo comprador; salário pelo jogador; faixas maiores", true, false, FAIXAS_MAIORES),
+			new Cenario("Preço pelo comprador; salário pelo clube; faixas maiores", true, true, FAIXAS_MAIORES));
 
 	@Test
 	void gerarRelatorio() throws IOException {
@@ -75,7 +78,7 @@ class RelatorioCicloMercadoTest {
 		List<GeradorBancoPadrao.PaisGerado> gerados = PaisPadrao.TODOS.stream().map(gerador::gerar).toList();
 		List<Simulacao> simulacoes = new ArrayList<>();
 		for (Cenario cenario : CENARIOS) {
-			Simulacao sim = new Simulacao(cenario.parametros());
+			Simulacao sim = new Simulacao(cenario);
 			for (int p = 0; p < PaisPadrao.TODOS.size(); p++) {
 				for (int semente = 0; semente < SEMENTES; semente++) {
 					try {
@@ -89,7 +92,7 @@ class RelatorioCicloMercadoTest {
 			simulacoes.add(sim);
 		}
 		Files.createDirectories(SAIDA.getParent());
-		String md = comparacao(simulacoes) + simulacoes.getLast().relatorio();
+		String md = comparacao(simulacoes) + simulacoes.get(DETALHADO).relatorio();
 		Files.writeString(SAIDA, md);
 		System.out.println(md);
 	}
@@ -105,12 +108,13 @@ class RelatorioCicloMercadoTest {
 			.append("abaixo de 10 rodadas da folha põe o mais caro sem asterisco em leilão; dá lance quem fica acima do limite mais ")
 			.append("5 rodadas da folha depois de pagar, tem menos de 25 jogadores e o jogador tem força de pelo menos a do time ")
 			.append("menos 5. Só máquina.\n\n")
-			.append("## Alavanca \"rico gasta mais\" (rev. 64)\n\n")
-			.append("*Rico*: saldo de pelo menos N limites (1 limite = 10 rodadas da folha). *Compras*: quantas por rodada o rico ")
-			.append("pode fazer (os outros, 1). *Compra direta*: depois dos leilões, o rico compra pelo preço cheio o jogador mais ")
-			.append("forte que lhe interessa entre os 5 ou 6 que cada clube da máquina deixa à venda (§9.4), com a mesma folga. ")
-			.append("Saldo no fim da ").append(TEMPORADAS).append("ª temporada, em limites, por terço final da tabela.\n\n")
-			.append("| Cenário | 1ª topo | 1ª fundo | 2ª topo | 2ª fundo | 1ª leilões sem lance | Compras diretas por temporada (liga) ")
+			.append("## Inflação pela força do clube (rev. 65)\n\n")
+			.append("*Faixa*: o ajuste da rev. 61 (abaixo de 15 −10%, 15–24 −5%, 25–34 0, 35–44 +5%, 45–50 +10%; *faixas maiores*: ")
+			.append("35–44 +20% e 45–50 +40%). *Preço pelo comprador*: o preço sai do salário sem faixa e leva a faixa da força ")
+			.append("em campo do clube que compra; o lance inicial do leilão (preço −20%) fica sem faixa. *Salário pelo clube*: todos ")
+			.append("os jogadores do clube recebem com a faixa da força em campo do clube. Prêmio e ampliação do estádio iguais em ")
+			.append("todos. Saldo no fim da ").append(TEMPORADAS).append("ª temporada, em limites, por terço final da tabela.\n\n")
+			.append("| Cenário | 1ª topo | 1ª fundo | 2ª topo | 2ª fundo | 1ª leilões sem lance | 2ª leilões sem lance ")
 			.append("| Vendas do rico no fundo (por 100 clubes-rodada) | Mobilidade | Ligas travadas |\n|---|---|---|---|---|---|---|---|---|---|\n");
 		for (int i = 0; i < CENARIOS.size(); i++) {
 			Simulacao s = simulacoes.get(i);
@@ -119,30 +123,37 @@ class RelatorioCicloMercadoTest {
 			md.append("| ").append(CENARIOS.get(i).nome()).append(" | ").append(dec(d1.limites[0] / d1.n[0])).append(" | ")
 				.append(dec(d1.limites[2] / d1.n[2])).append(" | ").append(dec(d2.limites[0] / d2.n[0])).append(" | ")
 				.append(dec(d2.limites[2] / d2.n[2])).append(" | ").append(pct(s.semLance[0] / (double) Math.max(1, s.ofertas[0])))
-				.append(" | ").append(dec(s.comprasDiretas / (double) (PaisPadrao.TODOS.size() * SEMENTES * TEMPORADAS)))
+				.append(" | ").append(pct(s.semLance[1] / (double) Math.max(1, s.ofertas[1])))
 				.append(" | ").append(dec(100.0 * s.vendedor[0][2] / Math.max(1, s.clubesRodada[0][2]))).append(" | ")
 				.append(pct(s.mudaramDeTerco / (double) Math.max(1, s.clubesNaMobilidade))).append(" | ").append(s.travadas)
 				.append(" de ").append(PaisPadrao.TODOS.size() * SEMENTES).append(" |\n");
 		}
 		md.append("\n*Ligas travadas*: liga × semente em que um clube ficou sem 11 disponíveis (vendas até o plantel mínimo de 14 ")
 			.append("mais suspensões); a simulação dessa liga para ali e as medidas contam só as temporadas jogadas.\n\n")
-			.append("As tabelas abaixo são do último cenário (a proposta).\n\n");
+			.append("As tabelas abaixo são do cenário \"").append(CENARIOS.get(DETALHADO).nome()).append("\".\n\n");
 		return md.toString();
 	}
 
-	private record Cenario(String nome, ParametrosMercadoMaquina parametros) {
+	/** Cenário com as tabelas completas no relatório. */
+	private static final int DETALHADO = 2;
+
+	/**
+	 * @param precoPeloComprador a faixa entra no preço pela força em campo do comprador
+	 * @param salarioPeloClube a faixa do salário segue a força em campo do clube
+	 */
+	private record Cenario(String nome, boolean precoPeloComprador, boolean salarioPeloClube, List<FaixaSalario> faixas) {
 	}
 
 	/** Acumuladores e regras de um cenário. */
 	private static final class Simulacao {
 
-		private final CaixaDaRodada caixa = CaixaDaRodada.padrao();
+		private final CaixaDaRodada caixa;
 		private final ParametrosPublico parametros = ParametrosPublico.padrao();
 		private final PublicoDoJogo publico = PublicoDoJogo.padrao();
 		private final AmpliacaoEstadio ampliacao = AmpliacaoEstadio.padrao();
 		private final Premiacao premiacao = Premiacao.padrao();
 		private final EvolucaoForca evolucao = EvolucaoForca.padrao();
-		private final PrecoJogador preco = PrecoJogador.padrao();
+		private final PrecoJogador preco;
 		private final MercadoDaMaquina mercado;
 		private final LeiloesDaRodada leiloes;
 
@@ -167,11 +178,13 @@ class RelatorioCicloMercadoTest {
 		private final Map<Integer, Map<Integer, Medida>> temporadas = new java.util.TreeMap<>();
 		private long clubesNaMobilidade;
 		private long mudaramDeTerco;
-		private long comprasDiretas;
 		private int travadas;
 
-		private Simulacao(ParametrosMercadoMaquina mercadoMaquina) {
-			mercado = new MercadoDaMaquina(mercadoMaquina, preco, caixa);
+		private Simulacao(Cenario cenario) {
+			caixa = new CaixaDaRodada(ParametrosEconomia.padrao().comFaixas(cenario.faixas(), cenario.salarioPeloClube()),
+					ParametrosMoral.padrao());
+			preco = new PrecoJogador(ParametrosMercado.padrao().comPrecoPeloComprador(cenario.precoPeloComprador()), caixa);
+			mercado = new MercadoDaMaquina(ParametrosMercadoMaquina.padrao(), preco, caixa);
 			leiloes = new LeiloesDaRodada(mercado, preco);
 		}
 
@@ -278,9 +291,6 @@ class RelatorioCicloMercadoTest {
 			Map<Long, int[]> posicaoAnterior = new HashMap<>();
 			ProcessamentoRodada processamento = ProcessamentoRodada.padrao();
 			SplittableRandom aleatorio = new SplittableRandom(semente * 131 + 7);
-			// sorteio próprio dos anunciados, para o cenário atual repetir os números de antes
-			SplittableRandom anuncios = new SplittableRandom(semente * 31 + 3);
-			Map<Long, Set<Long>> aVenda = new HashMap<>();
 			Disciplina disciplina = Disciplina.vazia();
 			Map<Long, Moral> moral = new HashMap<>();
 			for (int numero = 1; numero <= TEMPORADAS; numero++) {
@@ -314,8 +324,7 @@ class RelatorioCicloMercadoTest {
 								temporada.semente());
 						d.clubes().forEach(clube -> posicao.put(clube.id(), c.posicao(clube)));
 					}
-					leiloes(paisDaLiga, liga, divisaoDe, clubePorId, posicao, riqueza, planteis, saldo, trocas, aleatorio, aVenda,
-							anuncios);
+					leiloes(paisDaLiga, liga, divisaoDe, clubePorId, posicao, riqueza, planteis, saldo, trocas, aleatorio);
 					for (Temporada.SorteiosDivisao sd : temporada.divisoes()) {
 						Divisao d = divisaoDe.get(sd.calendario().jogos().getFirst().mandante().id());
 						int total = sd.calendario().rodadas().size();
@@ -391,8 +400,7 @@ class RelatorioCicloMercadoTest {
 		/** Leilões da máquina antes da rodada, como no jogo; aplica as vendas e mede. */
 		private void leiloes(String paisDaLiga, ConfiguracaoLiga liga, Map<Long, Divisao> divisaoDe, Map<Long, Clube> clubePorId,
 				Map<Long, Integer> posicao, Map<Long, Integer> riqueza, Map<Long, List<Jogador>> planteis, Map<Long, Long> saldo,
-				Map<Long, Integer> trocas, SplittableRandom aleatorio, Map<Long, Set<Long>> aVenda,
-				SplittableRandom anuncios) {
+				Map<Long, Integer> trocas, SplittableRandom aleatorio) {
 			List<ClubeNoMercado> daMaquina = new ArrayList<>();
 			for (Long id : divisaoDe.keySet().stream().sorted().toList()) {
 				daMaquina.add(new ClubeNoMercado(clubePorId.get(id), saldo.get(id), planteis.get(id)));
@@ -401,7 +409,6 @@ class RelatorioCicloMercadoTest {
 			}
 			List<Oferta> abertas = leiloes.abrir(daMaquina, paisDaLiga);
 			List<Desfecho> desfechos = leiloes.resolver(abertas, daMaquina, List.of(), Map.of(), paisDaLiga, aleatorio);
-			Map<Long, Integer> compras = new HashMap<>();
 			for (Desfecho d : desfechos) {
 				long vend = d.oferta().vendedorId();
 				int dv = divisaoDe.get(vend).prioridade() - 1;
@@ -418,57 +425,12 @@ class RelatorioCicloMercadoTest {
 					continue;
 				}
 				long comp = d.vencedor().get().clubeId();
-				compras.merge(comp, 1, Integer::sum);
 				vender(d.oferta().jogador(), vend, comp, d.vencedor().get().valor(), paisDaLiga, divisaoDe, posicao, riqueza,
 						planteis, saldo, trocas);
 			}
-			compraDireta(paisDaLiga, divisaoDe, posicao, riqueza, planteis, saldo, trocas, aVenda, anuncios, compras);
 		}
 
-		/**
-		 * Anúncios como no jogo (5 ou 6 por clube, repostos a cada rodada) e a compra direta dos ricos, na
-		 * ordem dos clubes, até as compras do rico na rodada.
-		 */
-		private void compraDireta(String paisDaLiga, Map<Long, Divisao> divisaoDe, Map<Long, Integer> posicao,
-				Map<Long, Integer> riqueza, Map<Long, List<Jogador>> planteis, Map<Long, Long> saldo, Map<Long, Integer> trocas,
-				Map<Long, Set<Long>> aVenda, SplittableRandom anuncios, Map<Long, Integer> compras) {
-			List<Long> ids = divisaoDe.keySet().stream().sorted().toList();
-			for (Long id : ids) {
-				Set<Long> ativos = new HashSet<>(aVenda.getOrDefault(id, Set.of()));
-				ativos.retainAll(planteis.get(id).stream().map(Jogador::id).toList());
-				mercado.sortearAVenda(planteis.get(id), ativos, anuncios).forEach(j -> ativos.add(j.id()));
-				aVenda.put(id, ativos);
-			}
-			for (Long comp : ids) {
-				while (compras.getOrDefault(comp, 0) < mercado.comprasPorRodada(saldo.get(comp), planteis.get(comp))) {
-					Map<Long, Long> dono = new HashMap<>();
-					List<Jogador> anunciados = new ArrayList<>();
-					for (Long vend : ids) {
-						if (vend.equals(comp)) {
-							continue;
-						}
-						for (Jogador j : planteis.get(vend)) {
-							if (aVenda.get(vend).contains(j.id()) && mercado.podeSair(planteis.get(vend), j)) {
-								anunciados.add(j);
-								dono.put(j.id(), vend);
-							}
-						}
-					}
-					Optional<Jogador> alvo = mercado.compraDireta(saldo.get(comp), planteis.get(comp), anunciados, paisDaLiga);
-					if (alvo.isEmpty()) {
-						break;
-					}
-					long vend = dono.get(alvo.get().id());
-					aVenda.get(vend).remove(alvo.get().id());
-					compras.merge(comp, 1, Integer::sum);
-					comprasDiretas++;
-					vender(alvo.get(), vend, comp, preco.preco(alvo.get(), paisDaLiga), paisDaLiga, divisaoDe, posicao, riqueza,
-							planteis, saldo, trocas);
-				}
-			}
-		}
-
-		/** Aplica uma venda, por leilão ou compra direta, e mede. */
+		/** Aplica uma venda e mede. */
 		private void vender(Jogador jogador, long vend, long comp, long valor, String paisDaLiga, Map<Long, Divisao> divisaoDe,
 				Map<Long, Integer> posicao, Map<Long, Integer> riqueza, Map<Long, List<Jogador>> planteis, Map<Long, Long> saldo,
 				Map<Long, Integer> trocas) {

@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import br.com.managerfoot.dominio.Clube;
 import br.com.managerfoot.dominio.Jogador;
 import br.com.managerfoot.dominio.Moral;
+import br.com.managerfoot.dominio.ParametrosMoral;
 import br.com.managerfoot.dominio.Posicao;
 import br.com.managerfoot.dominio.Temperamento;
 import br.com.managerfoot.economia.CaixaDaRodada.Local;
@@ -99,6 +100,19 @@ class CaixaDaRodadaTest {
 		SplittableRandom aleatorio = new SplittableRandom(7);
 		return (int) IntStream.range(0, 2_000).map(i -> caixa.publico(10_000, moral, forcaCasa, forcaFora, aleatorio))
 			.average().orElseThrow();
+	}
+
+	@Test
+	void comSalarioPeloClubeTodosRecebemComAFaixaDaForcaEmCampo() {
+		CaixaDaRodada peloClube = new CaixaDaRodada(
+				ParametrosEconomia.padrao().comFaixas(ParametrosEconomia.padrao().faixasSalario(), true), ParametrosMoral.padrao());
+		List<Jogador> plantel = new java.util.ArrayList<>(java.util.Collections.nCopies(11, jogador(40)));
+		plantel.add(jogador(17));
+		// força em campo 40: faixa +5% para todos, também para o reserva de força 17 (R$ 2.000 → R$ 2.100)
+		assertThat(peloClube.folha(plantel))
+			.isEqualTo(11 * Math.round(peloClube.salarioSemFaixa(40) * 1.05) + 2_100_00L);
+		// no padrão a faixa é a de cada jogador: o de força 17 recebe R$ 1.900
+		assertThat(caixa.folha(plantel)).isEqualTo(11 * caixa.salario(40) + 1_900_00L);
 	}
 
 	private static Jogador jogador(int forca) {

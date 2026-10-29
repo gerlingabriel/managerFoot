@@ -9,9 +9,12 @@ package br.com.managerfoot.economia;
  * @param descontoEstrangeiro desconto do jogador de outro país sobre o preço (definido pelo usuário: 25%)
  * @param acrescimoAsterisco acréscimo do jogador com asterisco sobre o preço (definido pelo usuário: 25%)
  * @param arredondamento o preço é arredondado para múltiplos deste valor, em centavos de Real
+ * @param precoPeloComprador a faixa do salário entra no preço pela força em campo do clube que compra,
+ *        não pela força do jogador; o lance inicial do leilão fica sem faixa (rev. 65, pedido do
+ *        usuário, em simulação: desligado no padrão)
  */
 public record ParametrosMercado(int rodadasDeSalarioNoPreco, double descontoLeilao, double descontoEstrangeiro,
-		double acrescimoAsterisco, long arredondamento) {
+		double acrescimoAsterisco, long arredondamento, boolean precoPeloComprador) {
 
 	public ParametrosMercado {
 		if (rodadasDeSalarioNoPreco < 1 || descontoLeilao < 0 || descontoLeilao >= 1 || descontoEstrangeiro < 0
@@ -25,6 +28,12 @@ public record ParametrosMercado(int rodadasDeSalarioNoPreco, double descontoLeil
 	 * (leilão 20% abaixo; estrangeiro 25% mais barato e asterisco 25% mais caro, rev. 43).
 	 */
 	public static ParametrosMercado padrao() {
-		return new ParametrosMercado(80, 0.20, 0.25, 0.25, 1_000_00L);
+		return new ParametrosMercado(80, 0.20, 0.25, 0.25, 1_000_00L, false);
+	}
+
+	/** Os mesmos valores com o preço pela força do comprador ligado ou desligado (rev. 65). */
+	public ParametrosMercado comPrecoPeloComprador(boolean peloComprador) {
+		return new ParametrosMercado(rodadasDeSalarioNoPreco, descontoLeilao, descontoEstrangeiro, acrescimoAsterisco,
+				arredondamento, peloComprador);
 	}
 }
