@@ -1,6 +1,8 @@
 package br.com.managerfoot.economia;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.SplittableRandom;
 
 /**
  * Propostas de patrocínio do início do ano (SPEC §9.6, rev. 40 e 55; modelo 9a): fixa à vista pelo
@@ -11,12 +13,40 @@ import java.util.List;
  * @param vitoriasEsperadas fração das rodadas que o clube médio vence (o por vitória fecha a tabela)
  * @param seSubirAgora fração da tabela paga à vista na proposta por acesso
  * @param bonusSeSubir bônus por acesso, em vezes a tabela
+ * @param primeirosNaPrimeira na 1ª divisão, que não tem para onde subir, o bônus vale para estes
+ *        primeiros colocados (rev. 57)
  */
 public record PropostasPatrocinio(double porVitoriaAgora, double vitoriasEsperadas, double seSubirAgora,
-		double bonusSeSubir) {
+		double bonusSeSubir, int primeirosNaPrimeira) {
+
+	/** Patrocinadores fictícios; os nomes são só texto (CLAUDE.md §7). */
+	private static final List<String> PATROCINADORES = List.of("Banco Serra Azul", "Rede Farol", "Cervejaria Alto Rio",
+			"Seguros Horizonte", "Construtora Pedra Lisa", "Laticínios Vale Verde", "Transportes Rota do Sul",
+			"Telefonia Aurora", "Café Morro Alto", "Energia Ventania", "Têxtil Fio de Ouro", "Moinho Três Pontes");
 
 	public static PropostasPatrocinio padrao() {
-		return new PropostasPatrocinio(0.6, 0.37, 0.5, 1.5);
+		return new PropostasPatrocinio(0.6, 0.37, 0.5, 1.5, 3);
+	}
+
+	/** Se o clube ganha o bônus da proposta por acesso: subiu, ou na 1ª ficou entre os primeiros. */
+	public boolean subiu(int prioridadeDivisao, int posicao, int promovidos) {
+		return prioridadeDivisao == 1 ? posicao <= primeirosNaPrimeira : posicao <= promovidos;
+	}
+
+	/** Vitórias do clube médio em {@code jogos}, para mostrar o total da proposta por vitória. */
+	public int vitoriasEsperadas(int jogos) {
+		return (int) Math.round(jogos * vitoriasEsperadas);
+	}
+
+	/** Um patrocinador diferente para cada proposta, na ordem de {@link Tipo}, sorteado pela semente. */
+	public List<String> patrocinadores(long semente) {
+		List<String> nomes = new ArrayList<>(PATROCINADORES);
+		SplittableRandom aleatorio = new SplittableRandom(semente);
+		List<String> escolhidos = new ArrayList<>();
+		for (int i = 0; i < Tipo.values().length; i++) {
+			escolhidos.add(nomes.remove(aleatorio.nextInt(nomes.size())));
+		}
+		return escolhidos;
 	}
 
 	public enum Tipo {

@@ -146,6 +146,47 @@
 </main>
 </div>
 <th:block th:if="${ficha != null}"><div th:replace="~{fragmentos :: ficha(${ficha}, @{/jogos/{id}/plantel(id=${v.jogoId})}, @{/jogos/{id}/mercado/vender(id=${v.jogoId})})}"></div></th:block>
+<!-- Caixa do patrocínio (modelo 9a, rev. 55): abre sozinha no início do ano e fica até a escolha;
+     a rodada 1 só começa depois dela. -->
+<div th:if="${patrocinio != null}" class="janela-fundo" th:with="p=${patrocinio}">
+<form role="dialog" aria-modal="true" aria-labelledby="t-patrocinio" class="janela larga patrocinio"
+	th:action="@{/jogos/{id}/patrocinio(id=${v.jogoId})}" method="post">
+<div class="janela-topo patrocinio-topo">
+<span class="rotulo" th:text="|Temporada ${p.temporada} · antes da 1ª rodada|">Temporada</span>
+<h2 id="t-patrocinio" class="ficha-nome">Propostas de patrocínio</h2>
+<span class="suave" th:text="|${p.clube} · ${p.divisao} · escolha uma|">Clube · escolha uma</span>
+</div>
+<fieldset class="patrocinio-lista">
+<legend class="oculto">Propostas</legend>
+<label th:each="n, i : ${p.propostas}" th:with="o=${n.proposta}" class="patrocinio-proposta">
+<input type="radio" name="proposta" th:value="${o.tipo}" th:checked="${i.first}" required>
+<span class="patrocinio-texto">
+<span class="patrocinio-linha">
+<span class="patrocinio-nome" th:text="${n.patrocinador}">Banco</span>
+<span class="patrocinio-agora" th:text="|${p.moeda.formatar(o.agora)} agora|">R$ 0 agora</span>
+</span>
+<th:block th:switch="${o.tipo.name()}">
+<th:block th:case="'FIXA'">
+<span class="patrocinio-regra">Tudo de uma vez, no início do ano.</span>
+<span class="suave patrocinio-nota" th:text="${p.primeiraTemporada} ? 'Na primeira temporada, o mesmo valor para todos da divisão.' : 'O valor da tabela pela posição na temporada passada.'">nota</span>
+</th:block>
+<th:block th:case="'POR_VITORIA'">
+<span class="patrocinio-regra" th:text="|Mais ${p.moeda.formatar(o.porVitoria)} a cada vitória na temporada.|">regra</span>
+<span class="suave patrocinio-nota" th:text="|Com ${p.vitoriasEsperadas} vitórias, ${p.moeda.formatar(o.total(p.vitoriasEsperadas, false))} no total.|">nota</span>
+</th:block>
+<th:block th:case="'SE_SUBIR'">
+<span class="patrocinio-regra" th:text="${p.primeiraDivisao} ? |Mais ${p.moeda.formatar(o.seSubir)} no fim do ano se terminar entre os ${p.primeirosNaPrimeira} primeiros.| : |Mais ${p.moeda.formatar(o.seSubir)} no fim do ano se subir de divisão.|">regra</span>
+<span class="suave patrocinio-nota" th:text="${p.primeiraDivisao} ? |Fora dos ${p.primeirosNaPrimeira} primeiros, fica só com ${p.moeda.formatar(o.agora)}.| : |Se não subir, fica só com ${p.moeda.formatar(o.agora)}.|">nota</span>
+</th:block>
+</th:block>
+</span>
+</label>
+</fieldset>
+<div class="janela-rodape">
+<button type="submit" class="botao">Assinar</button>
+</div>
+</form>
+</div>
 </div>
 </div>
 </div>

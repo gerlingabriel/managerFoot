@@ -88,6 +88,16 @@ class PublicoDoJogoTest {
 		assertThat(lista.get(2).total(0, true)).isEqualTo(400_000_00L);
 	}
 
+	@Test
+	void bonusDeAcessoNaPrimeiraValeParaOsTresPrimeirosEOsPatrocinadoresNaoSeRepetem() {
+		PropostasPatrocinio propostas = PropostasPatrocinio.padrao();
+		assertThat(propostas.subiu(1, 3, 0)).isTrue();
+		assertThat(propostas.subiu(1, 4, 0)).isFalse();
+		assertThat(propostas.subiu(2, 2, 2)).isTrue();
+		assertThat(propostas.subiu(2, 3, 2)).isFalse();
+		assertThat(propostas.patrocinadores(7)).hasSize(3).doesNotHaveDuplicates().isEqualTo(propostas.patrocinadores(7));
+	}
+
 	private static List<Jogador> plantel(int forca) {
 		List<Jogador> p = new ArrayList<>();
 		for (long id = 1; id <= 23; id++) {

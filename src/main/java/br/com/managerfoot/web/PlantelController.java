@@ -24,6 +24,7 @@ import br.com.managerfoot.dominio.Escalacao;
 import br.com.managerfoot.dominio.Formacao;
 import br.com.managerfoot.dominio.Lugar;
 import br.com.managerfoot.dominio.Posicao;
+import br.com.managerfoot.economia.PropostasPatrocinio;
 import br.com.managerfoot.motor.ParametrosMotor;
 import br.com.managerfoot.motor.RegrasPartida;
 import br.com.managerfoot.persistencia.ClubeNaFilaException;
@@ -32,6 +33,7 @@ import br.com.managerfoot.persistencia.FimDeTemporadaRepositorio;
 import br.com.managerfoot.persistencia.FimDeTemporadaRepositorio.NovaTemporada;
 import br.com.managerfoot.persistencia.JogoRepositorio;
 import br.com.managerfoot.persistencia.JogosDoTreinadorRepositorio;
+import br.com.managerfoot.persistencia.PatrocinioRepositorio;
 import br.com.managerfoot.persistencia.PlantelRepositorio;
 import br.com.managerfoot.persistencia.PlantelRepositorio.LinhaJogador;
 import br.com.managerfoot.persistencia.PlantelRepositorio.VisaoPlantel;
@@ -54,15 +56,18 @@ class PlantelController {
 	private final ConsultasRepositorio consultas;
 	private final FimDeTemporadaRepositorio fimDeTemporada;
 	private final JogoRepositorio jogo;
+	private final PatrocinioRepositorio patrocinios;
 
 	PlantelController(PlantelRepositorio plantel, JogosDoTreinadorRepositorio jogos, RodadaAoVivoRepositorio aoVivo,
-			ConsultasRepositorio consultas, FimDeTemporadaRepositorio fimDeTemporada, JogoRepositorio jogo) {
+			ConsultasRepositorio consultas, FimDeTemporadaRepositorio fimDeTemporada, JogoRepositorio jogo,
+			PatrocinioRepositorio patrocinios) {
 		this.plantel = plantel;
 		this.jogos = jogos;
 		this.aoVivo = aoVivo;
 		this.consultas = consultas;
 		this.fimDeTemporada = fimDeTemporada;
 		this.jogo = jogo;
+		this.patrocinios = patrocinios;
 	}
 
 	@GetMapping("/jogos/{jogoId}/plantel")
@@ -97,7 +102,19 @@ class PlantelController {
 		if (ficha != null) {
 			consultas.ficha(jogoId, usuario.id(), ficha).ifPresent(dados -> model.addAttribute("ficha", dados));
 		}
+		// propostas de patrocínio do início do ano: a caixa fica aberta até a escolha (modelo 9a)
+		patrocinios.pendente(jogoId, usuario.id()).ifPresent(p -> model.addAttribute("patrocinio", p));
 		return "plantel";
+	}
+
+	/** Assina a proposta de patrocínio escolhida (modelo 9a); um segundo pedido não paga de novo. */
+	@PostMapping("/jogos/{jogoId}/patrocinio")
+	String assinarPatrocinio(@AuthenticationPrincipal Usuario usuario, @PathVariable long jogoId,
+			@RequestParam PropostasPatrocinio.Tipo proposta, RedirectAttributes redirect) {
+		if (patrocinios.assinar(jogoId, usuario.id(), proposta)) {
+			redirect.addFlashAttribute("resultado", "Patrocínio assinado. A parte à vista já está no caixa.");
+		}
+		return "redirect:/jogos/" + jogoId + "/plantel";
 	}
 
 	@PostMapping("/jogos/{jogoId}/plantel/jogador/{jogadorId}")

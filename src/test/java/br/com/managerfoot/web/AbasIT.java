@@ -31,6 +31,7 @@ import br.com.managerfoot.economia.AmpliacaoEstadio;
 import br.com.managerfoot.economia.CaixaDaRodada;
 import br.com.managerfoot.economia.Moeda;
 import br.com.managerfoot.economia.ParametrosPublico;
+import br.com.managerfoot.economia.PropostasPatrocinio;
 import br.com.managerfoot.persistencia.BancoPadraoRepositorio;
 import br.com.managerfoot.persistencia.CaixaRepositorio;
 import br.com.managerfoot.persistencia.CaixaRepositorio.LinhaExtrato;
@@ -45,6 +46,7 @@ import br.com.managerfoot.persistencia.JogoRepositorio;
 import br.com.managerfoot.persistencia.CompraRepositorio;
 import br.com.managerfoot.persistencia.JogosDoTreinadorRepositorio;
 import br.com.managerfoot.persistencia.MoldeRepositorio;
+import br.com.managerfoot.persistencia.PatrocinioRepositorio;
 import br.com.managerfoot.persistencia.RodadaRepositorio;
 
 /** Abas Classificação e Artilheiros e a ficha do jogador (SPEC §10.3, rev. 16), com o banco padrão. */
@@ -84,6 +86,9 @@ class AbasIT {
 	CompraRepositorio compras;
 
 	@Autowired
+	PatrocinioRepositorio patrocinios;
+
+	@Autowired
 	JdbcClient jdbc;
 
 	Usuario treinador;
@@ -99,6 +104,7 @@ class AbasIT {
 			.filter(c -> c.codigoPais().equals("BRA")).findFirst().orElseThrow().paisId();
 		treinador = contas.criarAdministrador("a" + System.nanoTime() + "@exemplo.com", "Gabriel", "senha-boa-1");
 		jogoId = jogos.criarComSorteio(brasil, treinador.id(), 13).jogoId();
+		patrocinios.assinar(jogoId, treinador.id(), PropostasPatrocinio.Tipo.FIXA);
 		// sem suspensos na escalação do treinador: a máquina escala todos para as rodadas do teste
 		jdbc.sql("DELETE FROM jogo_escalacao e USING jogo_clube c WHERE c.id = e.clube_id AND c.jogo_id = :j")
 			.param("j", jogoId).update();
@@ -339,6 +345,7 @@ class AbasIT {
 	@Test
 	void financasAntesDaPrimeiraRodadaMostramOSaldoInicial() {
 		long novo = jogos.criarComSorteio(brasil, treinador.id(), 21).jogoId();
+		patrocinios.assinar(novo, treinador.id(), PropostasPatrocinio.Tipo.FIXA);
 		VisaoFinancas f = caixas.financas(novo, treinador.id());
 		long clube = jogo.clubeDoTreinador(novo, treinador.id()).orElseThrow();
 		long folha = CaixaDaRodada.padrao().folha(jogo.carregarPlanteis(novo).get(clube));

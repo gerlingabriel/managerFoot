@@ -68,6 +68,7 @@ public class RodadaAoVivoRepositorio {
 	 *
 	 * @throws IllegalStateException se a rodada não é a próxima, se há leilão aberto antes dela ou se a
 	 *         escalação não pode jogar
+	 * @throws PatrocinioPendenteException se um treinador ainda não escolheu o patrocínio da temporada
 	 */
 	@Transactional
 	public void iniciar(long jogoId, long usuarioId, int rodada, Instant agora) {
@@ -94,6 +95,18 @@ public class RodadaAoVivoRepositorio {
 		if (leilaoAberto) {
 			// os leilões da máquina são resolvidos antes do minuto a minuto (SPEC §9.4, rev. 41)
 			throw new IllegalStateException("há leilões abertos antes da rodada " + rodada);
+		}
+		boolean semPatrocinio = jdbc.sql("""
+				SELECT EXISTS (SELECT 1 FROM jogo_patrocinio p JOIN jogo_temporada t ON t.id = p.temporada_id
+				               JOIN jogo_clube c ON c.id = p.clube_id
+				               WHERE t.jogo_id = :jogo AND p.escolha IS NULL AND c.divisao_id IS NOT NULL
+				                 AND t.numero = (SELECT max(numero) FROM jogo_temporada WHERE jogo_id = :jogo))""")
+			.param("jogo", jogoId)
+			.query(Boolean.class)
+			.single();
+		if (semPatrocinio) {
+			// a rodada 1 só começa depois da escolha do patrocínio (modelo 9a, rev. 55)
+			throw new PatrocinioPendenteException("escolha o patrocínio antes da rodada " + rodada);
 		}
 		rodadas.preparar(jogoId, rodada, List.of());
 		jdbc.sql("""

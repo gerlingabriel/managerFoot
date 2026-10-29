@@ -191,6 +191,7 @@ public class CaixaRepositorio {
 							+ " (" + sigla(rs.getString("posicao")) + ", " + rs.getInt("forca") + ")";
 					case PREMIO -> "Prêmio da liga";
 					case ESTADIO -> "Ampliação do estádio";
+					case PATROCINIO -> rodada == 0 ? null : "Patrocínio";
 					default -> null;
 				};
 				if (detalhe != null) {
@@ -217,7 +218,8 @@ public class CaixaRepositorio {
 			int rodada = e.getKey();
 			Map<TipoLancamento, Long> valores = e.getValue();
 			long mercado = valores.getOrDefault(TipoLancamento.COMPRA, 0L) + valores.getOrDefault(TipoLancamento.VENDA, 0L)
-					+ valores.getOrDefault(TipoLancamento.PREMIO, 0L) + valores.getOrDefault(TipoLancamento.ESTADIO, 0L);
+					+ valores.getOrDefault(TipoLancamento.PREMIO, 0L) + valores.getOrDefault(TipoLancamento.ESTADIO, 0L)
+					+ (rodada == 0 ? 0 : valores.getOrDefault(TipoLancamento.PATROCINIO, 0L));
 			if (rodada == 0 && mercado == 0) {
 				continue; // só o patrocínio, que tem linha própria
 			}
@@ -267,10 +269,11 @@ public class CaixaRepositorio {
 	}
 
 	/**
-	 * Patrocínio da temporada atual (SPEC §9.6, rev. 45 e 46), lançado na rodada 0 para os clubes das
-	 * divisões, de uma vez. Na primeira temporada todos da divisão recebem o mesmo; nas seguintes, pela
-	 * posição na divisão em que o clube jogou; quem veio da fila recebe como o último da divisão em que
-	 * entra. Abre antes o caixa de quem ainda não tem.
+	 * Patrocínio da temporada atual (SPEC §9.6, rev. 45 e 46), no início da temporada. Os clubes da
+	 * máquina recebem a proposta fixa, de uma vez, na rodada 0; o clube de um usuário recebe a oferta
+	 * com o mesmo valor de tabela e escolhe a proposta (modelo 9a, rev. 55). Na primeira temporada todos
+	 * da divisão têm o mesmo valor; nas seguintes, pela posição na divisão em que o clube jogou; quem
+	 * veio da fila conta como o último da divisão em que entra. Abre antes o caixa de quem ainda não tem.
 	 *
 	 * @param anterior classificação final da temporada anterior por prioridade da divisão; vazia na
 	 *        primeira temporada
@@ -282,6 +285,10 @@ public class CaixaRepositorio {
 		ConfiguracaoLiga liga = jogos.carregarLiga(jogoId);
 		Map<Integer, Integer> limites = new HashMap<>();
 		liga.divisoes().forEach(d -> limites.put(d.prioridade(), d.limiteForca()));
+		List<Long> doUsuario = jdbc.sql("SELECT clube_id FROM jogo_treinador WHERE jogo_id = :jogo")
+			.param("jogo", jogoId)
+			.query(Long.class)
+			.list();
 		for (Divisao divisao : liga.divisoes()) {
 			int clubes = divisao.clubes().size();
 			for (Clube clube : divisao.clubes()) {
@@ -292,9 +299,43 @@ public class CaixaRepositorio {
 							.map(e -> premiacao.patrocinio(e.getValue().posicao(clube), e.getValue().linhas().size(),
 									limites.get(e.getKey())))
 							.orElse(premiacao.patrocinio(clubes, clubes, divisao.limiteForca()));
-				lancar(temporadaId, 0, clube.id(), List.of(new Lancamento(TipoLancamento.PATROCINIO, valor)));
+				if (doUsuario.contains(clube.id())) {
+					jdbc.sql("""
+							INSERT INTO jogo_patrocinio (clube_id, temporada_id, tabela, jogos)
+							VALUES (:clube, :temporada, :tabela, :jogos)""")
+						.param("clube", clube.id())
+						.param("temporada", temporadaId)
+						.param("tabela", valor)
+						.param("jogos", 2 * (clubes - 1))
+						.update();
+				}
+				else {
+					lancar(temporadaId, 0, clube.id(), List.of(new Lancamento(TipoLancamento.PATROCINIO, valor)));
+				}
 			}
 		}
+	}
+
+	/**
+	 * Pagamento do patrocínio do usuário (modelo 9a): a parte à vista na rodada 0, por vitória na rodada
+	 * dela e o bônus de acesso na última. O bônus soma no lançamento da última rodada, se o clube também
+	 * venceu nela.
+	 */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void lancarPatrocinio(long temporadaId, int rodada, long clubeId, long valor) {
+		jdbc.sql("""
+				INSERT INTO jogo_lancamento (clube_id, temporada_id, rodada, tipo, valor)
+				VALUES (:clube, :temporada, :rodada, 'PATROCINIO', :valor)
+				ON CONFLICT ON CONSTRAINT uq_jogo_lancamento DO UPDATE SET valor = jogo_lancamento.valor + EXCLUDED.valor""")
+			.param("clube", clubeId)
+			.param("temporada", temporadaId)
+			.param("rodada", rodada)
+			.param("valor", valor)
+			.update();
+		jdbc.sql("UPDATE jogo_clube SET saldo = saldo + :valor WHERE id = :clube")
+			.param("valor", valor)
+			.param("clube", clubeId)
+			.update();
 	}
 
 	/**

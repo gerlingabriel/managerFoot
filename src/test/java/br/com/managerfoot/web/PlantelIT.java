@@ -30,6 +30,8 @@ import br.com.managerfoot.bancopadrao.PaisPadrao;
 import br.com.managerfoot.bancopadrao.ParametrosBancoPadrao;
 import br.com.managerfoot.contas.Usuario;
 import br.com.managerfoot.dominio.EscalacaoDoTreinador;
+import br.com.managerfoot.economia.PropostasPatrocinio;
+import br.com.managerfoot.economia.PropostasPatrocinio.Proposta;
 import br.com.managerfoot.motor.ParametrosMotor;
 import br.com.managerfoot.persistencia.BancoPadraoRepositorio;
 import br.com.managerfoot.persistencia.ContasRepositorio;
@@ -165,6 +167,51 @@ class PlantelIT {
 
 		assertThat(escalacoes.carregar(clube).orElseThrow().titulares()).contains(titular);
 		assertThat(rodadas.rodadasProcessadas(jogoId)).isZero();
+	}
+
+	@Test
+	void propostasDePatrocinioAbremNoPlantelETravamARodadaAteAEscolha() throws Exception {
+		mvc.perform(get(plantel).with(como(treinador)))
+			.andExpect(content().string(containsString("Propostas de patrocínio")))
+			.andExpect(content().string(containsString("a cada vitória na temporada")))
+			.andExpect(content().string(containsString("se subir de divisão")));
+		pedir(post(jogarRodada()).param("rodada", "1"))
+			.andExpect(flash().attribute("erro", "Escolha o patrocínio da temporada antes de jogar a rodada."));
+		assertThat(jdbc.sql("SELECT count(*) FROM jogo_rodada_ao_vivo WHERE jogo_id = :j").param("j", jogoId)
+			.query(Long.class).single()).isZero();
+		long saldoAntes = saldo();
+
+		pedir(post("/jogos/" + jogoId + "/patrocinio").param("proposta", "POR_VITORIA"))
+			.andExpect(flash().attributeExists("resultado"));
+		pedir(post("/jogos/" + jogoId + "/patrocinio").param("proposta", "FIXA"))
+			.andExpect(flash().attributeCount(0));
+
+		Proposta proposta = PropostasPatrocinio.padrao().propostas(
+				jdbc.sql("SELECT tabela FROM jogo_patrocinio WHERE clube_id = :c").param("c", clube).query(Long.class).single(),
+				jdbc.sql("SELECT jogos FROM jogo_patrocinio WHERE clube_id = :c").param("c", clube).query(Integer.class).single())
+			.get(1);
+		assertThat(jdbc.sql("SELECT valor FROM jogo_lancamento WHERE clube_id = :c AND tipo = 'PATROCINIO' AND rodada = 0")
+			.param("c", clube).query(Long.class).single()).isEqualTo(proposta.agora());
+		assertThat(saldo()).isEqualTo(saldoAntes + proposta.agora());
+		mvc.perform(get(plantel).with(como(treinador)))
+			.andExpect(content().string(not(containsString("Propostas de patrocínio"))));
+
+		// cada vitória paga o valor da proposta na rodada dela
+		jdbc.sql("DELETE FROM jogo_escalacao WHERE clube_id = :c").param("c", clube).update();
+		for (int rodada = 1; rodada <= 4; rodada++) {
+			rodadas.avancar(jogoId, rodada);
+		}
+		long vitorias = jdbc.sql("""
+				SELECT count(*) FROM jogo_partida
+				WHERE (mandante_id = :c AND gols_mandante > gols_visitante) OR (visitante_id = :c AND gols_visitante > gols_mandante)""")
+			.param("c", clube).query(Long.class).single();
+		assertThat(jdbc.sql("""
+				SELECT valor FROM jogo_lancamento WHERE clube_id = :c AND tipo = 'PATROCINIO' AND rodada > 0""")
+			.param("c", clube).query(Long.class).list()).hasSize((int) vitorias).allMatch(v -> v == proposta.porVitoria());
+	}
+
+	private long saldo() {
+		return jdbc.sql("SELECT saldo FROM jogo_clube WHERE id = :c").param("c", clube).query(Long.class).single();
 	}
 
 	private ResultActions pedir(MockHttpServletRequestBuilder pedido) throws Exception {

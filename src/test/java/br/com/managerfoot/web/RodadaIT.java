@@ -38,6 +38,7 @@ import br.com.managerfoot.contas.Usuario;
 import br.com.managerfoot.dominio.EscalacaoDoTreinador;
 import br.com.managerfoot.dominio.Jogador;
 import br.com.managerfoot.dominio.Posicao;
+import br.com.managerfoot.economia.PropostasPatrocinio;
 import br.com.managerfoot.motor.ParametrosMotor;
 import br.com.managerfoot.persistencia.BancoPadraoRepositorio;
 import br.com.managerfoot.persistencia.ContasRepositorio;
@@ -45,6 +46,7 @@ import br.com.managerfoot.persistencia.EscalacaoRepositorio;
 import br.com.managerfoot.persistencia.JogoRepositorio;
 import br.com.managerfoot.persistencia.JogosDoTreinadorRepositorio;
 import br.com.managerfoot.persistencia.MoldeRepositorio;
+import br.com.managerfoot.persistencia.PatrocinioRepositorio;
 import br.com.managerfoot.persistencia.RodadaRepositorio;
 import br.com.managerfoot.temporada.RodadaAoVivo.PartidaDaRodada;
 
@@ -86,6 +88,9 @@ class RodadaIT {
 	@Autowired
 	EscalacaoRepositorio escalacoes;
 
+	@Autowired
+	PatrocinioRepositorio patrocinios;
+
 	Usuario treinador;
 	long jogoId;
 	String rodada;
@@ -99,6 +104,8 @@ class RodadaIT {
 			.filter(c -> c.codigoPais().equals("BRA")).findFirst().orElseThrow().paisId();
 		treinador = contas.criarAdministrador("r" + System.nanoTime() + "@exemplo.com", "Gabriel", "senha-boa-1");
 		jogoId = jogos.criarComSorteio(brasil, treinador.id(), 31).jogoId();
+		// a rodada 1 só começa depois da escolha do patrocínio (modelo 9a)
+		patrocinios.assinar(jogoId, treinador.id(), PropostasPatrocinio.Tipo.FIXA);
 		rodada = "/jogos/" + jogoId + "/rodada";
 		plantel = "/jogos/" + jogoId + "/plantel";
 		agora(0);

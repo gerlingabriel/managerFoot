@@ -12,6 +12,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.List;
+import java.util.Map;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +30,7 @@ import br.com.managerfoot.bancopadrao.GeradorBancoPadrao;
 import br.com.managerfoot.bancopadrao.PaisPadrao;
 import br.com.managerfoot.bancopadrao.ParametrosBancoPadrao;
 import br.com.managerfoot.contas.Usuario;
+import br.com.managerfoot.economia.PropostasPatrocinio;
 import br.com.managerfoot.motor.ParametrosMotor;
 import br.com.managerfoot.persistencia.BancoPadraoRepositorio;
 import br.com.managerfoot.persistencia.ContasRepositorio;
@@ -34,6 +38,7 @@ import br.com.managerfoot.persistencia.JogoRepositorio;
 import br.com.managerfoot.persistencia.JogosDoTreinadorRepositorio;
 import br.com.managerfoot.persistencia.MoldeRepositorio;
 import br.com.managerfoot.persistencia.RodadaRepositorio;
+import br.com.managerfoot.temporada.Classificacao;
 
 /** Fim de temporada na tela: o usuário só confirma (SPEC §15, 3c.4), com o banco padrão. */
 @Import(TestcontainersConfiguration.class)
@@ -115,6 +120,39 @@ class FimDeTemporadaIT {
 		mvc.perform(get(plantel).with(como(treinador)))
 			.andExpect(status().isOk())
 			.andExpect(content().string(containsString(naFila ? "fila de espera" : "Próximo jogo · Rodada 1")));
+	}
+
+	@Test
+	void bonusDoPatrocinioPorAcessoEntraNaUltimaRodadaQuandoOClubeSobe() throws Exception {
+		// o treinador passa a dirigir o líder da última divisão, com a oferta da temporada: ele sobe
+		long antigo = jogo.clubeDoTreinador(jogoId, treinador.id()).orElseThrow();
+		Map<Integer, Classificacao> tabela = rodadas.classificacao(jogoId);
+		long clube = tabela.get(tabela.keySet().stream().max(Integer::compare).orElseThrow()).linhas().getFirst().clube().id();
+		jdbc.sql("UPDATE jogo_patrocinio SET clube_id = :novo WHERE clube_id = :antigo")
+			.param("novo", clube).param("antigo", antigo).update();
+		jdbc.sql("UPDATE jogo_treinador SET clube_id = :novo WHERE jogo_id = :j").param("novo", clube).param("j", jogoId).update();
+		mvc.perform(post("/jogos/" + jogoId + "/patrocinio").param("proposta", "SE_SUBIR").with(como(treinador)).with(csrf()))
+			.andExpect(redirectedUrl(plantel));
+		Classificacao classificacao = tabela.values().stream()
+			.filter(c -> c.linhas().stream().anyMatch(l -> l.clube().id() == clube)).findFirst().orElseThrow();
+		int posicao = 1 + classificacao.linhas().stream().map(l -> l.clube().id()).toList().indexOf(clube);
+		var divisao = jogo.carregarLiga(jogoId).divisoes().stream()
+			.filter(d -> d.clubes().stream().anyMatch(c -> c.id() == clube)).findFirst().orElseThrow();
+		boolean subiu = PropostasPatrocinio.padrao().subiu(divisao.prioridade(), posicao, divisao.promovidos());
+		long valorDaTabela = jdbc.sql("SELECT tabela FROM jogo_patrocinio WHERE clube_id = :c").param("c", clube)
+			.query(Long.class).single();
+		int jogos = jdbc.sql("SELECT jogos FROM jogo_patrocinio WHERE clube_id = :c").param("c", clube)
+			.query(Integer.class).single();
+		long bonus = PropostasPatrocinio.padrao().propostas(valorDaTabela, jogos).get(2).seSubir();
+
+		mvc.perform(post("/jogos/" + jogoId + "/temporada").param("temporada", "1").with(como(treinador)).with(csrf()));
+
+		List<Long> pagos = jdbc.sql("""
+				SELECT l.valor FROM jogo_lancamento l JOIN jogo_temporada t ON t.id = l.temporada_id
+				WHERE l.clube_id = :c AND l.tipo = 'PATROCINIO' AND t.numero = 1 AND l.rodada > 0""")
+			.param("c", clube).query(Long.class).list();
+		assertThat(subiu).isTrue();
+		assertThat(pagos).containsExactly(bonus);
 	}
 
 	@Test

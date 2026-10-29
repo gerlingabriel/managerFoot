@@ -1428,3 +1428,16 @@ a.financas-link:hover, a.financas-link:focus-visible { border-color: var(--desta
 .estadio-ampliar .destaque { color: var(--destaque); }
 .estadio-acoes { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
 .estadio-nota { font-size: 13px; }
+
+/* Propostas de patrocínio (modelo 9a, rev. 55). */
+.patrocinio-topo { flex-direction: column; align-items: flex-start; gap: 4px; }
+.patrocinio-lista { margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; }
+.patrocinio-proposta { display: flex; gap: 12px; padding: 14px 16px; border-top: 1px solid rgba(31, 90, 58, 0.6); cursor: pointer; }
+.patrocinio-proposta:has(input:checked) { background: rgba(242, 201, 76, 0.12); box-shadow: inset 4px 0 0 var(--destaque); }
+.patrocinio-proposta input { width: 20px; height: 20px; margin: 4px 0 0; accent-color: var(--destaque); flex: none; }
+.patrocinio-texto { display: flex; flex-direction: column; gap: 4px; flex: 1 1 auto; min-width: 0; }
+.patrocinio-linha { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
+.patrocinio-nome { font: 600 20px 'Barlow Condensed', sans-serif; text-transform: uppercase; }
+.patrocinio-agora { font: 700 20px 'Barlow Condensed', sans-serif; color: var(--destaque); }
+.patrocinio-regra { font-size: 15px; }
+.patrocinio-nota { font-size: 13px; }

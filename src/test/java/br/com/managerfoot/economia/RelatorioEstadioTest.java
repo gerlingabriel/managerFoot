@@ -258,7 +258,7 @@ class RelatorioEstadioTest {
 					posicaoAnterior.put(clube.id(), new int[] { pos, d.clubes().size(), d.limiteForca() });
 					int terco = Math.min(2, (pos - 1) * 3 / d.clubes().size());
 					int vitorias = c.linhas().stream().filter(l -> l.clube().id() == clube.id()).findFirst().orElseThrow().vitorias();
-					boolean subiu = d.prioridade() == 1 ? pos <= 3 : pos <= d.promovidos();
+					boolean subiu = propostas.subiu(d.prioridade(), pos, d.promovidos());
 					List<Proposta> lista = propostas.propostas(tabelaPatrocinio.get(clube.id()), 2 * (d.clubes().size() - 1));
 					acumulado.patrocinio(terco, lista, vitorias, subiu);
 					Medida m = acumulado.temporadas.computeIfAbsent(numero, k -> new Medida());

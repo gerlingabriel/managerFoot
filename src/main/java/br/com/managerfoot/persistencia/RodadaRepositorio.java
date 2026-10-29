@@ -48,12 +48,13 @@ public class RodadaRepositorio {
 	private final MercadoRepositorio mercado;
 	private final ClassificacaoRepositorio classificacoes;
 	private final EstadioRepositorio estadios;
+	private final PatrocinioRepositorio patrocinios;
 	private final ProcessamentoRodada processamento = ProcessamentoRodada.padrao();
 	private final EvolucaoForca evolucao = EvolucaoForca.padrao();
 
 	public RodadaRepositorio(JdbcClient jdbc, JogoRepositorio jogos, TemporadaRepositorio temporadas,
 			EscalacaoRepositorio escalacoes, CaixaRepositorio caixas, MercadoRepositorio mercado,
-			ClassificacaoRepositorio classificacoes, EstadioRepositorio estadios) {
+			ClassificacaoRepositorio classificacoes, EstadioRepositorio estadios, PatrocinioRepositorio patrocinios) {
 		this.jdbc = jdbc;
 		this.jogos = jogos;
 		this.temporadas = temporadas;
@@ -62,6 +63,7 @@ public class RodadaRepositorio {
 		this.mercado = mercado;
 		this.classificacoes = classificacoes;
 		this.estadios = estadios;
+		this.patrocinios = patrocinios;
 	}
 
 	/**
@@ -109,6 +111,7 @@ public class RodadaRepositorio {
 		gravarDisciplina(planteis, antes, resultado.disciplina());
 		escalacoes.retirarSuspensos(jogoId);
 		caixas.lancarRodada(jogoId, linha.id(), temporada, rodada, resultado.partidas(), planteis);
+		patrocinios.pagarVitorias(linha.id(), rodada, resultado.partidas());
 		evoluir(jogoId, temporada, rodada, aoVivo, resultado, planteis);
 		estadios.avancarObras(jogoId, linha.id(), rodada, planteis);
 		mercado.reporAVenda(jogoId, MercadoRepositorio.semente(temporada.semente(), rodada));

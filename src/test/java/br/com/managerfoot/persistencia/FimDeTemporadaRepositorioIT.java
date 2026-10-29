@@ -161,7 +161,13 @@ class FimDeTemporadaRepositorioIT {
 		assertThat(lancamento(lideres.get(0), 1, "PREMIO")).isEqualTo(premiacao.premio(1, limiteA));
 		assertThat(lancamento(lideres.get(1), 1, "PREMIO")).isEqualTo(premiacao.premio(1, limiteB));
 		assertThat(contar("SELECT count(*) FROM jogo_lancamento l JOIN jogo_temporada t ON t.id = l.temporada_id "
-				+ "WHERE t.jogo_id = ? AND t.numero = 2 AND l.tipo = 'PATROCINIO' AND l.rodada = 0")).isEqualTo(16 + 15);
+				+ "WHERE t.jogo_id = ? AND t.numero = 2 AND l.tipo = 'PATROCINIO' AND l.rodada = 0")
+				+ contar("SELECT count(*) FROM jogo_patrocinio p JOIN jogo_temporada t ON t.id = p.temporada_id "
+						+ "WHERE t.jogo_id = ? AND t.numero = 2 AND p.escolha IS NULL")).isEqualTo(16 + 15);
+		// o clube do treinador recebe a oferta para escolher, não o dinheiro (modelo 9a, rev. 57)
+		assertThat(contar("SELECT count(*) FROM jogo_lancamento l JOIN jogo_treinador tr ON tr.clube_id = l.clube_id "
+				+ "JOIN jogo_temporada t ON t.id = l.temporada_id "
+				+ "WHERE tr.jogo_id = ? AND t.numero = 2 AND l.tipo = 'PATROCINIO'")).isZero();
 		assertThat(lancamento(lideres.get(0), 2, "PATROCINIO")).isEqualTo(premiacao.patrocinio(1, 16, limiteA));
 		// quem veio da fila recebe como o último da divisão em que entra
 		assertThat(lancamento("Fila 1", 2, "PATROCINIO")).isEqualTo(premiacao.patrocinio(15, 15, limiteB));
