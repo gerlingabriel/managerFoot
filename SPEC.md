@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 57 — 2026-10-28)
+-   **Status:** versão inicial para revisão (rev. 58 — 2026-10-29)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 58 (2026-10-29):** proposta do pedido de aumento com salário gravado (§9.5) e modelo 10a, aguardando aprovação.
 -   **rev. 57 (2026-10-28):** público, obras e ampliação da máquina gravados no avanço da rodada (V24); janela 6c do estádio; caixa 9a do patrocínio (V25), máquina com a fixa. Usuário aprovou torcida, ocupação, 6 rodadas de obra e as 3 propostas de patrocínio (por acesso na 1ª = terminar entre os 3 primeiros); jogos já salvos mantêm o estádio atual; até a 5ª rodada o público reflete a posição final da temporada passada.
 -   **rev. 56 (2026-10-28):** evolução C aprovada e gravada no avanço da rodada; público pela posição na tabela dos dois clubes e limitado pela força do clube; estádio máximo de 80.000; a máquina amplia quando cresce de força ou sobra dinheiro; a obra leva tempo; simular estádio, público e patrocínio.
 -   **rev. 55 (2026-10-28):** evolução corrigida pelo usuário: cada jogador perde no máximo 1 ponto por partida e o resultado decide quantos perdem (1, 3 ou 5); simulação refeita, nova proposta do agente (crescem 4, 2 ou 0,5 dos que não jogaram, com piso); modelos 6c (estádio) e 9a (patrocínio) aprovados.
@@ -1747,6 +1748,20 @@ A máquina oferece um pouco abaixo do preço padrão (§9.4).
   - Quem tem **salário abaixo da força** pede aumento: **um jogador por
     rodada** no clube (a regra do pedido de aumento acima).
   - A máquina sempre renova (§9.4). O saldo negativo vai para o §9.3.
+- **Provisório (rev. 58) — proposta do agente, aguardando aprovação:**
+  - **Salário gravado** no jogador (hoje segue a força a cada rodada). Na
+    compra e na renovação, o salário da força atual. A máquina renova
+    sempre, então nela o salário continua seguindo a força.
+  - **Pedido de aumento** (modelo 10a): depois da rodada em que um jogador
+    do usuário, sem contrato renovado na temporada, fica com salário abaixo
+    do da força, abre no plantel a caixa com força antes e depois, salário
+    pedido e efeito na folha. Um por rodada: o de maior diferença. A rodada
+    seguinte só começa depois da resposta.
+  - **Aceitar:** salário da força atual, contrato até o fim da temporada,
+    não pode ser vendido naquela rodada. **Recusar:** leilão na hora, como a
+    venda pela ficha, com mínimo no preço de tabela −20%; sem lance, fica no
+    clube com o salário antigo e não pede de novo na temporada.
+  - **Em aberto:** quando a força **cai**, o salário cai junto ou fica?
 -   Definir limites, prazos, taxas e consequências de inadimplência
     antes da implementação final.
 
