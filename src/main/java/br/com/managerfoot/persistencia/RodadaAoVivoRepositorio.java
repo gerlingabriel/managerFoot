@@ -23,6 +23,7 @@ import br.com.managerfoot.dominio.Formacao;
 import br.com.managerfoot.dominio.Jogador;
 import br.com.managerfoot.motor.DisputaPenaltis;
 import br.com.managerfoot.motor.EventoPartida;
+import br.com.managerfoot.motor.JogoDecisivo;
 import br.com.managerfoot.motor.Lado;
 import br.com.managerfoot.motor.ParametrosMotor;
 import br.com.managerfoot.motor.Partida;
@@ -469,12 +470,25 @@ public class RodadaAoVivoRepositorio {
 		int golsCasa = (int) eventos.stream().filter(e -> e.tipo() == TipoEvento.GOL && e.lado() == Lado.CASA).count();
 		int golsFora = (int) eventos.stream().filter(e -> e.tipo() == TipoEvento.GOL && e.lado() == Lado.FORA).count();
 		EventoPartida ultimo = eventos.stream().filter(e -> LANCES.contains(e.tipo())).reduce((a, b) -> b).orElse(null);
+		// etapa da copa (modelo 12b, rev. 71): a ida na volta e, no fim da partida decisiva, quem passa
+		Optional<JogoDecisivo> decisivo = p.condicoes().decisivo();
+		Optional<JogoDecisivo> volta = decisivo.filter(d -> !d.campoNeutro());
+		Clube passa = null;
+		if (decisivo.isPresent() && partida.terminada()) {
+			int totalCasa = golsCasa + decisivo.get().golsCasaAntes();
+			int totalFora = golsFora + decisivo.get().golsForaAntes();
+			boolean casaPassa = totalCasa != totalFora ? totalCasa > totalFora
+					: penaltis.orElseThrow().gols(Lado.CASA) > penaltis.get().gols(Lado.FORA);
+			passa = casaPassa ? p.jogo().mandante() : p.jogo().visitante();
+		}
 		return new PlacarAoVivo(p.jogo().mandante(), p.jogo().visitante(), publicos.get(p.jogo().mandante().id()),
 				golsCasa, golsFora,
 				p.jogo().mandante().id() == clube || p.jogo().visitante().id() == clube, ultimo,
 				eventos.stream().anyMatch(e -> EXPULSOES.contains(e.tipo()) && e.lado() == Lado.CASA),
 				eventos.stream().anyMatch(e -> EXPULSOES.contains(e.tipo()) && e.lado() == Lado.FORA), partida.prorrogacao(),
-				penaltis.map(d -> d.gols(Lado.CASA)).orElse(null), penaltis.map(d -> d.gols(Lado.FORA)).orElse(null));
+				penaltis.map(d -> d.gols(Lado.CASA)).orElse(null), penaltis.map(d -> d.gols(Lado.FORA)).orElse(null),
+				p.prioridade() == ProcessamentoRodada.PRIORIDADE_COPA && decisivo.isEmpty(),
+				volta.map(JogoDecisivo::golsCasaAntes).orElse(null), volta.map(JogoDecisivo::golsForaAntes).orElse(null), passa);
 	}
 
 	/** Partidas por divisão, na ordem de exibição (da maior prioridade para a 1ª). */
@@ -606,10 +620,26 @@ public class RodadaAoVivoRepositorio {
 	 * @param ultimoLance gol, amarelo ou vermelho mais recente; nulo se não houve (SPEC rev. 33)
 	 * @param prorrogacao a partida da copa foi para a prorrogação
 	 * @param penaltisCasa gols do mandante na disputa de pênaltis, depois do fim; nulo sem disputa
+	 * @param primeiroJogo a ida de um confronto da copa
+	 * @param idaCasa na volta da copa, os gols que o mandante desta partida marcou na ida; nulo fora da volta
+	 * @param passa no fim da volta ou da final, quem segue na copa; nulo antes do fim e fora delas
 	 */
 	public record PlacarAoVivo(Clube mandante, Clube visitante, int publico, int golsCasa, int golsFora, boolean doUsuario,
 			EventoPartida ultimoLance, boolean expulsaoCasa, boolean expulsaoFora, boolean prorrogacao, Integer penaltisCasa,
-			Integer penaltisFora) {
+			Integer penaltisFora, boolean primeiroJogo, Integer idaCasa, Integer idaFora, Clube passa) {
+
+		/** É a volta da copa: a tela mostra a ida e o total (modelo 12b). */
+		public boolean volta() {
+			return idaCasa != null;
+		}
+
+		public int totalCasa() {
+			return golsCasa + (idaCasa == null ? 0 : idaCasa);
+		}
+
+		public int totalFora() {
+			return golsFora + (idaFora == null ? 0 : idaFora);
+		}
 	}
 
 	/**

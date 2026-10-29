@@ -208,7 +208,8 @@ class RodadaIT {
 		mvc.perform(post(rodada).param("rodada", "4").param("etapa", "0").with(como(treinador)).with(csrf()))
 			.andExpect(redirectedUrl(rodada));
 		mvc.perform(get(rodada).with(como(treinador)))
-			.andExpect(content().string(containsString("Copa · 16 avos de final · ida")));
+			.andExpect(content().string(containsString("Copa · 16 avos de final · ida")))
+			.andExpect(content().string(containsString("1º jogo")));
 		agora(3_600);
 		MockHttpSession sessao = new MockHttpSession();
 		mvc.perform(get(rodada).header("HX-Request", "true").session(sessao).with(como(treinador)))

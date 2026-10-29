@@ -21,6 +21,7 @@
 </nav>
 <div class="relogio">
 <span class="relogio-minuto" th:text="|${e.minuto}'|">0'</span>
+<span th:if="${e.minuto > 90}" class="relogio-prorrogacao">prorrogação</span>
 <div class="relogio-barra" role="img" th:attr="aria-label=|${e.minuto} de ${e.minutos} minutos|">
 <div th:style="|width: ${e.minuto * 100 / e.minutos}%|"></div>
 </div>
@@ -58,10 +59,10 @@
 <span class="suave" th:text="|${e.comUsuario and e.pausada ? 'Pausada' : 'Ao vivo'} · ${e.partidas.size()} ${e.partidas.size() == 1 ? 'jogo' : 'jogos'}|">Ao vivo</span>
 </div>
 <div class="tabela-rolagem">
-<div class="jogos-rodada">
+<div class="jogos-rodada" th:with="comTotal=${!e.partidas.?[volta() or primeiroJogo()].isEmpty()}" th:classappend="${comTotal} ? 'com-total'">
 <div th:each="j : ${e.partidas}" class="jogo-linha" th:classappend="${j.doUsuario} ? 'do-usuario'">
 <span class="jogo-publico" th:text="${#numbers.formatInteger(j.publico, 1, 'POINT')}" th:attr="aria-label=|Público ${#numbers.formatInteger(j.publico, 1, 'POINT')}|">0</span>
-<div class="jogo-clube mandante">
+<div class="jogo-clube mandante" th:classappend="${j.passa != null} ? (${j.passa.id == j.mandante.id} ? 'passa' : 'sai')">
 <span th:if="${j.expulsaoCasa}" class="cartao vermelho" role="img" aria-label="Expulsão"></span>
 <form th:if="${e.comUsuario}" th:action="@{/jogos/{id}/rodada/janela(id=${e.jogoId})}" method="post" class="clube-clicavel">
 <input type="hidden" name="mandante" th:value="${j.mandante.id}">
@@ -73,7 +74,7 @@
 <div class="placar" th:attr="aria-label=|${j.golsCasa} a ${j.golsFora}${j.penaltisCasa != null ? ', pênaltis ' + j.penaltisCasa + ' a ' + j.penaltisFora : ''}|">
 <span th:text="${j.golsCasa}">0</span><span th:text="${j.golsFora}">0</span>
 </div>
-<div class="jogo-clube">
+<div class="jogo-clube" th:classappend="${j.passa != null} ? (${j.passa.id == j.visitante.id} ? 'passa' : 'sai')">
 <span aria-hidden="true" th:style="${@escudos.estilo(j.visitante.escudo, 22, 26)}"></span>
 <form th:if="${e.comUsuario}" th:action="@{/jogos/{id}/rodada/janela(id=${e.jogoId})}" method="post" class="clube-clicavel">
 <input type="hidden" name="mandante" th:value="${j.mandante.id}">
@@ -82,9 +83,17 @@
 <span th:unless="${e.comUsuario}" class="jogo-nome" th:text="${j.visitante.nome}">Visitante</span>
 <span th:if="${j.expulsaoFora}" class="cartao vermelho" role="img" aria-label="Expulsão"></span>
 </div>
-<span class="ultimo-lance">
-<span th:if="${j.penaltisCasa != null}" class="lance-texto" th:text="|Pênaltis ${j.penaltisCasa} x ${j.penaltisFora}|">Pênaltis 4 x 3</span>
-<th:block th:if="${j.penaltisCasa == null and j.ultimoLance != null}">
+<span th:if="${comTotal}" class="jogo-total">
+<th:block th:if="${j.volta()}">
+<span class="suave" th:text="|ida ${j.idaCasa} x ${j.idaFora}|">ida 1 x 1</span>
+<strong th:classappend="${j.totalCasa() == j.totalFora()} ? 'empatado'" th:text="|total ${j.totalCasa()} x ${j.totalFora()}|">total 2 x 2</strong>
+</th:block>
+<span th:if="${j.primeiroJogo}" class="suave">1º jogo</span>
+</span>
+<span class="ultimo-lance" th:classappend="${j.passa != null} ? 'passa'">
+<span th:if="${j.passa != null}" class="lance-texto" th:text="${j.penaltisCasa != null} ? |Pênaltis ${j.penaltisCasa} x ${j.penaltisFora} · passa ${j.passa.nome}| : |Fim · passa ${j.passa.nome}|">Fim · passa Clube</span>
+<span th:if="${j.passa == null and j.penaltisCasa != null}" class="lance-texto" th:text="|Pênaltis ${j.penaltisCasa} x ${j.penaltisFora}|">Pênaltis 4 x 3</span>
+<th:block th:if="${j.passa == null and j.penaltisCasa == null and j.ultimoLance != null}">
 <span class="lance" th:classappend="${@lances.icone(j.ultimoLance)}" role="img"
 	th:with="tipo=${j.ultimoLance.tipo.name()}"
 	th:attr="aria-label=${tipo == 'GOL' ? 'Gol' : (tipo == 'CARTAO_AMARELO' ? 'Cartão amarelo' : (tipo == 'LESAO' ? 'Lesão' : 'Expulsão'))}"></span>
@@ -99,6 +108,7 @@
 <footer class="rodape-rodada suave">
 <span th:text="${e.comUsuario} ? 'A linha mostra o último lance. Clique num clube para pausar e ver todos os lances; no seu clube, também as substituições.' : (${e.copa != null} ? 'Seu clube não joga esta etapa da copa: os jogos correm rápido.' : 'Nenhum clube desta divisão é seu: os jogos correm sempre rápido.')">texto</span>
 <span th:text="${e.divisaoAtual == e.divisoes.size() - 1} ? 'Ao fim desta divisão você volta ao plantel.' : 'Ao terminar, começa a próxima divisão.'">texto</span>
+<span th:if="${e.copa != null}">Ida · total: o placar da ida e o total, com os gols do mandante desta partida primeiro. Total empatado (em amarelo) vai à prorrogação e aos pênaltis.</span>
 </footer>
 
 <th:block th:if="${janela != null}"><div th:replace="~{janela :: janela}"></div></th:block>

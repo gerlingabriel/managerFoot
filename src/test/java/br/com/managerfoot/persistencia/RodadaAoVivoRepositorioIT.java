@@ -28,6 +28,8 @@ import br.com.managerfoot.motor.Lado;
 import br.com.managerfoot.motor.TipoEvento;
 import br.com.managerfoot.persistencia.RodadaAoVivoRepositorio.EstadoRodada;
 import br.com.managerfoot.persistencia.RodadaAoVivoRepositorio.Situacao;
+import br.com.managerfoot.temporada.ConfrontoCopa;
+import br.com.managerfoot.temporada.FaseCopa;
 import br.com.managerfoot.temporada.RodadaAoVivo;
 import br.com.managerfoot.temporada.Velocidade;
 
@@ -62,6 +64,12 @@ class RodadaAoVivoRepositorioIT {
 
 	@Autowired
 	PlantelRepositorio plantel;
+
+	@Autowired
+	CopaRepositorio copas;
+
+	@Autowired
+	TrocaRepositorio trocas;
 
 	@Autowired
 	JdbcClient jdbc;
@@ -259,6 +267,33 @@ class RodadaAoVivoRepositorioIT {
 			}
 		}
 		throw new AssertionError("nenhuma semente com lesão do usuário na rodada 1");
+	}
+
+	@Test
+	void voltaDaCopaMostraIdaTotalEQuemPassa() {
+		LigaDeTeste.escalarTodosPelaMaquina(jdbc, jogo);
+		for (int r = 1; r <= 12; r++) {
+			RodadasDeTeste.jogarRodada(rodadas, jogo, r);
+		}
+		// um convite para outro clube pararia a etapa: o usuário recusa
+		trocas.convitePendente(jogo, usuario).ifPresent(c -> trocas.recusar(jogo, usuario, c.id()));
+		// a volta das oitavas (índice 1 do quadro) vem antes da rodada 13
+		aoVivo.iniciarCopa(jogo, usuario, 1, T0);
+
+		// modelo 12b: durante a volta, a ida e o total
+		EstadoRodada durante = estado(5);
+		assertThat(durante.copa()).isEqualTo("Copa · Oitavas de final · volta");
+		assertThat(durante.partidas()).hasSize(8).allMatch(p -> p.volta() && !p.primeiroJogo());
+		// quem passa só aparece com a partida terminada (sem o clube do usuário a etapa corre rápida)
+		assertThat(durante.partidas()).allMatch(p -> p.passa() == null || durante.minuto() >= 90);
+		assertThat(durante.partidas()).allMatch(p -> p.totalCasa() == p.golsCasa() + p.idaCasa());
+
+		EstadoRodada fim = estado(3_600);
+		long temporada = jdbc.sql("SELECT id FROM jogo_temporada WHERE jogo_id = :j").param("j", jogo)
+			.query(Long.class).single();
+		List<ConfrontoCopa> confrontos = copas.carregar(jogo, temporada).orElseThrow().confrontosDa(FaseCopa.OITAVAS);
+		assertThat(fim.partidas()).allSatisfy(p -> assertThat(p.passa()).isEqualTo(confrontos.stream()
+			.filter(c -> c.envolve(p.mandante())).findFirst().orElseThrow().vencedor().orElseThrow()));
 	}
 
 	private EstadoRodada estado(long segundos) {
