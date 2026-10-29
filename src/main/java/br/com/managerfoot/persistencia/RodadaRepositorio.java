@@ -18,6 +18,7 @@ import br.com.managerfoot.dominio.Jogador;
 import br.com.managerfoot.dominio.Moral;
 import br.com.managerfoot.motor.EventoPartida;
 import br.com.managerfoot.motor.Lado;
+import br.com.managerfoot.motor.ParametrosMotor;
 import br.com.managerfoot.motor.TipoEvento;
 import br.com.managerfoot.temporada.Classificacao;
 import br.com.managerfoot.temporada.ConfiguracaoLiga;
@@ -199,7 +200,8 @@ public class RodadaRepositorio {
 		Map<Long, Escalacao> doTreinador = new HashMap<>();
 		escalacoes.carregarDoJogo(jogoId).forEach((clubeId, escalacao) -> {
 			try {
-				doTreinador.put(clubeId, escalacao.escalacao(planteis.getOrDefault(clubeId, List.of()), antes::suspenso));
+				doTreinador.put(clubeId, escalacao.escalacao(planteis.getOrDefault(clubeId, List.of()), antes::suspenso,
+						ParametrosMotor.padrao().penalti().fatorGoleiroImprovisado()));
 			}
 			catch (IllegalStateException e) {
 				throw new IllegalStateException("o clube " + clubeId + " não pode jogar a rodada " + rodada + ": "

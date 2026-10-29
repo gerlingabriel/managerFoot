@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 67 — 2026-10-29)
+-   **Status:** versão inicial para revisão (rev. 68 — 2026-10-29)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 68 (2026-10-29):** pelo usuário: plantel mínimo de 14 nas vendas mantido (evitar o time incompleto), mas com menos de 11 a partida começa como se fosse com expulsos; sem goleiro disponível, o usuário joga com um jogador de linha no gol, como a máquina (§9.3).
 -   **rev. 67 (2026-10-29):** time com um a menos da §9.3 implementado: com menos de 11 disponíveis o clube joga com as vagas vazias, como se começasse com expulsos. Agente: mínimo de 7 para começar (regra do futebol) e o usuário só joga incompleto se ninguém disponível cabe nas vagas abertas (Provisório).
 -   **rev. 66 (2026-10-29):** pelo usuário: salário com a faixa da força em campo do clube, +20% e +10% em cima e deflação embaixo se preciso; preço sem faixa (só força e asterisco); máquina com caixa completa o plantel até 23 comprando até jogador fraco. Agente escolheu −30%/−15% embaixo pela simulação. Ligado no jogo (§9.3, §9.5); prêmio volta a R$ 3,968 mi e +5.000 lugares a R$ 1,587 mi.
 -   **rev. 65 (2026-10-29):** pelo usuário: o rico faz só 1 compra por rodada; a máquina compra só por leilão e a compra direta é só do usuário (código da rev. 64 retirado); simular a "inflação" (faixa da rev. 61) pela força do clube que compra, não do jogador (§9.3).
@@ -1725,8 +1726,17 @@ sobram ficam vazias, como na expulsão (§7.3): não há substituto para elas.
 - **Provisório (agente):** com menos de **7** disponíveis a partida não
   começa (regra do futebol) e a rodada para com erro, como antes acontecia
   com menos de 11; com o plantel mínimo de 14 isso exige 8 suspensos ao
-  mesmo tempo. Sem goleiro disponível o usuário ainda não pode escalar
-  (falta improvisar um jogador de linha no gol, como a máquina faz).
+  mesmo tempo.
+- **Definido (rev. 68), pelo usuário:** o plantel mínimo de 14 nas vendas
+  continua, para evitar o time incompleto; se mesmo assim faltar gente, a
+  partida começa com as vagas vazias.
+- **Definido (rev. 68), pelo usuário: goleiro improvisado.** Sem goleiro
+  disponível no plantel, o usuário escala 11 de linha e o defensor mais
+  fraco entre os titulares vai para o gol (sem defensores, o jogador de
+  linha mais fraco), com a força reduzida do goleiro improvisado
+  (`ParametrosPenalti.fatorGoleiroImprovisado`), como faz a máquina. A
+  escolha é automática (agente); a tela mostra quem vai para o gol na linha
+  "Escalação válida".
 
 **Provisório (rev. 59), proposta do agente:** antes do time com um a
 menos, nenhuma venda (leilão da máquina, anúncio para compra

@@ -97,7 +97,9 @@ class PlantelController {
 				new Grupo("Banco", banco, banco.size() + " de " + Escalacao.MAXIMO_RESERVAS + " reservas"),
 				new Grupo("Fora do banco", fora, fora.size() + (fora.size() == 1 ? " jogador" : " jogadores"))));
 		model.addAttribute("valida", "Escalação válida: 1 G · " + f.quantidade(Posicao.DEFENSOR) + " D · "
-				+ f.quantidade(Posicao.MEIO_CAMPISTA) + " M · " + f.quantidade(Posicao.ATACANTE) + " A");
+				+ f.quantidade(Posicao.MEIO_CAMPISTA) + " M · " + f.quantidade(Posicao.ATACANTE) + " A"
+				+ (titulares.size() < Formacao.TITULARES ? " · com " + titulares.size() + " em campo" : "")
+				+ (v.goleiroImprovisado() == null ? "" : " · " + v.goleiroImprovisado() + " no gol"));
 		model.addAttribute("batedores", v.jogadores().stream().filter(l -> l.lugar() != Lugar.FORA).toList());
 		model.addAttribute("forcaMedia", titulares.isEmpty() ? "–" : String.format(Locale.forLanguageTag("pt-BR"), "%.1f",
 				titulares.stream().mapToInt(l -> l.jogador().forca()).average().orElse(0)));

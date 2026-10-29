@@ -23,7 +23,7 @@ class EscalacaoDoTreinadorTest {
 		EscalacaoDoTreinador escalacao = EscalacaoDoTreinador.de(DA_MAQUINA);
 
 		assertThat(escalacao.problemas(PLANTEL, id -> false)).isEmpty();
-		assertThat(escalacao.escalacao(PLANTEL, id -> false)).isEqualTo(DA_MAQUINA);
+		assertThat(escalacao.escalacao(PLANTEL, id -> false, 0.5)).isEqualTo(DA_MAQUINA);
 	}
 
 	@Test
@@ -34,7 +34,7 @@ class EscalacaoDoTreinadorTest {
 
 		assertThat(emTresCincoDois.problemas(PLANTEL, id -> false))
 			.containsExactlyInAnyOrder("sobram 1 defensor", "faltam 1 meio-campista");
-		assertThatIllegalStateException().isThrownBy(() -> emTresCincoDois.escalacao(PLANTEL, id -> false))
+		assertThatIllegalStateException().isThrownBy(() -> emTresCincoDois.escalacao(PLANTEL, id -> false, 0.5))
 			.withMessageContaining("faltam 1 meio-campista");
 	}
 
@@ -65,7 +65,7 @@ class EscalacaoDoTreinadorTest {
 		EscalacaoDoTreinador semUm = EscalacaoDoTreinador.de(DA_MAQUINA).sem(Set.of(19L, 20L));
 
 		assertThat(semUm.problemas(PLANTEL, id -> id >= 19)).isEmpty();
-		Escalacao escalacao = semUm.escalacao(PLANTEL, id -> id >= 19);
+		Escalacao escalacao = semUm.escalacao(PLANTEL, id -> id >= 19, 0.5);
 		assertThat(escalacao.incompleta()).isTrue();
 		assertThat(escalacao.titulares()).hasSize(10);
 		// o banco (goleiro, defensor e meia) não cabe na vaga do ataque
@@ -91,6 +91,40 @@ class EscalacaoDoTreinadorTest {
 			.containsExactly("o batedor de pênalti precisa estar entre os titulares ou no banco");
 		assertThatIllegalArgumentException()
 			.isThrownBy(() -> new EscalacaoDoTreinador(Formacao.F_4_4_2, Set.of(1L), Set.of(1L), null));
+	}
+
+	@Test
+	void semGoleiroDisponivelODefensorMaisFracoVaiProGolComForcaReduzida() {
+		// goleiros 1 a 3 suspensos; 5 defensores no time de um 4-4-2
+		EscalacaoDoTreinador semGoleiro = new EscalacaoDoTreinador(Formacao.F_4_4_2,
+				Set.of(4L, 5L, 6L, 7L, 8L, 11L, 12L, 13L, 14L, 18L, 19L), Set.of(20L), 4L);
+
+		assertThat(semGoleiro.problemas(PLANTEL, id -> id <= 3)).isEmpty();
+		assertThat(semGoleiro.goleiroImprovisado(PLANTEL, id -> id <= 3)).contains(j(4));
+		Escalacao escalacao = semGoleiro.escalacao(PLANTEL, id -> id <= 3, 0.5);
+		Jogador noGol = escalacao.jogadoresNa(Posicao.GOLEIRO).getFirst();
+		assertThat(noGol.id()).isEqualTo(4);
+		assertThat(noGol.forca()).isEqualTo(10);
+		assertThat(escalacao.batedorPreferido()).contains(noGol);
+	}
+
+	@Test
+	void comGoleiroDisponivelNaoImprovisa() {
+		EscalacaoDoTreinador semGoleiro = new EscalacaoDoTreinador(Formacao.F_4_4_2,
+				Set.of(4L, 5L, 6L, 7L, 8L, 11L, 12L, 13L, 14L, 18L, 19L), Set.of(), null);
+
+		assertThat(semGoleiro.goleiroImprovisado(PLANTEL, id -> id <= 2)).isEmpty();
+		assertThat(semGoleiro.problemas(PLANTEL, id -> id <= 2)).contains("faltam 1 goleiro", "sobram 1 defensor");
+	}
+
+	@Test
+	void improvisadoQueDesfalcaASetorAvisaQuemVaiProGol() {
+		// só 4 defensores: o mais fraco vai para o gol e falta um na defesa
+		EscalacaoDoTreinador semGoleiro = new EscalacaoDoTreinador(Formacao.F_4_4_2,
+				Set.of(4L, 5L, 6L, 7L, 11L, 12L, 13L, 14L, 15L, 18L, 19L), Set.of(), null);
+
+		assertThat(semGoleiro.problemas(PLANTEL, id -> id <= 3)).containsExactly("faltam 1 defensor",
+				"sobram 1 meio-campista", "sem goleiro disponível, J4 vai para o gol");
 	}
 
 	@Test

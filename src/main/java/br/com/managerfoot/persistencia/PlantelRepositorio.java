@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.function.LongPredicate;
 import java.util.function.UnaryOperator;
 
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -79,7 +80,9 @@ public class PlantelRepositorio {
 			return new LinhaJogador(j, escalacao.lugarDe(j.id()), s.gols(), s.amarelos(), s.suspensao() > 0,
 					j.nacionalidade().equals(paisDoClube) ? null : j.nacionalidade());
 		}).toList();
-		List<String> problemas = escalacao.problemas(plantel, id -> situacoes.containsKey(id) && situacoes.get(id).suspensao() > 0);
+		LongPredicate suspenso = id -> situacoes.containsKey(id) && situacoes.get(id).suspensao() > 0;
+		List<String> problemas = escalacao.problemas(plantel, suspenso);
+		String goleiroImprovisado = escalacao.goleiroImprovisado(plantel, suspenso).map(Jogador::nome).orElse(null);
 
 		int processadas = rodadas.rodadasProcessadas(jogoId);
 		int total = rodadas.totalDeRodadas(jogoId);
@@ -106,7 +109,7 @@ public class PlantelRepositorio {
 				linha.pontos(), linha.jogos(), moral.valor(), parametrosMoral.maximo(), moral.faixa(parametrosMoral),
 				processadas + 1, processadas >= total, proximo.map(j -> j.mandante().id() == clube).orElse(null),
 				proximo.map(j -> j.mandante().id() == clube ? j.visitante() : j.mandante()).orElse(null), escalacao,
-				linhas, problemas, caixas.saldo(clube, plantel), caixas.moeda(jogoId)));
+				linhas, problemas, goleiroImprovisado, caixas.saldo(clube, plantel), caixas.moeda(jogoId)));
 	}
 
 	/** Move o jogador para titular, banco ou fora (SPEC §10.3, rev. 34). */
@@ -213,6 +216,6 @@ public class PlantelRepositorio {
 	public record VisaoPlantel(long jogoId, int temporada, int ano, Clube clube, String divisao, int posicao, int pontos, int jogos,
 			int moral, int moralMaxima, Moral.Faixa faixaMoral, int rodada, boolean temporadaEncerrada, Boolean emCasa,
 			Clube adversario, EscalacaoDoTreinador escalacao, List<LinhaJogador> jogadores, List<String> problemas,
-			long saldo, Moeda moeda) {
+			String goleiroImprovisado, long saldo, Moeda moeda) {
 	}
 }
