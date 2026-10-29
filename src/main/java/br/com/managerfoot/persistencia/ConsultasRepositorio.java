@@ -15,6 +15,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import br.com.managerfoot.dominio.Clube;
 import br.com.managerfoot.dominio.Jogador;
+import br.com.managerfoot.dominio.Moral;
+import br.com.managerfoot.dominio.ParametrosMoral;
 import br.com.managerfoot.dominio.Posicao;
 import br.com.managerfoot.economia.Moeda;
 import br.com.managerfoot.economia.PrecoJogador;
@@ -37,11 +39,14 @@ public class ConsultasRepositorio {
 
 	/** Linhas mostradas nos rankings de artilheiros. */
 	private static final int LINHAS_ARTILHEIROS = 20;
+	/** Resultados mostrados na janela do clube (modelo 11c). */
+	private static final int ULTIMOS_RESULTADOS = 5;
 
 	private final JdbcClient jdbc;
 	private final JogoRepositorio jogos;
 	private final RodadaRepositorio rodadas;
 	private final TemporadaRepositorio temporadas;
+	private final ParametrosMoral parametrosMoral = ParametrosMoral.padrao();
 
 	public ConsultasRepositorio(JdbcClient jdbc, JogoRepositorio jogos, RodadaRepositorio rodadas,
 			TemporadaRepositorio temporadas) {
@@ -156,8 +161,23 @@ public class ConsultasRepositorio {
 			.orElseThrow();
 		String nomeDivisao = jdbc.sql("SELECT nome FROM jogo_divisao WHERE jogo_id = :jogo AND prioridade = :p")
 			.param("jogo", jogoId).param("p", divisao.get().prioridade()).query(String.class).single();
+		// faixa do topo da janela (modelo 11c, rev. 62): treinador, força em campo, moral e últimos 5
+		record Treinador(String nome, Integer moral) {
+		}
+		Treinador treinador = jdbc.sql("""
+				SELECT coalesce(u.nome, m.nome) AS nome, c.moral FROM jogo_clube c
+				LEFT JOIN jogo_treinador t ON t.clube_id = c.id LEFT JOIN usuario u ON u.id = t.usuario_id
+				LEFT JOIN jogo_treinador_maquina m ON m.clube_id = c.id WHERE c.id = :clube""")
+			.param("clube", clubeId)
+			.query((rs, n) -> new Treinador(rs.getString("nome"), (Integer) rs.getObject("moral")))
+			.single();
+		Moral moral = treinador.moral() == null ? Moral.inicial(parametrosMoral) : new Moral(treinador.moral());
+		List<String> ultimos = jogosDoClube.stream().map(JogoNoCalendario::resultado).filter(r -> r != null).toList();
+		ultimos = ultimos.subList(Math.max(0, ultimos.size() - ULTIMOS_RESULTADOS), ultimos.size());
+		double forcaEmCampo = Clube.forcaEmCampo(jogos.carregarPlanteis(jogoId).getOrDefault(clubeId, List.of()));
 		return Optional.of(new VisaoCalendario(linha.clube(), jogos.ano(jogoId, temporada.numero()), nomeDivisao,
-				classificacao.linhas().indexOf(linha) + 1, linha, jogosDoClube));
+				classificacao.linhas().indexOf(linha) + 1, linha, jogosDoClube, treinador.nome(), forcaEmCampo, moral.valor(),
+				parametrosMoral.maximo(), moral.faixa(parametrosMoral), ultimos));
 	}
 
 	private List<LinhaArtilheiro> linhas(List<Artilharia.Artilheiro> ranking) {
@@ -339,8 +359,14 @@ public class ConsultasRepositorio {
 	 * @param temporada ano da temporada
 	 * @param linha a linha do clube na classificação: jogos, vitórias, empates, derrotas e gols
 	 */
+	/**
+	 * @param treinador nome do usuário ou do treinador da máquina
+	 * @param forcaEmCampo média dos 11 mais fortes
+	 * @param ultimos resultados dos últimos jogos (V, E, D), do mais antigo ao mais recente
+	 */
 	public record VisaoCalendario(Clube clube, int temporada, String divisao, int posicao, LinhaClassificacao linha,
-			List<JogoNoCalendario> jogos) {
+			List<JogoNoCalendario> jogos, String treinador, double forcaEmCampo, int moral, int moralMaxima,
+			Moral.Faixa faixa, List<String> ultimos) {
 	}
 
 	/**

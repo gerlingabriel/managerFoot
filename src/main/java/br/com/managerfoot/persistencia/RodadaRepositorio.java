@@ -1,6 +1,7 @@
 package br.com.managerfoot.persistencia;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -49,12 +50,14 @@ public class RodadaRepositorio {
 	private final ClassificacaoRepositorio classificacoes;
 	private final EstadioRepositorio estadios;
 	private final PatrocinioRepositorio patrocinios;
+	private final TrocaRepositorio trocas;
 	private final ProcessamentoRodada processamento = ProcessamentoRodada.padrao();
 	private final EvolucaoForca evolucao = EvolucaoForca.padrao();
 
 	public RodadaRepositorio(JdbcClient jdbc, JogoRepositorio jogos, TemporadaRepositorio temporadas,
 			EscalacaoRepositorio escalacoes, CaixaRepositorio caixas, MercadoRepositorio mercado,
-			ClassificacaoRepositorio classificacoes, EstadioRepositorio estadios, PatrocinioRepositorio patrocinios) {
+			ClassificacaoRepositorio classificacoes, EstadioRepositorio estadios, PatrocinioRepositorio patrocinios,
+			TrocaRepositorio trocas) {
 		this.jdbc = jdbc;
 		this.jogos = jogos;
 		this.temporadas = temporadas;
@@ -64,6 +67,7 @@ public class RodadaRepositorio {
 		this.classificacoes = classificacoes;
 		this.estadios = estadios;
 		this.patrocinios = patrocinios;
+		this.trocas = trocas;
 	}
 
 	/**
@@ -123,6 +127,13 @@ public class RodadaRepositorio {
 					.update();
 			}
 		});
+		// demissões pela moral e trocas de treinador, depois de gravada a moral (SPEC §5.4, rev. 62)
+		Set<Long> jogaram = new HashSet<>();
+		resultado.partidas().forEach(p -> {
+			jogaram.add(p.jogo().mandante().id());
+			jogaram.add(p.jogo().visitante().id());
+		});
+		trocas.demitirDepoisDaRodada(jogoId, linha.id(), rodada, moralAntes, jogaram);
 
 		int atualizadas = jdbc.sql("""
 				UPDATE jogo_temporada SET rodadas_processadas = :rodada

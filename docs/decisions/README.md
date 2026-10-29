@@ -25,3 +25,4 @@ consideradas, decisão e consequências.
 | [0011](0011-mercado-no-banco.md) | Mercado no banco: anúncios, salário e lançamentos | Aceita |
 | [0012](0012-leiloes-da-rodada.md) | Leilões da máquina antes da rodada | Aceita |
 | [0013](0013-treinadores-da-maquina.md) | Treinadores da máquina e histórico | Aceita |
+| [0014](0014-troca-de-treinador.md) | Troca de treinador pela moral no banco | Aceita |

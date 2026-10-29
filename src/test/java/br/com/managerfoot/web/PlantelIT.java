@@ -231,6 +231,55 @@ class PlantelIT {
 	}
 
 	@Test
+	void conviteDeOutroClubeAbreNoPlantelTravaARodadaEAceitarMudaOClube() throws Exception {
+		long temporada = jdbc.sql("SELECT id FROM jogo_temporada WHERE jogo_id = :j").param("j", jogoId).query(Long.class)
+			.single();
+		long outro = jdbc.sql("""
+				SELECT c.id FROM jogo_clube c JOIN jogo_divisao d ON d.id = c.divisao_id
+				WHERE c.jogo_id = :j AND d.prioridade = 1 ORDER BY c.id LIMIT 1""").param("j", jogoId).query(Long.class).single();
+		String nome = jdbc.sql("SELECT nome FROM jogo_clube WHERE id = :c").param("c", outro).query(String.class).single();
+		long convite = jdbc.sql("""
+				INSERT INTO jogo_troca_treinador (jogo_id, temporada_id, rodada, clube_id, outro_clube_id, convidado_id, situacao)
+				VALUES (:j, :t, 1, :outro, :clube, :u, 'CONVITE') RETURNING id""")
+			.param("j", jogoId).param("t", temporada).param("outro", outro).param("clube", clube).param("u", treinador.id())
+			.query(Long.class).single();
+
+		mvc.perform(get(plantel).with(como(treinador)))
+			.andExpect(content().string(containsString("Aceita ser o novo treinador?")))
+			.andExpect(content().string(containsString(nome)));
+		pedir(post(jogarRodada()).param("rodada", "1"))
+			.andExpect(flash().attribute("erro", "Responda ao convite para assumir outro clube antes de jogar a rodada."));
+
+		pedir(post("/jogos/" + jogoId + "/convite").param("convite", String.valueOf(convite)).param("resposta", "ACEITAR"))
+			.andExpect(flash().attribute("resultado", "Convite aceito: este é o seu novo clube."));
+		// clique repetido não faz nada
+		pedir(post("/jogos/" + jogoId + "/convite").param("convite", String.valueOf(convite)).param("resposta", "RECUSAR"))
+			.andExpect(flash().attributeCount(0));
+
+		assertThat(jogo.clubeDoTreinador(jogoId, treinador.id())).hasValue(outro);
+		mvc.perform(get(plantel).with(como(treinador)))
+			.andExpect(content().string(not(containsString("Aceita ser o novo treinador?"))))
+			.andExpect(content().string(containsString("Escalação válida")));
+	}
+
+	@Test
+	void avisoDeDemissaoApareceUmaVez() throws Exception {
+		long temporada = jdbc.sql("SELECT id FROM jogo_temporada WHERE jogo_id = :j").param("j", jogoId).query(Long.class)
+			.single();
+		long aviso = jdbc.sql("""
+				INSERT INTO jogo_troca_treinador (jogo_id, temporada_id, rodada, clube_id, demitido_id, situacao)
+				VALUES (:j, :t, 1, :clube, :u, 'CONTINUA') RETURNING id""")
+			.param("j", jogoId).param("t", temporada).param("clube", clube).param("u", treinador.id())
+			.query(Long.class).single();
+
+		mvc.perform(get(plantel).with(como(treinador)))
+			.andExpect(content().string(containsString("Você continua, por enquanto")));
+		pedir(post("/jogos/" + jogoId + "/aviso-demissao").param("aviso", String.valueOf(aviso)));
+		mvc.perform(get(plantel).with(como(treinador)))
+			.andExpect(content().string(not(containsString("Você continua, por enquanto"))));
+	}
+
+	@Test
 	void pedidoDeAumentoTravaARodadaEAceitarRenovaPelaForcaAtual() throws Exception {
 		pedir(post("/jogos/" + jogoId + "/patrocinio").param("proposta", "FIXA"));
 		long jogador = jdbc.sql("SELECT id FROM jogo_jogador WHERE clube_id = :c ORDER BY forca DESC, id LIMIT 1")

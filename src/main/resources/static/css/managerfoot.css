@@ -673,12 +673,12 @@ a.clube-linha:hover { color: var(--texto); background: rgba(242, 201, 76, 0.1); 
 
 .moral-escala { font-size: 15px; color: var(--texto-suave); }
 
-/* faixas da moral padrão (0-30): vermelha até 5, amarela até 14, verde a partir de 15 */
+/* faixas da moral padrão (0-30): vermelha até 6, amarela até 14, verde a partir de 15 (rev. 61) */
 .moral-barra {
 	position: relative;
 	height: 8px;
 	border-radius: 4px;
-	background: linear-gradient(90deg, var(--erro) 0 20%, var(--destaque) 20% 50%, #3FB37F 50% 100%);
+	background: linear-gradient(90deg, var(--erro) 0 23.3%, var(--destaque) 23.3% 50%, #3FB37F 50% 100%);
 }
 
 .moral-marca {
@@ -1447,3 +1447,49 @@ a.financas-link:hover, a.financas-link:focus-visible { border-color: var(--desta
 .aumento-salario { font-size: 30px; }
 .aumento-acoes { padding: 12px 20px; border-top: 1px solid var(--borda); }
 .aumento-nota { margin: 0; padding: 0 20px 14px; font-size: 13px; }
+
+/* Convite (modelo 11a) e aviso de demissão (11b), rev. 62 */
+.janela.convite { max-width: 620px; border-color: var(--destaque); }
+.janela.convite.demitido { max-width: 520px; border-color: #F87171; }
+.janela.convite.continua { max-width: 520px; border-color: #FBBF24; }
+.convite-topo {
+	display: flex; flex-direction: column; align-items: center; gap: 12px;
+	padding: 26px 20px 20px; text-align: center;
+	background: var(--campo-faixa); border-bottom: 1px solid var(--borda);
+}
+.rotulo.destaque { color: var(--destaque); }
+.rotulo.aviso-vermelho { color: #FCA5A5; }
+.rotulo.aviso-amarelo { color: #FCD34D; }
+.convite-nome { margin: 0; font: 700 38px 'Barlow Condensed', sans-serif; line-height: 1; text-transform: uppercase; }
+.convite-frase { margin: 0; max-width: 460px; font-size: 18px; line-height: 1.4; color: var(--texto-claro); }
+.convite-pergunta { margin: 0; font: 600 22px 'Barlow Condensed', sans-serif; }
+.convite-comparacao { display: grid; grid-template-columns: 1fr auto 1fr; border-bottom: 1px solid var(--borda); }
+.convite-clube { display: flex; flex-direction: column; gap: 6px; padding: 16px; font-size: 15px; color: var(--texto-claro); }
+.convite-clube.novo { background: rgba(242, 201, 76, 0.08); }
+.convite-clube-nome { font: 700 22px 'Barlow Condensed', sans-serif; text-transform: uppercase; color: var(--texto); }
+.convite-seta { align-self: center; margin: 0 4px; color: var(--destaque); }
+.convite-moral { display: inline-flex; align-items: center; gap: 8px; }
+.bola-moral { width: 10px; height: 10px; flex: none; border-radius: 50%; }
+.bola-moral.moral-verde { background: #4ADE80; }
+.bola-moral.moral-amarelo { background: #FBBF24; }
+.bola-moral.moral-vermelho { background: #F87171; }
+.convite-texto { margin: 0; padding: 14px 20px; font-size: 15px; line-height: 1.45; color: var(--texto-claro); border-bottom: 1px solid var(--borda); }
+.convite-acoes { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; padding: 18px 16px; }
+.convite-acoes .botao, .convite-acoes .botao-contorno { min-height: 48px; padding: 0 22px; }
+.aviso-clube { display: flex; align-items: center; gap: 14px; padding: 16px 20px; border-bottom: 1px solid var(--borda); }
+.aviso-clube.pilha-curta { flex-direction: column; align-items: flex-start; }
+.texto-claro { font-size: 15px; color: var(--texto-claro); }
+@media (max-width: 520px) {
+	.convite-comparacao { grid-template-columns: 1fr; }
+	.convite-seta { transform: rotate(90deg); }
+}
+
+/* Faixa do clube na janela da classificação (modelo 11c, rev. 62) */
+.clube-faixa {
+	display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1px;
+	background: var(--borda); border-bottom: 1px solid var(--borda);
+}
+.clube-faixa > div { display: flex; flex-direction: column; gap: 4px; padding: 12px 16px; background: var(--cartao); }
+.clube-faixa-numero { font: 700 26px 'Barlow Condensed', sans-serif; }
+.clube-faixa-ultimos { font-size: 22px; letter-spacing: 0.08em; }
+.clube-faixa-escala { font-size: 12px; }

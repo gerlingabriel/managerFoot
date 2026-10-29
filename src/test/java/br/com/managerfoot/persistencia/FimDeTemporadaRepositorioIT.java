@@ -225,7 +225,9 @@ class FimDeTemporadaRepositorioIT {
 			.update();
 		jdbc.sql("UPDATE jogo_partida SET gols_mandante = 9, gols_visitante = 0 WHERE visitante_id = :c").param("c", antigo)
 			.update();
-		jdbc.sql("INSERT INTO jogo_escalacao (clube_id, formacao) VALUES (:c, 'F_4_4_2')").param("c", antigo).update();
+		// o usuário pode ter trocado de clube pela moral nas 30 rodadas: o clube novo já tem escalação
+		jdbc.sql("INSERT INTO jogo_escalacao (clube_id, formacao) VALUES (:c, 'F_4_4_2') ON CONFLICT DO NOTHING")
+			.param("c", antigo).update();
 
 		FimDeTemporadaRepositorio.NovaTemporada nova = fim.avancarTemporada(jogo, 1, SEMENTE_NOVA);
 

@@ -146,6 +146,75 @@
 </main>
 </div>
 <th:block th:if="${ficha != null}"><div th:replace="~{fragmentos :: ficha(${ficha}, @{/jogos/{id}/plantel(id=${v.jogoId})}, @{/jogos/{id}/mercado/vender(id=${v.jogoId})})}"></div></th:block>
+<!-- Convite para assumir outro clube (modelo 11a, rev. 62): depois da rodada, antes do plantel; a rodada espera. -->
+<div th:if="${convite != null}" class="janela-fundo" th:with="c=${convite}, h=${convite.hoje}, n=${convite.convite}">
+<form role="dialog" aria-modal="true" aria-labelledby="t-convite" class="janela convite"
+	th:action="@{/jogos/{id}/convite(id=${v.jogoId})}" method="post">
+<input type="hidden" name="convite" th:value="${c.id}">
+<div class="convite-topo">
+<span class="rotulo destaque" th:text="|Convite · fim da rodada ${c.rodada}|">Convite</span>
+<span aria-hidden="true" th:style="${@escudos.estilo(n.clube.escudo, 84, 100)}"></span>
+<h2 id="t-convite" class="convite-nome" th:text="${n.clube.nome}">Clube</h2>
+<p class="convite-frase" th:text="|A diretoria demitiu ${c.treinadorDemitido} e quer você no comando.|">A diretoria quer você.</p>
+<p class="convite-pergunta">Aceita ser o novo treinador?</p>
+</div>
+<div class="convite-comparacao">
+<div class="convite-clube">
+<span class="rotulo">Hoje</span>
+<span class="convite-clube-nome" th:text="${h.clube.nome}">Clube</span>
+<span th:text="|${h.divisao} · ${h.posicao}º lugar|">Divisão</span>
+<span th:text="|Força ${#numbers.formatDecimal(h.forca, 1, 'POINT', 1, 'COMMA')}|">Força</span>
+<span class="convite-moral"><span aria-hidden="true" class="bola-moral" th:classappend="|moral-${#strings.toLowerCase(h.faixa)}|"></span><span th:text="|Moral ${h.moral.valor} · ${#strings.toLowerCase(h.faixa)}|">Moral</span></span>
+</div>
+<svg class="convite-seta" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m13 6 6 6-6 6"></path></svg>
+<div class="convite-clube novo">
+<span class="rotulo destaque">O convite</span>
+<span class="convite-clube-nome" th:text="${n.clube.nome}">Clube</span>
+<span th:text="|${n.divisao} · ${n.posicao}º lugar|">Divisão</span>
+<span th:text="|Força ${#numbers.formatDecimal(n.forca, 1, 'POINT', 1, 'COMMA')}|">Força</span>
+<span class="convite-moral"><span aria-hidden="true" class="bola-moral moral-verde"></span>Moral recomeça em 22</span>
+</div>
+</div>
+<p class="convite-texto" th:text="|Se aceitar, você assume o ${n.clube.nome} agora, com plantel, caixa e estádio dele, e ${c.treinadorDemitido} vai para o ${h.clube.nome}.|">Se aceitar…</p>
+<div class="convite-acoes">
+<button type="submit" name="resposta" value="RECUSAR" class="botao-contorno" th:text="|Recusar e ficar no ${h.clube.nome}|">Recusar</button>
+<button type="submit" name="resposta" value="ACEITAR" class="botao">Aceitar o convite</button>
+</div>
+</form>
+</div>
+<!-- Aviso de demissão do usuário (modelo 11b, rev. 62): troca com a máquina ou continua. -->
+<div th:if="${aviso != null}" class="janela-fundo" th:with="a=${aviso}">
+<form role="dialog" aria-modal="true" aria-labelledby="t-aviso" class="janela convite"
+	th:classappend="${a.novo.present} ? 'demitido' : 'continua'"
+	th:action="@{/jogos/{id}/aviso-demissao(id=${v.jogoId})}" method="post">
+<input type="hidden" name="aviso" th:value="${a.id}">
+<div class="convite-topo">
+<span class="rotulo" th:classappend="${a.novo.present} ? 'aviso-vermelho' : 'aviso-amarelo'" th:text="|Fim da rodada ${a.rodada} · jogo decisivo|">Fim da rodada</span>
+<h2 id="t-aviso" class="convite-nome" th:text="${a.novo.present} ? 'Você foi demitido' : 'Você continua, por enquanto'">Você foi demitido</h2>
+<p class="convite-frase" th:if="${a.novo.present}" th:text="|A diretoria do ${a.clubeAntigo} decidiu trocar de treinador.|">A diretoria decidiu trocar.</p>
+<p class="convite-frase" th:unless="${a.novo.present}" th:text="|A diretoria do ${a.clubeAntigo} queria trocar de treinador, mas nenhum clube aceitou a troca.|">Ninguém aceitou.</p>
+</div>
+<th:block th:if="${a.novo.present}" th:with="n=${a.novo.get()}">
+<div class="aviso-clube">
+<span aria-hidden="true" th:style="${@escudos.estilo(n.clube.escudo, 44, 52)}"></span>
+<div class="pilha-curta">
+<span class="rotulo destaque">Seu novo clube</span>
+<span class="convite-clube-nome" th:text="${n.clube.nome}">Clube</span>
+<span class="texto-claro" th:text="|${n.divisao} · ${n.posicao}º lugar · força ${#numbers.formatDecimal(n.forca, 1, 'POINT', 1, 'COMMA')} · moral recomeça em 22|">Divisão</span>
+</div>
+</div>
+<p class="convite-texto" th:text="|${a.treinadorQueChega}, do ${n.clube.nome}, assume o ${a.clubeAntigo}.|">Quem chega.</p>
+<div class="convite-acoes"><button type="submit" class="botao" th:text="|Ir para o plantel do ${n.clube.nome}|">Ir para o plantel</button></div>
+</th:block>
+<th:block th:unless="${a.novo.present}">
+<div class="aviso-clube pilha-curta">
+<span class="convite-clube-nome convite-moral"><span aria-hidden="true" class="bola-moral" th:classappend="|moral-${#strings.toLowerCase(a.faixa)}|"></span><span th:text="|Moral ${a.moral.valor} · ${#strings.toLowerCase(a.faixa)}|">Moral</span></span>
+<span class="texto-claro">O próximo jogo também é decisivo: só a volta ao amarelo segura o cargo.</span>
+</div>
+<div class="convite-acoes"><button type="submit" class="botao">Ir para o plantel</button></div>
+</th:block>
+</form>
+</div>
 <!-- Caixa do pedido de aumento (modelo 10a, rev. 58): fica até a resposta; a rodada espera. -->
 <div th:if="${aumento != null}" class="janela-fundo" th:with="a=${aumento}, j=${aumento.jogador}">
 <form role="dialog" aria-modal="true" aria-labelledby="t-aumento" class="janela ficha aumento"

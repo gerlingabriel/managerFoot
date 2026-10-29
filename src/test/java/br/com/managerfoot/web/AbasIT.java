@@ -224,11 +224,17 @@ class AbasIT {
 		int pontos = calendario.jogos().stream().map(JogoNoCalendario::resultado)
 			.mapToInt(r -> r == null ? 0 : r.equals("V") ? 3 : r.equals("E") ? 1 : 0).sum();
 		assertThat(pontos).isEqualTo(calendario.linha().pontos());
+		// faixa do clube (modelo 11c): os últimos resultados na ordem e a moral gravada
+		assertThat(calendario.ultimos()).isEqualTo(calendario.jogos().subList(0, 3).stream()
+			.map(JogoNoCalendario::resultado).filter(r -> r != null).toList());
+		assertThat(calendario.forcaEmCampo()).isPositive();
 
 		mvc.perform(get(base + "/classificacao").param("calendario", String.valueOf(clube)).with(como(treinador)))
 			.andExpect(content().string(containsString("aria-label=\"Janela do clube\"")))
 			.andExpect(content().string(containsString("Temporada 2026 · ")))
-			.andExpect(content().string(containsString("Placar com os gols do clube primeiro")));
+			.andExpect(content().string(containsString("Placar com os gols do clube primeiro")))
+			.andExpect(content().string(containsString("Moral do treinador")))
+			.andExpect(content().string(containsString("0–6 vermelho · 7–14 amarelo · 15–30 verde")));
 		mvc.perform(get(base + "/classificacao").param("calendario", "-1").with(como(treinador)))
 			.andExpect(content().string(not(containsString("aria-label=\"Janela do clube\""))));
 	}

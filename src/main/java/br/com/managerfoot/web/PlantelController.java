@@ -39,6 +39,7 @@ import br.com.managerfoot.persistencia.PlantelRepositorio;
 import br.com.managerfoot.persistencia.PlantelRepositorio.LinhaJogador;
 import br.com.managerfoot.persistencia.PlantelRepositorio.VisaoPlantel;
 import br.com.managerfoot.persistencia.RodadaAoVivoRepositorio;
+import br.com.managerfoot.persistencia.TrocaRepositorio;
 import jakarta.servlet.http.HttpServletResponse;
 
 /**
@@ -59,10 +60,11 @@ class PlantelController {
 	private final JogoRepositorio jogo;
 	private final PatrocinioRepositorio patrocinios;
 	private final AumentoRepositorio aumentos;
+	private final TrocaRepositorio trocas;
 
 	PlantelController(PlantelRepositorio plantel, JogosDoTreinadorRepositorio jogos, RodadaAoVivoRepositorio aoVivo,
 			ConsultasRepositorio consultas, FimDeTemporadaRepositorio fimDeTemporada, JogoRepositorio jogo,
-			PatrocinioRepositorio patrocinios, AumentoRepositorio aumentos) {
+			PatrocinioRepositorio patrocinios, AumentoRepositorio aumentos, TrocaRepositorio trocas) {
 		this.plantel = plantel;
 		this.jogos = jogos;
 		this.aoVivo = aoVivo;
@@ -71,6 +73,7 @@ class PlantelController {
 		this.jogo = jogo;
 		this.patrocinios = patrocinios;
 		this.aumentos = aumentos;
+		this.trocas = trocas;
 	}
 
 	@GetMapping("/jogos/{jogoId}/plantel")
@@ -105,6 +108,17 @@ class PlantelController {
 		if (ficha != null) {
 			consultas.ficha(jogoId, usuario.id(), ficha).ifPresent(dados -> model.addAttribute("ficha", dados));
 		}
+		// depois da rodada e antes do plantel: aviso de demissão (11b) e convite de outro clube (11a, rev. 62)
+		var aviso = trocas.avisoPendente(jogoId, usuario.id());
+		var convite = trocas.convitePendente(jogoId, usuario.id());
+		if (aviso.isPresent()) {
+			model.addAttribute("aviso", aviso.get());
+			return "plantel";
+		}
+		if (convite.isPresent()) {
+			model.addAttribute("convite", convite.get());
+			return "plantel";
+		}
 		// propostas de patrocínio do início do ano: a caixa fica aberta até a escolha (modelo 9a)
 		patrocinios.pendente(jogoId, usuario.id()).ifPresentOrElse(p -> model.addAttribute("patrocinio", p),
 				// pedido de aumento: um por rodada, depois do patrocínio (modelo 10a, rev. 58)
@@ -131,6 +145,26 @@ class PlantelController {
 			}
 			redirect.addFlashAttribute("resultado", "Aumento recusado: ele fica com o salário de antes.");
 		}
+		return "redirect:/jogos/" + jogoId + "/plantel";
+	}
+
+	/** Resposta ao convite para assumir outro clube (modelo 11a); clique repetido não muda nada. */
+	@PostMapping("/jogos/{jogoId}/convite")
+	String responderConvite(@AuthenticationPrincipal Usuario usuario, @PathVariable long jogoId, @RequestParam long convite,
+			@RequestParam String resposta, RedirectAttributes redirect) {
+		if ("ACEITAR".equals(resposta) && trocas.aceitar(jogoId, usuario.id(), convite)) {
+			redirect.addFlashAttribute("resultado", "Convite aceito: este é o seu novo clube.");
+		}
+		else if ("RECUSAR".equals(resposta) && trocas.recusar(jogoId, usuario.id(), convite)) {
+			redirect.addFlashAttribute("resultado", "Convite recusado: você continua no seu clube.");
+		}
+		return "redirect:/jogos/" + jogoId + "/plantel";
+	}
+
+	/** O usuário viu o aviso de demissão (modelo 11b). */
+	@PostMapping("/jogos/{jogoId}/aviso-demissao")
+	String avisoVisto(@AuthenticationPrincipal Usuario usuario, @PathVariable long jogoId, @RequestParam long aviso) {
+		trocas.marcarAvisoVisto(jogoId, usuario.id(), aviso);
 		return "redirect:/jogos/" + jogoId + "/plantel";
 	}
 

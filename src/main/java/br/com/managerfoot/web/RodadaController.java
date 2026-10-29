@@ -26,6 +26,7 @@ import br.com.managerfoot.persistencia.LeilaoRepositorio.Etapa;
 import br.com.managerfoot.persistencia.DecisaoPendenteException;
 import br.com.managerfoot.persistencia.PlantelRepositorio;
 import br.com.managerfoot.persistencia.RodadaAoVivoRepositorio;
+import br.com.managerfoot.persistencia.TrocaRepositorio;
 import br.com.managerfoot.persistencia.RodadaAoVivoRepositorio.EstadoRodada;
 import br.com.managerfoot.persistencia.RodadaAoVivoRepositorio.PlacarAoVivo;
 import br.com.managerfoot.temporada.Velocidade;
@@ -43,12 +44,15 @@ class RodadaController {
 	private final RodadaAoVivoRepositorio aoVivo;
 	private final PlantelRepositorio plantel;
 	private final LeilaoRepositorio leiloes;
+	private final TrocaRepositorio trocas;
 	private final Clock relogio;
 
-	RodadaController(RodadaAoVivoRepositorio aoVivo, PlantelRepositorio plantel, LeilaoRepositorio leiloes, Clock relogio) {
+	RodadaController(RodadaAoVivoRepositorio aoVivo, PlantelRepositorio plantel, LeilaoRepositorio leiloes,
+			TrocaRepositorio trocas, Clock relogio) {
 		this.aoVivo = aoVivo;
 		this.plantel = plantel;
 		this.leiloes = leiloes;
+		this.trocas = trocas;
 		this.relogio = relogio;
 	}
 
@@ -67,6 +71,11 @@ class RodadaController {
 		}
 		if (!visao.problemas().isEmpty()) {
 			redirect.addFlashAttribute("erro", "Complete a escalação antes de jogar a rodada.");
+			return "redirect:/jogos/" + jogoId + "/plantel";
+		}
+		if (trocas.algumConvitePendente(jogoId)) {
+			// o convite (modelo 11a) vem antes dos leilões e da rodada
+			redirect.addFlashAttribute("erro", "Responda ao convite para assumir outro clube antes de jogar a rodada.");
 			return "redirect:/jogos/" + jogoId + "/plantel";
 		}
 		try {

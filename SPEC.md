@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 62 — 2026-10-29)
+-   **Status:** versão inicial para revisão (rev. 63 — 2026-10-29)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 63 (2026-10-29):** pelo usuário: modelos 11a (convite), 11b (aviso de demissão) e 11c (moral na janela do clube) aprovados; 9,8 trocas por temporada na 1ª está bom; regra da surpresa aprovada. Troca de treinador ligada à rodada (V28, ADR 0014).
 -   **rev. 62 (2026-10-29):** pelo usuário: máquina demitida pelas mesmas regras do usuário; recusa passa ao seguinte; sem chamado, o treinador continua; chamado no máximo 12 pontos abaixo; convite depois da rodada e antes do plantel (modelo de tela proposto); pedido de 10 ou 11 demissões por temporada com os fortes demitindo mais. Proposta do agente (provisória, já na rodada): a surpresa vale mais na moral e o retorno à inicial fica mais fraco (§6.2); simulação refeita.
 -   **rev. 61 (2026-10-29):** pelo usuário: vermelho de **0 a 6** e amarelo de **7 a 14** (o amarelo é o período para tentar melhorar); força média confirmada (média dos 11); a máquina também segue a moral; troca de treinadores na demissão (o chamado vai para o clube que demitiu e o demitido fica com o clube dele; entre os 3 clubes inferiores de moral verde, o usuário decide e, sem usuário, vai o mais forte); depois da troca os dois começam com 22; moral visível ao clicar no clube; **salário com ajuste pela faixa de força** (+10% de 45 a 50, +5% de 35 a 44, nada de 25 a 34, −5% de 15 a 24, −10% abaixo de 15), simulado (§9.5). Simulações refeitas.
 -   **rev. 60 (2026-10-29):** pelo usuário: no máximo **2 divisões** por país (a 3ª saiu do banco padrão); elenco gerado com **20 jogadores** (máximo continua 25); moral começa em **22**, com verde de 15 a 30, amarelo de 8 a 14 e vermelho de 0 a 7; usuário no vermelho tem um jogo decisivo antes da demissão; demissão na máquina chama treinador de clube mais fraco com moral verde, e o usuário chamado recebe convite (§5.4). Banco padrão versionado (V27): a carga troca o molde antigo; jogos já salvos não mudam. Simulações refeitas (`ciclo-do-mercado.md`, `temporada.md`) e nova `docs/simulacoes/demissao.md`.
@@ -765,8 +766,18 @@ sorteio provisório da rev. 36 para o usuário que cai para a fila):
   fluido, **pelo menos 10 ou 11 por temporada**; os fortes devem continuar
   fortes e ter mais demissões; o clube fraco pode crescer.
 - **No domínio:** `temporada.TrocaDeTreinador` (ordem dos chamados, limite de
-  12, treinador sem clube até força 10, moral 22 depois da troca). Ainda não
-  ligada à rodada.
+  12, treinador sem clube até força 10, moral 22 depois da troca).
+- **Gravado (rev. 63, V28, ADR 0014):** depois de cada rodada, na mesma
+  transação, do clube mais forte ao mais fraco, um clube por troca por
+  rodada. Máquina×máquina troca na hora; usuário chamado recebe o convite
+  (11a) no plantel e a rodada seguinte espera; recusa chama o seguinte;
+  usuário demitido vê o aviso (11b). Histórico em `jogo_troca_treinador`.
+  - O usuário demitido troca só com a máquina (dois usuários não trocam de
+    clube; rever no multiplayer).
+  - **Não feito:** treinador sem clube para clubes de força até 10 (o jogo
+    ainda não cria treinadores sem clube; no banco padrão o mais fraco tem
+    força 22). O usuário cujo clube cai para a fila segue o sorteio da rev.
+    36.
 - ~~Simulação da rev. 61 (só 1 troca por temporada; fundo preso no
   vermelho) e pergunta sobre quem chamar sem inferior de moral verde.~~
   Respondido: continua; e a moral passou a valer a surpresa (§6.2, rev. 62),
@@ -923,8 +934,9 @@ moral. ~~**Em aberto:** o usuário disse "até 18 ele seria verde"; a faixa
 verde atual começa em 15 (a moral inicial é 18).~~ Resolvido na rev. 60
 (faixas abaixo).
 
-**Proposta da rev. 62 (do agente, a partir do pedido do usuário por mais
-demissões, com os fortes demitindo mais; Provisório):**
+**Definido (rev. 63) — proposta do agente da rev. 62, aprovada pelo usuário**
+("para que times de forças abaixo possam ter moral melhor para assumir times
+mais fortes, em caso de vitória, empate"):
 - **A surpresa vale mais:** a cada 3 pontos de diferença de força em campo
   entre os clubes, 1 ponto de moral, no máximo 3. O favorito que **empata ou
   perde** perde esse tanto a mais; o azarão que **empata ou vence** ganha esse
@@ -2264,6 +2276,11 @@ para o treinador saber se pode contratar; o valor leva à aba Finanças.
 - **Depois, com o mercado (§9.4):** clicar num clube na classificação
   poderá mostrar os jogadores postos à venda; sem preço definido não há
   oferta.
+
+**Aprovados (rev. 63):** **11a** convite para assumir outro clube (depois
+da rodada, antes do plantel), **11b** aviso de demissão do usuário (troca ou
+continua) e **11c** faixa do clube no topo da janela do clube (força em
+campo, moral com a faixa e os últimos 5), para todos os clubes.
 
 **Definido (rev. 29):**
 - **Início**, logo depois de entrar, com **só duas opções**: "Novo jogo" e
