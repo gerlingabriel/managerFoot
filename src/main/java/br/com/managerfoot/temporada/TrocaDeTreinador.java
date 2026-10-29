@@ -11,9 +11,9 @@ import br.com.managerfoot.dominio.ParametrosMoral;
 
 /**
  * Quem substitui o treinador demitido (SPEC §5.4, rev. 59 a 61). O chamado é o treinador de um clube
- * de força inferior com moral verde; os dois trocam de clube e começam com a moral inicial. Entre os
- * {@code principais} mais fortes desses clubes, o usuário decide primeiro (convite); sem usuário, vai o
- * de maior força. Força = força em campo, a média dos 11 mais fortes.
+ * de força inferior, no máximo {@code diferencaMaxima} abaixo, com moral verde; os dois trocam de
+ * clube e começam com a moral inicial. Entre os {@code principais} mais fortes desses clubes, o usuário
+ * decide primeiro (convite); sem usuário, vai o de maior força. Força = força em campo, a média dos 11 mais fortes.
  */
 public final class TrocaDeTreinador {
 
@@ -32,31 +32,37 @@ public final class TrocaDeTreinador {
 	private final ParametrosMoral moral;
 	private final int principais;
 	private final double forcaComTreinadorSemClube;
+	private final double diferencaMaxima;
 
 	/**
 	 * @param principais quantos dos inferiores mais fortes entram na primeira chamada, com prioridade
 	 *        para o usuário (3, rev. 61)
 	 * @param forcaComTreinadorSemClube até esta força, o clube aceita um treinador sem clube quando
 	 *        nenhum com clube pode vir (10, rev. 59 e 60)
+	 * @param diferencaMaxima o clube que cede o treinador fica no máximo tantos pontos de força abaixo
+	 *        (12, rev. 61: um clube de força 20 não assume um de força 50)
 	 */
-	public TrocaDeTreinador(ParametrosMoral moral, int principais, double forcaComTreinadorSemClube) {
+	public TrocaDeTreinador(ParametrosMoral moral, int principais, double forcaComTreinadorSemClube,
+			double diferencaMaxima) {
 		if (principais < 1) {
 			throw new IllegalArgumentException("principais deve ser pelo menos 1, mas foi " + principais);
 		}
 		this.moral = Objects.requireNonNull(moral);
 		this.principais = principais;
 		this.forcaComTreinadorSemClube = forcaComTreinadorSemClube;
+		this.diferencaMaxima = diferencaMaxima;
 	}
 
 	public static TrocaDeTreinador padrao() {
-		return new TrocaDeTreinador(ParametrosMoral.padrao(), 3, 10);
+		return new TrocaDeTreinador(ParametrosMoral.padrao(), 3, 10, 12);
 	}
 
 	/**
 	 * Ordem de chamada para o clube que demitiu: os {@code principais} inferiores de moral verde mais
 	 * fortes (usuários antes, depois a máquina, cada grupo do mais forte ao mais fraco) e então os demais
-	 * inferiores de moral verde, do mais forte ao mais fraco. Quem recusa (usuário) dá a vez ao seguinte.
-	 * Vazia: nenhum treinador com clube pode vir.
+	 * inferiores de moral verde, do mais forte ao mais fraco. Quem recusa (usuário) dá a vez ao seguinte;
+	 * se todos recusam ou a lista é vazia (nenhum treinador com clube pode vir), o demitido continua
+	 * (rev. 61).
 	 *
 	 * @param clubes os outros clubes do país; o próprio clube que demitiu não deve estar entre eles
 	 */
@@ -64,7 +70,8 @@ public final class TrocaDeTreinador {
 		Comparator<Candidato> maisForte = Comparator.comparingDouble(Candidato::forca).reversed()
 			.thenComparingLong(Candidato::clubeId);
 		List<Candidato> inferiores = clubes.stream()
-			.filter(c -> c.forca() < forcaDoClube && c.moral().faixa(moral) == Moral.Faixa.VERDE)
+			.filter(c -> c.forca() < forcaDoClube && c.forca() >= forcaDoClube - diferencaMaxima)
+			.filter(c -> c.moral().faixa(moral) == Moral.Faixa.VERDE)
 			.sorted(maisForte)
 			.toList();
 		List<Candidato> primeiros = inferiores.subList(0, Math.min(principais, inferiores.size()));

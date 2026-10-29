@@ -147,8 +147,12 @@ public final class RodadaAoVivo {
 			planteis.getOrDefault(partida.jogo().mandante().id(), List.of()).forEach(j -> jogadores.add(j.id()));
 			planteis.getOrDefault(partida.jogo().visitante().id(), List.of()).forEach(j -> jogadores.add(j.id()));
 			depois = depois.aposPartida(jogadores, resultado, suspensao, aleatorio);
-			atualizarMoral(novaMoral, partida.jogo().mandante(), true, resultado.golsCasa(), resultado.golsFora());
-			atualizarMoral(novaMoral, partida.jogo().visitante(), false, resultado.golsFora(), resultado.golsCasa());
+			double forcaCasa = Clube.forcaEmCampo(planteis.getOrDefault(partida.jogo().mandante().id(), List.of()));
+			double forcaFora = Clube.forcaEmCampo(planteis.getOrDefault(partida.jogo().visitante().id(), List.of()));
+			atualizarMoral(novaMoral, partida.jogo().mandante(), true, resultado.golsCasa(), resultado.golsFora(), forcaCasa,
+					forcaFora);
+			atualizarMoral(novaMoral, partida.jogo().visitante(), false, resultado.golsFora(), resultado.golsCasa(),
+					forcaFora, forcaCasa);
 		}
 		return new ProcessamentoRodada.Resultado(jogadas, depois, novaMoral);
 	}
@@ -164,9 +168,11 @@ public final class RodadaAoVivo {
 		}
 	}
 
-	private void atualizarMoral(Map<Long, Moral> moral, Clube clube, boolean emCasa, int golsPro, int golsContra) {
+	/** A força é a em campo dos planteis (média dos 11 mais fortes), para a surpresa da moral (rev. 61). */
+	private void atualizarMoral(Map<Long, Moral> moral, Clube clube, boolean emCasa, int golsPro, int golsContra,
+			double forcaPropria, double forcaAdversario) {
 		Moral atual = moral.getOrDefault(clube.id(), Moral.inicial(parametrosMoral));
-		moral.put(clube.id(), atual.aposJogo(emCasa, golsPro, golsContra, parametrosMoral));
+		moral.put(clube.id(), atual.aposJogo(emCasa, golsPro, golsContra, forcaPropria, forcaAdversario, parametrosMoral));
 	}
 
 	/** Eventos da partida até o minuto, para a tela. */

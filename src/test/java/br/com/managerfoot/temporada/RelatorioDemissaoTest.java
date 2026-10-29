@@ -4,10 +4,13 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.SplittableRandom;
 
 import org.junit.jupiter.api.Tag;
@@ -26,163 +29,199 @@ import br.com.managerfoot.motor.ParametrosMotor;
 import br.com.managerfoot.motor.ResultadoPartida;
 
 /**
- * Gera {@code docs/simulacoes/demissao.md} (rev. 60): com que frequência a regra de demissão pela
- * moral ({@link Moral#demite}) demitiria o treinador de cada clube, se valesse para todos, e como
- * fica a troca (rev. 61, {@link TrocaDeTreinador}): o chamado vem de um clube inferior de moral verde,
- * os dois trocam de clube e recomeçam com a moral inicial; sem chamado, o treinador fica. Mesma simplificação de
- * {@link RelatorioTemporadaTest}: 4-4-2 com os 11 na força do clube. Executar com
+ * Gera {@code docs/simulacoes/demissao.md} (rev. 61): demissões pela moral ({@link Moral#demite}) e
+ * trocas de treinador ({@link TrocaDeTreinador}) num país de 2 divisões, com a regra valendo para todos
+ * os clubes, e o efeito do ajuste da moral pela força do adversário
+ * ({@link ParametrosMoral#diferencaPorPonto()}). Depois de cada rodada, do clube mais forte ao mais
+ * fraco, quem é demitido chama o treinador de um clube do país; os dois clubes voltam à moral inicial e
+ * não entram em outra troca na mesma rodada. Sem chamado, o treinador fica. Simplificação: cada clube
+ * joga em 4-4-2 com os 11 na força do clube, sem evolução de força, mercado nem acesso. Executar com
  * {@code ./mvnw test -Dgroups=simulacao -Dsurefire.excludedGroups=none -Dtest=RelatorioDemissaoTest}.
  */
 @Tag("simulacao")
 class RelatorioDemissaoTest {
 
-	private static final int TEMPORADAS = 200;
+	private static final int TEMPORADAS = 100;
 	private static final int CLUBES = 20;
 	private static final Path SAIDA = Path.of("docs/simulacoes/demissao.md");
 
-	private final ParametrosMoral parametros = ParametrosMoral.padrao();
 	private final MotorPartida motor = new MotorPartida(ParametrosMotor.padrao());
-	private final TrocaDeTreinador troca = TrocaDeTreinador.padrao();
+
+	/** Resultado de uma variante, por temporada. */
+	private record Medidas(double trocas1, double trocas2, double semChamado, double daSegunda, double vermelhoFim1,
+			double vermelhoFim2, double diferenca, int[] trocasPorClube, int[] cedeuPorClube, int[] semChamadoPorClube) {
+	}
 
 	@Test
 	void gerarRelatorio() throws IOException {
+		List<Clube> primeira = divisao(1, 50, 35);
+		List<Clube> segunda = divisao(101, 30, 22);
+		ParametrosMoral padrao = ParametrosMoral.padrao();
+
 		StringBuilder md = new StringBuilder();
-		md.append("# Demissão pela moral\n\n");
-		md.append("Gerado por `RelatorioDemissaoTest` (ferramenta de desenvolvimento). ").append(TEMPORADAS)
-			.append(" temporadas por cenário, divisão de ").append(CLUBES)
-			.append(" clubes em turno e returno, calendário sorteado; sementes 0 a ").append(TEMPORADAS - 1).append(".\n\n");
-		md.append("**Regra (SPEC §5.4, rev. 60):** moral de 0 a 30, começa em ").append(parametros.inicial())
-			.append("; verde de ").append(parametros.limiteVerde()).append(" a ").append(parametros.maximo())
-			.append(", amarelo de ").append(parametros.limiteAmarelo()).append(" a ").append(parametros.limiteVerde() - 1)
-			.append(", vermelho de ").append(parametros.minimo()).append(" a ").append(parametros.limiteAmarelo() - 1)
-			.append(". Ao entrar no vermelho, o jogo seguinte é decisivo: se depois dele a moral continua vermelha, ")
-			.append("o treinador é demitido. Aqui a regra vale para **todos** os clubes, para medir a frequência.\n\n");
-		md.append("**Troca (rev. 61):** é chamado o treinador de um clube de força inferior com moral verde (entre os ")
-			.append("3 mais fortes, o de maior força; aqui não há usuário). Os dois trocam de clube e os dois clubes ")
-			.append("voltam à moral inicial. Sem chamado (nenhum inferior de moral verde), o treinador fica e a moral ")
-			.append("segue: o jogo seguinte no vermelho é decisivo de novo.\n\n");
-		md.append("**Simplificação:** cada clube joga em 4-4-2 com os 11 na força do clube, sem evolução de força nem ")
-			.append("mercado, como em `temporada.md`.\n\n");
-		cenario(md, "Cenário A: forças de 50 a 12, de 2 em 2", 2);
-		cenario(md, "Cenário B: forças de 50 a 31, de 1 em 1 (hierarquia apertada)", 1);
+		md.append("# Demissão pela moral e troca de treinador\n\n");
+		md.append("Gerado por `RelatorioDemissaoTest` (ferramenta de desenvolvimento). País com 2 divisões de ")
+			.append(CLUBES).append(" clubes: 1ª com forças de 50 a 35 e 2ª de 30 a 22 (como o banco padrão), turno e ")
+			.append("returno, ").append(TEMPORADAS).append(" temporadas (sementes 0 a ").append(TEMPORADAS - 1)
+			.append("). Cada clube joga em 4-4-2 com os 11 na força do clube, sem evolução de força, mercado nem acesso; ")
+			.append("toda temporada começa com moral ").append(padrao.inicial()).append(".\n\n");
+		md.append("**Regras (SPEC §5.4 e §6.2, rev. 61):** verde de ").append(padrao.limiteVerde()).append(" a ")
+			.append(padrao.maximo()).append(", amarelo de ").append(padrao.limiteAmarelo()).append(" a ")
+			.append(padrao.limiteVerde() - 1).append(", vermelho de ").append(padrao.minimo()).append(" a ")
+			.append(padrao.limiteAmarelo() - 1).append(". Ao entrar no vermelho, o jogo seguinte é decisivo; se a moral ")
+			.append("continua vermelha, o treinador é demitido — máquina e usuário (aqui todos são máquina). Depois da ")
+			.append("rodada, do clube mais forte ao mais fraco, quem foi demitido chama o treinador de um clube do país ")
+			.append("de força inferior, no máximo 12 abaixo, com moral verde (o mais forte deles). Os dois trocam de clube ")
+			.append("e os dois clubes voltam a ").append(padrao.inicial())
+			.append("; nenhum dos dois entra em outra troca na mesma rodada. Sem chamado, o treinador fica e o jogo ")
+			.append("seguinte no vermelho é decisivo de novo.\n\n");
+		md.append("**Ajuste pela força do adversário (proposta da rev. 61):** a surpresa vale mais. A cada *D* pontos ")
+			.append("de diferença de força, 1 ponto, no máximo *M*: o favorito que empata ou perde perde esse tanto a ")
+			.append("mais; o azarão que empata ou vence ganha esse tanto a mais; o resultado esperado vale o normal. ")
+			.append("Ex. com D = 3, M = 3: o clube de força 50 que perde em casa para um de 41 perde 3 + 3 = 6; o de 41 que ")
+			.append("vence fora ganha 3 + 3 = 6; se o de 50 vence, os dois ficam com o normal (+2 e −2).\n\n");
+		md.append("## Comparação\n\n");
+		md.append("Por temporada. *Trocas*: demissões que acharam quem chamar. *Decisivos sem chamado*: jogos ")
+			.append("decisivos perdidos sem ninguém para chamar (o treinador fica). *Chamado da 2ª*: % das trocas da 1ª ")
+			.append("em que o treinador veio da 2ª. *Vermelho no fim*: % dos clubes no vermelho na última rodada.\n\n");
+		md.append("| D | M | Trocas 1ª | Trocas 2ª | Decisivos sem chamado | Chamado da 2ª | Diferença de força na troca | Vermelho no fim 1ª | Vermelho no fim 2ª |\n");
+		md.append("|---|---|---|---|---|---|---|---|---|\n");
+		double[][] variantes = { { 0, 0 }, { 5, 2 }, { 4, 2 }, { 4, 3 }, { 3, 3 }, { 3, 4 }, { 2, 4 } };
+		for (double[] v : variantes) {
+			ParametrosMoral p = comAjuste(padrao, v[0], (int) v[1]);
+			Medidas m = simular(primeira, segunda, p);
+			boolean escolhida = p.equals(padrao);
+			md.append("| ").append(escolhida ? "**" : "").append(v[0] == 0 ? "sem ajuste" : f(v[0], 0))
+				.append(escolhida ? "**" : "").append(" | ").append((int) v[1])
+				.append(" | ").append(f(m.trocas1(), 1)).append(" | ").append(f(m.trocas2(), 1))
+				.append(" | ").append(f(m.semChamado(), 1)).append(" | ").append(f(m.daSegunda(), 0)).append("%")
+				.append(" | ").append(f(m.diferenca(), 1))
+				.append(" | ").append(f(m.vermelhoFim1(), 0)).append("% | ").append(f(m.vermelhoFim2(), 0)).append("% |\n");
+		}
+
+		Medidas escolhida = simular(primeira, segunda, padrao);
+		md.append("\n## Por clube, com os valores do jogo (D = ").append(f(padrao.diferencaPorPonto(), 0)).append(", M = ")
+			.append(padrao.ajusteMaximo()).append(")\n\n");
+		md.append("| Divisão | Força | Demitido e trocado por temporada | Decisivos sem chamado | Cedeu o treinador (subiu) |\n");
+		md.append("|---|---|---|---|---|\n");
+		List<Clube> todos = new ArrayList<>(primeira);
+		todos.addAll(segunda);
+		for (int i = 0; i < todos.size(); i++) {
+			md.append("| ").append(i < CLUBES ? "1ª" : "2ª").append(" | ").append(todos.get(i).forca())
+				.append(" | ").append(f((double) escolhida.trocasPorClube()[i] / TEMPORADAS, 2))
+				.append(" | ").append(f((double) escolhida.semChamadoPorClube()[i] / TEMPORADAS, 2))
+				.append(" | ").append(f((double) escolhida.cedeuPorClube()[i] / TEMPORADAS, 2)).append(" |\n");
+		}
+
 		Files.createDirectories(SAIDA.getParent());
 		Files.writeString(SAIDA, md.toString());
 		System.out.println(md);
 	}
 
-	private void cenario(StringBuilder md, String titulo, int passo) {
-		List<Clube> clubes = new ArrayList<>();
+	private Medidas simular(List<Clube> primeira, List<Clube> segunda, ParametrosMoral parametros) {
+		TrocaDeTreinador troca = new TrocaDeTreinador(parametros, 3, 10, 12);
+		List<Clube> todos = new ArrayList<>(primeira);
+		todos.addAll(segunda);
 		Map<Clube, Escalacao> escalacoes = new HashMap<>();
-		for (int i = 0; i < CLUBES; i++) {
-			Clube clube = new Clube(i + 1, "F" + (50 - passo * i), 50 - passo * i);
-			clubes.add(clube);
-			escalacoes.put(clube, escalacao(clube));
-		}
-		int[] demissoes = new int[CLUBES];
-		int[] semChamado = new int[CLUBES];
-		int[] cedeu = new int[CLUBES];
-		long totalSemChamado = 0;
-		double somaDiferenca = 0;
-		int[] temporadasComDemissao = new int[CLUBES];
-		long[] rodadaPrimeira = new long[CLUBES];
-		int[] entradasNoVermelho = new int[CLUBES];
-		int[] salvos = new int[CLUBES];
-		long totalDemissoes = 0;
-		int[] demissoesPorRodada = new int[(CLUBES - 1) * 2 + 1];
+		todos.forEach(c -> escalacoes.put(c, escalacao(c)));
+		int[] trocasPorClube = new int[todos.size()];
+		int[] cedeu = new int[todos.size()];
+		int[] semChamadoPorClube = new int[todos.size()];
+		long trocas1 = 0;
+		long trocas2 = 0;
+		long semChamado = 0;
+		long daSegunda = 0;
+		long vermelho1 = 0;
+		long vermelho2 = 0;
+		double diferenca = 0;
 
 		for (long t = 0; t < TEMPORADAS; t++) {
 			SplittableRandom aleatorio = new SplittableRandom(t);
+			List<Rodada> rodadas1 = Calendario.sorteado(primeira, aleatorio).rodadas();
+			List<Rodada> rodadas2 = Calendario.sorteado(segunda, aleatorio).rodadas();
 			Map<Clube, Moral> moral = new HashMap<>();
-			clubes.forEach(c -> moral.put(c, Moral.inicial(parametros)));
-			int[] naTemporada = new int[CLUBES];
-			for (Rodada rodada : Calendario.sorteado(clubes, aleatorio).rodadas()) {
-				for (Jogo jogo : rodada.jogos()) {
-					ResultadoPartida r = motor.simular(escalacoes.get(jogo.mandante()), escalacoes.get(jogo.visitante()),
+			todos.forEach(c -> moral.put(c, Moral.inicial(parametros)));
+			for (int r = 0; r < rodadas1.size(); r++) {
+				Map<Clube, Moral> antes = new HashMap<>(moral);
+				List<Jogo> jogos = new ArrayList<>(rodadas1.get(r).jogos());
+				jogos.addAll(rodadas2.get(r).jogos());
+				for (Jogo jogo : jogos) {
+					ResultadoPartida res = motor.simular(escalacoes.get(jogo.mandante()), escalacoes.get(jogo.visitante()),
 							aleatorio.nextLong());
-					for (boolean emCasa : new boolean[] { true, false }) {
-						Clube clube = emCasa ? jogo.mandante() : jogo.visitante();
-						int i = clubes.indexOf(clube);
-						Moral antes = moral.get(clube);
-						Moral depois = antes.aposJogo(emCasa, emCasa ? r.golsCasa() : r.golsFora(),
-								emCasa ? r.golsFora() : r.golsCasa(), parametros);
-						boolean vermelhoAntes = antes.faixa(parametros) == Moral.Faixa.VERMELHO;
-						boolean vermelhoDepois = depois.faixa(parametros) == Moral.Faixa.VERMELHO;
-						if (!vermelhoAntes && vermelhoDepois) {
-							entradasNoVermelho[i]++;
+					Clube casa = jogo.mandante();
+					Clube fora = jogo.visitante();
+					moral.put(casa, moral.get(casa).aposJogo(true, res.golsCasa(), res.golsFora(), casa.forca(), fora.forca(),
+							parametros));
+					moral.put(fora, moral.get(fora).aposJogo(false, res.golsFora(), res.golsCasa(), fora.forca(), casa.forca(),
+							parametros));
+				}
+				Set<Clube> trocados = new HashSet<>();
+				List<Clube> ordem = todos.stream().sorted(Comparator.comparingInt(Clube::forca).reversed()).toList();
+				for (Clube clube : ordem) {
+					if (trocados.contains(clube) || !antes.get(clube).demite(moral.get(clube), parametros)) {
+						continue;
+					}
+					List<TrocaDeTreinador.Candidato> candidatos = todos.stream()
+						.filter(c -> c != clube && !trocados.contains(c))
+						.map(c -> new TrocaDeTreinador.Candidato(c.id(), c.forca(), moral.get(c), false))
+						.toList();
+					List<TrocaDeTreinador.Candidato> chamados = troca.chamados(clube.forca(), candidatos);
+					int i = todos.indexOf(clube);
+					if (chamados.isEmpty()) {
+						semChamado++;
+						semChamadoPorClube[i]++;
+						continue;
+					}
+					Clube chamado = todos.stream().filter(c -> c.id() == chamados.get(0).clubeId()).findFirst().orElseThrow();
+					int k = todos.indexOf(chamado);
+					trocasPorClube[i]++;
+					cedeu[k]++;
+					diferenca += clube.forca() - chamado.forca();
+					if (i < CLUBES) {
+						trocas1++;
+						if (k >= CLUBES) {
+							daSegunda++;
 						}
-						if (vermelhoAntes && !vermelhoDepois) {
-							salvos[i]++;
-						}
-						if (antes.demite(depois, parametros)) {
-							List<TrocaDeTreinador.Candidato> candidatos = new ArrayList<>();
-							for (Clube outro : clubes) {
-								if (outro != clube) {
-									candidatos.add(new TrocaDeTreinador.Candidato(outro.id(), outro.forca(), moral.get(outro), false));
-								}
-							}
-							List<TrocaDeTreinador.Candidato> chamados = troca.chamados(clube.forca(), candidatos);
-							if (chamados.isEmpty()) {
-								semChamado[i]++;
-								totalSemChamado++;
-								moral.put(clube, depois);
-								continue;
-							}
-							Clube chamado = clubes.get((int) chamados.get(0).clubeId() - 1);
-							cedeu[clubes.indexOf(chamado)]++;
-							somaDiferenca += clube.forca() - chamado.forca();
-							moral.put(chamado, troca.moralDepoisDaTroca());
-							demissoes[i]++;
-							totalDemissoes++;
-							demissoesPorRodada[rodada.numero()]++;
-							if (naTemporada[i]++ == 0) {
-								rodadaPrimeira[i] += rodada.numero();
-							}
-							depois = troca.moralDepoisDaTroca();
-						}
-						moral.put(clube, depois);
+					} else {
+						trocas2++;
+					}
+					moral.put(clube, troca.moralDepoisDaTroca());
+					moral.put(chamado, troca.moralDepoisDaTroca());
+					trocados.add(clube);
+					trocados.add(chamado);
+				}
+			}
+			for (int i = 0; i < todos.size(); i++) {
+				if (moral.get(todos.get(i)).faixa(parametros) == Moral.Faixa.VERMELHO) {
+					if (i < CLUBES) {
+						vermelho1++;
+					} else {
+						vermelho2++;
 					}
 				}
 			}
-			for (int i = 0; i < CLUBES; i++) {
-				if (naTemporada[i] > 0) {
-					temporadasComDemissao[i]++;
-				}
-			}
 		}
+		long trocas = trocas1 + trocas2;
+		return new Medidas((double) trocas1 / TEMPORADAS, (double) trocas2 / TEMPORADAS, (double) semChamado / TEMPORADAS,
+				trocas1 == 0 ? 0 : 100.0 * daSegunda / trocas1, 100.0 * vermelho1 / (TEMPORADAS * CLUBES),
+				100.0 * vermelho2 / (TEMPORADAS * CLUBES), trocas == 0 ? 0 : diferenca / trocas, trocasPorClube, cedeu,
+				semChamadoPorClube);
+	}
 
-		md.append("## ").append(titulo).append("\n\n");
-		md.append("Trocas por temporada na divisão (média): **").append(f((double) totalDemissoes / TEMPORADAS, 1))
-			.append("**; diferença média de força entre o clube que demitiu e o que cedeu o treinador: **")
-			.append(f(totalDemissoes == 0 ? 0 : somaDiferenca / totalDemissoes, 1))
-			.append("**. Jogos decisivos perdidos sem ninguém para chamar (o treinador fica): **")
-			.append(f((double) totalSemChamado / TEMPORADAS, 1)).append("** por temporada.\n\n");
-		md.append("| Força | Trocas por temporada | Temporadas com troca | Rodada da 1ª troca (média) ")
-			.append("| Entradas no vermelho por temporada | Saídas do vermelho no jogo decisivo ")
-			.append("| Decisivos perdidos sem chamado | Vezes que cedeu o treinador |\n");
-		md.append("|---|---|---|---|---|---|---|---|\n");
+	/** 20 clubes com forças espalhadas de {@code maior} a {@code menor}. */
+	private static List<Clube> divisao(long primeiroId, int maior, int menor) {
+		List<Clube> clubes = new ArrayList<>();
 		for (int i = 0; i < CLUBES; i++) {
-			md.append("| ").append(clubes.get(i).forca())
-				.append(" | ").append(f((double) demissoes[i] / TEMPORADAS, 2))
-				.append(" | ").append(f(100.0 * temporadasComDemissao[i] / TEMPORADAS, 1)).append("%")
-				.append(" | ").append(temporadasComDemissao[i] == 0 ? "–" : f((double) rodadaPrimeira[i] / temporadasComDemissao[i], 1))
-				.append(" | ").append(f((double) entradasNoVermelho[i] / TEMPORADAS, 2))
-				.append(" | ").append(entradasNoVermelho[i] == 0 ? "–" : f(100.0 * salvos[i] / entradasNoVermelho[i], 0) + "%")
-				.append(" | ").append(f((double) semChamado[i] / TEMPORADAS, 2))
-				.append(" | ").append(f((double) cedeu[i] / TEMPORADAS, 2))
-				.append(" |\n");
+			int forca = (int) Math.round(maior - (double) (maior - menor) * i / (CLUBES - 1));
+			clubes.add(new Clube(primeiroId + i, "F" + forca + "-" + i, forca));
 		}
-		md.append("\nTrocas por trecho da temporada (% do total): ");
-		int rodadas = demissoesPorRodada.length - 1;
-		List<String> trechos = new ArrayList<>();
-		for (int inicio = 1; inicio <= rodadas; inicio += 10) {
-			int fim = Math.min(rodadas, inicio + 9);
-			long soma = 0;
-			for (int k = inicio; k <= fim; k++) {
-				soma += demissoesPorRodada[k];
-			}
-			trechos.add("rodadas " + inicio + "–" + fim + " " + f(totalDemissoes == 0 ? 0 : 100.0 * soma / totalDemissoes, 0) + "%");
-		}
-		md.append(String.join("; ", trechos)).append(".\n\n");
+		return clubes;
+	}
+
+	private static ParametrosMoral comAjuste(ParametrosMoral p, double diferencaPorPonto, int ajusteMaximo) {
+		return new ParametrosMoral(p.minimo(), p.maximo(), p.inicial(), p.vitoriaEmCasa(), p.vitoriaFora(),
+				p.empateEmCasa(), p.empateFora(), p.derrotaEmCasa(), p.derrotaFora(), p.limiteVerde(), p.limiteAmarelo(),
+				p.divisorRetorno(), diferencaPorPonto, ajusteMaximo);
 	}
 
 	private static Escalacao escalacao(Clube clube) {

@@ -1,5 +1,7 @@
 package br.com.managerfoot.dominio;
 
+import java.util.Comparator;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -24,6 +26,12 @@ public record Clube(long id, String nome, int forca, Escudo escudo) {
 			throw new IllegalArgumentException("força de " + nome + " deve estar entre " + Jogador.FORCA_MINIMA + " e "
 					+ Jogador.FORCA_MAXIMA + ", mas foi " + forca);
 		}
+	}
+
+	/** Força em campo (SPEC §4.3): média dos 11 jogadores mais fortes do plantel; 0 sem jogadores. */
+	public static double forcaEmCampo(List<Jogador> plantel) {
+		return plantel.stream().mapToInt(Jogador::forca).boxed().sorted(Comparator.reverseOrder()).limit(11)
+			.mapToInt(Integer::intValue).average().orElse(0);
 	}
 
 	/** Clube ainda sem escudo cadastrado: usa {@link Escudo#NEUTRO}. */

@@ -30,15 +30,15 @@ Ocupação: 45% com moral inicial e adversário de mesma força; moral máxima s
 
 | Divisão | Forças | Público médio | Ocupação | Bilheteria por jogo | Receita líquida | Folha | Resultado | Fecham no vermelho |
 |---|---|---|---|---|---|---|---|---|
-| 1ª | 35–50 | 20.621 | 41% | R$ 824.836 | R$ 11.985.512 | R$ 8.442.824 | R$ 3.542.688 | 15% |
-| 2ª | 23–30 | 6.141 | 41% | R$ 245.622 | R$ 3.342.253 | R$ 2.488.681 | R$ 853.572 | 22% |
+| 1ª | 35–50 | 17.963 | 39% | R$ 718.524 | R$ 10.296.135 | R$ 8.442.824 | R$ 1.853.311 | 28% |
+| 2ª | 23–30 | 5.715 | 39% | R$ 228.596 | R$ 3.071.699 | R$ 2.488.681 | R$ 583.018 | 29% |
 
 ## Resultado da temporada por terço de força dentro da divisão
 
 | Divisão | Mais fortes | Medianos | Mais fracos | Saldo final mínimo |
 |---|---|---|---|---|
-| 1ª | R$ 6.713.484 | R$ 2.917.398 | R$ 643.640 | R$ -836.170 |
-| 2ª | R$ 1.567.508 | R$ 742.436 | R$ 167.049 | R$ -664.981 |
+| 1ª | R$ 432.094 | R$ 2.434.825 | R$ 2.809.639 | R$ -4.712.140 |
+| 2ª | R$ 529.781 | R$ 582.966 | R$ 643.710 | R$ -885.916 |
 
 *Receita líquida* é bilheteria menos custo do jogo e deslocamento. *Resultado* é a receita líquida menos a folha. *Fecham no vermelho*: clubes cujo resultado da temporada é negativo (o saldo inicial cobre 10 rodadas de folha).
 
@@ -65,11 +65,11 @@ Por terço de força dentro da divisão: força média do terço, preço de um j
 
 | Divisão | Terço | Força média | Preço | Saldo inicial compra | Resultado da temporada compra |
 |---|---|---|---|---|---|
-| 1ª | Mais fortes | 47,6 | R$ 1.519.000 | 2,1 | 4,4 |
-| 1ª | Medianos | 42,2 | R$ 955.000 | 2,2 | 3,1 |
-| 1ª | Mais fracos | 37,0 | R$ 675.000 | 2,1 | 1,0 |
-| 2ª | Mais fortes | 29,1 | R$ 369.000 | 2,1 | 4,2 |
-| 2ª | Medianos | 26,4 | R$ 299.000 | 2,2 | 2,5 |
-| 2ª | Mais fracos | 24,1 | R$ 247.000 | 2,2 | 0,7 |
+| 1ª | Mais fortes | 47,6 | R$ 1.519.000 | 2,1 | 0,3 |
+| 1ª | Medianos | 42,2 | R$ 955.000 | 2,2 | 2,5 |
+| 1ª | Mais fracos | 37,0 | R$ 675.000 | 2,1 | 4,2 |
+| 2ª | Mais fortes | 29,1 | R$ 369.000 | 2,1 | 1,4 |
+| 2ª | Medianos | 26,4 | R$ 299.000 | 2,2 | 1,9 |
+| 2ª | Mais fracos | 24,1 | R$ 247.000 | 2,2 | 2,6 |
 
 Vender um jogador rende o preço (ou o lance do leilão) e tira o salário dele da folha. Ainda fora: patrocínio, premiação e regra de lance da máquina.

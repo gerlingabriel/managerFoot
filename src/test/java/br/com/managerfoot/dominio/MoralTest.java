@@ -45,12 +45,12 @@ class MoralTest {
 	@Test
 	void retornoLevePuxaParaOValorInicial() {
 		ParametrosMoral comRetorno = ParametrosMoral.padrao();
-		assertThat(comRetorno.divisorRetorno()).isEqualTo(12);
-		// 0 + empate fora (0) + (22 - 0) / 12 = 1
+		assertThat(comRetorno.divisorRetorno()).isEqualTo(20);
+		// 0 + empate fora (0) + (22 - 0) / 20 = 1
 		assertThat(new Moral(0).aposJogo(false, 0, 0, comRetorno).valor()).isEqualTo(1);
-		// 7 + vitória em casa (2) + (22 - 7) / 12 = 10: sai do vermelho
-		assertThat(new Moral(7).aposJogo(true, 1, 0, comRetorno).valor()).isEqualTo(10);
-		// 30 + empate fora (0) + (22 - 30) / 12 = 30: com a moral inicial 22, o topo quase não é puxado
+		// 2 + vitória em casa (2) + (22 - 2) / 20 = 5
+		assertThat(new Moral(2).aposJogo(true, 1, 0, comRetorno).valor()).isEqualTo(5);
+		// 30 + empate fora (0) + (22 - 30) / 20 = 30: com a moral inicial 22, o topo quase não é puxado
 		assertThat(new Moral(30).aposJogo(false, 0, 0, comRetorno).valor()).isEqualTo(30);
 		// perto do centro o retorno é zero
 		assertThat(new Moral(24).aposJogo(false, 0, 0, comRetorno).valor()).isEqualTo(24);
@@ -77,21 +77,41 @@ class MoralTest {
 	@Test
 	void quemEntraNoVermelhoEhDemitidoSeOJogoSeguinteNaoTiraDoVermelho() {
 		ParametrosMoral padrao = ParametrosMoral.padrao();
-		// 8 + derrota em casa (-3) + (22 - 8) / 12 = 6
-		Moral entrouNoVermelho = new Moral(8).aposJogo(true, 0, 1, padrao);
+		// 9 + derrota em casa (-3) + (22 - 9) / 20 = 6
+		Moral entrouNoVermelho = new Moral(9).aposJogo(true, 0, 1, padrao);
 		assertThat(entrouNoVermelho).isEqualTo(new Moral(6));
 		// o jogo que leva ao vermelho não demite
-		assertThat(new Moral(8).demite(entrouNoVermelho, padrao)).isFalse();
+		assertThat(new Moral(9).demite(entrouNoVermelho, padrao)).isFalse();
 
-		// vitória em casa (9) e empate fora (7) voltam ao amarelo e salvam
+		// contra um adversário de mesma força: a vitória em casa (8) salva
 		assertThat(entrouNoVermelho.demite(entrouNoVermelho.aposJogo(true, 2, 0, padrao), padrao)).isFalse();
-		assertThat(entrouNoVermelho.demite(entrouNoVermelho.aposJogo(false, 1, 1, padrao), padrao)).isFalse();
-		// derrota (5) e empate em casa (6) não saem do vermelho e demitem
+		// derrota (4), empate fora (6) e empate em casa (5) não saem do vermelho e demitem
 		assertThat(entrouNoVermelho.demite(entrouNoVermelho.aposJogo(false, 0, 1, padrao), padrao)).isTrue();
+		assertThat(entrouNoVermelho.demite(entrouNoVermelho.aposJogo(false, 1, 1, padrao), padrao)).isTrue();
 		assertThat(entrouNoVermelho.demite(entrouNoVermelho.aposJogo(true, 1, 1, padrao), padrao)).isTrue();
+		// empate fora contra um adversário 6 pontos mais forte vale +2 e salva (8)
+		assertThat(entrouNoVermelho.demite(entrouNoVermelho.aposJogo(false, 1, 1, 30, 36, padrao), padrao)).isFalse();
 		// vitória que não basta para sair do vermelho também demite
 		Moral zero = new Moral(0);
 		assertThat(zero.aposJogo(true, 1, 0, padrao).faixa(padrao)).isEqualTo(Moral.Faixa.VERMELHO);
 		assertThat(zero.demite(zero.aposJogo(true, 1, 0, padrao), padrao)).isTrue();
+	}
+
+	@Test
+	void aSurpresaValeMaisEOResultadoEsperadoValeONormal() {
+		ParametrosMoral padrao = ParametrosMoral.padrao();
+		Moral meio = new Moral(22);
+		// favorito (50 contra 41, 9 pontos = 3 a mais): vitória normal, empate e derrota piores
+		assertThat(meio.aposJogo(true, 1, 0, 50, 41, padrao)).isEqualTo(new Moral(24));
+		assertThat(meio.aposJogo(true, 1, 1, 50, 41, padrao)).isEqualTo(new Moral(18));
+		assertThat(meio.aposJogo(true, 0, 1, 50, 41, padrao)).isEqualTo(new Moral(16));
+		// azarão: derrota normal, empate e vitória melhores
+		assertThat(meio.aposJogo(false, 0, 1, 41, 50, padrao)).isEqualTo(new Moral(20));
+		assertThat(meio.aposJogo(false, 1, 1, 41, 50, padrao)).isEqualTo(new Moral(25));
+		assertThat(meio.aposJogo(false, 1, 0, 41, 50, padrao)).isEqualTo(new Moral(28));
+		// a diferença conta no máximo 3 pontos: 50 contra 20 é igual a 50 contra 41
+		assertThat(meio.aposJogo(true, 0, 1, 50, 20, padrao)).isEqualTo(new Moral(16));
+		// menos de 1,5 ponto de diferença não conta (arredonda para 0)
+		assertThat(meio.aposJogo(true, 0, 1, 30, 28.6, padrao)).isEqualTo(meio.aposJogo(true, 0, 1, padrao));
 	}
 }

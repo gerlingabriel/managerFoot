@@ -22,13 +22,14 @@ class TrocaDeTreinadorTest {
 		List<Candidato> clubes = List.of(maquina(1, 40, VERDE), maquina(2, 35, VERDE), maquina(3, 31, AMARELA),
 				maquina(4, 29, VERDE), maquina(5, 20, VERDE));
 
-		assertThat(troca.chamados(35, clubes)).extracting(Candidato::clubeId).containsExactly(4L, 5L);
+		// o de força 20 fica 15 abaixo, além do limite de 12
+		assertThat(troca.chamados(35, clubes)).extracting(Candidato::clubeId).containsExactly(4L);
 	}
 
 	@Test
 	void usuarioEntreOsTresMaisFortesDecidePrimeiro() {
-		List<Candidato> clubes = List.of(maquina(1, 30, VERDE), maquina(2, 28, VERDE), usuario(3, 26, VERDE),
-				maquina(4, 24, VERDE), usuario(5, 22, VERDE));
+		List<Candidato> clubes = List.of(maquina(1, 34, VERDE), maquina(2, 32, VERDE), usuario(3, 30, VERDE),
+				maquina(4, 28, VERDE), usuario(5, 26, VERDE));
 
 		// o usuário 3 está entre os 3 mais fortes; o usuário 5 não, e fica na ordem da força
 		assertThat(troca.chamados(35, clubes)).extracting(Candidato::clubeId).containsExactly(3L, 1L, 2L, 4L, 5L);
@@ -49,6 +50,14 @@ class TrocaDeTreinadorTest {
 		List<Candidato> clubes = List.of(maquina(9, 30, VERDE), maquina(7, 30, VERDE), maquina(8, 35, VERDE));
 
 		assertThat(troca.chamados(35, clubes)).extracting(Candidato::clubeId).containsExactly(7L, 9L);
+	}
+
+	@Test
+	void clubeDoisPontosAlemDeDozeAbaixoNaoPodeAssumir() {
+		// força 50 com moral vermelha: o de força 20 não serve; o de 38 (12 abaixo) serve
+		List<Candidato> clubes = List.of(maquina(1, 20, VERDE), maquina(2, 37.9, VERDE), maquina(3, 38, VERDE));
+
+		assertThat(troca.chamados(50, clubes)).extracting(Candidato::clubeId).containsExactly(3L);
 	}
 
 	@Test

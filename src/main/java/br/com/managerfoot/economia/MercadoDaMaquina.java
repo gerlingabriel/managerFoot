@@ -100,8 +100,7 @@ public final class MercadoDaMaquina {
 
 	/** Força em campo: média dos 11 jogadores mais fortes do plantel. */
 	public static double forcaEmCampo(List<Jogador> plantel) {
-		return plantel.stream().map(Jogador::forca).sorted(Comparator.reverseOrder()).limit(11)
-			.mapToInt(Integer::intValue).average().orElse(0);
+		return Clube.forcaEmCampo(plantel);
 	}
 
 	/**
