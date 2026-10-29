@@ -243,12 +243,41 @@ public class ConsultasRepositorio {
 				Long usuario = (Long) rs.getObject("usuario_id");
 				porAno.computeIfAbsent(rs.getInt("ano"), a -> new HashMap<>()).put(rs.getInt("divisao_prioridade"),
 						new CampeaoNoAno(rs.getString("clube_nome"), rs.getString("treinador"),
-								usuario != null && usuario == usuarioId));
+								usuario != null && usuario == usuarioId, null));
 			});
+		// a copa (modelo 12e, rev. 71): campeão, treinador e o placar da final do ponto de vista dele
+		Map<Integer, CampeaoNoAno> copas = new HashMap<>();
+		jdbc.sql("""
+				SELECT c.ano, c.clube_id, c.clube_nome, c.vice_nome, c.usuario_id, coalesce(u.nome, m.nome) AS treinador,
+				       p.mandante_id, p.gols_mandante, p.gols_visitante, p.penaltis_mandante, p.penaltis_visitante
+				FROM jogo_campeao_copa c
+				LEFT JOIN usuario u ON u.id = c.usuario_id
+				LEFT JOIN jogo_treinador_maquina m ON m.id = c.treinador_maquina_id
+				LEFT JOIN jogo_temporada t ON t.jogo_id = c.jogo_id AND t.numero = c.temporada
+				LEFT JOIN jogo_partida p ON p.temporada_id = t.id AND p.perna = 'JOGO_UNICO'
+				WHERE c.jogo_id = :jogo""")
+			.param("jogo", jogoId)
+			.query(rs -> {
+				Long usuario = (Long) rs.getObject("usuario_id");
+				String fin = null;
+				if (rs.getObject("gols_mandante") != null) {
+					boolean emCasa = rs.getLong("mandante_id") == rs.getLong("clube_id");
+					int gols = rs.getInt(emCasa ? "gols_mandante" : "gols_visitante");
+					int sofridos = rs.getInt(emCasa ? "gols_visitante" : "gols_mandante");
+					Integer penMandante = (Integer) rs.getObject("penaltis_mandante");
+					String penaltis = penMandante == null ? ""
+							: ", pên. " + rs.getInt(emCasa ? "penaltis_mandante" : "penaltis_visitante") + " x "
+									+ rs.getInt(emCasa ? "penaltis_visitante" : "penaltis_mandante");
+					fin = "final " + gols + " x " + sofridos + penaltis + " sobre " + rs.getString("vice_nome");
+				}
+				copas.put(rs.getInt("ano"), new CampeaoNoAno(rs.getString("clube_nome"), rs.getString("treinador"),
+						usuario != null && usuario == usuarioId, fin));
+			});
+		copas.keySet().forEach(ano -> porAno.computeIfAbsent(ano, a -> new HashMap<>()));
 		List<AbaDivisao> divisoes = abas(jogos.carregarLiga(jogoId));
 		List<AnoNoHistorico> anos = new ArrayList<>();
 		porAno.forEach((ano, campeoes) -> anos.add(new AnoNoHistorico(ano,
-				divisoes.stream().map(d -> campeoes.get(d.prioridade())).toList())));
+				divisoes.stream().map(d -> campeoes.get(d.prioridade())).toList(), copas.get(ano))));
 		List<TreinadorNoRanking> ranking = new ArrayList<>();
 		jdbc.sql("""
 				SELECT c.usuario_id, coalesce(u.nome, m.nome) AS nome, coalesce(cu.nome, cm.nome) AS clube, count(*) AS titulos
@@ -272,7 +301,7 @@ public class ConsultasRepositorio {
 				ranking.add(new TreinadorNoRanking(posicao, rs.getString("nome"), rs.getString("clube"), titulos,
 						usuario != null && usuario == usuarioId));
 			});
-		return new VisaoHistorico(divisoes, anos, ranking);
+		return new VisaoHistorico(divisoes, anos, ranking, !copas.isEmpty());
 	}
 
 	/** A divisão pedida, ou a do clube do usuário (a última, se ele está na fila). */
@@ -300,16 +329,24 @@ public class ConsultasRepositorio {
 	/**
 	 * @param divisoes colunas dos campeões, na ordem das divisões
 	 * @param anos do mais recente ao mais antigo
+	 * @param temCopa alguma copa já terminou: mostra a coluna Copa
 	 */
-	public record VisaoHistorico(List<AbaDivisao> divisoes, List<AnoNoHistorico> anos, List<TreinadorNoRanking> ranking) {
+	public record VisaoHistorico(List<AbaDivisao> divisoes, List<AnoNoHistorico> anos, List<TreinadorNoRanking> ranking,
+			boolean temCopa) {
 	}
 
-	/** @param campeoes um por divisão, na ordem de {@link VisaoHistorico#divisoes()}; nulo se não houve */
-	public record AnoNoHistorico(int ano, List<CampeaoNoAno> campeoes) {
+	/**
+	 * @param campeoes um por divisão, na ordem de {@link VisaoHistorico#divisoes()}; nulo se não houve
+	 * @param copa campeão da copa; nulo se não houve
+	 */
+	public record AnoNoHistorico(int ano, List<CampeaoNoAno> campeoes, CampeaoNoAno copa) {
 	}
 
-	/** @param seu o treinador era o usuário que vê a tela */
-	public record CampeaoNoAno(String clube, String treinador, boolean seu) {
+	/**
+	 * @param seu o treinador era o usuário que vê a tela
+	 * @param detalhe na copa, o placar da final ("final 1 x 1, pên. 4 x 3 sobre Vice"); nulo na liga
+	 */
+	public record CampeaoNoAno(String clube, String treinador, boolean seu, String detalhe) {
 	}
 
 	/** @param clube clube atual do treinador; nulo se ele está sem clube */

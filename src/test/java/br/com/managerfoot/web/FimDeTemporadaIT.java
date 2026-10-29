@@ -114,7 +114,12 @@ class FimDeTemporadaIT {
 			.andExpect(status().isOk())
 			.andExpect(content().string(containsString(">2026<")))
 			.andExpect(content().string(containsString(campeao)))
-			.andExpect(content().string(not(containsString("Ninguém foi campeão ainda."))));
+			.andExpect(content().string(not(containsString("Ninguém foi campeão ainda."))))
+			// a coluna Copa com o campeão e o placar da final (modelo 12e, rev. 71)
+			.andExpect(content().string(containsString(">Copa</th>")))
+			.andExpect(content().string(containsString(jdbc.sql("SELECT clube_nome FROM jogo_campeao_copa WHERE jogo_id = :j")
+				.param("j", jogoId).query(String.class).single())))
+			.andExpect(content().string(containsString("final ")));
 		boolean naFila = jdbc.sql("""
 				SELECT c.divisao_id IS NULL FROM jogo_treinador t JOIN jogo_clube c ON c.id = t.clube_id
 				WHERE t.jogo_id = :j""").param("j", jogoId).query(Boolean.class).single();

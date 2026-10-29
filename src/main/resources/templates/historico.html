@@ -13,25 +13,29 @@
 <div class="painel-titulo painel-cabecalho">
 <div class="pilha-curta">
 <h1 id="t-campeoes" class="titulo-secao pequeno">Campeões</h1>
-<span class="suave">Por ano, mais recente primeiro · treinador embaixo do clube</span>
+<span class="suave" th:text="${h.temCopa} ? 'Por ano, mais recente primeiro · treinador embaixo do clube · Copa ao lado da ' + ${h.divisoes[0].nome} : 'Por ano, mais recente primeiro · treinador embaixo do clube'">Por ano</span>
 </div>
 </div>
 <p th:if="${h.anos.isEmpty()}" class="texto linha-jogo">Nenhuma temporada terminou ainda.</p>
 <div th:unless="${h.anos.isEmpty()}" class="rolagem">
 <table class="tabela-classificacao tabela-historico">
 <thead>
-<tr><th scope="col">Ano</th><th scope="col" th:each="d : ${h.divisoes}" th:text="${d.nome}">Série A</th></tr>
+<tr><th scope="col">Ano</th><th:block th:each="d, i : ${h.divisoes}"><th scope="col" th:text="${d.nome}">Série A</th>
+<th th:if="${i.first and h.temCopa}" scope="col" class="historico-copa">Copa</th></th:block></tr>
 </thead>
 <tbody>
 <tr th:each="a : ${h.anos}">
 <th scope="row" class="historico-ano" th:text="${a.ano}">2026</th>
-<td th:each="c : ${a.campeoes}" th:classappend="${c != null and c.seu} ? 'seu'">
+<th:block th:each="campeao, i : ${a.campeoes}">
+<td th:each="c : ${i.first and h.temCopa ? {campeao, a.copa} : {campeao}}" th:classappend="${c != null and c.seu} ? 'seu'">
 <th:block th:if="${c != null}">
 <span class="historico-clube" th:text="${c.clube}">Clube</span>
 <span class="historico-treinador" th:text="${c.seu} ? |${c.treinador} (você)| : ${c.treinador}">Treinador</span>
+<span th:if="${c.detalhe != null}" class="historico-final" th:text="${c.detalhe}">final 2 x 1 sobre Vice</span>
 </th:block>
 <span th:if="${c == null}" class="suave">—</span>
 </td>
+</th:block>
 </tr>
 </tbody>
 </table>
@@ -59,7 +63,7 @@
 </tr>
 </tbody>
 </table>
-<p class="suave historico-nota" th:text="|Só aparece quem já ganhou a ${h.divisoes[0].nome}. Títulos das outras divisões ficam só na lista de campeões.|">nota</p>
+<p class="suave historico-nota" th:text="|Só aparece quem já ganhou a ${h.divisoes[0].nome}. Títulos da copa e das outras divisões ficam só na lista de campeões.|">nota</p>
 </section>
 </div>
 </div>

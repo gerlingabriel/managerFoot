@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 70 — 2026-10-29)
+-   **Status:** versão inicial para revisão (rev. 71 — 2026-10-29)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 71 (2026-10-29):** pelo usuário: modelos 12a a 12f da copa aprovados (aba Copa, etapa ao vivo com "Ida · total" e prorrogação, próximo jogo no plantel, calendário, coluna Copa no Histórico, linhas da copa no extrato com o quadro "Copa na temporada"); as propostas provisórias da rev. 70 (chave fixa, prorrogação, ordem dos batedores, público da final, clique na etapa sem o clube) passam a Definido (§8.2).
 -   **rev. 70 (2026-10-29):** pelo usuário: partida de copa com os efeitos da liga menos o salário, na mesma tela da rodada, título no Histórico e não no ranking; sem gol fora de casa (empate no placar somado vai à prorrogação e aos pênaltis), mando da ida por sorteio, prêmio da copa igual ao do campeão da 1ª divisão e metade para o vice, "mais fraco" é a força em campo no início da temporada, liga de 1 divisão com menos de 16 clubes usa a maior potência de 2 (§8.2). Domínio da copa e prorrogação/pênaltis no motor feitos; propostas do agente marcadas Provisório; simulação em `docs/simulacoes/copa.md`.
 -   **rev. 69 (2026-10-29):** pelo usuário: lesões no máximo 2 por clube por temporada, gravidade leve/média/grave com jogos fora e perda de força (§7.5), temperamento calmo > educado > normal > ansioso > violento, substituição do usuário na hora e automática na máquina; copa com 32 clubes (2 divisões) ou 16 (1 divisão), quadro fixo de rodadas da liga, final depois da liga em campo neutro com bilheteria 50/50 e prêmio do campeão e do vice (§8.2).
 -   **rev. 68 (2026-10-29):** pelo usuário: plantel mínimo de 14 nas vendas mantido (evitar o time incompleto), mas com menos de 11 a partida começa como se fosse com expulsos; sem goleiro disponível, o usuário joga com um jogador de linha no gol, como a máquina (§9.3).
@@ -1530,6 +1531,38 @@ etapa, o usuário ainda clica "Confirmar e jogar a copa" e a etapa corre
 rápida. Textos do plantel ("Próximo jogo · Copa · Oitavas de final ·
 ida", "Seu clube não joga") e do quadro ("Pênaltis 4 x 3") feitos sem
 modelo, a aprovar junto com as telas da copa.
+
+**Definido (rev. 71), pelo usuário:** as propostas marcadas Provisório acima
+(chave fixa, prorrogação de 30 minutos, disputa e ordem dos batedores, fila
+de espera fora da copa, público e ingresso da final, clique obrigatório na
+etapa sem o clube do usuário) foram aprovadas junto com os modelos das telas.
+
+**Definido (rev. 71), modelos 12a a 12f aprovados — telas da copa:**
+- **12a · Aba Copa** (entre Classificação e Artilheiros): seletor das fases
+  com o momento de cada uma ("depois das rodadas 18 e 20"; feita, atual ou
+  futura); confrontos da fase escolhida com Nº, clube que jogou a ida em
+  casa, ida, volta, outro clube e total (com "pên. 4 x 3" ou "prorrogação"
+  quando houver); quem passa em destaque e quem sai apagado/riscado; quadro
+  "Chave até a final" com os confrontos seguintes ("Venc. 3 × Venc. 4") e a
+  lista dos clubes fora da copa. O clube do usuário em destaque.
+- **12b · Etapa ao vivo:** título "Copa · <fase> · <perna>"; na volta, coluna
+  **Ida · total** (placar da ida e total na ordem do mandante da volta; total
+  empatado em amarelo); na ida, "1º jogo"; na final a coluna some. Relógio
+  até 120 com "prorrogação"; só os empatados no total seguem depois do 90'.
+  Último lance ao fim: "Fim · passa X" ou "Pênaltis 4 x 3 · passa X".
+- **12c · Plantel:** "Próximo jogo · Copa · <fase> · <perna>" com o local e o
+  adversário e uma linha de detalhe (ida já jogada; motivo da saída, quando o
+  clube não joga; "campo neutro" na final). Botões "Confirmar e jogar a
+  copa" e, na final, "Confirmar e jogar a final".
+- **12d · Calendário do clube:** coluna "Jogo" com "Rodada N" ou "Copa ·
+  <fase> · <perna>" em amarelo, na ordem em que são jogados; na volta, o
+  total embaixo do placar (e os pênaltis).
+- **12e · Histórico:** coluna **Copa** ao lado da 1ª divisão, com clube,
+  treinador e o placar da final; o ranking segue só com a 1ª divisão.
+- **12f · Finanças:** linhas da copa com "Copa" na coluna da rodada, sem
+  salário, na ordem jogada; a final com bilheteria e custo divididos e o
+  prêmio da copa na mesma linha; quadro **Copa na temporada** com a soma só
+  da copa (bilheteria, prêmio e custos).
 
 **Definido (rev. 70), pelo usuário — partida de copa na temporada:**
 - **Efeitos iguais aos da liga, sem salário:** o mandante fica com a
