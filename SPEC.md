@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 71 — 2026-10-29)
+-   **Status:** versão inicial para revisão (rev. 72 — 2026-10-29)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 72 (2026-10-29):** pelo usuário: competição continental só da região do país jogado, fase de grupos + mata-mata com 32 clubes e vagas padrão somando 32 (sem fase preliminar), estrangeiros gerados pelo banco padrão, vagas do país jogado pela liga anterior com o campeão da copa ocupando uma delas, sem vaga extra do campeão continental (§8.3.6). Agente: vagas padrão da América do Sul e da Europa (com fonte), grupos, oitavas e quadro de rodadas marcados Provisório.
 -   **rev. 71 (2026-10-29):** pelo usuário: modelos 12a a 12f da copa aprovados (aba Copa, etapa ao vivo com "Ida · total" e prorrogação, próximo jogo no plantel, calendário, coluna Copa no Histórico, linhas da copa no extrato com o quadro "Copa na temporada"); as propostas provisórias da rev. 70 (chave fixa, prorrogação, ordem dos batedores, público da final, clique na etapa sem o clube) passam a Definido (§8.2).
 -   **rev. 70 (2026-10-29):** pelo usuário: partida de copa com os efeitos da liga menos o salário, na mesma tela da rodada, título no Histórico e não no ranking; sem gol fora de casa (empate no placar somado vai à prorrogação e aos pênaltis), mando da ida por sorteio, prêmio da copa igual ao do campeão da 1ª divisão e metade para o vice, "mais fraco" é a força em campo no início da temporada, liga de 1 divisão com menos de 16 clubes usa a maior potência de 2 (§8.2). Domínio da copa e prorrogação/pênaltis no motor feitos; propostas do agente marcadas Provisório; simulação em `docs/simulacoes/copa.md`.
 -   **rev. 69 (2026-10-29):** pelo usuário: lesões no máximo 2 por clube por temporada, gravidade leve/média/grave com jogos fora e perda de força (§7.5), temperamento calmo > educado > normal > ansioso > violento, substituição do usuário na hora e automática na máquina; copa com 32 clubes (2 divisões) ou 16 (1 divisão), quadro fixo de rodadas da liga, final depois da liga em campo neutro com bilheteria 50/50 e prêmio do campeão e do vice (§8.2).
@@ -1668,6 +1669,67 @@ Se a ausência de representantes impedir a realização do formato previsto, o s
 
 - O editor deverá poder personalizar os nomes das competições.
 - A quantidade de vagas por país deverá ser configurável individualmente em cada competição continental.
+
+#### 8.3.6 Primeira versão da continental (rev. 72)
+
+**Definido (rev. 72), pelo usuário:**
+- **Escopo:** só a competição continental da **região do país jogado**. As
+  outras regiões e o Mundial (§8.3.4, formato Em aberto) ficam para depois.
+- **Formato:** **fase de grupos + mata-mata**. O mata-mata segue o formato
+  definido da §8.2 (ida e volta, final única, prorrogação e pênaltis).
+- **32 clubes nos grupos, sem fase preliminar:** as vagas padrão de cada
+  região já somam 32.
+- **Clubes estrangeiros:** gerados pelo banco padrão (só país, força e
+  plantel; suas ligas não são jogadas), como o gerador já faz com o país
+  jogado. O editor pode trocá-los.
+- **Classificação do país jogado:** as vagas vão aos primeiros da 1ª
+  divisão na temporada anterior, e o **campeão da copa** ocupa uma delas (se
+  já classificado pela liga, a vaga passa ao próximo da liga). Na 1ª
+  temporada não há classificação anterior: por força com sorteio
+  (§8.3.2 item 2). Os países não jogados escolhem sempre por força com
+  sorteio.
+- **Sem vaga extra** para o campeão continental anterior: ele só entra se
+  classificar pelo seu país.
+
+**Provisório (rev. 72), proposta do agente — a ajustar:**
+- **Vagas padrão** (somam 32). Base: a fase de grupos real, com fonte e data:
+  - **América do Sul** — Libertadores 2026 (Wikipedia, "2026 Copa
+    Libertadores", seção de vagas, consultada em 2026-10-29: 28 vagas diretas
+    nos grupos, Brasil e Argentina 6, demais 2; mais 4 da fase preliminar).
+    Proposta: **Brasil 7, Argentina 6, Chile 3, Colômbia 3, Uruguai 3,
+    Bolívia 2, Equador 2, Paraguai 2, Peru 2, Venezuela 2**. As 4 vagas da
+    fase preliminar foram para o Brasil (maior número de vagas) e para Chile
+    e Colômbia (os que mais entram na 2ª fase preliminar); a do Uruguai segue
+    o exemplo da §8.3.2.
+  - **Europa** — ranking de países da UEFA (Wikipedia, "UEFA coefficient",
+    ranking de 22/10/2026, consultado em 2026-10-29). Proposta no modelo
+    antigo de 32 clubes: **Inglaterra, Itália, Espanha e Alemanha 4; França
+    e Portugal 3; Bélgica, Países Baixos e Turquia 2; Grécia, Tchéquia,
+    Polônia e Noruega 1**.
+  - América do Norte/Central e Caribe e Ásia: só quando houver país jogável
+    dessas regiões no banco padrão.
+- **Clubes estrangeiros gerados:** o dobro das vagas do país (para a escolha
+  por força com sorteio variar), com a faixa de força da 1ª divisão do
+  banco padrão (rev. 31). Não evoluem, não têm caixa nem mercado.
+  **Em aberto:** força relativa entre países (ex.: Venezuela mais fraca que
+  Brasil) — decidir por simulação.
+- **Grupos:** 8 grupos de 4, turno e returno; sorteio em 4 potes de 8 pela
+  força em campo, sem dois clubes do mesmo país no grupo quando possível.
+  Desempate: pontos, saldo, gols pró, sorteio. Passam os 2 primeiros.
+- **Oitavas:** cada 1º pega um 2º de outro grupo (sorteio); o 1º joga a volta
+  em casa. Depois, chave fixa como a da copa (§8.2).
+- **Quadro** pelas rodadas da liga, sem coincidir com a copa:
+
+  | Fase | Depois das rodadas |
+  |---|---|
+  | Grupos (6 jogos) | 2, 4, 7, 9, 14, 16 |
+  | Oitavas | 19 e 21 |
+  | Quartas | 22 e 24 |
+  | Semifinal | 25 e 27 |
+  | Final (jogo único, campo neutro) | depois da final da copa |
+- **Efeitos:** como a copa (os da liga menos o salário, mesma tela da
+  rodada, final com bilheteria 50/50, título no Histórico e não no ranking).
+  **Prêmio:** igual ao da copa por enquanto, a ajustar por simulação.
 
 ### 8.4 Regras de estrangeiros
 
