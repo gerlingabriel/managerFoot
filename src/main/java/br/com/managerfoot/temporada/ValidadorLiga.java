@@ -18,6 +18,8 @@ public final class ValidadorLiga {
 	/** Faixa de clubes por divisão (SPEC §4.1). */
 	public static final int MINIMO_CLUBES_POR_DIVISAO = 15;
 	public static final int MAXIMO_CLUBES_POR_DIVISAO = 20;
+	/** Divisões por país (SPEC §4.1, rev. 60): a 3ª foi retirada. */
+	public static final int MAXIMO_DIVISOES = 2;
 	/** A liga principal tem limite de força máximo (SPEC §4.2). */
 	public static final int LIMITE_FORCA_PRINCIPAL = Jogador.FORCA_MAXIMA;
 
@@ -34,6 +36,7 @@ public final class ValidadorLiga {
 			problemas.add("A liga precisa de ao menos uma divisão.");
 			return problemas;
 		}
+		validarQuantidadeDivisoes(divisoes.size(), problemas);
 
 		for (int i = 0; i < divisoes.size(); i++) {
 			Divisao divisao = divisoes.get(i);
@@ -80,6 +83,7 @@ public final class ValidadorLiga {
 			problemas.add("A liga precisa de ao menos uma divisão.");
 			return problemas;
 		}
+		validarQuantidadeDivisoes(divisoes.size(), problemas);
 		for (int i = 0; i < divisoes.size(); i++) {
 			FormatoDivisao d = divisoes.get(i);
 			if (d.prioridade() != i + 1) {
@@ -110,6 +114,12 @@ public final class ValidadorLiga {
 	private static void lancarSeHouver(List<String> problemas) {
 		if (!problemas.isEmpty()) {
 			throw new IllegalArgumentException("A liga não pode iniciar:\n- " + String.join("\n- ", problemas));
+		}
+	}
+
+	private static void validarQuantidadeDivisoes(int divisoes, List<String> problemas) {
+		if (divisoes > MAXIMO_DIVISOES) {
+			problemas.add("A liga tem " + divisoes + " divisões; o máximo é " + MAXIMO_DIVISOES + ".");
 		}
 	}
 

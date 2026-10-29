@@ -45,3 +45,16 @@ Opção 2.
 - A identificação do molde pelo nome é provisória. Quando houver molde
   pessoal (SPEC §3.5, em aberto), o molde padrão pode ganhar uma marcação
   própria.
+
+## Adendo (2026-10-29, SPEC rev. 60)
+
+- O gerador mudou (2 divisões e 20 jogadores por clube). Sem recarga, quem já
+  tinha o molde continuaria criando jogos com 3 divisões e 23 jogadores.
+- O molde ganhou `versao_banco_padrao` (V27; o existente fica com 1) e
+  `BancoPadraoRepositorio.VERSAO` (2). Na carga, molde de versão antiga é
+  **apagado e gravado de novo**. Jogos já criados não mudam: são cópias, e
+  `jogo.molde_id` fica nulo (`ON DELETE SET NULL`).
+- Quando o editor de moldes existir, apagar o molde padrão perderia as
+  edições do usuário nele; nessa hora, decidir se o molde padrão editado
+  vira molde pessoal antes da troca.
+

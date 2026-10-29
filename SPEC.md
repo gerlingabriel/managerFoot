@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 59 — 2026-10-29)
+-   **Status:** versão inicial para revisão (rev. 60 — 2026-10-29)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 60 (2026-10-29):** pelo usuário: no máximo **2 divisões** por país (a 3ª saiu do banco padrão); elenco gerado com **20 jogadores** (máximo continua 25); moral começa em **22**, com verde de 15 a 30, amarelo de 8 a 14 e vermelho de 0 a 7; usuário no vermelho tem um jogo decisivo antes da demissão; demissão na máquina chama treinador de clube mais fraco com moral verde, e o usuário chamado recebe convite (§5.4). Banco padrão versionado (V27): a carga troca o molde antigo; jogos já salvos não mudam. Simulações refeitas (`ciclo-do-mercado.md`, `temporada.md`) e nova `docs/simulacoes/demissao.md`.
 -   **rev. 59 (2026-10-29):** regra do usuário para a demissão do usuário (troca com treinador da máquina, §5.4); moral sem efeito na partida (§6.2); plantel mínimo de 14 nas vendas (provisório, §9.3); simulação do ciclo do mercado com a economia atual (`docs/simulacoes/ciclo-do-mercado.md`).
 -   **rev. 58 (2026-10-29):** salário gravado nos clubes de usuário (a máquina readequa), pedido de aumento com intervalo de 5 pontos e modelo 10a aprovados e gravados (V26).
 -   **rev. 57 (2026-10-28):** público, obras e ampliação da máquina gravados no avanço da rodada (V24); janela 6c do estádio; caixa 9a do patrocínio (V25), máquina com a fixa. Usuário aprovou torcida, ocupação, 6 rodadas de obra e as 3 propostas de patrocínio (por acesso na 1ª = terminar entre os 3 primeiros); jogos já salvos mantêm o estádio atual; até a 5ª rodada o público reflete a posição final da temporada passada.
@@ -357,7 +358,11 @@ clubes necessários = Σ (clubes de cada divisão) + rebaixados da última divis
 **Definido (rev. 31) — países e formato do banco padrão:**
 - Países: **Brasil, Argentina, Inglaterra, Espanha, Itália e Portugal**.
   Outros podem entrar depois.
-- Até **3 divisões** por país.
+- Até ~~**3 divisões**~~ **2 divisões** por país. **Definido (rev. 60), pelo
+  usuário:** a 3ª divisão foi retirada; não é possível criar uma 3ª
+  (`ValidadorLiga.MAXIMO_DIVISOES`, recusada também ao acrescentar divisão no
+  molde). No banco padrão, a 2ª divisão passou a ser a última e manda para a
+  fila o número real de rebaixados dela (`docs/banco-padrao-formatos.md`).
 - O jogo não precisa ser fiel: o formato real é **adaptado** à regra de 15
   a 20 clubes por divisão, em **pontos corridos**, com **acesso e
   rebaixamento diretos**, sem grupos nem playoffs. Ex.: uma divisão real de
@@ -490,11 +495,12 @@ A geração do elenco deve respeitar a força cadastrada:
   deveriam ser equivalentes.
 
 **Definido (rev. 31):** a força do clube é a **média dos 11 em campo**, na
-escalação que a máquina escolheria (§7.4.1), não a média dos 23.
+escalação que a máquina escolheria (§7.4.1), não a média do elenco inteiro.
 
 **Definido (rev. 31) — faixas de força do banco padrão:** 1ª divisão de
-**35 a 50**, 2ª de **22 a 30** e 3ª de **12 a 22**. O limite (teto) das
-divisões do banco padrão segue o topo da faixa: 50, 30 e 22.
+**35 a 50**, 2ª de **22 a 30** ~~e 3ª de **12 a 22**~~ (a 3ª saiu na rev.
+60). O limite (teto) das divisões do banco padrão segue o topo da faixa: 50 e
+30.
 
 ## 5. Clubes, jogadores e treinadores
 
@@ -539,7 +545,7 @@ rankings de artilheiros e o histórico de cartões de cada jogador (§7.4).
   o início do jogo salvo.
 
 **Definido — elenco gerado:**
-- Cada clube tem **23 jogadores** cadastrados (composição abaixo; máximo de 25).
+- Cada clube tem ~~**23**~~ **20 jogadores** cadastrados (rev. 60; composição abaixo; máximo de 25).
 - Nomes e nacionalidades são gerados por padrão, por sorteio.
 - ~~Cada clube tem **de 5 a 7 estrangeiros**, para não distorcer o limite de
   estrangeiros (§8.4).~~ **Substituído na rev. 32:** no banco padrão,
@@ -549,8 +555,12 @@ rankings de artilheiros e o histórico de cartões de cada jogador (§7.4).
     regra dos 5 a 7 estrangeiros.
 
 **Definido (rev. 17) — composição padrão:**
-- O cadastro padrão gera **23 jogadores**: 3 goleiros, 7 defensores,
-  7 meias e 6 atacantes.
+- ~~O cadastro padrão gera **23 jogadores**: 3 goleiros, 7 defensores,
+  7 meias e 6 atacantes.~~
+- **Definido (rev. 60), pelo usuário:** o cadastro padrão gera **20
+  jogadores**, para ver se trocas, mercado e finanças melhoram; o máximo
+  continua **25**. **Provisório (proposta do agente):** 3 goleiros,
+  6 defensores, 6 meias e 5 atacantes, a proporção mais próxima da anterior.
 - O elenco pode chegar a **25**; as 2 vagas livres servem para compra e
   venda e dependem das finanças. A máquina também precisa dessa folga para
   negociar.
@@ -691,10 +701,52 @@ sorteio provisório da rev. 36 para o usuário que cai para a fila):
 - **Clube do usuário com força média acima de 10:** só pode trocar com
   treinadores **com clube** e de força **inferior**. Se não houver, o
   usuário **continua no clube** até a troca ser possível.
-- **Em aberto (perguntado ao usuário):** o que dispara a demissão do
+- ~~**Em aberto (perguntado ao usuário):** o que dispara a demissão do
   usuário (moral vermelha? queda para a fila?); quando a máquina demite o
   próprio treinador; se "força média" é a força em campo (média dos 11);
-  se o usuário sem clube assiste às rodadas.
+  se o usuário sem clube assiste às rodadas.~~ Respondido em parte na rev. 60
+  (abaixo).
+
+**Definido (rev. 60), pelo usuário — gatilho da demissão do usuário:**
+- Quando a moral do usuário **entra no vermelho** (§6.2), o **próximo jogo é
+  decisivo**. Se depois dele a moral continua vermelha, o usuário é
+  **demitido** e segue a troca da rev. 59 acima.
+  - Vitória que volta ao amarelo salva; derrota demite; empate ou vitória
+    que não tiram do vermelho também demitem. Ex.: de 7, empate fora vai a
+    8 (salva) e empate em casa fica em 7 (demite).
+  - Regra no domínio: `Moral.demite` (estava vermelho antes do jogo e
+    continua depois). Ainda não ligada ao avanço da rodada.
+- **Força média** = força do clube, a média dos 11 em campo (§4.3). Leitura
+  do agente de "força da média do time"; confirmar.
+
+**Definido (rev. 60), pelo usuário — troca quando a máquina demite:**
+- Quando um treinador da máquina é demitido, é chamado o treinador de um
+  clube de **força inferior** com **moral verde**, e há **troca de
+  treinador**.
+- Se o treinador chamado for um **usuário**, ele recebe uma **tela de
+  convite** e pode **aceitar ou recusar**. (Tela: mockup antes, §10.)
+- **Clube demitido com força até 10:** o substituto pode ser **qualquer
+  treinador da fila** (sem clube), mas de preferência um treinador **com
+  clube**.
+- **Clube demitido com força acima de 10:** só treinador **com clube**.
+- **Em aberto (perguntado ao usuário):**
+  - Quando a máquina demite: a mesma regra do jogo decisivo do usuário? A
+    simulação (`docs/simulacoes/demissao.md`, regra valendo para todos)
+    mostra 7 a 15 demissões por divisão por temporada, quase todas nos 5 ou 6
+    clubes mais fracos.
+  - "Troca": o demitido vai para o clube mais fraco que perdeu o treinador
+    ou para a fila de treinadores sem clube?
+  - Usuário que recusa o convite: chama o próximo candidato? Qual é a ordem
+    entre vários clubes inferiores com moral verde (o mais forte deles? o de
+    moral mais alta? sorteio?)
+  - Moral depois da troca: cada treinador começa com 22 no clube novo (§6.2,
+    "ao assumir um time") ou o clube mantém a moral que tinha?
+  - Usuário no clube mais fraco da última divisão (onde o jogo começa,
+    §3.2): demitido e sem clube inferior para trocar, ele continua no clube
+    (rev. 59). A simulação mostra que esse clube cai no vermelho quase toda
+    temporada; o jogo decisivo se repete a cada jogo no vermelho?
+  - No banco padrão, depois da rev. 60, o clube mais fraco tem força 22, então
+    as regras de força até 10 só valem em ligas criadas pelo usuário.
 
 ## 6. Progressão de força e moral
 
@@ -789,16 +841,26 @@ A escala e os efeitos ainda precisam ser formalizados.
 | Empate | −1 | 0 |
 | Derrota | −3 | −2 |
 
-Ao assumir um time, a moral começa em **18**. Ela fica limitada entre 0 e
-30.
+Ao assumir um time, a moral começa em ~~**18**~~ **22** (rev. 60, pelo
+usuário). Ela fica limitada entre 0 e 30.
 
 Esses valores são uma hipótese inicial a validar por simulação. A moral deverá
 influenciar: - Risco de demissão do treinador. - Público no estádio,
 conforme a intenção original. - Possivelmente outros efeitos, se forem
 aprovados.
 
-Proposta de faixas ilustrativas: - Verde: 15 a 30. - Amarelo: 6 a 14. -
-Vermelho: 0 a 5.
+~~Proposta de faixas ilustrativas: - Verde: 15 a 30. - Amarelo: 6 a 14. -
+Vermelho: 0 a 5.~~
+
+**Definido (rev. 60), pelo usuário — faixas:** verde de **15 a 30**,
+amarelo de **8 a 14**, vermelho de **0 a 7** (`ParametrosMoral.padrao()`).
+- **Conflito a confirmar:** a mensagem também dizia "para ficar moral
+  vermelho depois dos 12". Foi aplicada a tabela explícita (vermelho até 7).
+- Jogos já salvos: clube sem jogo ainda começa em 22; quem já jogou mantém a
+  moral gravada, agora lida com as faixas novas.
+- Simulação (`docs/simulacoes/temporada.md`, refeita): com início em 22, a
+  moral vermelha no fim da temporada cai nos clubes do meio (força 26: de 30%
+  para 16%) e quase não muda no fundo (força 16: 97% a 99%).
 
 A implementação deve definir limites mínimos/máximos e o efeito de
 vitórias, sequência de resultados e diferença de força.
@@ -816,8 +878,9 @@ demais.
 **Definido (rev. 59), pelo usuário:** a moral vai de 0 a 30 e **não
 influencia a partida** (força com moral alta desequilibraria ainda mais);
 pode servir a outras coisas, como a demissão (§5.4). Hoje o motor não usa a
-moral. **Em aberto:** o usuário disse "até 18 ele seria verde"; a faixa
-verde atual começa em 15 (a moral inicial é 18).
+moral. ~~**Em aberto:** o usuário disse "até 18 ele seria verde"; a faixa
+verde atual começa em 15 (a moral inicial é 18).~~ Resolvido na rev. 60
+(faixas abaixo).
 
 **Definido (rev. 15): correção leve.** O usuário pediu para melhorar, mas
 não muito, porque o Elifoot 98 é sobre assumir times e ser demitido.
@@ -1199,7 +1262,7 @@ os cartões de um time todo calmo (antes, 2,8 vezes).
       campeão. Do 4º em diante, nada.
     - **Definido (rev. 46), pelo usuário:** a força dos jogadores do prêmio
       é o **teto de força da divisão** (1ª 50, 2ª 30, 3ª 22 no banco
-      padrão): 2ª ≈ R$ 988 mil, 3ª ≈ R$ 566 mil. O prêmio do campeão fica
+      padrão; a 3ª saiu na rev. 60): 2ª ≈ R$ 988 mil, 3ª ≈ R$ 566 mil. O prêmio do campeão fica
       perto de um quarto da bilheteria da temporada nas três divisões. Simulado em `docs/simulacoes/mercado-maquina.md`; valores
       em `economia.ParametrosPremiacao`, regra em `economia.Premiacao`.
     - **Gravado (rev. 48):** o prêmio é lançado no extrato na última rodada
@@ -1576,6 +1639,14 @@ menos de **14** jogadores (`ParametrosMercadoMaquina.plantelMinimo`). A
 simulação do ciclo do mercado mostrou clubes da 3ª vendendo até 11 e
 ficando com 10 disponíveis por suspensão, o que travaria o avanço da
 rodada.
+
+**Simulação refeita (rev. 60, `docs/simulacoes/ciclo-do-mercado.md`)** com 2
+divisões e 20 jogadores: os leilões sem lance caem de 80% (2ª) e 96% (3ª)
+para 26% a 27%, e o topo e o meio da 2ª passam a comprar (25% e 23% dos
+leilões com lance). Mas os ricos acumulam ainda mais caixa (topo da 1ª com
+25,9 limites em 6 temporadas, antes 18,8), quem vende continua sendo o fundo
+da tabela, e a mobilidade cai de 9% para 6%. As alavancas do mercado
+propostas na rev. 59 continuam aguardando a escolha do usuário.
 
 **Definido (rev. 43), pelo usuário:** sem empréstimo, sempre que o caixa
 ficar **negativo** um jogador do clube vai a **leilão sem lance mínimo**.
@@ -2150,8 +2221,8 @@ Na tela, a divisão sem usuário é exibida sempre em velocidade rápida
 
 **Definido (rev. 15) — exibição da rodada:**
 - As divisões são exibidas **uma depois da outra**, nunca ao mesmo tempo:
-  primeiro a mais inferior (por exemplo, a 3ª), depois a 2ª, e por último
-  a 1ª.
+  primeiro a mais inferior (a 2ª, com o limite de 2 divisões da rev. 60) e
+  por último a 1ª.
 - Quando uma divisão termina, a seguinte começa.
 - Divisão **com usuário:** roda na velocidade configurada.
 - Divisão **sem usuário:** roda **sempre rápido**, sem opção de
@@ -2406,7 +2477,7 @@ começa depois que a anterior estiver testada.
     a ser aplicada na rev. 36: ele assume um clube sorteado da última
     divisão.
 - **Banco padrão (concluído, rev. 32):** 6 países com formatos adaptados
-  (`docs/banco-padrao-formatos.md`), 23 jogadores nacionais por clube, força
+  (`docs/banco-padrao-formatos.md`), 20 jogadores nacionais por clube (23 até a rev. 59), força
   do clube igual à média dos 11 em campo; gerado por código e carregado com
   `--carregar-banco-padrao` (`docs/decisions/0008`).
 - Telas Thymeleaf + HTMX:

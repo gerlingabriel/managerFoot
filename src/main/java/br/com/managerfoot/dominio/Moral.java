@@ -2,7 +2,7 @@ package br.com.managerfoot.dominio;
 
 /**
  * Moral numérica do time (SPEC §6.2), sempre entre o mínimo e o máximo configurados.
- * Os efeitos (demissão, público) entram nas etapas seguintes.
+ * Não influencia a partida (rev. 59); serve à demissão (§5.4).
  */
 public record Moral(int valor) {
 
@@ -35,5 +35,16 @@ public record Moral(int valor) {
 			return Faixa.VERDE;
 		}
 		return valor >= parametros.limiteAmarelo() ? Faixa.AMARELO : Faixa.VERMELHO;
+	}
+
+	/**
+	 * Demissão pela moral (SPEC §5.4, rev. 60): ao entrar no vermelho, o jogo seguinte é decisivo; se
+	 * depois dele a moral continua vermelha (derrota, ou empate ou vitória que não tiram do vermelho), o
+	 * treinador é demitido.
+	 *
+	 * @param depois a moral depois do jogo decisivo; esta é a de antes dele
+	 */
+	public boolean demite(Moral depois, ParametrosMoral parametros) {
+		return faixa(parametros) == Faixa.VERMELHO && depois.faixa(parametros) == Faixa.VERMELHO;
 	}
 }

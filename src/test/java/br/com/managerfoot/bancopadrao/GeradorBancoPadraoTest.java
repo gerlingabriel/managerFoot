@@ -38,6 +38,7 @@ class GeradorBancoPadraoTest {
 	void osSeisPaisesTemClubesSuficientesEFormatoValido() {
 		assertThat(BANCO).extracting(p -> p.pais().codigo()).containsExactly("BRA", "ARG", "ENG", "ESP", "ITA", "POR");
 		for (PaisGerado pais : BANCO) {
+			assertThat(pais.pais().formato().divisoes()).as(pais.pais().nome()).hasSize(ValidadorLiga.MAXIMO_DIVISOES);
 			assertThat(pais.clubes()).hasSize(pais.pais().clubesNecessarios());
 			assertThat(ValidadorLiga.problemas(pais.pais().formato(), pais.clubes().size())).as(pais.pais().nome())
 				.isEmpty();
@@ -62,14 +63,14 @@ class GeradorBancoPadraoTest {
 	}
 
 	@Test
-	void cadaClubeTem23JogadoresNacionaisNaComposicaoPadrao() {
+	void cadaClubeTem20JogadoresNacionaisNaComposicaoPadrao() {
 		for (PaisGerado pais : BANCO) {
 			for (ClubeGerado clube : pais.clubes()) {
-				assertThat(clube.jogadores()).hasSize(23);
+				assertThat(clube.jogadores()).hasSize(20);
 				Map<Posicao, Long> porPosicao = clube.jogadores().stream()
 					.collect(Collectors.groupingBy(Jogador::posicao, () -> new EnumMap<>(Posicao.class), Collectors.counting()));
-				assertThat(porPosicao).containsExactlyInAnyOrderEntriesOf(Map.of(Posicao.GOLEIRO, 3L, Posicao.DEFENSOR, 7L,
-						Posicao.MEIO_CAMPISTA, 7L, Posicao.ATACANTE, 6L));
+				assertThat(porPosicao).containsExactlyInAnyOrderEntriesOf(Map.of(Posicao.GOLEIRO, 3L, Posicao.DEFENSOR, 6L,
+						Posicao.MEIO_CAMPISTA, 6L, Posicao.ATACANTE, 5L));
 				assertThat(clube.jogadores()).allSatisfy(j -> assertThat(j.nacionalidade()).isEqualTo(pais.pais().codigo()));
 				assertThat(clube.jogadores()).extracting(Jogador::nome).doesNotHaveDuplicates();
 			}

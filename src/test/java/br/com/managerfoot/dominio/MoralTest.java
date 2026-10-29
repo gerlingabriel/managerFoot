@@ -46,17 +46,52 @@ class MoralTest {
 	void retornoLevePuxaParaOValorInicial() {
 		ParametrosMoral comRetorno = ParametrosMoral.padrao();
 		assertThat(comRetorno.divisorRetorno()).isEqualTo(12);
-		// 0 + empate fora (0) + (18 - 0) / 12 = 1
+		// 0 + empate fora (0) + (22 - 0) / 12 = 1
 		assertThat(new Moral(0).aposJogo(false, 0, 0, comRetorno).valor()).isEqualTo(1);
-		// 30 + empate fora (0) + (18 - 30) / 12 = 29
-		assertThat(new Moral(30).aposJogo(false, 0, 0, comRetorno).valor()).isEqualTo(29);
+		// 7 + vitória em casa (2) + (22 - 7) / 12 = 10: sai do vermelho
+		assertThat(new Moral(7).aposJogo(true, 1, 0, comRetorno).valor()).isEqualTo(10);
+		// 30 + empate fora (0) + (22 - 30) / 12 = 30: com a moral inicial 22, o topo quase não é puxado
+		assertThat(new Moral(30).aposJogo(false, 0, 0, comRetorno).valor()).isEqualTo(30);
 		// perto do centro o retorno é zero
-		assertThat(new Moral(20).aposJogo(false, 0, 0, comRetorno).valor()).isEqualTo(20);
+		assertThat(new Moral(24).aposJogo(false, 0, 0, comRetorno).valor()).isEqualTo(24);
 	}
 
 	@Test
 	void recusaParametrosIncoerentes() {
 		assertThatIllegalArgumentException().isThrownBy(() -> new ParametrosMoral(0, 30, 31, 2, 3, -1, 0, -3, -2, 15, 6, 0));
 		assertThatIllegalArgumentException().isThrownBy(() -> new ParametrosMoral(0, 30, 18, 2, 3, -1, 0, -3, -2, 6, 15, 0));
+	}
+
+	@Test
+	void padraoComecaEm22ComVerdeDe15AmareloDe8EVermelhoAte7() {
+		ParametrosMoral padrao = ParametrosMoral.padrao();
+		assertThat(Moral.inicial(padrao).valor()).isEqualTo(22);
+		assertThat(new Moral(30).faixa(padrao)).isEqualTo(Moral.Faixa.VERDE);
+		assertThat(new Moral(15).faixa(padrao)).isEqualTo(Moral.Faixa.VERDE);
+		assertThat(new Moral(14).faixa(padrao)).isEqualTo(Moral.Faixa.AMARELO);
+		assertThat(new Moral(8).faixa(padrao)).isEqualTo(Moral.Faixa.AMARELO);
+		assertThat(new Moral(7).faixa(padrao)).isEqualTo(Moral.Faixa.VERMELHO);
+		assertThat(new Moral(0).faixa(padrao)).isEqualTo(Moral.Faixa.VERMELHO);
+	}
+
+	@Test
+	void quemEntraNoVermelhoEhDemitidoSeOJogoSeguinteNaoTiraDoVermelho() {
+		ParametrosMoral padrao = ParametrosMoral.padrao();
+		// 9 + derrota em casa (-3) + (22 - 9) / 12 = 7
+		Moral entrouNoVermelho = new Moral(9).aposJogo(true, 0, 1, padrao);
+		assertThat(entrouNoVermelho).isEqualTo(new Moral(7));
+		// o jogo que leva ao vermelho não demite
+		assertThat(new Moral(9).demite(entrouNoVermelho, padrao)).isFalse();
+
+		// vitória em casa (10) e empate fora (8) voltam ao amarelo e salvam
+		assertThat(entrouNoVermelho.demite(entrouNoVermelho.aposJogo(true, 2, 0, padrao), padrao)).isFalse();
+		assertThat(entrouNoVermelho.demite(entrouNoVermelho.aposJogo(false, 1, 1, padrao), padrao)).isFalse();
+		// derrota (6) e empate em casa (7) não saem do vermelho e demitem
+		assertThat(entrouNoVermelho.demite(entrouNoVermelho.aposJogo(false, 0, 1, padrao), padrao)).isTrue();
+		assertThat(entrouNoVermelho.demite(entrouNoVermelho.aposJogo(true, 1, 1, padrao), padrao)).isTrue();
+		// vitória que não basta para sair do vermelho também demite
+		Moral zero = new Moral(0);
+		assertThat(zero.aposJogo(true, 1, 0, padrao).faixa(padrao)).isEqualTo(Moral.Faixa.VERMELHO);
+		assertThat(zero.demite(zero.aposJogo(true, 1, 0, padrao), padrao)).isTrue();
 	}
 }

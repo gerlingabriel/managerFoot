@@ -35,7 +35,10 @@ class ScriptBancoPadrao implements ApplicationRunner {
 		}
 		GeradorBancoPadrao gerador = new GeradorBancoPadrao(ParametrosBancoPadrao.padrao(), ParametrosMotor.padrao());
 		BancoPadraoRepositorio.Carga carga = repositorio.carregar(gerador.gerar(PaisPadrao.TODOS));
-		if (carga.criado()) {
+		if (carga.substituido()) {
+			LOG.info("Banco padrão de versão antiga substituído pela versão {} no molde {}; jogos já criados não mudam.",
+					BancoPadraoRepositorio.VERSAO, carga.moldeId());
+		} else if (carga.criado()) {
 			LOG.info("Banco padrão gravado no molde {} com {} países.", carga.moldeId(), PaisPadrao.TODOS.size());
 		} else {
 			LOG.info("Banco padrão já estava carregado no molde {}; nada foi gravado.", carga.moldeId());

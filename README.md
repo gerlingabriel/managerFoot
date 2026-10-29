@@ -67,7 +67,9 @@ O endereço do link usa `URL_BASE` (padrão `http://localhost:8080`). Ver
 
 Gera e grava os 6 países do banco padrão (Brasil, Argentina, Inglaterra,
 Espanha, Itália e Portugal; SPEC §4.1, `docs/decisions/0008`). Rodar de novo
-não duplica nada.
+não duplica nada. Se o molde gravado é de uma versão antiga do gerador (até a
+SPEC rev. 59: 3 divisões e 23 jogadores), ele é apagado e gravado de novo;
+jogos já criados não mudam.
 
 ```bash
 set -a && . ./.env && set +a

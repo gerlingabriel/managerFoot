@@ -11,8 +11,12 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
+import br.com.managerfoot.bancopadrao.GeradorBancoPadrao;
 import br.com.managerfoot.bancopadrao.GeradorBancoPadrao.PaisGerado;
+import br.com.managerfoot.bancopadrao.PaisPadrao;
+import br.com.managerfoot.bancopadrao.ParametrosBancoPadrao;
 import br.com.managerfoot.contas.Usuario;
+import br.com.managerfoot.motor.ParametrosMotor;
 import br.com.managerfoot.persistencia.BancoPadraoRepositorio;
 import br.com.managerfoot.persistencia.ContasRepositorio;
 import br.com.managerfoot.persistencia.JogoRepositorio;
@@ -52,7 +56,7 @@ class ScriptBancoPadraoIT {
 			.param("nome", BancoPadraoRepositorio.NOME_MOLDE)
 			.query(Long.class)
 			.single()).isEqualTo(1);
-		assertThat(contarJogadores(molde)).isEqualTo(jogadores).isEqualTo((64 * 4 + 44 + 60) * 23L);
+		assertThat(contarJogadores(molde)).isEqualTo(jogadores).isEqualTo((44 * 4 + 43 + 39) * 20L);
 
 		List<CampeonatoDisponivel> campeonatos = moldes.campeonatosDisponiveis(molde);
 		assertThat(campeonatos).extracting(CampeonatoDisponivel::codigoPais)
@@ -77,6 +81,34 @@ class ScriptBancoPadraoIT {
 			}
 		};
 		new ScriptBancoPadrao(semUso).run(new DefaultApplicationArguments());
+	}
+
+	@Test
+	void moldeDeVersaoAntigaEhGravadoDeNovoSemMexerNosJogosJaCriados() {
+		ScriptBancoPadrao script = new ScriptBancoPadrao(repositorio);
+		script.run(new DefaultApplicationArguments("--carregar-banco-padrao"));
+		long antigo = repositorio.moldeId().orElseThrow();
+		String sufixo = System.nanoTime() + "@exemplo.com";
+		Usuario admin = contas.criarAdministrador("admin-versao-" + sufixo, "Admin", "senha-de-teste");
+		Usuario participante = contas.cadastrar(contas.gerarLinkCadastro(admin.id()), "participante-versao-" + sufixo,
+				"Participante", "senha-de-teste");
+		long jogo = jogos.criarJogoComClubeSorteado(moldes.campeonatosDisponiveis(antigo).getFirst().paisId(),
+				participante.id(), 11);
+		jdbc.sql("UPDATE molde SET versao_banco_padrao = 1 WHERE id = :molde").param("molde", antigo).update();
+
+		BancoPadraoRepositorio.Carga carga = repositorio.carregar(
+				new GeradorBancoPadrao(ParametrosBancoPadrao.padrao(), ParametrosMotor.padrao()).gerar(PaisPadrao.TODOS));
+
+		assertThat(carga.criado()).isTrue();
+		assertThat(carga.substituido()).isTrue();
+		assertThat(carga.moldeId()).isNotEqualTo(antigo).isEqualTo(repositorio.moldeId().orElseThrow());
+		assertThat(jdbc.sql("SELECT count(*) FROM molde WHERE id = :molde").param("molde", antigo).query(Long.class).single())
+			.isZero();
+		assertThat(jdbc.sql("SELECT versao_banco_padrao FROM molde WHERE id = :molde")
+			.param("molde", carga.moldeId())
+			.query(Integer.class)
+			.single()).isEqualTo(BancoPadraoRepositorio.VERSAO);
+		assertThat(jogos.clubeDoTreinador(jogo, participante.id())).isPresent();
 	}
 
 	long contarJogadores(long molde) {

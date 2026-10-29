@@ -171,4 +171,15 @@ class ValidadorLigaTest {
 				List.of(new FormatoDivisao("A", 1, 20, 50, 2), new FormatoDivisao("C", 3, 20, 20, 2)));
 		assertThat(ValidadorLiga.problemas(formato, 100)).singleElement().asString().contains("deveria ter prioridade 2");
 	}
+
+	@Test
+	void ligaComTresDivisoesPassaDoMaximoDeDuas() {
+		FormatoLiga formato = new FormatoLiga("Liga", List.of(new FormatoDivisao("A", 1, 20, 50, 4),
+				new FormatoDivisao("B", 2, 20, 30, 4), new FormatoDivisao("C", 3, 20, 22, 4)));
+		ConfiguracaoLiga liga = new ConfiguracaoLiga("Liga", List.of(divisao("A", 1, 50, 0, 4, 20),
+				divisao("B", 2, 30, 4, 4, 20), divisao("C", 3, 22, 4, 4, 20)), clubes(4));
+
+		assertThat(ValidadorLiga.problemas(formato, 100)).containsExactly("A liga tem 3 divisões; o máximo é 2.");
+		assertThat(ValidadorLiga.problemas(liga)).contains("A liga tem 3 divisões; o máximo é 2.");
+	}
 }

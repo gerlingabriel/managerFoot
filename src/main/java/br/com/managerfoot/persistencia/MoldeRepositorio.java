@@ -62,6 +62,7 @@ public class MoldeRepositorio {
 	 * conferidos pelo {@link ValidadorLiga}, para o editor poder guardar uma liga incompleta.
 	 *
 	 * @throws IllegalStateException se o país não existe ou ainda não tem liga
+	 * @throws IllegalArgumentException se a liga já tem {@link ValidadorLiga#MAXIMO_DIVISOES} divisões
 	 */
 	@Transactional
 	public int adicionarDivisao(long paisId, String nome, int quantidadeClubes, int limiteForca, int rebaixados) {
@@ -70,6 +71,10 @@ public class MoldeRepositorio {
 			.param("pais", paisId)
 			.query(Integer.class)
 			.single();
+		if (prioridade > ValidadorLiga.MAXIMO_DIVISOES) {
+			throw new IllegalArgumentException(
+					"A liga já tem " + ValidadorLiga.MAXIMO_DIVISOES + " divisões; não é possível criar outra.");
+		}
 		jdbc.sql("""
 				INSERT INTO molde_divisao (pais_id, nome, prioridade, quantidade_clubes, limite_forca, rebaixados)
 				VALUES (:pais, :nome, :prioridade, :quantidade, :limite, :rebaixados)""")

@@ -13,7 +13,7 @@ import br.com.managerfoot.dominio.Temperamento;
  * @param semente mesma semente, mesmo banco
  * @param faixas faixa de força dos clubes por divisão, da principal para baixo; o topo é o teto da
  *        divisão
- * @param composicao jogadores gerados por posição (23 no total)
+ * @param composicao jogadores gerados por posição (20 no total desde a rev. 60)
  * @param variacaoTitulares os 11 da escalação nascem a até esta distância da força do clube
  * @param quedaReservasMinima os reservas nascem pelo menos isto abaixo da força do clube
  * @param quedaReservasMaxima e no máximo isto abaixo
@@ -35,9 +35,8 @@ public record ParametrosBancoPadrao(long semente, List<FaixaForca> faixas, Map<P
 	public record FaixaForca(int minima, int maxima) {
 	}
 
-	/** Faixas da rev. 31: 1ª de 35 a 50, 2ª de 22 a 30, 3ª de 12 a 22. */
-	public static final List<FaixaForca> FAIXAS = List.of(new FaixaForca(35, 50), new FaixaForca(22, 30),
-			new FaixaForca(12, 22));
+	/** Faixas da rev. 31: 1ª de 35 a 50, 2ª de 22 a 30 (a 3ª, de 12 a 22, saiu na rev. 60). */
+	public static final List<FaixaForca> FAIXAS = List.of(new FaixaForca(35, 50), new FaixaForca(22, 30));
 
 	public ParametrosBancoPadrao {
 		faixas = List.copyOf(faixas);
@@ -54,7 +53,7 @@ public record ParametrosBancoPadrao(long semente, List<FaixaForca> faixas, Map<P
 
 	public static ParametrosBancoPadrao padrao() {
 		return new ParametrosBancoPadrao(19980101L, FAIXAS,
-				Map.of(Posicao.GOLEIRO, 3, Posicao.DEFENSOR, 7, Posicao.MEIO_CAMPISTA, 7, Posicao.ATACANTE, 6), 2, 3, 8,
+				Map.of(Posicao.GOLEIRO, 3, Posicao.DEFENSOR, 6, Posicao.MEIO_CAMPISTA, 6, Posicao.ATACANTE, 5), 2, 3, 8,
 				3, 0.10, 0.70,
 				Map.of(Temperamento.NORMAL, 40, Temperamento.CALMO, 20, Temperamento.EDUCADO, 20, Temperamento.ANSIOSO,
 						13, Temperamento.VIOLENTO, 7),

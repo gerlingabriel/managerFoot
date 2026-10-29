@@ -14,13 +14,16 @@ import br.com.managerfoot.temporada.FormatoDivisao;
 
 /**
  * Grava o banco padrão gerado como um molde (docs/decisions/0008). Carregar de novo não duplica:
- * se o molde do banco padrão já existe, nada é gravado.
+ * se o molde do banco padrão já existe na versão atual, nada é gravado; se é de uma versão antiga
+ * do gerador, ele é apagado e gravado de novo (jogos já criados são cópias e não mudam).
  */
 @Repository
 public class BancoPadraoRepositorio {
 
 	/** Nome do molde que guarda o banco padrão. */
 	public static final String NOME_MOLDE = "Banco padrão";
+	/** Versão do gerador: muda quando o banco gerado muda (rev. 60: 2 divisões e 20 jogadores). */
+	public static final int VERSAO = 2;
 
 	private final JdbcClient jdbc;
 	private final MoldeRepositorio moldes;
@@ -30,21 +33,30 @@ public class BancoPadraoRepositorio {
 		this.moldes = moldes;
 	}
 
-	/** Resultado da carga: o id do molde e se ele foi criado agora. */
-	public record Carga(long moldeId, boolean criado) {
+	/**
+	 * Resultado da carga: o id do molde e se ele foi criado agora.
+	 *
+	 * @param substituido havia um molde de versão antiga, que foi apagado
+	 */
+	public record Carga(long moldeId, boolean criado, boolean substituido) {
 	}
 
-	/** Grava os países gerados num molde novo, ou devolve o que já existe. */
+	/** Grava os países gerados num molde novo, ou devolve o que já existe na versão atual. */
 	@Transactional
 	public Carga carregar(List<PaisGerado> paises) {
 		// duas cargas ao mesmo tempo esperam uma pela outra e a segunda encontra o molde pronto
 		jdbc.sql("SELECT 1 FROM pg_advisory_xact_lock(hashtext('managerfoot.banco-padrao'))").query(Integer.class).single();
 		Optional<Long> existente = moldeId();
-		if (existente.isPresent()) {
+		if (existente.isPresent() && versao(existente.get()) >= VERSAO) {
 			completarTreinadores(existente.get(), paises);
-			return new Carga(existente.get(), false);
+			return new Carga(existente.get(), false, false);
 		}
+		existente.ifPresent(antigo -> jdbc.sql("DELETE FROM molde WHERE id = :molde").param("molde", antigo).update());
 		long molde = moldes.criarMolde(NOME_MOLDE);
+		jdbc.sql("UPDATE molde SET versao_banco_padrao = :versao WHERE id = :molde")
+			.param("versao", VERSAO)
+			.param("molde", molde)
+			.update();
 		for (PaisGerado gerado : paises) {
 			long pais = moldes.criarPais(molde, gerado.pais().codigo(), gerado.pais().nome());
 			moldes.criarLiga(pais, gerado.pais().formato().nome());
@@ -57,7 +69,14 @@ public class BancoPadraoRepositorio {
 				moldes.adicionarJogadores(gravado.id(), clube.jogadores());
 			}
 		}
-		return new Carga(molde, true);
+		return new Carga(molde, true, existente.isPresent());
+	}
+
+	private int versao(long moldeId) {
+		return jdbc.sql("SELECT coalesce(versao_banco_padrao, 1) FROM molde WHERE id = :molde")
+			.param("molde", moldeId)
+			.query(Integer.class)
+			.single();
 	}
 
 	/**

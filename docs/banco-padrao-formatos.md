@@ -5,7 +5,7 @@ páginas da temporada atual na Wikipédia em inglês, lidas nessa data (links
 abaixo). Várias tabelas estavam no meio da temporada; quando a página não
 dizia o número de vagas com clareza, isso está marcado como **a confirmar**.
 
-A adaptação segue a SPEC: até 3 divisões, 15 a 20 clubes por divisão, pontos
+A adaptação segue a SPEC: até 2 divisões (até a rev. 59 eram 3), 15 a 20 clubes por divisão, pontos
 corridos, acesso e rebaixamento diretos, sem grupos nem playoffs. Vaga de
 playoff vira vaga direta. Os rebaixados de uma divisão são os promovidos da
 de baixo (§4.1, rev. 11), e os rebaixados da última vão para a fila de
@@ -17,12 +17,17 @@ espera.
 
 | País | Divisões (clubes · rebaixados) | Fila | Clubes no país |
 |---|---|---|---|
-| Brasil | Série A 20 · 4 → Série B 20 · 4 → Série C 20 · 4 | 4 | 64 |
+| Brasil | Série A 20 · 4 → Série B 20 · 4 | 4 | 44 |
 | Argentina | Primera 20 · 2 → Nacional 20 · 4 | 4 | 44 |
-| Inglaterra | Premier 20 · 3 → Championship 20 · 3 → League One 20 · 4 | 4 | 64 |
-| Espanha | Primera 20 · 3 → Segunda 20 · 4 → Federación 20 · 4 | 4 | 64 |
-| Itália | Serie A 20 · 3 → Serie B 20 · 4 → Serie C 20 · 4 | 4 | 64 |
-| Portugal | Liga 18 · 3 → Liga 2 18 · 3 → Liga 3 20 · 4 | 4 | 60 |
+| Inglaterra | Premier 20 · 3 → Championship 20 · 3 | 3 | 43 |
+| Espanha | Primera 20 · 3 → Segunda 20 · 4 | 4 | 44 |
+| Itália | Serie A 20 · 3 → Serie B 20 · 4 | 4 | 44 |
+| Portugal | Liga 18 · 3 → Liga 2 18 · 3 | 3 | 39 |
+
+**Rev. 60 (2026-10-29), pelo usuário:** a 3ª divisão foi retirada; cada país
+tem no máximo 2. A 2ª divisão passou a ser a última, e os rebaixados dela
+(o número real de rebaixamentos da 2ª divisão de cada país) vão para a fila.
+As linhas da 3ª divisão abaixo ficam só como registro da pesquisa.
 
 Clubes no país = soma das divisões + rebaixados da última (§4.1). Os nomes
 das divisões no jogo são fictícios, como os dos clubes; a tabela usa os

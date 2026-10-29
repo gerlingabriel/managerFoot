@@ -59,7 +59,13 @@ class RodadaController {
 	@PostMapping("/jogos/{jogoId}/rodada")
 	String iniciar(@AuthenticationPrincipal Usuario usuario, @PathVariable long jogoId, @RequestParam("rodada") int rodada,
 			RedirectAttributes redirect) {
-		if (!plantel.visao(jogoId, usuario.id()).orElseThrow(NoSuchElementException::new).problemas().isEmpty()) {
+		PlantelRepositorio.VisaoPlantel visao = plantel.visao(jogoId, usuario.id()).orElseThrow(NoSuchElementException::new);
+		// clique repetido numa rodada já jogada: a escalação pode ter mudado depois (suspensão), mas o aviso é este
+		if (rodada < visao.rodada()) {
+			redirect.addFlashAttribute("erro", "A rodada " + rodada + " já foi jogada. Confira o plantel.");
+			return "redirect:/jogos/" + jogoId + "/plantel";
+		}
+		if (!visao.problemas().isEmpty()) {
 			redirect.addFlashAttribute("erro", "Complete a escalação antes de jogar a rodada.");
 			return "redirect:/jogos/" + jogoId + "/plantel";
 		}

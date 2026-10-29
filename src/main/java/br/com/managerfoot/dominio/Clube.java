@@ -12,7 +12,7 @@ import java.util.Objects;
  */
 public record Clube(long id, String nome, int forca, Escudo escudo) {
 
-	/** Máximo de jogadores no plantel (SPEC §5.2): os 23 gerados mais 2 vagas para o mercado. */
+	/** Máximo de jogadores no plantel (SPEC §5.2): os 20 gerados (rev. 60) mais 5 vagas para o mercado. */
 	public static final int MAXIMO_JOGADORES = 25;
 
 	public Clube {

@@ -44,9 +44,9 @@ class CaixaDaRodadaTest {
 	@Test
 	void publicoSobeComAMoralEComAdversarioForteENuncaPassaDaCapacidade() {
 		int baixa = media(new Moral(0), 30, 30);
-		int inicial = media(new Moral(18), 30, 30);
+		int inicial = media(new Moral(22), 30, 30);
 		int alta = media(new Moral(30), 30, 30);
-		int adversarioForte = media(new Moral(18), 30, 50);
+		int adversarioForte = media(new Moral(22), 30, 50);
 
 		assertThat(baixa).isLessThan(inicial);
 		assertThat(alta).isGreaterThan(inicial);

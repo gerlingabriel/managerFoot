@@ -78,18 +78,19 @@ class MoldeRepositorioIT {
 	}
 
 	@Test
-	void excluirDivisaoDoMeioSobeAsDeBaixo() {
+	void excluirDivisaoSobeAsDeBaixoESoCabemDuas() {
 		long pais = repositorio.criarPais(repositorio.criarMolde("Padrão"), "BRA", "Brasil");
 		repositorio.criarLiga(pais, "Brasileiro");
 		repositorio.adicionarDivisao(pais, "Série A", 20, 50, 4);
 		repositorio.adicionarDivisao(pais, "Série B", 20, 30, 4);
-		repositorio.adicionarDivisao(pais, "Série C", 20, 20, 4);
+		// só 2 divisões (rev. 60)
+		assertThatThrownBy(() -> repositorio.adicionarDivisao(pais, "Série C", 20, 20, 4))
+			.isInstanceOf(IllegalArgumentException.class).hasMessageContaining("já tem 2 divisões");
 
-		repositorio.excluirDivisao(pais, 2);
+		repositorio.excluirDivisao(pais, 1);
 
-		assertThat(repositorio.carregarFormato(pais).divisoes()).containsExactly(
-				new FormatoDivisao("Série A", 1, 20, 50, 4), new FormatoDivisao("Série C", 2, 20, 20, 4));
-		assertThat(repositorio.adicionarDivisao(pais, "Série D", 20, 15, 4)).isEqualTo(3);
+		assertThat(repositorio.carregarFormato(pais).divisoes()).containsExactly(new FormatoDivisao("Série B", 1, 20, 30, 4));
+		assertThat(repositorio.adicionarDivisao(pais, "Série C", 20, 20, 4)).isEqualTo(2);
 		assertThatThrownBy(() -> repositorio.excluirDivisao(pais, 9)).isInstanceOf(NoSuchElementException.class);
 	}
 
