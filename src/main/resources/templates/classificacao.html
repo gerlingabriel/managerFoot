@@ -85,26 +85,30 @@
 <div th:if="${erro}" role="alert" class="alerta janela-aviso" th:text="${erro}">erro</div>
 <th:block th:if="${vitrine == null}">
 <div class="calendario-resumo">
-<span><strong th:text="${k.linha.jogos}">0</strong> <span th:text="${k.linha.jogos == 1} ? 'jogo' : 'jogos'">jogos</span></span>
-<span><strong class="cor-v" th:text="${k.linha.vitorias}">0</strong> <span th:text="${k.linha.vitorias == 1} ? 'vitória' : 'vitórias'">vitórias</span></span>
-<span><strong class="cor-e" th:text="${k.linha.empates}">0</strong> <span th:text="${k.linha.empates == 1} ? 'empate' : 'empates'">empates</span></span>
-<span><strong class="cor-d" th:text="${k.linha.derrotas}">0</strong> <span th:text="${k.linha.derrotas == 1} ? 'derrota' : 'derrotas'">derrotas</span></span>
-<span>gols <strong th:text="|${k.linha.golsPro} : ${k.linha.golsContra}|">0 : 0</strong></span>
+<span><strong th:text="${k.jogados()}">0</strong> <span th:text="${k.jogados() == 1} ? 'jogo' : 'jogos'">jogos</span><span th:if="${k.jogadosNaCopa() > 0}" th:text="| (${k.jogados() - k.jogadosNaCopa()} liga · ${k.jogadosNaCopa()} copa)|"></span></span>
+<span><strong class="cor-v" th:text="${k.contar('V')}">0</strong> <span th:text="${k.contar('V') == 1} ? 'vitória' : 'vitórias'">vitórias</span></span>
+<span><strong class="cor-e" th:text="${k.contar('E')}">0</strong> <span th:text="${k.contar('E') == 1} ? 'empate' : 'empates'">empates</span></span>
+<span><strong class="cor-d" th:text="${k.contar('D')}">0</strong> <span th:text="${k.contar('D') == 1} ? 'derrota' : 'derrotas'">derrotas</span></span>
+<span>gols <strong th:text="|${k.golsPro()} : ${k.golsContra()}|">0 : 0</strong></span>
 </div>
 <div class="calendario-lista">
 <table class="tabela-calendario">
-<thead><tr><th scope="col" class="num">Rod.</th><th scope="col">Local</th><th scope="col">Adversário</th><th scope="col" class="num">Resultado</th></tr></thead>
+<thead><tr><th scope="col">Jogo</th><th scope="col">Local</th><th scope="col">Adversário</th><th scope="col" class="num">Resultado</th></tr></thead>
 <tbody>
-<tr th:each="j : ${k.jogos}" th:classappend="${j.proximo} ? 'do-usuario' : (${j.adversario == null} ? 'folga')">
-<td class="num suave" th:text="${j.rodada}">1</td>
-<td class="temperamento" th:text="${j.emCasa == null} ? '—' : (${j.emCasa} ? 'Casa' : 'Fora')">Casa</td>
+<tr th:each="j : ${k.jogos}" th:classappend="${j.proximo} ? 'do-usuario' : (${j.copa != null} ? 'da-copa' : (${j.adversario == null} ? 'folga'))">
+<td th:if="${j.copa == null}" class="suave" th:text="|Rodada ${j.rodada}|">Rodada 1</td>
+<td th:if="${j.copa != null}" class="calendario-copa" th:text="${j.copa}">Copa · Oitavas de final · ida</td>
+<td class="temperamento" th:text="${j.emCasa == null} ? (${j.copa != null} ? 'Neutro' : '—') : (${j.emCasa} ? 'Casa' : 'Fora')">Casa</td>
 <td>
 <span th:if="${j.adversario != null}" class="clube-celula"><span aria-hidden="true" th:style="${@escudos.estilo(j.adversario.escudo, 18, 22)}"></span><span class="jogo-nome calendario-nome" th:text="${j.adversario.nome}">Adversário</span></span>
 <span th:if="${j.adversario == null}">Folga</span>
 </td>
 <td class="num">
 <span class="calendario-resultado">
+<span class="calendario-placar-coluna">
 <span class="calendario-placar" th:text="${j.golsPro == null} ? (${j.adversario == null} ? '' : '—') : |${j.golsPro} x ${j.golsContra}|">—</span>
+<span th:if="${j.detalhe != null}" class="calendario-detalhe" th:text="${j.detalhe}">total 3 x 2 · passa</span>
+</span>
 <span th:if="${j.resultado() != null}" class="marca-resultado" th:classappend="|resultado-${j.resultado()}|" th:text="${j.resultado()}"
 	th:attr="aria-label=${j.resultado() == 'V' ? 'vitória' : (j.resultado() == 'E' ? 'empate' : 'derrota')}">V</span>
 </span>
@@ -113,7 +117,7 @@
 </tbody>
 </table>
 </div>
-<p class="suave calendario-nota">Placar com os gols do clube primeiro. Mostra só os jogos que já existem: a liga inteira desde o início da temporada; copas e continentais conforme os confrontos forem criados.</p>
+<p class="suave calendario-nota">Placar com os gols do clube primeiro. Mostra só os jogos que já existem: a liga inteira desde o início da temporada; a copa, em amarelo, na ordem em que é jogada, conforme os confrontos forem criados.</p>
 </th:block>
 <th:block th:if="${vitrine != null}" th:with="v=${vitrine}">
 <div class="vitrine-caixa">

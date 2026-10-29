@@ -1249,6 +1249,10 @@ a.link-clube:hover { color: var(--destaque); text-decoration: underline; }
 .calendario-nome { font-size: 18px; }
 .calendario-resultado { display: inline-flex; justify-content: flex-end; align-items: center; gap: 8px; }
 .calendario-placar { font: 700 18px 'Barlow Condensed', sans-serif; }
+.calendario-placar-coluna { display: inline-flex; flex-direction: column; align-items: flex-end; }
+.calendario-detalhe { font-size: 12px; color: var(--texto-suave); white-space: nowrap; }
+.calendario-copa { font-weight: 700; font-size: 14px; color: var(--destaque); line-height: 1.2; }
+.tabela-calendario tr.da-copa td { background: rgba(242, 201, 76, 0.05); }
 .marca-resultado { display: inline-flex; justify-content: center; width: 24px; padding: 1px 0; border-radius: 5px; font: 700 13px Barlow, sans-serif; }
 .marca-resultado.resultado-V { background: #3FB37F; color: #062014; }
 .marca-resultado.resultado-E { background: var(--destaque); color: #1A1A12; }

@@ -23,9 +23,12 @@ import br.com.managerfoot.economia.PrecoJogador;
 import br.com.managerfoot.temporada.Artilharia;
 import br.com.managerfoot.temporada.Classificacao;
 import br.com.managerfoot.temporada.ConfiguracaoLiga;
+import br.com.managerfoot.temporada.ConfrontoCopa;
+import br.com.managerfoot.temporada.Copa;
 import br.com.managerfoot.temporada.Divisao;
 import br.com.managerfoot.temporada.Jogo;
 import br.com.managerfoot.temporada.LinhaClassificacao;
+import br.com.managerfoot.temporada.PlacarCopa;
 import br.com.managerfoot.temporada.Rodada;
 import br.com.managerfoot.temporada.Temporada;
 
@@ -46,14 +49,16 @@ public class ConsultasRepositorio {
 	private final JogoRepositorio jogos;
 	private final RodadaRepositorio rodadas;
 	private final TemporadaRepositorio temporadas;
+	private final CopaRepositorio copas;
 	private final ParametrosMoral parametrosMoral = ParametrosMoral.padrao();
 
 	public ConsultasRepositorio(JdbcClient jdbc, JogoRepositorio jogos, RodadaRepositorio rodadas,
-			TemporadaRepositorio temporadas) {
+			TemporadaRepositorio temporadas, CopaRepositorio copas) {
 		this.jdbc = jdbc;
 		this.jogos = jogos;
 		this.rodadas = rodadas;
 		this.temporadas = temporadas;
+		this.copas = copas;
 	}
 
 	/**
@@ -117,7 +122,7 @@ public class ConsultasRepositorio {
 
 	/**
 	 * Calendário do clube na temporada atual (SPEC §10.3, rev. 17 e 18; modelo 3b, rev. 36): os jogos
-	 * da liga, com o resultado dos já jogados, sem detalhes dos gols. Vazio se o clube não joga a
+	 * da liga e da copa (modelo 12d, rev. 71), com o resultado dos já jogados, sem detalhes dos gols. Vazio se o clube não joga a
 	 * temporada (fila de espera) ou não é deste jogo.
 	 */
 	@Transactional(readOnly = true)
@@ -146,7 +151,10 @@ public class ConsultasRepositorio {
 				int visitante = rs.getInt("gols_visitante");
 				placares.put(rs.getInt("rodada"), emCasa ? new int[] { mandante, visitante } : new int[] { visitante, mandante });
 			});
-		int proxima = rodadas.rodadasProcessadas(jogoId) + 1;
+		RodadaRepositorio.Proximo proximo = rodadas.proximo(jogoId);
+		long temporadaId = jdbc.sql("SELECT id FROM jogo_temporada WHERE jogo_id = :jogo AND numero = :numero")
+			.param("jogo", jogoId).param("numero", temporada.numero()).query(Long.class).single();
+		List<JogoNoCalendario> daCopa = jogosDaCopa(jogoId, temporadaId, clubeId, proximo);
 		List<JogoNoCalendario> jogosDoClube = new ArrayList<>();
 		for (Rodada rodada : divisao.get().calendario().rodadas()) {
 			Optional<Jogo> jogo = rodada.jogos().stream()
@@ -154,7 +162,10 @@ public class ConsultasRepositorio {
 			int[] placar = placares.get(rodada.numero());
 			jogosDoClube.add(new JogoNoCalendario(rodada.numero(), jogo.map(j -> j.mandante().id() == clubeId).orElse(null),
 					jogo.map(j -> j.mandante().id() == clubeId ? j.visitante() : j.mandante()).orElse(null),
-					placar == null ? null : placar[0], placar == null ? null : placar[1], rodada.numero() == proxima));
+					placar == null ? null : placar[0], placar == null ? null : placar[1],
+					proximo instanceof RodadaRepositorio.Proximo.Liga(int r) && r == rodada.numero(), null, null));
+			// os jogos da copa entram depois da rodada da liga em que são jogados (modelo 12d, rev. 71)
+			daCopa.stream().filter(c -> c.rodada() == rodada.numero()).forEach(jogosDoClube::add);
 		}
 		Classificacao classificacao = rodadas.classificacao(jogoId).get(divisao.get().prioridade());
 		LinhaClassificacao linha = classificacao.linhas().stream().filter(l -> l.clube().id() == clubeId).findFirst()
@@ -178,6 +189,76 @@ public class ConsultasRepositorio {
 		return Optional.of(new VisaoCalendario(linha.clube(), jogos.ano(jogoId, temporada.numero()), nomeDivisao,
 				classificacao.linhas().indexOf(linha) + 1, linha, jogosDoClube, treinador.nome(), forcaEmCampo, moral.valor(),
 				parametrosMoral.maximo(), moral.faixa(parametrosMoral), ultimos));
+	}
+
+	/**
+	 * Os jogos da copa do clube na temporada, na ordem do quadro, com o placar do ponto de vista dele
+	 * e, na volta, o total ou o placar da ida (modelo 12d, rev. 71). A rodada é a da liga depois da
+	 * qual o jogo é disputado.
+	 */
+	private List<JogoNoCalendario> jogosDaCopa(long jogoId, long temporadaId, long clubeId,
+			RodadaRepositorio.Proximo proximo) {
+		Optional<Copa> copa = copas.carregar(jogoId, temporadaId);
+		if (copa.isEmpty()) {
+			return List.of();
+		}
+		List<Copa.Etapa> quadro = copas.quadro(jogoId, temporadaId);
+		List<JogoNoCalendario> lista = new ArrayList<>();
+		for (int i = 0; i < quadro.size(); i++) {
+			Copa.Etapa etapa = quadro.get(i);
+			boolean ehProximo = proximo instanceof RodadaRepositorio.Proximo.EtapaCopa e && e.indice() == i;
+			copa.get().confrontosDa(etapa.fase()).stream()
+				.filter(c -> c.mandante().id() == clubeId || c.visitante().id() == clubeId)
+				.findFirst()
+				.ifPresent(c -> lista.add(jogoDaCopa(c, etapa, c.mandante().id() == clubeId, ehProximo)));
+		}
+		return lista;
+	}
+
+	private static JogoNoCalendario jogoDaCopa(ConfrontoCopa c, Copa.Etapa etapa, boolean ehMandante, boolean proximo) {
+		Clube adversario = ehMandante ? c.visitante() : c.mandante();
+		String nome = "Copa · " + etapa.nome();
+		return switch (etapa.perna()) {
+			case IDA -> {
+				Optional<PlacarCopa> p = c.ida();
+				yield new JogoNoCalendario(etapa.depoisDaRodada(), ehMandante, adversario,
+						p.map(x -> ehMandante ? x.golsMandante() : x.golsVisitante()).orElse(null),
+						p.map(x -> ehMandante ? x.golsVisitante() : x.golsMandante()).orElse(null), proximo, nome, null);
+			}
+			case VOLTA -> {
+				// na volta quem manda é o visitante da ida
+				Optional<PlacarCopa> p = c.volta();
+				String detalhe = null;
+				if (p.isPresent()) {
+					int pro = ehMandante ? c.golsDoMandanteSomados() : c.golsDoVisitanteSomados();
+					int contra = ehMandante ? c.golsDoVisitanteSomados() : c.golsDoMandanteSomados();
+					String penaltis = p.get().penaltis()
+						.map(x -> " · pên. " + (ehMandante ? x.visitante() : x.mandante()) + " x "
+								+ (ehMandante ? x.mandante() : x.visitante()))
+						.orElse("");
+					boolean passa = c.vencedor().map(v -> v.equals(ehMandante ? c.mandante() : c.visitante())).orElse(false);
+					detalhe = "total " + pro + " x " + contra + penaltis + (passa ? " · passa" : " · sai");
+				} else if (c.ida().isPresent()) {
+					PlacarCopa ida = c.ida().get();
+					detalhe = "ida " + (ehMandante ? ida.golsMandante() : ida.golsVisitante()) + " x "
+							+ (ehMandante ? ida.golsVisitante() : ida.golsMandante());
+				}
+				yield new JogoNoCalendario(etapa.depoisDaRodada(), !ehMandante, adversario,
+						p.map(x -> ehMandante ? x.golsVisitante() : x.golsMandante()).orElse(null),
+						p.map(x -> ehMandante ? x.golsMandante() : x.golsVisitante()).orElse(null), proximo, nome, detalhe);
+			}
+			case JOGO_UNICO -> {
+				Optional<PlacarCopa> p = c.ida();
+				String detalhe = p.flatMap(PlacarCopa::penaltis)
+					.map(x -> "pên. " + (ehMandante ? x.mandante() : x.visitante()) + " x "
+							+ (ehMandante ? x.visitante() : x.mandante()))
+					.orElse(null);
+				// campo neutro: sem casa nem fora
+				yield new JogoNoCalendario(etapa.depoisDaRodada(), null, adversario,
+						p.map(x -> ehMandante ? x.golsMandante() : x.golsVisitante()).orElse(null),
+						p.map(x -> ehMandante ? x.golsVisitante() : x.golsMandante()).orElse(null), proximo, nome, detalhe);
+			}
+		};
 	}
 
 	private List<LinhaArtilheiro> linhas(List<Artilharia.Artilheiro> ranking) {
@@ -376,12 +457,15 @@ public class ConsultasRepositorio {
 	/**
 	 * Um jogo no calendário do clube.
 	 *
-	 * @param emCasa nulo na folga
+	 * @param rodada na copa, a rodada da liga depois da qual o jogo é disputado
+	 * @param emCasa nulo na folga e na final da copa (campo neutro)
 	 * @param adversario nulo na folga
 	 * @param golsPro nulo enquanto o jogo não foi jogado
+	 * @param copa nome do jogo da copa ("Copa · Oitavas de final · ida"); nulo na liga
+	 * @param detalhe na copa, o total ou a ida embaixo do placar ("total 3 x 2 · passa"); pode ser nulo
 	 */
 	public record JogoNoCalendario(int rodada, Boolean emCasa, Clube adversario, Integer golsPro, Integer golsContra,
-			boolean proximo) {
+			boolean proximo, String copa, String detalhe) {
 
 		/** V, E ou D; nulo se ainda não foi jogado. */
 		public String resultado() {
@@ -404,6 +488,29 @@ public class ConsultasRepositorio {
 	public record VisaoCalendario(Clube clube, int temporada, String divisao, int posicao, LinhaClassificacao linha,
 			List<JogoNoCalendario> jogos, String treinador, double forcaEmCampo, int moral, int moralMaxima,
 			Moral.Faixa faixa, List<String> ultimos) {
+
+		/** Jogos já disputados, da liga e da copa. */
+		public long jogados() {
+			return jogos.stream().filter(j -> j.golsPro() != null).count();
+		}
+
+		/** Jogos da copa já disputados. */
+		public long jogadosNaCopa() {
+			return jogos.stream().filter(j -> j.golsPro() != null && j.copa() != null).count();
+		}
+
+		/** Quantos jogos terminaram com o resultado (V, E ou D), liga e copa. */
+		public long contar(String resultado) {
+			return jogos.stream().filter(j -> resultado.equals(j.resultado())).count();
+		}
+
+		public int golsPro() {
+			return jogos.stream().filter(j -> j.golsPro() != null).mapToInt(JogoNoCalendario::golsPro).sum();
+		}
+
+		public int golsContra() {
+			return jogos.stream().filter(j -> j.golsPro() != null).mapToInt(JogoNoCalendario::golsContra).sum();
+		}
 	}
 
 	/**

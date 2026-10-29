@@ -87,6 +87,38 @@ class CopaNaTemporadaIT {
 	}
 
 	@Test
+	void calendarioDoClubeMostraOsJogosDaCopaDepoisDaRodada() {
+		jogarAte(10);
+		rodadas.avancarCopa(jogo, 0, List.of());
+		ConfrontoCopa confronto = copas.carregar(jogo, temporada).orElseThrow().confrontosDa(FaseCopa.OITAVAS).getFirst();
+		long dono = jdbc.sql("SELECT usuario_id FROM jogo_treinador WHERE jogo_id = :j").param("j", jogo)
+			.query(Long.class).single();
+
+		List<ConsultasRepositorio.JogoNoCalendario> calendario = consultas
+			.calendario(jogo, dono, confronto.visitante().id()).orElseThrow().jogos();
+
+		// modelo 12d: depois da rodada 10, a ida; depois da 12, a volta, com o placar da ida embaixo
+		int ida = calendario.indexOf(calendario.stream().filter(j -> j.copa() != null).findFirst().orElseThrow());
+		assertThat(calendario.get(ida - 1).rodada()).isEqualTo(10);
+		assertThat(calendario.get(ida - 1).copa()).isNull();
+		ConsultasRepositorio.JogoNoCalendario jogoDaIda = calendario.get(ida);
+		assertThat(jogoDaIda.copa()).isEqualTo("Copa · Oitavas de final · ida");
+		assertThat(jogoDaIda.emCasa()).isFalse();
+		assertThat(jogoDaIda.adversario()).isEqualTo(confronto.mandante());
+		assertThat(jogoDaIda.golsPro()).isEqualTo(confronto.ida().orElseThrow().golsVisitante());
+		ConsultasRepositorio.JogoNoCalendario volta = calendario.stream()
+			.filter(j -> "Copa · Oitavas de final · volta".equals(j.copa())).findFirst().orElseThrow();
+		assertThat(volta.emCasa()).isTrue();
+		assertThat(volta.golsPro()).isNull();
+		assertThat(volta.detalhe()).isEqualTo("ida " + confronto.ida().get().golsVisitante() + " x "
+				+ confronto.ida().get().golsMandante());
+		assertThat(calendario.get(calendario.indexOf(volta) - 1).rodada()).isEqualTo(12);
+		// a próxima é a rodada 11 da liga
+		assertThat(calendario.stream().filter(ConsultasRepositorio.JogoNoCalendario::proximo).toList())
+			.singleElement().matches(j -> j.copa() == null && j.rodada() == 11);
+	}
+
+	@Test
 	void etapaDaCopaTemBilheteriaSemSalarioEContaGolsECartoes() {
 		jogarAte(10);
 		long salariosAntes = soma("SALARIOS");

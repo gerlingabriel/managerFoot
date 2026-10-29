@@ -11,6 +11,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.List;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -217,16 +219,21 @@ class AbasIT {
 	void calendarioDoClubeComResultadosEProximoJogo() throws Exception {
 		long clube = jogo.clubeDoTreinador(jogoId, treinador.id()).orElseThrow();
 		VisaoCalendario calendario = consultas.calendario(jogoId, treinador.id(), clube).orElseThrow();
+		List<JogoNoCalendario> liga = calendario.jogos().stream().filter(j -> j.copa() == null).toList();
 
-		assertThat(calendario.jogos()).hasSize(rodadas.totalDeRodadas(jogoId));
-		assertThat(calendario.jogos().subList(0, 3)).allMatch(j -> j.adversario() == null || j.resultado() != null);
-		assertThat(calendario.jogos().get(3).proximo()).isTrue();
-		assertThat(calendario.jogos().subList(3, calendario.jogos().size())).allMatch(j -> j.resultado() == null);
-		int pontos = calendario.jogos().stream().map(JogoNoCalendario::resultado)
+		assertThat(liga).hasSize(rodadas.totalDeRodadas(jogoId));
+		assertThat(liga.subList(0, 3)).allMatch(j -> j.adversario() == null || j.resultado() != null);
+		// depois da 3ª rodada vem a ida dos 16 avos da copa: o próximo jogo é dela, se o clube a joga
+		assertThat(rodadas.proximo(jogoId)).isInstanceOf(RodadaRepositorio.Proximo.EtapaCopa.class);
+		assertThat(liga.get(3).proximo()).isFalse();
+		assertThat(calendario.jogos().stream().filter(JogoNoCalendario::proximo))
+			.allMatch(j -> "Copa · 16 avos de final · ida".equals(j.copa()));
+		assertThat(liga.subList(3, liga.size())).allMatch(j -> j.resultado() == null);
+		int pontos = liga.stream().map(JogoNoCalendario::resultado)
 			.mapToInt(r -> r == null ? 0 : r.equals("V") ? 3 : r.equals("E") ? 1 : 0).sum();
 		assertThat(pontos).isEqualTo(calendario.linha().pontos());
 		// faixa do clube (modelo 11c): os últimos resultados na ordem e a moral gravada
-		assertThat(calendario.ultimos()).isEqualTo(calendario.jogos().subList(0, 3).stream()
+		assertThat(calendario.ultimos()).isEqualTo(liga.subList(0, 3).stream()
 			.map(JogoNoCalendario::resultado).filter(r -> r != null).toList());
 		assertThat(calendario.forcaEmCampo()).isPositive();
 
