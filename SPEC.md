@@ -15,7 +15,7 @@
 
 ### Histórico de revisões
 
--   **rev. 57 (2026-10-28):** usuário aprovou torcida, ocupação, 6 rodadas de obra e as 3 propostas de patrocínio (por acesso na 1ª = terminar entre os 3 primeiros); jogos já salvos mantêm o estádio atual; até a 5ª rodada o público reflete a posição final da temporada passada.
+-   **rev. 57 (2026-10-28):** público, obras e ampliação da máquina gravados no avanço da rodada (V24). Usuário aprovou torcida, ocupação, 6 rodadas de obra e as 3 propostas de patrocínio (por acesso na 1ª = terminar entre os 3 primeiros); jogos já salvos mantêm o estádio atual; até a 5ª rodada o público reflete a posição final da temporada passada.
 -   **rev. 56 (2026-10-28):** evolução C aprovada e gravada no avanço da rodada; público pela posição na tabela dos dois clubes e limitado pela força do clube; estádio máximo de 80.000; a máquina amplia quando cresce de força ou sobra dinheiro; a obra leva tempo; simular estádio, público e patrocínio.
 -   **rev. 55 (2026-10-28):** evolução corrigida pelo usuário: cada jogador perde no máximo 1 ponto por partida e o resultado decide quantos perdem (1, 3 ou 5); simulação refeita, nova proposta do agente (crescem 4, 2 ou 0,5 dos que não jogaram, com piso); modelos 6c (estádio) e 9a (patrocínio) aprovados.
 -   **rev. 54 (2026-10-28):** modelo 8a (histórico) aprovado; um treinador por clube, obrigatório ao criar ou editar clube; patrocínio volta à caixa de escolha da rev. 40; estádio até 120.000 lugares para todos, com janela nas finanças (capacidade, ingresso fixo por clube e divisão, ampliação de 5.000 lugares pelo preço de um jogador de força 50); regra de evolução de força descrita pelo usuário e simulada (`docs/simulacoes/evolucao-forca.md`), proposta do agente aguardando aprovação. Gravados os treinadores da máquina e a aba Histórico (V23).
@@ -1502,6 +1502,15 @@ reajustados por nova simulação (`docs/simulacoes/economia-caixa.md`):
       temporada e 0,1 depois; a 2ª e a 3ª quase nunca.
     - **Jogos já salvos (rev. 57, pelo usuário):** mantêm o estádio que os
       clubes têm; o estádio inicial de 75% vale só para jogos novos.
+    - **Gravado (rev. 57, V24):** o avanço da rodada usa este público (o
+      mesmo no quadro ao vivo, pela semente da partida e pela tabela antes da
+      rodada) no lugar da ocupação da rev. 38; as obras andam uma rodada por
+      avanço e a máquina decide ampliar depois de cada rodada, pagando na
+      hora (lançamento "Ampliação do estádio", na coluna "Mercado e prêmios"
+      das finanças). A posição final é gravada no fim da temporada; num
+      jogo salvo antes da V24, só a temporada em andamento fica sem ela (usa
+      45% nas primeiras rodadas), e a seguinte já tem. Clube de usuário só
+      amplia pela tela (6c, a fazer).
     - **Atenção:** sem o mercado na simulação, 40% dos clubes da 3ª terminam
       a temporada com saldo negativo (o fundo da tabela arrecada metade do
       que arrecadava); no jogo, esses clubes vendem jogadores (§9.3).

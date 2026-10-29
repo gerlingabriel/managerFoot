@@ -43,12 +43,13 @@ public class FimDeTemporadaRepositorio {
 	private final EscalacaoRepositorio escalacoes;
 	private final CaixaRepositorio caixas;
 	private final LeilaoRepositorio leiloes;
+	private final EstadioRepositorio estadios;
 	private final int candidatosClubeInicial;
 	private final EscalacaoMaquina escalacaoMaquina = new EscalacaoMaquina(ParametrosMotor.padrao());
 
 	public FimDeTemporadaRepositorio(JdbcClient jdbc, JogoRepositorio jogos, TemporadaRepositorio temporadas,
 			RodadaRepositorio rodadas, EscalacaoRepositorio escalacoes, CaixaRepositorio caixas, LeilaoRepositorio leiloes,
-			@Value("${managerfoot.jogo.candidatos-clube-inicial}") int candidatosClubeInicial) {
+			EstadioRepositorio estadios, @Value("${managerfoot.jogo.candidatos-clube-inicial}") int candidatosClubeInicial) {
 		this.jdbc = jdbc;
 		this.jogos = jogos;
 		this.temporadas = temporadas;
@@ -56,6 +57,7 @@ public class FimDeTemporadaRepositorio {
 		this.escalacoes = escalacoes;
 		this.caixas = caixas;
 		this.leiloes = leiloes;
+		this.estadios = estadios;
 		this.candidatosClubeInicial = candidatosClubeInicial;
 	}
 
@@ -90,6 +92,7 @@ public class FimDeTemporadaRepositorio {
 		TransicaoTemporada transicao = TransicaoTemporada.aplicar(jogos.carregarLiga(jogoId), finais,
 				new SplittableRandom(~semente));
 		gravarDivisoes(jogoId, transicao.proxima());
+		estadios.gravarPosicoesAnteriores(jogoId, finais, transicao.proxima());
 		jdbc.sql("""
 				UPDATE jogo_jogador SET amarelos = 0
 				WHERE amarelos > 0 AND clube_id IN (SELECT id FROM jogo_clube WHERE jogo_id = :jogo)""")

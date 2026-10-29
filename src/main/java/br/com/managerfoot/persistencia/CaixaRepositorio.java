@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.OptionalDouble;
+import java.util.SplittableRandom;
 import java.util.TreeMap;
 
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -15,12 +17,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 import br.com.managerfoot.dominio.Clube;
 import br.com.managerfoot.dominio.Jogador;
-import br.com.managerfoot.dominio.Moral;
 import br.com.managerfoot.dominio.Posicao;
 import br.com.managerfoot.economia.CaixaDaRodada;
 import br.com.managerfoot.economia.Lancamento;
+import br.com.managerfoot.economia.MercadoDaMaquina;
 import br.com.managerfoot.economia.Moeda;
 import br.com.managerfoot.economia.Premiacao;
+import br.com.managerfoot.economia.PublicoDoJogo;
 import br.com.managerfoot.economia.TipoLancamento;
 import br.com.managerfoot.temporada.Classificacao;
 import br.com.managerfoot.temporada.ConfiguracaoLiga;
@@ -43,13 +46,17 @@ public class CaixaRepositorio {
 	private final JdbcClient jdbc;
 	private final JogoRepositorio jogos;
 	private final TemporadaRepositorio temporadas;
+	private final ClassificacaoRepositorio classificacoes;
 	private final CaixaDaRodada caixa = CaixaDaRodada.padrao();
+	private final PublicoDoJogo publico = PublicoDoJogo.padrao();
 	private final Premiacao premiacao = Premiacao.padrao();
 
-	public CaixaRepositorio(JdbcClient jdbc, JogoRepositorio jogos, TemporadaRepositorio temporadas) {
+	public CaixaRepositorio(JdbcClient jdbc, JogoRepositorio jogos, TemporadaRepositorio temporadas,
+			ClassificacaoRepositorio classificacoes) {
 		this.jdbc = jdbc;
 		this.jogos = jogos;
 		this.temporadas = temporadas;
+		this.classificacoes = classificacoes;
 	}
 
 	/**
@@ -72,29 +79,64 @@ public class CaixaRepositorio {
 
 	/**
 	 * Público de cada jogo da rodada ao vivo, pelo id do mandante (modelo 1a): o mesmo que o avanço
-	 * vai gravar, porque usa a mesma semente, a moral de antes da rodada e o estádio (o inicial, se o
-	 * caixa ainda não foi aberto).
+	 * vai gravar, porque usa a mesma semente, a mesma tabela (antes da rodada), os mesmos planteis e o
+	 * estádio (o inicial, se o caixa ainda não foi aberto).
 	 */
 	@Transactional(readOnly = true)
 	public Map<Long, Integer> publicos(long jogoId, List<RodadaAoVivo.PartidaDaRodada> partidas) {
-		Map<Long, Integer> capacidades = new HashMap<>();
-		Map<Long, Moral> moral = new HashMap<>();
-		jdbc.sql("SELECT id, forca, estadio_capacidade, moral FROM jogo_clube WHERE jogo_id = :jogo")
+		if (partidas.isEmpty()) {
+			return Map.of();
+		}
+		return publicos(jogoId, temporadas.carregarAtual(jogoId), temporadaAtual(jogoId),
+				partidas.stream().map(p -> new Partida(p.prioridade(), p.jogo(), p.semente())).toList(),
+				jogos.carregarPlanteis(jogoId));
+	}
+
+	/**
+	 * Público pela posição dos dois clubes na tabela antes da rodada, pela torcida do mandante (a força
+	 * em campo) e, nas primeiras rodadas, pela posição final da temporada passada (SPEC §9.2, rev. 56 e
+	 * 57). Sorteado pela semente da partida, com o complemento para não repetir a sequência dela.
+	 */
+	private Map<Long, Integer> publicos(long jogoId, Temporada temporada, long temporadaId, List<Partida> partidas,
+			Map<Long, List<Jogador>> planteis) {
+		int rodada = partidas.getFirst().jogo().rodada();
+		Map<Integer, Classificacao> tabela = classificacoes.calcular(temporada, temporadaId, rodada);
+		Map<Long, Integer> estadios = new HashMap<>();
+		Map<Long, OptionalDouble> anteriores = new HashMap<>();
+		jdbc.sql("""
+				SELECT id, forca, estadio_capacidade, posicao_anterior, clubes_divisao_anterior
+				FROM jogo_clube WHERE jogo_id = :jogo""")
 			.param("jogo", jogoId)
 			.query(rs -> {
 				long id = rs.getLong("id");
-				capacidades.put(id, rs.getObject("estadio_capacidade") == null ? caixa.capacidadeInicial(rs.getInt("forca"))
+				estadios.put(id, rs.getObject("estadio_capacidade") == null ? publico.estadioInicial(rs.getInt("forca"))
 						: rs.getInt("estadio_capacidade"));
-				if (rs.getObject("moral") != null) {
-					moral.put(id, new Moral(rs.getInt("moral")));
-				}
+				anteriores.put(id, rs.getObject("posicao_anterior") == null ? OptionalDouble.empty()
+						: OptionalDouble.of(PublicoDoJogo.relativa(rs.getInt("posicao_anterior"),
+								rs.getInt("clubes_divisao_anterior"))));
 			});
 		Map<Long, Integer> publicos = new HashMap<>();
-		for (RodadaAoVivo.PartidaDaRodada p : partidas) {
+		for (Partida p : partidas) {
+			Classificacao classificacao = tabela.get(p.prioridade());
+			int rodadas = temporada.divisoes().stream().filter(d -> d.prioridade() == p.prioridade()).findFirst()
+				.orElseThrow().calendario().rodadas().size();
 			long mandante = p.jogo().mandante().id();
-			publicos.put(mandante, caixa.publico(p.jogo(), capacidades.get(mandante), moral.get(mandante), p.semente()));
+			long visitante = p.jogo().visitante().id();
+			publicos.put(mandante, publico.publico(estadios.get(mandante),
+					MercadoDaMaquina.forcaEmCampo(planteis.getOrDefault(mandante, List.of())), posicao(classificacao, mandante),
+					posicao(classificacao, visitante), classificacao.linhas().size(), rodada, rodadas, anteriores.get(mandante),
+					anteriores.get(visitante), new SplittableRandom(~p.semente())));
 		}
 		return publicos;
+	}
+
+	private static int posicao(Classificacao classificacao, long clubeId) {
+		for (int i = 0; i < classificacao.linhas().size(); i++) {
+			if (classificacao.linhas().get(i).clube().id() == clubeId) {
+				return i + 1;
+			}
+		}
+		throw new IllegalStateException("o clube " + clubeId + " não está na classificação da divisão");
 	}
 
 	/**
@@ -123,7 +165,7 @@ public class CaixaRepositorio {
 				WHERE c.id = :clube ORDER BY t.numero DESC LIMIT 1""")
 			.param("clube", clube)
 			.query((rs, n) -> new Situacao(rs.getObject("estadio_capacidade") == null
-					? caixa.capacidadeInicial(rs.getInt("forca")) : rs.getInt("estadio_capacidade"),
+					? publico.estadioInicial(rs.getInt("forca")) : rs.getInt("estadio_capacidade"),
 					rs.getLong("temporada_id"), rs.getInt("rodadas_processadas"), rs.getString("divisao")))
 			.single();
 
@@ -146,6 +188,7 @@ public class CaixaRepositorio {
 					case COMPRA, VENDA -> (tipo == TipoLancamento.COMPRA ? "Compra: " : "Venda: ") + rs.getString("nome")
 							+ " (" + sigla(rs.getString("posicao")) + ", " + rs.getInt("forca") + ")";
 					case PREMIO -> "Prêmio da liga";
+					case ESTADIO -> "Ampliação do estádio";
 					default -> null;
 				};
 				if (detalhe != null) {
@@ -172,7 +215,7 @@ public class CaixaRepositorio {
 			int rodada = e.getKey();
 			Map<TipoLancamento, Long> valores = e.getValue();
 			long mercado = valores.getOrDefault(TipoLancamento.COMPRA, 0L) + valores.getOrDefault(TipoLancamento.VENDA, 0L)
-					+ valores.getOrDefault(TipoLancamento.PREMIO, 0L);
+					+ valores.getOrDefault(TipoLancamento.PREMIO, 0L) + valores.getOrDefault(TipoLancamento.ESTADIO, 0L);
 			if (rodada == 0 && mercado == 0) {
 				continue; // só o patrocínio, que tem linha própria
 			}
@@ -199,23 +242,21 @@ public class CaixaRepositorio {
 	 * divisões. A fila de espera não joga e não tem lançamentos. Abre antes o caixa de quem ainda não
 	 * tem.
 	 *
-	 * @param moralAntes moral dos clubes antes da rodada, que decide o público
+	 * @param planteis os planteis que jogaram, antes da evolução de força
 	 */
 	@Transactional(propagation = Propagation.MANDATORY)
 	public void lancarRodada(long jogoId, long temporadaId, Temporada temporada, int rodada,
-			List<ProcessamentoRodada.PartidaJogada> partidas, Map<Long, Moral> moralAntes,
-			Map<Long, List<Jogador>> planteis) {
+			List<ProcessamentoRodada.PartidaJogada> partidas, Map<Long, List<Jogador>> planteis) {
 		abrirCaixas(jogoId, planteis);
-		Map<Long, Integer> capacidades = capacidades(jogoId);
-		Map<Long, Long> sementes = new HashMap<>();
-		partidas.forEach(p -> sementes.put(p.jogo().mandante().id(), p.semente()));
+		Map<Long, Integer> publicos = partidas.isEmpty() ? Map.of()
+				: publicos(jogoId, temporada, temporadaId,
+						partidas.stream().map(p -> new Partida(p.prioridade(), p.jogo(), p.semente())).toList(), planteis);
 		for (Temporada.SorteiosDivisao divisao : temporada.divisoes()) {
 			for (Rodada r : divisao.calendario().rodadas()) {
 				if (r.numero() == rodada) {
-					CaixaDaRodada.Movimento movimento = caixa.rodada(r, divisao.prioridade(), sementes, capacidades,
-							moralAntes, planteis);
-					movimento.publicoPorMandante().forEach((mandante, publico) -> gravarPublico(temporadaId, rodada,
-							mandante, publico));
+					CaixaDaRodada.Movimento movimento = caixa.rodada(r, divisao.prioridade(), publicos, planteis);
+					movimento.publicoPorMandante().forEach((mandante, pagantes) -> gravarPublico(temporadaId, rodada,
+							mandante, pagantes));
 					movimento.lancamentos().forEach((clube, lancamentos) -> lancar(temporadaId, rodada, clube, lancamentos));
 				}
 			}
@@ -312,33 +353,32 @@ public class CaixaRepositorio {
 			.update();
 	}
 
+	/** Pagamento da ampliação do estádio na rodada, e o saldo do clube. */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void lancarEstadio(long temporadaId, int rodada, long clubeId, long custo) {
+		lancar(temporadaId, rodada, clubeId, List.of(new Lancamento(TipoLancamento.ESTADIO, -custo)));
+	}
+
 	/** Abre o caixa (estádio e saldo inicial) dos clubes do jogo que ainda não têm. */
 	@Transactional(propagation = Propagation.MANDATORY)
 	public void abrirCaixas(long jogoId) {
 		abrirCaixas(jogoId, jogos.carregarPlanteis(jogoId));
 	}
 
-	/** Capacidade inicial do estádio e saldo inicial dos clubes que ainda não têm caixa. */
+	/**
+	 * Estádio inicial (75% da torcida, rev. 56) e saldo inicial dos clubes que ainda não têm caixa. Os
+	 * caixas já abertos mantêm o estádio (rev. 57).
+	 */
 	private void abrirCaixas(long jogoId, Map<Long, List<Jogador>> planteis) {
 		jdbc.sql("SELECT id, forca FROM jogo_clube WHERE jogo_id = :jogo AND saldo IS NULL")
 			.param("jogo", jogoId)
 			.query((rs, n) -> Map.entry(rs.getLong("id"), rs.getInt("forca")))
 			.list()
 			.forEach(c -> jdbc.sql("UPDATE jogo_clube SET estadio_capacidade = :capacidade, saldo = :saldo WHERE id = :clube")
-				.param("capacidade", caixa.capacidadeInicial(c.getValue()))
+				.param("capacidade", publico.estadioInicial(c.getValue()))
 				.param("saldo", caixa.saldoInicial(planteis.getOrDefault(c.getKey(), List.of())))
 				.param("clube", c.getKey())
 				.update());
-	}
-
-	private Map<Long, Integer> capacidades(long jogoId) {
-		Map<Long, Integer> capacidades = new HashMap<>();
-		jdbc.sql("SELECT id, estadio_capacidade FROM jogo_clube WHERE jogo_id = :jogo")
-			.param("jogo", jogoId)
-			.query((rs, n) -> Map.entry(rs.getLong("id"), rs.getInt("estadio_capacidade")))
-			.list()
-			.forEach(e -> capacidades.put(e.getKey(), e.getValue()));
-		return capacidades;
 	}
 
 	private void gravarPublico(long temporadaId, int rodada, long mandanteId, int publico) {
@@ -381,6 +421,9 @@ public class CaixaRepositorio {
 
 	private static boolean envolve(Jogo jogo, long clube) {
 		return jogo.mandante().id() == clube || jogo.visitante().id() == clube;
+	}
+
+	private record Partida(int prioridade, Jogo jogo, long semente) {
 	}
 
 	private record Situacao(int estadio, long temporadaId, int rodadas, String divisao) {

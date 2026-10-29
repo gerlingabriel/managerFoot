@@ -71,23 +71,21 @@ class CaixaDaRodadaTest {
 	}
 
 	@Test
-	void rodadaLancaMandanteVisitanteEFolgaComPublicoReproduzivel() {
+	void rodadaLancaMandanteVisitanteEFolgaComOPublicoRecebido() {
 		Clube a = new Clube(1, "A", 30);
 		Clube b = new Clube(2, "B", 30);
 		Clube c = new Clube(3, "C", 30);
 		Rodada rodada = new Rodada(1, List.of(new Jogo(1, a, b)), Optional.of(c));
 		List<Jogador> plantel = List.of(jogador(17));
 		Map<Long, List<Jogador>> planteis = Map.of(1L, plantel, 2L, plantel, 3L, plantel);
-		Map<Long, Integer> capacidades = Map.of(1L, 10_000, 2L, 10_000, 3L, 10_000);
 
-		CaixaDaRodada.Movimento movimento = caixa.rodada(rodada, 1, Map.of(1L, 99L), capacidades, Map.of(), planteis);
+		CaixaDaRodada.Movimento movimento = caixa.rodada(rodada, 1, Map.of(1L, 7_500), planteis);
 
 		int publico = movimento.publicoPorMandante().get(1L);
-		assertThat(publico).isEqualTo(caixa.publico(10_000, new Moral(18), 30, 30, new SplittableRandom(~99L)));
+		assertThat(publico).isEqualTo(7_500);
 		assertThat(movimento.lancamentos().get(1L)).isEqualTo(caixa.lancamentos(Local.CASA, 1, publico, plantel));
 		assertThat(movimento.lancamentos().get(2L)).isEqualTo(caixa.lancamentos(Local.FORA, 1, 0, plantel));
 		assertThat(movimento.lancamentos().get(3L)).isEqualTo(caixa.lancamentos(Local.FOLGA, 1, 0, plantel));
-		assertThat(caixa.rodada(rodada, 1, Map.of(1L, 99L), capacidades, Map.of(), planteis)).isEqualTo(movimento);
 	}
 
 	private int media(Moral moral, int forcaCasa, int forcaFora) {

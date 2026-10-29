@@ -1,15 +1,11 @@
 package br.com.managerfoot.persistencia;
 
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.SplittableRandom;
-import java.util.TreeMap;
-import java.util.stream.Stream;
 
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
@@ -28,7 +24,6 @@ import br.com.managerfoot.temporada.Disciplina;
 import br.com.managerfoot.temporada.EvolucaoForca;
 import br.com.managerfoot.temporada.Jogo;
 import br.com.managerfoot.temporada.ProcessamentoRodada;
-import br.com.managerfoot.temporada.ResultadoJogo;
 import br.com.managerfoot.temporada.RodadaAoVivo;
 import br.com.managerfoot.temporada.Temporada;
 
@@ -51,22 +46,27 @@ public class RodadaRepositorio {
 	private final EscalacaoRepositorio escalacoes;
 	private final CaixaRepositorio caixas;
 	private final MercadoRepositorio mercado;
+	private final ClassificacaoRepositorio classificacoes;
+	private final EstadioRepositorio estadios;
 	private final ProcessamentoRodada processamento = ProcessamentoRodada.padrao();
 	private final EvolucaoForca evolucao = EvolucaoForca.padrao();
 
 	public RodadaRepositorio(JdbcClient jdbc, JogoRepositorio jogos, TemporadaRepositorio temporadas,
-			EscalacaoRepositorio escalacoes, CaixaRepositorio caixas, MercadoRepositorio mercado) {
+			EscalacaoRepositorio escalacoes, CaixaRepositorio caixas, MercadoRepositorio mercado,
+			ClassificacaoRepositorio classificacoes, EstadioRepositorio estadios) {
 		this.jdbc = jdbc;
 		this.jogos = jogos;
 		this.temporadas = temporadas;
 		this.escalacoes = escalacoes;
 		this.caixas = caixas;
 		this.mercado = mercado;
+		this.classificacoes = classificacoes;
+		this.estadios = estadios;
 	}
 
 	/**
-	 * Joga a rodada da temporada atual e grava placares, gols, cartões, suspensões, moral e o caixa
-	 * dos clubes (SPEC §9.1), e completa os jogadores à venda da máquina (SPEC §9.4). Os clubes de treinador humano jogam com a escalação gravada, e quem
+	 * Joga a rodada da temporada atual e grava placares, gols, cartões, suspensões, moral, o caixa
+	 * dos clubes (SPEC §9.1) e as obras do estádio (§9.2), e completa os jogadores à venda da máquina (SPEC §9.4). Os clubes de treinador humano jogam com a escalação gravada, e quem
 	 * ficou suspenso sai dela.
 	 *
 	 * @param rodada a rodada que quem pede espera jogar: a seguinte à última processada
@@ -108,8 +108,9 @@ public class RodadaRepositorio {
 		}
 		gravarDisciplina(planteis, antes, resultado.disciplina());
 		escalacoes.retirarSuspensos(jogoId);
-		caixas.lancarRodada(jogoId, linha.id(), temporada, rodada, resultado.partidas(), moralAntes, planteis);
+		caixas.lancarRodada(jogoId, linha.id(), temporada, rodada, resultado.partidas(), planteis);
 		evoluir(jogoId, temporada, rodada, aoVivo, resultado, planteis);
+		estadios.avancarObras(jogoId, linha.id(), rodada, planteis);
 		mercado.reporAVenda(jogoId, MercadoRepositorio.semente(temporada.semente(), rodada));
 		resultado.moral().forEach((clubeId, moral) -> {
 			if (!moral.equals(moralAntes.get(clubeId))) {
@@ -210,34 +211,7 @@ public class RodadaRepositorio {
 	/** Classificação de cada divisão da temporada atual, por prioridade, com os placares gravados. */
 	@Transactional(readOnly = true)
 	public Map<Integer, Classificacao> classificacao(long jogoId) {
-		LinhaTemporada linha = temporadaAtual(jogoId, false);
-		Temporada temporada = temporadas.carregarAtual(jogoId);
-		Map<Integer, Classificacao> classificacoes = new TreeMap<>();
-		for (Temporada.SorteiosDivisao divisao : temporada.divisoes()) {
-			Map<String, Jogo> porConfronto = new HashMap<>();
-			divisao.calendario().jogos().forEach(j -> porConfronto.put(confronto(j.mandante().id(), j.visitante().id()), j));
-			List<ResultadoJogo> resultados = new ArrayList<>();
-			jdbc.sql("""
-					SELECT p.mandante_id, p.visitante_id, p.gols_mandante, p.gols_visitante
-					FROM jogo_partida p JOIN jogo_divisao d ON d.id = p.divisao_id
-					WHERE p.temporada_id = :temporada AND d.prioridade = :prioridade AND p.gols_mandante IS NOT NULL""")
-				.param("temporada", linha.id())
-				.param("prioridade", divisao.prioridade())
-				.query((rs, n) -> new ResultadoJogo(
-						porConfronto.get(confronto(rs.getLong("mandante_id"), rs.getLong("visitante_id"))),
-						rs.getInt("gols_mandante"), rs.getInt("gols_visitante")))
-				.list()
-				.forEach(resultados::add);
-			List<Clube> clubes = divisao.calendario()
-				.jogos()
-				.stream()
-				.flatMap(j -> Stream.of(j.mandante(), j.visitante()))
-				.distinct()
-				.sorted(Comparator.comparingLong(Clube::id))
-				.toList();
-			classificacoes.put(divisao.prioridade(), Classificacao.calcular(clubes, resultados, temporada.semente()));
-		}
-		return classificacoes;
+		return classificacoes.calcular(temporadas.carregarAtual(jogoId), temporadaAtual(jogoId, false).id(), Integer.MAX_VALUE);
 	}
 
 	private int totalDeRodadas(LinhaTemporada linha) {
@@ -330,10 +304,6 @@ public class RodadaRepositorio {
 			.query((rs, n) -> new LinhaTemporada(rs.getLong("id"), rs.getInt("rodadas_processadas")))
 			.optional()
 			.orElseThrow(() -> new NoSuchElementException("o jogo " + jogoId + " não existe ou não tem temporada"));
-	}
-
-	private static String confronto(long mandante, long visitante) {
-		return mandante + "x" + visitante;
 	}
 
 	/** Rodada jogada pelo avanço. */

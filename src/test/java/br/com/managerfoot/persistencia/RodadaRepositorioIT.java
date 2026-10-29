@@ -22,6 +22,9 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 
 import br.com.managerfoot.TestcontainersConfiguration;
 import br.com.managerfoot.dominio.Jogador;
+import br.com.managerfoot.economia.AmpliacaoEstadio;
+import br.com.managerfoot.economia.ParametrosPublico;
+import br.com.managerfoot.economia.PublicoDoJogo;
 import br.com.managerfoot.temporada.Classificacao;
 import br.com.managerfoot.temporada.Disciplina;
 import br.com.managerfoot.temporada.LinhaClassificacao;
@@ -109,6 +112,11 @@ class RodadaRepositorioIT {
 
 		// todos os clubes ganham estádio e saldo; só os das divisões têm lançamentos
 		assertThat(contar("SELECT count(*) FROM jogo_clube WHERE jogo_id = ? AND saldo IS NULL")).isZero();
+		// estádio inicial: 75% da torcida pela força cadastrada (rev. 56)
+		PublicoDoJogo publico = PublicoDoJogo.padrao();
+		jdbc.sql("SELECT forca, estadio_capacidade FROM jogo_clube WHERE jogo_id = ?").param(jogo)
+			.query((rs, n) -> Map.entry(rs.getInt("forca"), rs.getInt("estadio_capacidade"))).list()
+			.forEach(e -> assertThat(e.getValue()).isEqualTo(publico.estadioInicial(e.getKey())));
 		assertThat(contar("""
 				SELECT count(DISTINCT l.clube_id) FROM jogo_lancamento l JOIN jogo_clube c ON c.id = l.clube_id
 				WHERE c.jogo_id = ? AND l.tipo = 'SALARIOS'""")).isEqualTo(16 + 15);
@@ -130,6 +138,50 @@ class RodadaRepositorioIT {
 				SELECT sum(l.valor) FROM jogo_lancamento l JOIN jogo_clube c ON c.id = l.clube_id
 				WHERE c.jogo_id = ? AND l.rodada = 2""");
 		assertThat(contar("SELECT sum(saldo) FROM jogo_clube WHERE jogo_id = ?")).isEqualTo(saldos + extrato2);
+	}
+
+	@Test
+	void maquinaComMuitoDinheiroAmpliaOEstadioEOsLugaresValemDepoisDaObra() {
+		rodadas.avancar(jogo, 1);
+		long clube = jdbc.sql("""
+				SELECT c.id FROM jogo_clube c WHERE c.jogo_id = ? AND c.divisao_id IS NOT NULL
+				  AND NOT EXISTS (SELECT 1 FROM jogo_treinador t WHERE t.clube_id = c.id) ORDER BY c.id LIMIT 1""")
+			.param(jogo).query(Long.class).single();
+		jdbc.sql("UPDATE jogo_clube SET estadio_capacidade = 500, saldo = 10000000000000, obra_rodadas = NULL WHERE id = ?")
+			.param(clube).update();
+		ParametrosPublico parametros = ParametrosPublico.padrao();
+
+		rodadas.avancar(jogo, 2);
+
+		assertThat(estadio(clube)).isEqualTo(500);
+		assertThat(obra(clube)).isEqualTo(parametros.rodadasDeObra());
+		assertThat(jdbc.sql("SELECT valor FROM jogo_lancamento WHERE clube_id = ? AND rodada = 2 AND tipo = 'ESTADIO'")
+			.param(clube).query(Long.class).single()).isEqualTo(-AmpliacaoEstadio.padrao().custo());
+
+		for (int rodada = 3; rodada < 2 + parametros.rodadasDeObra(); rodada++) {
+			rodadas.avancar(jogo, rodada);
+		}
+		assertThat(estadio(clube)).isEqualTo(500);
+		assertThat(obra(clube)).isEqualTo(1);
+
+		rodadas.avancar(jogo, 2 + parametros.rodadasDeObra());
+
+		// a obra terminou e, ainda rico, o clube começa outra
+		assertThat(estadio(clube)).isEqualTo(500 + parametros.bloco());
+		assertThat(obra(clube)).isEqualTo(parametros.rodadasDeObra());
+		// o clube do usuário só amplia pela tela
+		assertThat(contar("""
+				SELECT count(*) FROM jogo_lancamento l JOIN jogo_treinador t ON t.clube_id = l.clube_id
+				WHERE t.jogo_id = ? AND l.tipo = 'ESTADIO'""")).isZero();
+	}
+
+	private int estadio(long clube) {
+		return jdbc.sql("SELECT estadio_capacidade FROM jogo_clube WHERE id = ?").param(clube).query(Integer.class).single();
+	}
+
+	private Integer obra(long clube) {
+		return jdbc.sql("SELECT obra_rodadas FROM jogo_clube WHERE id = ?").param(clube)
+			.query((rs, n) -> (Integer) rs.getObject("obra_rodadas")).single();
 	}
 
 	@Test

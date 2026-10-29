@@ -166,6 +166,15 @@ class FimDeTemporadaRepositorioIT {
 		// quem veio da fila recebe como o último da divisão em que entra
 		assertThat(lancamento("Fila 1", 2, "PATROCINIO")).isEqualTo(premiacao.patrocinio(15, 15, limiteB));
 
+		// posição final da temporada passada para o público das primeiras rodadas (rev. 57): o campeão
+		// da Série A é 1º de 16; quem veio da fila conta como o último da Série B; a fila fica sem
+		assertThat(posicaoAnterior(lideres.get(0))).isEqualTo("1/16");
+		assertThat(posicaoAnterior("Fila 1")).isEqualTo("15/15");
+		assertThat(contar("SELECT count(*) FROM jogo_clube WHERE jogo_id = ? AND divisao_id IS NOT NULL "
+				+ "AND posicao_anterior IS NULL")).isZero();
+		assertThat(contar("SELECT count(*) FROM jogo_clube WHERE jogo_id = ? AND divisao_id IS NULL "
+				+ "AND posicao_anterior IS NOT NULL")).isZero();
+
 		assertThatThrownBy(() -> fim.avancarTemporada(jogo, 1, SEMENTE_NOVA)).isInstanceOf(IllegalStateException.class)
 			.hasMessageContaining("é a 2");
 		assertThat(rodadas.avancar(jogo, 1).numero()).isEqualTo(1);
@@ -182,6 +191,11 @@ class FimDeTemporadaRepositorioIT {
 			.param("tipo", tipo)
 			.query(Long.class)
 			.single();
+	}
+
+	private String posicaoAnterior(String clube) {
+		return jdbc.sql("SELECT posicao_anterior || '/' || clubes_divisao_anterior FROM jogo_clube WHERE jogo_id = ? AND nome = ?")
+			.param(jogo).param(clube).query(String.class).single();
 	}
 
 	private long contar(String sql) {

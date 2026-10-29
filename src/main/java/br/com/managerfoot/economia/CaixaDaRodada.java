@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.SplittableRandom;
 import java.util.random.RandomGenerator;
 
 import br.com.managerfoot.dominio.Jogador;
@@ -64,8 +63,9 @@ public final class CaixaDaRodada {
 	}
 
 	/**
-	 * Público do jogo em casa: a ocupação sobe com a moral do mandante e com um adversário mais forte
-	 * (SPEC §9.2), com uma pequena variação sorteada; nunca passa da capacidade.
+	 * Público do jogo em casa pela regra da rev. 37: a ocupação sobe com a moral do mandante e com um
+	 * adversário mais forte, com uma pequena variação sorteada; nunca passa da capacidade. O jogo usa
+	 * {@link PublicoDoJogo} desde a rev. 57; esta fica para as simulações de economia e mercado.
 	 */
 	public int publico(int capacidade, Moral moralMandante, int forcaMandante, int forcaVisitante,
 			RandomGenerator aleatorio) {
@@ -74,17 +74,6 @@ public final class CaixaDaRodada {
 		double ocupacao = parametros.ocupacaoBase() + parametros.pesoMoral() * moral + parametros.pesoAdversario() * adversario
 				+ (aleatorio.nextDouble() * 2 - 1) * parametros.variacaoPublico();
 		return (int) Math.round(capacidade * Math.clamp(ocupacao, 0.1, 1.0));
-	}
-
-	/**
-	 * Público do jogo pela semente da partida: o mesmo no quadro ao vivo e no lançamento da rodada.
-	 *
-	 * @param moralMandante nula vale a moral inicial
-	 */
-	public int publico(Jogo jogo, int capacidade, Moral moralMandante, long sementePartida) {
-		// a partida usa a semente; o público usa o complemento para não repetir a mesma sequência
-		return publico(capacidade, moralMandante == null ? Moral.inicial(parametrosMoral) : moralMandante,
-				jogo.mandante().forca(), jogo.visitante().forca(), new SplittableRandom(~sementePartida));
 	}
 
 	/**
@@ -107,29 +96,25 @@ public final class CaixaDaRodada {
 	}
 
 	/**
-	 * Caixa de uma divisão numa rodada: o público de cada jogo e os lançamentos de cada clube, inclusive
-	 * o da folga. O público de cada jogo é sorteado pela semente da partida, para a rodada refeita dar
-	 * o mesmo caixa.
+	 * Caixa de uma divisão numa rodada: os lançamentos de cada clube, inclusive o da folga.
 	 *
-	 * @param sementePorMandante semente da partida, pelo id do mandante
-	 * @param capacidades estádio de cada clube
-	 * @param moral moral dos clubes antes da rodada; quem não estiver tem a moral inicial
+	 * @param publicos pagantes de cada jogo, pelo id do mandante ({@link PublicoDoJogo})
 	 */
-	public Movimento rodada(Rodada rodada, int prioridadeDivisao, Map<Long, Long> sementePorMandante,
-			Map<Long, Integer> capacidades, Map<Long, Moral> moral, Map<Long, List<Jogador>> planteis) {
-		Map<Long, Integer> publicos = new HashMap<>();
+	public Movimento rodada(Rodada rodada, int prioridadeDivisao, Map<Long, Integer> publicos,
+			Map<Long, List<Jogador>> planteis) {
+		Map<Long, Integer> publicoPorMandante = new HashMap<>();
 		Map<Long, List<Lancamento>> lancamentos = new HashMap<>();
 		for (Jogo jogo : rodada.jogos()) {
 			long mandante = jogo.mandante().id();
-			int publico = publico(jogo, capacidades.get(mandante), moral.get(mandante), sementePorMandante.get(mandante));
-			publicos.put(mandante, publico);
+			int publico = publicos.get(mandante);
+			publicoPorMandante.put(mandante, publico);
 			lancamentos.put(mandante, lancamentos(Local.CASA, prioridadeDivisao, publico, planteis.get(mandante)));
 			long visitante = jogo.visitante().id();
 			lancamentos.put(visitante, lancamentos(Local.FORA, prioridadeDivisao, 0, planteis.get(visitante)));
 		}
 		rodada.folga()
 			.ifPresent(c -> lancamentos.put(c.id(), lancamentos(Local.FOLGA, prioridadeDivisao, 0, planteis.get(c.id()))));
-		return new Movimento(publicos, lancamentos);
+		return new Movimento(publicoPorMandante, lancamentos);
 	}
 
 	/** Público de cada jogo pelo id do mandante e lançamentos de cada clube pelo id. */
