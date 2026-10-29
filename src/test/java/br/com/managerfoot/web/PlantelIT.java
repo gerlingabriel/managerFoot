@@ -221,13 +221,16 @@ class PlantelIT {
 				WHERE c.jogo_id = :j AND c.id <> :c AND j.forca_salario IS NOT NULL""")
 			.param("j", jogoId).param("c", clube).query(Long.class).single()).isZero();
 
-		// o salário do contrato vale mesmo com a força mudando: a folha lançada é a da força 10
+		// o salário do contrato vale mesmo com a força mudando: a folha lançada é a da força 10, com a
+		// faixa da força em campo do clube (rev. 66)
 		jdbc.sql("UPDATE jogo_jogador SET forca_salario = 10 WHERE clube_id = :c").param("c", clube).update();
-		long jogadores = jdbc.sql("SELECT count(*) FROM jogo_jogador WHERE clube_id = :c").param("c", clube)
-			.query(Long.class).single();
+		java.util.List<Integer> forcas = jdbc.sql("SELECT forca FROM jogo_jogador WHERE clube_id = :c").param("c", clube)
+			.query(Integer.class).list();
+		double emCampo = forcas.stream().sorted(java.util.Comparator.reverseOrder()).limit(11).mapToInt(Integer::intValue)
+			.average().orElseThrow();
 		rodadas.avancar(jogoId, 1);
 		assertThat(jdbc.sql("SELECT valor FROM jogo_lancamento WHERE clube_id = :c AND rodada = 1 AND tipo = 'SALARIOS'")
-			.param("c", clube).query(Long.class).single()).isEqualTo(-jogadores * CaixaDaRodada.padrao().salario(10));
+			.param("c", clube).query(Long.class).single()).isEqualTo(-forcas.size() * CaixaDaRodada.padrao().salario(10, emCampo));
 	}
 
 	@Test

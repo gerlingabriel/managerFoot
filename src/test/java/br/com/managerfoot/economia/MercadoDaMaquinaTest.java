@@ -21,11 +21,11 @@ class MercadoDaMaquinaTest {
 
 	@Test
 	void limiteEDezRodadasDaFolhaEAbaixoDeleOClubeVende() {
-		// 23 jogadores de força 17: folha de R$ 43.700 por rodada (R$ 1.900 cada, faixa −5%)
+		// 23 jogadores de força 17: folha de R$ 39.100 por rodada (R$ 1.700 cada, faixa −15%)
 		List<Jogador> plantel = plantel(23, 17);
-		assertThat(mercado.limite(plantel)).isEqualTo(437_000_00L);
-		assertThat(mercado.precisaVender(436_999_00L, plantel)).isTrue();
-		assertThat(mercado.precisaVender(437_000_00L, plantel)).isFalse();
+		assertThat(mercado.limite(plantel)).isEqualTo(391_000_00L);
+		assertThat(mercado.precisaVender(390_999_00L, plantel)).isTrue();
+		assertThat(mercado.precisaVender(391_000_00L, plantel)).isFalse();
 	}
 
 	@Test
@@ -67,13 +67,13 @@ class MercadoDaMaquinaTest {
 	@Test
 	void lanceFicaAbaixoDoPrecoEOClubeMaisForteDaUmPoucoMais() {
 		List<Jogador> plantel = plantel(23, 17);
-		Jogador alvo = jogador(300, Posicao.MEIO_CAMPISTA, 17); // preço R$ 152.000
+		Jogador alvo = jogador(300, Posicao.MEIO_CAMPISTA, 17); // preço R$ 160.000
 		long rico = 10_000_000_00L;
-		long fraco = mercado.lance(new Clube(1, "Fraco", 10), rico, plantel, alvo, "BRA", 121_000_00L).orElseThrow();
-		long forte = mercado.lance(new Clube(2, "Forte", 50), rico, plantel, alvo, "BRA", 121_000_00L).orElseThrow();
-		assertThat(fraco).isEqualTo(138_000_00L); // 152.000 × (0,90 + 0,05 × 10/50) = 138.320
-		assertThat(forte).isEqualTo(144_000_00L); // 152.000 × 0,95 = 144.400
-		assertThat(fraco).isLessThan(forte).isGreaterThanOrEqualTo(121_000_00L);
+		long fraco = mercado.lance(new Clube(1, "Fraco", 10), rico, plantel, alvo, "BRA", 128_000_00L).orElseThrow();
+		long forte = mercado.lance(new Clube(2, "Forte", 50), rico, plantel, alvo, "BRA", 128_000_00L).orElseThrow();
+		assertThat(fraco).isEqualTo(146_000_00L); // 160.000 × (0,90 + 0,05 × 10/50) = 145.600
+		assertThat(forte).isEqualTo(152_000_00L); // 160.000 × 0,95
+		assertThat(fraco).isLessThan(forte).isGreaterThanOrEqualTo(128_000_00L);
 	}
 
 	@Test
@@ -81,10 +81,10 @@ class MercadoDaMaquinaTest {
 		Jogador alvo = jogador(300, Posicao.MEIO_CAMPISTA, 17);
 		Clube clube = new Clube(1, "Clube", 17);
 		List<Jogador> plantel = plantel(23, 17);
-		// com o novo jogador a folha é 24 × R$ 1.900 = R$ 45.600: limite de 10 rodadas mais folga de 5,
-		// R$ 684.000; lance de R$ 139.000
-		assertThat(mercado.lance(clube, 823_000_00L, plantel, alvo, "BRA", 0)).contains(139_000_00L);
-		assertThat(mercado.lance(clube, 822_999_00L, plantel, alvo, "BRA", 0)).isEmpty();
+		// com o novo jogador a folha é 24 × R$ 1.700 = R$ 40.800: limite de 10 rodadas mais folga de 5,
+		// R$ 612.000; lance de R$ 147.000 (160.000 × 0,917)
+		assertThat(mercado.lance(clube, 759_000_00L, plantel, alvo, "BRA", 0)).contains(147_000_00L);
+		assertThat(mercado.lance(clube, 758_999_00L, plantel, alvo, "BRA", 0)).isEmpty();
 		assertThat(mercado.lance(clube, 10_000_000_00L, plantel(Clube.MAXIMO_JOGADORES, 17), alvo, "BRA", 0)).isEmpty();
 	}
 
@@ -95,6 +95,19 @@ class MercadoDaMaquinaTest {
 		long rico = 100_000_000_00L;
 		assertThat(mercado.lance(clube, rico, plantel, jogador(300, Posicao.ATACANTE, 25), "BRA", 0)).isPresent();
 		assertThat(mercado.lance(clube, rico, plantel, jogador(301, Posicao.ATACANTE, 24), "BRA", 0)).isEmpty();
+	}
+
+	@Test
+	void abaixoDoPlantelAlvoOClubeComCaixaCompraAteJogadorFraco() {
+		Clube clube = new Clube(1, "Clube", 30);
+		long rico = 100_000_000_00L;
+		Jogador fraco = jogador(300, Posicao.ATACANTE, 15);
+		// 20 jogadores: abaixo de 23, qualquer força serve (rev. 66)
+		assertThat(mercado.lance(clube, rico, plantel(20, 30), fraco, "BRA", 0)).isPresent();
+		assertThat(mercado.lance(clube, rico, plantel(22, 30), fraco, "BRA", 0)).isPresent();
+		assertThat(mercado.lance(clube, rico, plantel(23, 30), fraco, "BRA", 0)).isEmpty();
+		// sem caixa, nem abaixo do alvo
+		assertThat(mercado.lance(clube, 0, plantel(20, 30), fraco, "BRA", 0)).isEmpty();
 	}
 
 	@Test

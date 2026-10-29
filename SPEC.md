@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 65 — 2026-10-29)
+-   **Status:** versão inicial para revisão (rev. 66 — 2026-10-29)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 66 (2026-10-29):** pelo usuário: salário com a faixa da força em campo do clube, +20% e +10% em cima e deflação embaixo se preciso; preço sem faixa (só força e asterisco); máquina com caixa completa o plantel até 23 comprando até jogador fraco. Agente escolheu −30%/−15% embaixo pela simulação. Ligado no jogo (§9.3, §9.5); prêmio volta a R$ 3,968 mi e +5.000 lugares a R$ 1,587 mi.
 -   **rev. 65 (2026-10-29):** pelo usuário: o rico faz só 1 compra por rodada; a máquina compra só por leilão e a compra direta é só do usuário (código da rev. 64 retirado); simular a "inflação" (faixa da rev. 61) pela força do clube que compra, não do jogador (§9.3).
 -   **rev. 64 (2026-10-29):** pelo usuário: simular a alavanca "rico gasta mais" (§9.3). Resultado negativo: o rico que gasta fica mais forte e mais rico; parâmetros no código, desligados no padrão.
 -   **rev. 63 (2026-10-29):** pelo usuário: modelos 11a (convite), 11b (aviso de demissão) e 11c (moral na janela do clube) aprovados; 9,8 trocas por temporada na 1ª está bom; regra da surpresa aprovada. Troca de treinador ligada à rodada (V28, ADR 0014).
@@ -1335,7 +1336,7 @@ os cartões de um time todo calmo (antes, 2,8 vezes).
 -   ~~**Em aberto:** os valores.~~ **Definido (rev. 45), pelo usuário —
     prêmio da liga:**
     - **Campeão:** o preço de **2 jogadores de força 50 com asterisco**
-      (~~R$ 3.968.000~~ R$ 4.364.000 com a tabela de preço atual, rev. 61).
+      (R$ 3.968.000; foi R$ 4.364.000 entre as rev. 61 e 65, quando o preço levava a faixa).
     - **2º:** 30% menos que o campeão (70%). **3º:** 10% do prêmio do
       campeão. Do 4º em diante, nada.
     - **Definido (rev. 46), pelo usuário:** a força dos jogadores do prêmio
@@ -1661,7 +1662,7 @@ reajustados por nova simulação (`docs/simulacoes/economia-caixa.md`):
     - **Resultado:** topo da tabela 72–79% do estádio, meio 45–48%, fundo
       22–26%; líder contra o 2º 84–95%; só 3–8% dos jogos passam de 90%. Um
       clube de força 30 com 80.000 lugares não passa de ~23.000 pagantes.
-    - **Ampliação:** 5.000 lugares por ~~R$ 1.587.000~~ R$ 1.746.000 (rev. 61), valem depois de **6
+    - **Ampliação:** 5.000 lugares por R$ 1.587.000 (R$ 1.746.000 entre as rev. 61 e 65), valem depois de **6
       rodadas de obra**, uma obra por vez, até 80.000. A **máquina** amplia
       quando o jogo grande (líder contra o 2º) já passa do estádio com o
       bloco novo e sobram 1,5 limite de caixa; ou, com 3 limites sobrando,
@@ -1795,9 +1796,59 @@ em limites:
   `ParametrosMercado.precoPeloComprador`, `ParametrosEconomia.salarioPeloClube`,
   `PrecoJogador.preco(jogador, país, forçaDoComprador)`. Prêmio e ampliação do
   estádio continuam com os mesmos valores.
-- **Aguardando o usuário:** ligar ou não; faixa no salário pelo clube ou pelo
+- ~~**Aguardando o usuário:** ligar ou não; faixa no salário pelo clube ou pelo
   jogador; manter ±10% ou faixas maiores; preço da compra direta do usuário
-  também pela força do clube dele.
+  também pela força do clube dele.~~ Respondido na rev. 66 (abaixo).
+
+**Definido (rev. 66), pelo usuário — ligado no jogo:**
+- **Salário pela força do clube:** a faixa vale para todos os jogadores do
+  clube pela **força em campo** (média dos 11 mais fortes), e é maior nos
+  fortes. Nos clubes de usuário a força do contrato (§9.5) continua valendo;
+  a faixa é a da força em campo atual do clube.
+
+  | Força em campo do clube | Ajuste |
+  |---|---|
+  | 45 a 50 | +20% (usuário) |
+  | 35 a 44 | +10% (usuário) |
+  | 25 a 34 | nenhum |
+  | 15 a 24 | −15% (agente) |
+  | abaixo de 15 | −30% (agente) |
+
+  O usuário pediu deflação embaixo se os de baixo continuassem sem dinheiro;
+  o agente escolheu −30/−15 entre os cenários simulados (abaixo). No banco
+  padrão o clube mais fraco tem força 22, então a faixa abaixo de 15 só vale
+  em ligas do usuário.
+- **Preço sem faixa:** quem compra é o usuário (a máquina só por leilão), então
+  o preço é só pela força, com o asterisco mais caro (e o estrangeiro mais
+  barato). O lance da máquina segue a regra da rev. 44 sobre esse preço.
+  Prêmio, patrocínio e ampliação do estádio, que seguem o preço do jogador de
+  referência, voltam aos valores da rev. 45/54: campeão da 1ª R$ 3,968 mi,
+  +5.000 lugares R$ 1,587 mi.
+- **Plantel maior para quem tem caixa:** com menos de **23** jogadores, o
+  clube da máquina com caixa (limite mais a folga, rev. 44) dá lance em
+  jogador de **qualquer força** ("times fortes podem comprar jogadores fracos,
+  principalmente no começo"); de 23 a 25 só no jogador que interessa (força em
+  campo −5). Sem caixa, continua vendendo para equilibrar (rev. 43).
+  `ParametrosMercadoMaquina.plantelAlvo` = 23.
+- **Simulação** (`docs/simulacoes/ciclo-do-mercado.md`, saldo no fim da 6ª
+  temporada em limites, todos com o preço e o prêmio novos):
+
+  | Cenário | 1ª topo | 1ª meio | 1ª fundo | 2ª topo | 2ª meio | 2ª fundo | Negativos 2ª | Plantel 1ª / 2ª |
+  |---|---|---|---|---|---|---|---|---|
+  | Faixa pelo jogador (rev. 61) | 21,5 | 10,9 | 7,9 | 10,9 | 5,5 | 1,3 | 8% | 20,5 / 20,1 |
+  | Pelo clube −10/−5/0/+10/+20 | 18,4 | 9,0 | 8,5 | 11,0 | 5,2 | 1,2 | 10% | 20,5 / 20,3 |
+  | Idem, plantel até 23 | 14,2 | 8,1 | 8,1 | 13,2 | 9,6 | 1,9 | 10% | 22,5 / 18,2 |
+  | Pelo clube −20/−10/0/+10/+20, plantel até 23 | 14,2 | 8,1 | 8,6 | 14,8 | 10,2 | 2,9 | 7% | 22,2 / 18,5 |
+  | **Pelo clube −30/−15/0/+10/+20, plantel até 23 (escolhido)** | **14,5** | **7,9** | **8,9** | **16,0** | **12,0** | **3,3** | **5%** | **22,2 / 18,4** |
+
+  - O topo da 1ª acumula um terço a menos (21,5 → 14,5) e gasta comprando
+    jogadores da 2ª para chegar a 22–23; a 2ª vende (plantel médio 18,4) e
+    fica com bem mais caixa (meio 5,5 → 12,0; fundo 1,3 → 3,3), com menos
+    clubes negativos (8% → 5%).
+  - Continua: leilões da 1ª sem lance 33%; mobilidade 6%; o fundo da 2ª ainda
+    é o mais pobre.
+- **Jogos salvos:** a folha e o preço passam a usar a regra nova a partir da
+  próxima rodada (são calculados, não gravados).
 
 **Definido (rev. 43), pelo usuário:** sem empréstimo, sempre que o caixa
 ficar **negativo** um jogador do clube vai a **leilão sem lance mínimo**.

@@ -73,15 +73,20 @@ public final class CaixaDaRodada {
 	}
 
 	/**
-	 * Folha por rodada. Com o salário pelo clube (rev. 65), a faixa é a da força em campo do clube,
-	 * a mesma para todos os jogadores.
+	 * Salário por rodada de um jogador da força dada num clube da força em campo dada: com o salário
+	 * pelo clube (rev. 66), a faixa é a do clube; sem ele, a do jogador.
 	 */
-	public long folha(List<Jogador> plantel) {
-		if (parametros.salarioPeloClube()) {
-			double fator = fatorDaFaixa(Clube.forcaEmCampo(plantel));
-			return plantel.stream().mapToLong(j -> Math.round(salarioSemFaixa(j.forca()) * fator)).sum();
+	public long salario(int forca, double forcaDoClube) {
+		if (!parametros.salarioPeloClube()) {
+			return salario(forca);
 		}
-		return plantel.stream().mapToLong(this::salario).sum();
+		return Math.round(salarioSemFaixa(forca) * fatorDaFaixa(forcaDoClube));
+	}
+
+	/** Folha por rodada, com a faixa da força em campo do clube (rev. 66). */
+	public long folha(List<Jogador> plantel) {
+		double forcaDoClube = Clube.forcaEmCampo(plantel);
+		return plantel.stream().mapToLong(j -> salario(j.forca(), forcaDoClube)).sum();
 	}
 
 	public long saldoInicial(List<Jogador> plantel) {

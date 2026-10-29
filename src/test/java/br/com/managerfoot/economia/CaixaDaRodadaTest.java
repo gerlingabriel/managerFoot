@@ -36,16 +36,16 @@ class CaixaDaRodadaTest {
 
 	@Test
 	void salarioCresceComAForcaEComAFaixa() {
-		// referência R$ 2.000 na força 17, × 1,072 por ponto; faixa de 15 a 24: −5%
-		assertThat(caixa.salario(jogador(17))).isEqualTo(1_900_00L);
-		assertThat(caixa.salario(jogador(18))).isEqualTo(2_036_80L);
-		assertThat(caixa.folha(List.of(jogador(17), jogador(17)))).isEqualTo(3_800_00L);
-		assertThat(caixa.saldoInicial(List.of(jogador(17)))).isEqualTo(19_000_00L);
-		// faixas: abaixo de 15 −10%, 25 a 34 sem ajuste, 35 a 44 +5%, 45 a 50 +10%
-		assertThat(caixa.salario(14)).isEqualTo(Math.round(2_000_00L * Math.pow(1.072, -3) * 0.90));
+		// referência R$ 2.000 na força 17, × 1,072 por ponto; faixa de 15 a 24: −15% (rev. 66)
+		assertThat(caixa.salario(jogador(17))).isEqualTo(1_700_00L);
+		assertThat(caixa.salario(jogador(18))).isEqualTo(1_822_40L);
+		assertThat(caixa.folha(List.of(jogador(17), jogador(17)))).isEqualTo(3_400_00L);
+		assertThat(caixa.saldoInicial(List.of(jogador(17)))).isEqualTo(17_000_00L);
+		// faixas: abaixo de 15 −30%, 25 a 34 sem ajuste, 35 a 44 +10%, 45 a 50 +20%
+		assertThat(caixa.salario(14)).isEqualTo(Math.round(2_000_00L * Math.pow(1.072, -3) * 0.70));
 		assertThat(caixa.salario(25)).isEqualTo(Math.round(2_000_00L * Math.pow(1.072, 8)));
-		assertThat(caixa.salario(44)).isEqualTo(Math.round(2_000_00L * Math.pow(1.072, 27) * 1.05));
-		assertThat(caixa.salario(45)).isEqualTo(Math.round(2_000_00L * Math.pow(1.072, 28) * 1.10));
+		assertThat(caixa.salario(44)).isEqualTo(Math.round(2_000_00L * Math.pow(1.072, 27) * 1.10));
+		assertThat(caixa.salario(45)).isEqualTo(Math.round(2_000_00L * Math.pow(1.072, 28) * 1.20));
 		assertThat(IntStream.rangeClosed(Jogador.FORCA_MINIMA, Jogador.FORCA_MAXIMA).mapToLong(caixa::salario)).isSorted();
 	}
 
@@ -71,11 +71,11 @@ class CaixaDaRodadaTest {
 
 		assertThat(caixa.lancamentos(Local.CASA, 1, 1_000, plantel)).containsExactly(
 				new Lancamento(TipoLancamento.BILHETERIA, 40_000_00L), new Lancamento(TipoLancamento.CUSTO_DO_JOGO, -6_000_00L),
-				new Lancamento(TipoLancamento.SALARIOS, -1_900_00L));
+				new Lancamento(TipoLancamento.SALARIOS, -1_700_00L));
 		assertThat(caixa.lancamentos(Local.FORA, 2, 0, plantel)).containsExactly(
-				new Lancamento(TipoLancamento.DESLOCAMENTO, -30_000_00L), new Lancamento(TipoLancamento.SALARIOS, -1_900_00L));
+				new Lancamento(TipoLancamento.DESLOCAMENTO, -30_000_00L), new Lancamento(TipoLancamento.SALARIOS, -1_700_00L));
 		assertThat(caixa.lancamentos(Local.FOLGA, 3, 0, plantel))
-			.containsExactly(new Lancamento(TipoLancamento.SALARIOS, -1_900_00L));
+			.containsExactly(new Lancamento(TipoLancamento.SALARIOS, -1_700_00L));
 	}
 
 	@Test
@@ -103,16 +103,16 @@ class CaixaDaRodadaTest {
 	}
 
 	@Test
-	void comSalarioPeloClubeTodosRecebemComAFaixaDaForcaEmCampo() {
-		CaixaDaRodada peloClube = new CaixaDaRodada(
-				ParametrosEconomia.padrao().comFaixas(ParametrosEconomia.padrao().faixasSalario(), true), ParametrosMoral.padrao());
+	void todosRecebemComAFaixaDaForcaEmCampoDoClube() {
 		List<Jogador> plantel = new java.util.ArrayList<>(java.util.Collections.nCopies(11, jogador(40)));
 		plantel.add(jogador(17));
-		// força em campo 40: faixa +5% para todos, também para o reserva de força 17 (R$ 2.000 → R$ 2.100)
-		assertThat(peloClube.folha(plantel))
-			.isEqualTo(11 * Math.round(peloClube.salarioSemFaixa(40) * 1.05) + 2_100_00L);
-		// no padrão a faixa é a de cada jogador: o de força 17 recebe R$ 1.900
-		assertThat(caixa.folha(plantel)).isEqualTo(11 * caixa.salario(40) + 1_900_00L);
+		// força em campo 40: faixa +10% para todos, também para o reserva de força 17 (R$ 2.000 → R$ 2.200)
+		assertThat(caixa.folha(plantel)).isEqualTo(11 * Math.round(caixa.salarioSemFaixa(40) * 1.10) + 2_200_00L);
+		assertThat(caixa.salario(17, 40)).isEqualTo(2_200_00L);
+		// com a faixa pelo jogador (rev. 61), o de força 17 recebe R$ 1.700
+		CaixaDaRodada peloJogador = new CaixaDaRodada(
+				ParametrosEconomia.padrao().comFaixas(ParametrosEconomia.padrao().faixasSalario(), false), ParametrosMoral.padrao());
+		assertThat(peloJogador.folha(plantel)).isEqualTo(11 * peloJogador.salario(40) + 1_700_00L);
 	}
 
 	private static Jogador jogador(int forca) {

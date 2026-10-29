@@ -24,10 +24,12 @@ import br.com.managerfoot.dominio.Posicao;
  * @param aVendaMinimo quando o clube tem menos que isto à venda para compra direta, sorteia mais
  *        (usuário: "uns 5 ou 6")
  * @param aVendaMaximo até quantos o sorteio completa
+ * @param plantelAlvo abaixo disto o clube com caixa compra até jogador mais fraco que o time, para ter
+ *        um plantel maior (usuário, rev. 66: "entre 23 e 25 se o caixa permitir"); 0 desliga
  */
 public record ParametrosMercadoMaquina(int rodadasDeFolhaNoLimite, double descontoLance, double acrescimoPelaForca,
 		Map<Posicao, Integer> elencoMinimo, int plantelMinimo, int interesseAbaixoDoTime, int folgaNaCompra,
-		int aVendaMinimo, int aVendaMaximo) {
+		int aVendaMinimo, int aVendaMaximo, int plantelAlvo) {
 
 	public ParametrosMercadoMaquina {
 		if (rodadasDeFolhaNoLimite < 0 || descontoLance < 0 || descontoLance >= 1 || acrescimoPelaForca < 0
@@ -43,6 +45,12 @@ public record ParametrosMercadoMaquina(int rodadasDeFolhaNoLimite, double descon
 		minimo.put(Posicao.DEFENSOR, 4);
 		minimo.put(Posicao.MEIO_CAMPISTA, 4);
 		minimo.put(Posicao.ATACANTE, 2);
-		return new ParametrosMercadoMaquina(10, 0.10, 0.05, minimo, 14, 5, 5, 5, 6);
+		return new ParametrosMercadoMaquina(10, 0.10, 0.05, minimo, 14, 5, 5, 5, 6, 23);
+	}
+
+	/** Os mesmos valores com outro plantel alvo (rev. 66). */
+	public ParametrosMercadoMaquina comPlantelAlvo(int alvo) {
+		return new ParametrosMercadoMaquina(rodadasDeFolhaNoLimite, descontoLance, acrescimoPelaForca, elencoMinimo,
+				plantelMinimo, interesseAbaixoDoTime, folgaNaCompra, aVendaMinimo, aVendaMaximo, alvo);
 	}
 }

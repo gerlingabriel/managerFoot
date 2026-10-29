@@ -9,12 +9,11 @@ package br.com.managerfoot.economia;
  * @param descontoEstrangeiro desconto do jogador de outro país sobre o preço (definido pelo usuário: 25%)
  * @param acrescimoAsterisco acréscimo do jogador com asterisco sobre o preço (definido pelo usuário: 25%)
  * @param arredondamento o preço é arredondado para múltiplos deste valor, em centavos de Real
- * @param precoPeloComprador a faixa do salário entra no preço pela força em campo do clube que compra,
- *        não pela força do jogador; o lance inicial do leilão fica sem faixa (rev. 65, pedido do
- *        usuário, em simulação: desligado no padrão)
+ * @param precoSemFaixa o preço vem do salário sem a faixa da rev. 61: só a força do jogador (e o
+ *        asterisco) pesa (rev. 66, pelo usuário)
  */
 public record ParametrosMercado(int rodadasDeSalarioNoPreco, double descontoLeilao, double descontoEstrangeiro,
-		double acrescimoAsterisco, long arredondamento, boolean precoPeloComprador) {
+		double acrescimoAsterisco, long arredondamento, boolean precoSemFaixa) {
 
 	public ParametrosMercado {
 		if (rodadasDeSalarioNoPreco < 1 || descontoLeilao < 0 || descontoLeilao >= 1 || descontoEstrangeiro < 0
@@ -25,15 +24,16 @@ public record ParametrosMercado(int rodadasDeSalarioNoPreco, double descontoLeil
 
 	/**
 	 * Proposta da rev. 41 (80 rodadas de salário, valores redondos em R$ 1.000) e regras do usuário
-	 * (leilão 20% abaixo; estrangeiro 25% mais barato e asterisco 25% mais caro, rev. 43).
+	 * (leilão 20% abaixo; estrangeiro 25% mais barato e asterisco 25% mais caro, rev. 43; preço sem a
+	 * faixa do salário, rev. 66).
 	 */
 	public static ParametrosMercado padrao() {
-		return new ParametrosMercado(80, 0.20, 0.25, 0.25, 1_000_00L, false);
+		return new ParametrosMercado(80, 0.20, 0.25, 0.25, 1_000_00L, true);
 	}
 
-	/** Os mesmos valores com o preço pela força do comprador ligado ou desligado (rev. 65). */
-	public ParametrosMercado comPrecoPeloComprador(boolean peloComprador) {
+	/** Os mesmos valores com o preço sem faixa ligado ou desligado (rev. 66). */
+	public ParametrosMercado comPrecoSemFaixa(boolean semFaixa) {
 		return new ParametrosMercado(rodadasDeSalarioNoPreco, descontoLeilao, descontoEstrangeiro, acrescimoAsterisco,
-				arredondamento, peloComprador);
+				arredondamento, semFaixa);
 	}
 }

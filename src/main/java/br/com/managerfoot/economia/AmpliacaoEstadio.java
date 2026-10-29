@@ -43,7 +43,7 @@ public final class AmpliacaoEstadio {
 
 	/** Preço de um bloco: o de um jogador de força 50 nacional. */
 	public long custo() {
-		return preco.preco(REFERENCIA, REFERENCIA.nacionalidade(), REFERENCIA.forca());
+		return preco.preco(REFERENCIA, REFERENCIA.nacionalidade());
 	}
 
 	public boolean cabe(int capacidade) {

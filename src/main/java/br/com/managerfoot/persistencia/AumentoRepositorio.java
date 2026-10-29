@@ -80,8 +80,9 @@ public class AumentoRepositorio {
 			Jogador j = c.jogador();
 			Moeda moeda = Moeda.doPais(s.pais());
 			long folha = caixas.folhas(jogoId).getOrDefault(clube, 0L);
-			long atual = caixa.salario(c.forcaDoSalario());
-			long pedido = caixa.salario(j.forca());
+			double emCampo = caixas.forcaEmCampo(clube);
+			long atual = caixa.salario(c.forcaDoSalario(), emCampo);
+			long pedido = caixa.salario(j.forca(), emCampo);
 			return new VisaoPedido(jogos.ano(jogoId, s.numero()), s.processadas() + 1, j, atual, pedido, folha,
 					folha - atual + pedido, preco.lanceInicialLeilao(j, s.pais()), moeda);
 		});

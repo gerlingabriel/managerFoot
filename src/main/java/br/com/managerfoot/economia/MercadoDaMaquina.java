@@ -105,7 +105,8 @@ public final class MercadoDaMaquina {
 
 	/**
 	 * Lance da máquina num leilão: um pouco abaixo do preço, um pouco mais para o clube mais forte.
-	 * Vazio se o jogador é fraco demais para o time, se o plantel está cheio, se o lance fica abaixo
+	 * Vazio se o jogador é fraco demais para o time (abaixo do plantel alvo, qualquer força serve,
+	 * rev. 66), se o plantel está cheio, se o lance fica abaixo
 	 * do mínimo ou se, pago o lance, o caixa não ficaria acima do limite com a folga, já com o novo
 	 * salário.
 	 *
@@ -113,13 +114,13 @@ public final class MercadoDaMaquina {
 	 */
 	public Optional<Long> lance(Clube clube, long saldo, List<Jogador> plantel, Jogador alvo, String paisDaLiga,
 			long lanceMinimo) {
-		if (plantel.size() >= Clube.MAXIMO_JOGADORES
-				|| alvo.forca() < forcaEmCampo(plantel) - parametros.interesseAbaixoDoTime()) {
+		if (plantel.size() >= Clube.MAXIMO_JOGADORES || plantel.size() >= parametros.plantelAlvo()
+				&& alvo.forca() < forcaEmCampo(plantel) - parametros.interesseAbaixoDoTime()) {
 			return Optional.empty();
 		}
 		double fator = 1 - parametros.descontoLance()
 				+ parametros.acrescimoPelaForca() * clube.forca() / Jogador.FORCA_MAXIMA;
-		long valor = preco.redondo(Math.round(preco.preco(alvo, paisDaLiga, forcaEmCampo(plantel)) * fator));
+		long valor = preco.redondo(Math.round(preco.preco(alvo, paisDaLiga) * fator));
 		List<Jogador> depois = new ArrayList<>(plantel);
 		depois.add(alvo);
 		long reserva = limite(depois) + caixa.folha(depois) * parametros.folgaNaCompra();

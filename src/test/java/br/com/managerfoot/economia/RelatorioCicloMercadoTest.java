@@ -48,7 +48,7 @@ import br.com.managerfoot.temporada.TransicaoTemporada;
  * prêmio e patrocínio fixo) e os leilões da máquina antes de cada rodada, com as mesmas classes do
  * jogo ({@link LeiloesDaRodada}). Mede quem vende, quem compra e quem consegue dar lance, para ver se
  * os clubes ricos que caem vendem e se os de baixo têm dinheiro para comprar (objetivo do usuário,
- * rev. 58). Só máquina. Na rev. 65 compara cenários da inflação pela força do clube. Executar com
+ * rev. 58). Só máquina. Nas rev. 65 e 66 compara cenários da inflação do salário pela força do clube. Executar com
  * {@code ./mvnw test -Dgroups=simulacao -Dsurefire.excludedGroups=none -Dtest=RelatorioCicloMercadoTest}.
  */
 @Tag("simulacao")
@@ -60,17 +60,18 @@ class RelatorioCicloMercadoTest {
 	private static final String[] TERCOS = { "Topo", "Meio", "Fundo" };
 	private static final String[] RIQUEZA = { "Rico", "Médio", "Pobre" };
 
-	private static final List<FaixaSalario> FAIXAS_DO_USUARIO = ParametrosEconomia.padrao().faixasSalario();
-	private static final List<FaixaSalario> FAIXAS_MAIORES = List.of(new FaixaSalario(0, 0.90), new FaixaSalario(15, 0.95),
-			new FaixaSalario(25, 1.0), new FaixaSalario(35, 1.20), new FaixaSalario(45, 1.40));
+	private static List<FaixaSalario> faixas(double abaixoDe15, double de15a24, double de35a44, double de45a50) {
+		return List.of(new FaixaSalario(0, abaixoDe15), new FaixaSalario(15, de15a24), new FaixaSalario(25, 1.0),
+				new FaixaSalario(35, de35a44), new FaixaSalario(45, de45a50));
+	}
 
-	/** Cenários da inflação pela força (rev. 65): o primeiro é o jogo atual. */
+	/** Cenários da rev. 66: o primeiro é o jogo antes dela, o último é o padrão atual. */
 	private static final List<Cenario> CENARIOS = List.of(
-			new Cenario("Atual: faixa pelo jogador no salário e no preço", false, false, FAIXAS_DO_USUARIO),
-			new Cenario("Preço pelo comprador; salário pelo jogador", true, false, FAIXAS_DO_USUARIO),
-			new Cenario("Preço pelo comprador; salário pelo clube", true, true, FAIXAS_DO_USUARIO),
-			new Cenario("Preço pelo comprador; salário pelo jogador; faixas maiores", true, false, FAIXAS_MAIORES),
-			new Cenario("Preço pelo comprador; salário pelo clube; faixas maiores", true, true, FAIXAS_MAIORES));
+			new Cenario("Antes (rev. 61): faixa pelo jogador (−10/−5/0/+5/+10)", false, faixas(0.90, 0.95, 1.05, 1.10), 0),
+			new Cenario("Pelo clube −10/−5/0/+10/+20, preço sem faixa", true, faixas(0.90, 0.95, 1.10, 1.20), 0),
+			new Cenario("Pelo clube −10/−5/0/+10/+20, preço sem faixa, plantel até 23", true, faixas(0.90, 0.95, 1.10, 1.20), 23),
+			new Cenario("Pelo clube −20/−10/0/+10/+20, preço sem faixa, plantel até 23", true, faixas(0.80, 0.90, 1.10, 1.20), 23),
+			new Cenario("Escolhido (rev. 66): pelo clube −30/−15/0/+10/+20, preço sem faixa, plantel até 23", true, faixas(0.70, 0.85, 1.10, 1.20), 23));
 
 	@Test
 	void gerarRelatorio() throws IOException {
@@ -108,23 +109,31 @@ class RelatorioCicloMercadoTest {
 			.append("abaixo de 10 rodadas da folha põe o mais caro sem asterisco em leilão; dá lance quem fica acima do limite mais ")
 			.append("5 rodadas da folha depois de pagar, tem menos de 25 jogadores e o jogador tem força de pelo menos a do time ")
 			.append("menos 5. Só máquina.\n\n")
-			.append("## Inflação pela força do clube (rev. 65)\n\n")
-			.append("*Faixa*: o ajuste da rev. 61 (abaixo de 15 −10%, 15–24 −5%, 25–34 0, 35–44 +5%, 45–50 +10%; *faixas maiores*: ")
-			.append("35–44 +20% e 45–50 +40%). *Preço pelo comprador*: o preço sai do salário sem faixa e leva a faixa da força ")
-			.append("em campo do clube que compra; o lance inicial do leilão (preço −20%) fica sem faixa. *Salário pelo clube*: todos ")
-			.append("os jogadores do clube recebem com a faixa da força em campo do clube. Prêmio e ampliação do estádio iguais em ")
-			.append("todos. Saldo no fim da ").append(TEMPORADAS).append("ª temporada, em limites, por terço final da tabela.\n\n")
-			.append("| Cenário | 1ª topo | 1ª fundo | 2ª topo | 2ª fundo | 1ª leilões sem lance | 2ª leilões sem lance ")
-			.append("| Vendas do rico no fundo (por 100 clubes-rodada) | Mobilidade | Ligas travadas |\n|---|---|---|---|---|---|---|---|---|---|\n");
+			.append("## Inflação do salário pela força do clube (rev. 66)\n\n")
+			.append("*Pelo clube*: todos os jogadores recebem com a faixa da força em campo do clube (abaixo de 15 / 15–24 / ")
+			.append("25–34 / 35–44 / 45–50), e o preço sai do salário sem faixa (só a força e o asterisco). *Plantel até 23*: abaixo ")
+			.append("de 23 jogadores, o clube com caixa (limite mais a folga) dá lance em jogador de qualquer força. O prêmio e a ")
+			.append("ampliação do estádio seguem o preço do jogador de referência. Saldo no fim da ").append(TEMPORADAS)
+			.append("ª temporada, em limites (1 limite = 10 rodadas da folha), por terço final da tabela.\n\n")
+			.append("| Cenário | 1ª topo | 1ª meio | 1ª fundo | 2ª topo | 2ª meio | 2ª fundo | Clubes negativos (2ª) ")
+			.append("| Plantel médio 1ª / 2ª | Leilões sem lance 1ª / 2ª | Vendas do rico no fundo | Mobilidade | Ligas travadas |\n")
+			.append("|---|---|---|---|---|---|---|---|---|---|---|---|---|\n");
 		for (int i = 0; i < CENARIOS.size(); i++) {
 			Simulacao s = simulacoes.get(i);
 			Medida d1 = s.temporadas.get(1).get(TEMPORADAS);
 			Medida d2 = s.temporadas.get(2).get(TEMPORADAS);
-			md.append("| ").append(CENARIOS.get(i).nome()).append(" | ").append(dec(d1.limites[0] / d1.n[0])).append(" | ")
-				.append(dec(d1.limites[2] / d1.n[2])).append(" | ").append(dec(d2.limites[0] / d2.n[0])).append(" | ")
-				.append(dec(d2.limites[2] / d2.n[2])).append(" | ").append(pct(s.semLance[0] / (double) Math.max(1, s.ofertas[0])))
-				.append(" | ").append(pct(s.semLance[1] / (double) Math.max(1, s.ofertas[1])))
-				.append(" | ").append(dec(100.0 * s.vendedor[0][2] / Math.max(1, s.clubesRodada[0][2]))).append(" | ")
+			md.append("| ").append(CENARIOS.get(i).nome());
+			for (Medida m : List.of(d1, d2)) {
+				for (int t = 0; t < 3; t++) {
+					md.append(" | ").append(dec(m.limites[t] / m.n[t]));
+				}
+			}
+			md.append(" | ").append(pct(d2.negativos / (d2.n[0] + d2.n[1] + d2.n[2]))).append(" | ")
+				.append(dec(d1.jogadores / (d1.n[0] + d1.n[1] + d1.n[2]))).append(" / ")
+				.append(dec(d2.jogadores / (d2.n[0] + d2.n[1] + d2.n[2]))).append(" | ")
+				.append(pct(s.semLance[0] / (double) Math.max(1, s.ofertas[0]))).append(" / ")
+				.append(pct(s.semLance[1] / (double) Math.max(1, s.ofertas[1]))).append(" | ")
+				.append(dec(100.0 * s.vendedor[0][2] / Math.max(1, s.clubesRodada[0][2]))).append(" | ")
 				.append(pct(s.mudaramDeTerco / (double) Math.max(1, s.clubesNaMobilidade))).append(" | ").append(s.travadas)
 				.append(" de ").append(PaisPadrao.TODOS.size() * SEMENTES).append(" |\n");
 		}
@@ -135,13 +144,13 @@ class RelatorioCicloMercadoTest {
 	}
 
 	/** Cenário com as tabelas completas no relatório. */
-	private static final int DETALHADO = 2;
+	private static final int DETALHADO = 4;
 
 	/**
-	 * @param precoPeloComprador a faixa entra no preço pela força em campo do comprador
-	 * @param salarioPeloClube a faixa do salário segue a força em campo do clube
+	 * @param peloClube a faixa do salário segue a força em campo do clube e o preço sai sem faixa
+	 * @param plantelAlvo abaixo disto o clube com caixa compra até jogador fraco (0 desliga)
 	 */
-	private record Cenario(String nome, boolean precoPeloComprador, boolean salarioPeloClube, List<FaixaSalario> faixas) {
+	private record Cenario(String nome, boolean peloClube, List<FaixaSalario> faixas, int plantelAlvo) {
 	}
 
 	/** Acumuladores e regras de um cenário. */
@@ -181,10 +190,10 @@ class RelatorioCicloMercadoTest {
 		private int travadas;
 
 		private Simulacao(Cenario cenario) {
-			caixa = new CaixaDaRodada(ParametrosEconomia.padrao().comFaixas(cenario.faixas(), cenario.salarioPeloClube()),
+			caixa = new CaixaDaRodada(ParametrosEconomia.padrao().comFaixas(cenario.faixas(), cenario.peloClube()),
 					ParametrosMoral.padrao());
-			preco = new PrecoJogador(ParametrosMercado.padrao().comPrecoPeloComprador(cenario.precoPeloComprador()), caixa);
-			mercado = new MercadoDaMaquina(ParametrosMercadoMaquina.padrao(), preco, caixa);
+			preco = new PrecoJogador(ParametrosMercado.padrao().comPrecoSemFaixa(cenario.peloClube()), caixa);
+			mercado = new MercadoDaMaquina(ParametrosMercadoMaquina.padrao().comPlantelAlvo(cenario.plantelAlvo()), preco, caixa);
 			leiloes = new LeiloesDaRodada(mercado, preco);
 		}
 
@@ -387,6 +396,7 @@ class RelatorioCicloMercadoTest {
 						m.limites[t] += saldo.get(clube.id()) / (double) mercado.limite(planteis.get(clube.id()));
 						m.negativos += saldo.get(clube.id()) < 0 ? 1 : 0;
 						m.trocas += trocas.getOrDefault(clube.id(), 0);
+					m.jogadores += planteis.get(clube.id()).size();
 					}
 				}
 				liga = TransicaoTemporada.aplicar(liga, finais, aleatorio).proxima();
@@ -510,5 +520,6 @@ class RelatorioCicloMercadoTest {
 		final double[] limites = new double[3];
 		double negativos;
 		double trocas;
+		double jogadores;
 	}
 }

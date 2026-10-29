@@ -400,19 +400,38 @@ public class CaixaRepositorio {
 
 	/**
 	 * Folha de cada clube do jogo por rodada, pelos salários gravados (SPEC §9.5, rev. 58): a força do
-	 * contrato nos clubes de usuário; a força atual nos da máquina, que readequam sempre.
+	 * contrato nos clubes de usuário; a força atual nos da máquina, que readequam sempre. A faixa é a
+	 * da força em campo atual do clube (rev. 66).
 	 */
 	@Transactional(readOnly = true)
 	public Map<Long, Long> folhas(long jogoId) {
-		Map<Long, Long> folhas = new HashMap<>();
+		Map<Long, List<int[]>> porClube = new HashMap<>();
 		jdbc.sql("""
-				SELECT j.clube_id, coalesce(j.forca_salario, j.forca) AS forca
+				SELECT j.clube_id, j.forca, coalesce(j.forca_salario, j.forca) AS forca_salario
 				FROM jogo_jogador j JOIN jogo_clube c ON c.id = j.clube_id WHERE c.jogo_id = :jogo""")
 			.param("jogo", jogoId)
 			.query(rs -> {
-				folhas.merge(rs.getLong("clube_id"), caixa.salario(rs.getInt("forca")), Long::sum);
+				porClube.computeIfAbsent(rs.getLong("clube_id"), k -> new ArrayList<>())
+					.add(new int[] { rs.getInt("forca"), rs.getInt("forca_salario") });
 			});
+		Map<Long, Long> folhas = new HashMap<>();
+		porClube.forEach((clube, jogadores) -> {
+			double emCampo = forcaEmCampo(jogadores.stream().mapToInt(j -> j[0]));
+			folhas.put(clube, jogadores.stream().mapToLong(j -> caixa.salario(j[1], emCampo)).sum());
+		});
 		return folhas;
+	}
+
+	/** Força em campo atual do clube: média das 11 maiores forças (SPEC §4.3). */
+	@Transactional(readOnly = true)
+	public double forcaEmCampo(long clubeId) {
+		return forcaEmCampo(jdbc.sql("SELECT forca FROM jogo_jogador WHERE clube_id = :clube").param("clube", clubeId)
+			.query(Integer.class).list().stream().mapToInt(Integer::intValue));
+	}
+
+	private static double forcaEmCampo(java.util.stream.IntStream forcas) {
+		return forcas.boxed().sorted(java.util.Comparator.reverseOrder()).limit(11).mapToInt(Integer::intValue).average()
+			.orElse(0);
 	}
 
 	/** Pagamento da ampliação do estádio na rodada, e o saldo do clube. */

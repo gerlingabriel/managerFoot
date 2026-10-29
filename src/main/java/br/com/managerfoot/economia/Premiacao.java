@@ -34,7 +34,7 @@ public final class Premiacao {
 		// jogador nacional: o país do jogador é o da liga
 		Jogador referencia = new Jogador(0, "referência", Posicao.ATACANTE, forcaReferencia, Temperamento.NORMAL, true,
 				"BRA");
-		return preco.preco(referencia, "BRA", referencia.forca()) * parametros.jogadoresNoPremio();
+		return preco.preco(referencia, "BRA") * parametros.jogadoresNoPremio();
 	}
 
 	/** Prêmio pela posição final na liga; do 4º em diante, nada. */
