@@ -11,19 +11,21 @@ package br.com.managerfoot.economia;
  *        cerca de 10%)
  * @param patrocinioSegundo quanto o patrocínio do 2º é menor que o do 1º (usuário: 10%)
  * @param patrocinioPorPosicao quanto cada posição seguinte é menor que a anterior (usuário: 8%)
+ * @param viceDaCopa prêmio do vice da copa sobre o do campeão, que recebe o mesmo que o campeão da 1ª
+ *        divisão (usuário, rev. 70: metade)
  */
 public record ParametrosPremiacao(int jogadoresNoPremio, double segundoLugar, double terceiroLugar,
-		double patrocinioSobrePremio, double patrocinioSegundo, double patrocinioPorPosicao) {
+		double patrocinioSobrePremio, double patrocinioSegundo, double patrocinioPorPosicao, double viceDaCopa) {
 
 	public ParametrosPremiacao {
 		if (jogadoresNoPremio < 0 || segundoLugar < 0 || terceiroLugar < 0 || patrocinioSobrePremio < 0
 				|| patrocinioSegundo < 0 || patrocinioSegundo >= 1 || patrocinioPorPosicao < 0
-				|| patrocinioPorPosicao >= 1) {
+				|| patrocinioPorPosicao >= 1 || viceDaCopa < 0) {
 			throw new IllegalArgumentException("parâmetros de premiação inválidos");
 		}
 	}
 
 	public static ParametrosPremiacao padrao() {
-		return new ParametrosPremiacao(2, 0.70, 0.10, 0.10, 0.10, 0.08);
+		return new ParametrosPremiacao(2, 0.70, 0.10, 0.10, 0.10, 0.08, 0.50);
 	}
 }

@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 69 — 2026-10-29)
+-   **Status:** versão inicial para revisão (rev. 70 — 2026-10-29)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 70 (2026-10-29):** pelo usuário: sem gol fora de casa (empate no placar somado vai à prorrogação e aos pênaltis), mando da ida por sorteio, prêmio da copa igual ao do campeão da 1ª divisão e metade para o vice, "mais fraco" é a força em campo no início da temporada, liga de 1 divisão com menos de 16 clubes usa a maior potência de 2 (§8.2). Domínio da copa e prorrogação/pênaltis no motor feitos; propostas do agente marcadas Provisório; simulação em `docs/simulacoes/copa.md`.
 -   **rev. 69 (2026-10-29):** pelo usuário: lesões no máximo 2 por clube por temporada, gravidade leve/média/grave com jogos fora e perda de força (§7.5), temperamento calmo > educado > normal > ansioso > violento, substituição do usuário na hora e automática na máquina; copa com 32 clubes (2 divisões) ou 16 (1 divisão), quadro fixo de rodadas da liga, final depois da liga em campo neutro com bilheteria 50/50 e prêmio do campeão e do vice (§8.2).
 -   **rev. 68 (2026-10-29):** pelo usuário: plantel mínimo de 14 nas vendas mantido (evitar o time incompleto), mas com menos de 11 a partida começa como se fosse com expulsos; sem goleiro disponível, o usuário joga com um jogador de linha no gol, como a máquina (§9.3).
 -   **rev. 67 (2026-10-29):** time com um a menos da §9.3 implementado: com menos de 11 disponíveis o clube joga com as vagas vazias, como se começasse com expulsos. Agente: mínimo de 7 para começar (regra do futebol) e o usuário só joga incompleto se ninguém disponível cabe nas vagas abertas (Provisório).
@@ -1458,14 +1459,10 @@ continentais e Mundial):**
 - **Em aberto:** se a copa começa junto com a liga e como as rodadas de
   copa se intercalam com as da liga.
 
-**Em aberto:**
-- No ida e volta, se existe critério de gol fora de casa antes da
-  prorrogação. (Não foi mencionado; hipótese: não existe.)
-- Onde é jogada a final única: campo neutro, clube melhor classificado ou
-  sorteio.
-- A proporção da bilheteria compartilhada (hipótese: 50/50).
-- Para excluir equipes, se "mais fraca" significa menor força cadastrada,
-  menor força atual ou pior classificação.
+~~**Em aberto:** gol fora de casa, local da final, proporção da
+bilheteria e significado de "mais fraca".~~ Resolvidos para a copa
+nacional na rev. 69 e 70 (abaixo); continentais e Mundial decidem quando
+existirem.
 
 **Definido (rev. 69), pelo usuário — copa nacional:**
 - **Tamanho pelo número de divisões:** liga com 2 divisões começa nos
@@ -1487,15 +1484,43 @@ continentais e Mundial):**
   médio-alto e também depende da posição dos dois clubes nos campeonatos.
 - **Prêmio:** o campeão recebe um prêmio e o vice outro.
 
-**Em aberto (copa):**
-- Gol fora de casa no ida e volta (hipótese: não existe; empate no
-  agregado vai à prorrogação e aos pênaltis).
-- Quem joga a ida em casa (hipótese: sorteio).
-- Valores do prêmio do campeão e do vice.
-- Se "mais fraco" é a força em campo atual, a força do clube ou a
-  classificação.
-- Liga de 1 divisão com menos de 16 clubes (hipótese: a maior potência de 2
-  que cabe, entrando na fase correspondente do quadro).
+**Definido (rev. 70), pelo usuário — copa nacional:**
+- **Sem gol fora de casa:** empate no placar somado vai à prorrogação e,
+  persistindo, aos pênaltis. Assim há mais prorrogações e pênaltis.
+- **Ida em casa:** sorteio.
+- **Prêmio:** o campeão recebe o mesmo que o campeão da 1ª divisão
+  (R$ 3,968 mi no banco padrão) e o vice, **metade** (R$ 1,984 mi). Valores
+  em `economia.ParametrosPremiacao`.
+- **"Mais fraco" que fica de fora:** menor **força em campo** no início da
+  temporada (média dos 11 mais fortes). Empate na linha de corte: sorteio.
+  Com 2 divisões do banco padrão são 40 clubes para 32 vagas.
+- **Liga de 1 divisão com menos de 16 clubes:** a maior potência de 2 que
+  cabe, começando na fase correspondente do quadro (15 clubes → 8, nas
+  quartas).
+
+**Provisório (rev. 70), proposta do agente — a ajustar:**
+- **Chave fixa:** a chave é sorteada uma vez no início da temporada; os
+  vencedores dos confrontos 1 e 2 se enfrentam na fase seguinte, e assim por
+  diante. O mando da ida de cada confronto novo é sorteado quando ele é
+  criado.
+- **Prorrogação:** 30 minutos, sem substituição extra (o limite da
+  competição vale para a partida inteira). Cartões e lesões seguem
+  normais.
+- **Disputa de pênaltis:** o primeiro a bater é sorteado; 5 cobranças
+  alternadas, encerrada quando um lado não alcança mais o outro, depois
+  alternadas uma a uma. Ordem dos batedores: o escolhido no plantel (se
+  em campo), depois os de linha do mais forte ao mais fraco (asterisco à
+  frente no empate, sorteio entre iguais), o goleiro por último; recomeça
+  quando todos bateram. Mesma conversão do pênalti da partida.
+- **Fila de espera** fora da copa (a §4.1 deixa em aberto).
+- **Simulação** (`docs/simulacoes/copa.md`, 1.200 copas): 16% das
+  partidas decisivas vão à prorrogação e 8% aos pênaltis; o clube mais
+  fraco vence 44% dos confrontos equilibrados (menos de 3 de diferença) e
+  14% com 8 ou mais; o mais forte dos inscritos ganha 18% das copas.
+
+**Em aberto (copa) — antes de ligar à rodada:** ver a pergunta da parte 2
+(efeitos da partida de copa em caixa, público, moral, evolução e
+demissões; exibição ao vivo; título no ranking de treinadores).
 
 Quando não houver participantes controlados por usuários em uma partida
 da copa, poderá ser usado um processamento rápido, sem simulação visual

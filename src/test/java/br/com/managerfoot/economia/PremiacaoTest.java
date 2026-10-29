@@ -20,6 +20,13 @@ class PremiacaoTest {
 	}
 
 	@Test
+	void copaPagaOCampeaoComoO1ºDaLigaEOViceMetade() {
+		assertThat(premiacao.premioDaCopa(1, 50)).isEqualTo(3_968_000_00L);
+		assertThat(premiacao.premioDaCopa(2, 50)).isEqualTo(1_984_000_00L);
+		assertThat(premiacao.premioDaCopa(3, 50)).isZero();
+	}
+
+	@Test
 	void premioAcompanhaAForcaDeReferencia() {
 		assertThat(premiacao.premioDoCampeao(22)).isLessThan(premiacao.premioDoCampeao(30))
 			.isLessThan(premiacao.premioDoCampeao(50));

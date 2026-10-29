@@ -2,6 +2,8 @@ package br.com.managerfoot.motor;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.List;
@@ -35,6 +37,8 @@ import br.com.managerfoot.dominio.Temperamento;
  * marcar; acima do limite em campo, cada asterisco a mais tira domínio do time.
  * Entre os minutos, o treinador do usuário pode substituir ({@link #substituir}); os times da
  * máquina só reagem ao goleiro expulso ({@link TreinadorMaquina}).
+ * Numa partida que precisa de vencedor ({@link JogoDecisivo}, SPEC §8.2), o placar somado empatado
+ * no fim dos 90 minutos leva à prorrogação e, persistindo, à disputa de pênaltis ao fim dela.
  * Toda aleatoriedade vem do {@link RandomGenerator} recebido, para a partida ser reproduzível.
  */
 public final class Partida {
@@ -53,8 +57,11 @@ public final class Partida {
 	private final Map<Lado, Integer> lesoes = new EnumMap<>(Lado.class);
 	private final Map<Lado, Jogador> lesionadoAguardando = new EnumMap<>(Lado.class);
 	private int minuto;
+	private int fim;
 	private int golsCasa;
 	private int golsFora;
+	private boolean prorrogacao;
+	private DisputaPenaltis penaltis;
 
 	/**
 	 * @param ladosDoUsuario times controlados por usuários; os demais seguem o {@link TreinadorMaquina}
@@ -70,6 +77,7 @@ public final class Partida {
 				ladosDoUsuario.isEmpty() ? EnumSet.noneOf(Lado.class) : EnumSet.copyOf(ladosDoUsuario));
 		this.condicoes = Objects.requireNonNull(condicoes);
 		this.aleatorio = Objects.requireNonNull(aleatorio);
+		this.fim = parametros.minutos();
 	}
 
 	/** Partida sem sorte nem bônus de artilharia. */
@@ -160,11 +168,29 @@ public final class Partida {
 		verificarCartao(Lado.FORA);
 		verificarLesao(Lado.CASA);
 		verificarLesao(Lado.FORA);
+		if (minuto == fim && condicoes.decisivo().isPresent() && placarSomadoEmpatado()) {
+			if (prorrogacao) {
+				penaltis = disputarPenaltis();
+			} else {
+				prorrogacao = true;
+				fim += JogoDecisivo.MINUTOS_PRORROGACAO;
+			}
+		}
 		return List.copyOf(eventos.subList(antes, eventos.size()));
 	}
 
 	public boolean terminada() {
-		return minuto >= parametros.minutos();
+		return minuto >= fim;
+	}
+
+	/** A partida foi para a prorrogação (SPEC §8.2). */
+	public boolean prorrogacao() {
+		return prorrogacao;
+	}
+
+	/** Minuto em que a partida termina: 90, ou 120 depois de ir para a prorrogação. */
+	public int minutoFinal() {
+		return fim;
 	}
 
 	public int minuto() {
@@ -172,11 +198,12 @@ public final class Partida {
 	}
 
 	public ResultadoPartida resultado() {
-		return new ResultadoPartida(golsCasa, golsFora, eventos);
+		return new ResultadoPartida(golsCasa, golsFora, eventos, prorrogacao, Optional.ofNullable(penaltis));
 	}
 
 	private Lado sortearQuemDomina() {
-		double meioCasa = potencia(forcaSetor(casa, Posicao.MEIO_CAMPISTA)) * parametros.fatorMando()
+		boolean campoNeutro = condicoes.decisivo().map(JogoDecisivo::campoNeutro).orElse(false);
+		double meioCasa = potencia(forcaSetor(casa, Posicao.MEIO_CAMPISTA)) * (campoNeutro ? 1 : parametros.fatorMando())
 				* fatorDominio(Lado.CASA);
 		double meioFora = potencia(forcaSetor(fora, Posicao.MEIO_CAMPISTA)) * fatorDominio(Lado.FORA);
 		if (meioCasa + meioFora == 0) {
@@ -201,11 +228,89 @@ public final class Partida {
 
 	private void cobrarPenalti(Lado lado) {
 		Jogador batedor = time(lado).batedorPenalti(aleatorio);
+		registrarFinalizacao(lado, batedor, conversaoPenalti(lado, batedor), true);
+	}
+
+	private double conversaoPenalti(Lado lado, Jogador batedor) {
 		TimeEmCampo defesa = time(lado.adversario());
 		double conversao = defesa.goleiro().asterisco() && !defesa.goleiroImprovisado()
 				? parametros.asterisco().conversaoPenaltiGoleiroAsterisco()
 				: parametros.penalti().conversao();
-		registrarFinalizacao(lado, batedor, Math.min(1, conversao * bonusFinalizacao(batedor)), true);
+		return Math.min(1, conversao * bonusFinalizacao(batedor));
+	}
+
+	private boolean placarSomadoEmpatado() {
+		JogoDecisivo decisivo = condicoes.decisivo().orElseThrow();
+		return golsCasa + decisivo.golsCasaAntes() == golsFora + decisivo.golsForaAntes();
+	}
+
+	/**
+	 * Disputa de pênaltis com a mesma conversão do pênalti da partida. O primeiro a bater é sorteado;
+	 * cada lado bate na ordem de {@link #ordemDaDisputa}, recomeçando quando todos já bateram.
+	 */
+	private DisputaPenaltis disputarPenaltis() {
+		Lado primeiro = aleatorio.nextBoolean() ? Lado.CASA : Lado.FORA;
+		Map<Lado, List<Jogador>> ordem = new EnumMap<>(Lado.class);
+		ordem.put(primeiro, ordemDaDisputa(primeiro));
+		ordem.put(primeiro.adversario(), ordemDaDisputa(primeiro.adversario()));
+		Map<Lado, Integer> cobradas = new EnumMap<>(Map.of(Lado.CASA, 0, Lado.FORA, 0));
+		Map<Lado, Integer> gols = new EnumMap<>(Map.of(Lado.CASA, 0, Lado.FORA, 0));
+		List<DisputaPenaltis.Cobranca> cobrancas = new ArrayList<>();
+		while (true) {
+			for (Lado lado : List.of(primeiro, primeiro.adversario())) {
+				List<Jogador> batedores = ordem.get(lado);
+				Jogador batedor = batedores.get(cobradas.get(lado) % batedores.size());
+				boolean gol = aleatorio.nextDouble() < conversaoPenalti(lado, batedor);
+				cobrancas.add(new DisputaPenaltis.Cobranca(lado, batedor, gol));
+				cobradas.merge(lado, 1, Integer::sum);
+				if (gol) {
+					gols.merge(lado, 1, Integer::sum);
+				}
+				if (disputaDecidida(cobradas, gols)) {
+					return new DisputaPenaltis(cobrancas);
+				}
+			}
+		}
+	}
+
+	/**
+	 * Nas cinco iniciais, decidida quando um lado não alcança o outro nem convertendo as que faltam;
+	 * depois, quando os dois bateram o mesmo número de vezes e um tem mais gols.
+	 */
+	private static boolean disputaDecidida(Map<Lado, Integer> cobradas, Map<Lado, Integer> gols) {
+		int cobradasCasa = cobradas.get(Lado.CASA);
+		int cobradasFora = cobradas.get(Lado.FORA);
+		int golsCasa = gols.get(Lado.CASA);
+		int golsFora = gols.get(Lado.FORA);
+		int inicial = DisputaPenaltis.COBRANCAS_INICIAIS;
+		if (cobradasCasa < inicial || cobradasFora < inicial) {
+			int faltamCasa = Math.max(0, inicial - cobradasCasa);
+			int faltamFora = Math.max(0, inicial - cobradasFora);
+			return golsCasa > golsFora + faltamFora || golsFora > golsCasa + faltamCasa;
+		}
+		return cobradasCasa == cobradasFora && golsCasa != golsFora;
+	}
+
+	/**
+	 * Ordem dos batedores na disputa (SPEC §12): o batedor escolhido pelo treinador, se está em campo;
+	 * depois os jogadores de linha do mais forte ao mais fraco, com o asterisco à frente no empate e o
+	 * sorteio entre os iguais; o goleiro por último.
+	 */
+	private List<Jogador> ordemDaDisputa(Lado lado) {
+		TimeEmCampo time = time(lado);
+		List<Jogador> linha = new ArrayList<>(time.emCampo());
+		linha.remove(time.goleiro());
+		Collections.shuffle(linha, aleatorio);
+		linha.sort(Comparator.comparingInt(Jogador::forca).reversed()
+			.thenComparing(Jogador::asterisco, Comparator.reverseOrder()));
+		time.batedorPreferidoEmCampo().ifPresent(preferido -> {
+			linha.remove(preferido);
+			linha.addFirst(preferido);
+		});
+		if (!linha.contains(time.goleiro())) {
+			linha.add(time.goleiro());
+		}
+		return linha;
 	}
 
 	private void registrarFinalizacao(Lado lado, Jogador finalizador, double conversao, boolean penalti) {

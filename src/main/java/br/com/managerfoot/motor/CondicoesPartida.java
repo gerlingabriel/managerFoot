@@ -2,6 +2,7 @@ package br.com.managerfoot.motor;
 
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 
 import br.com.managerfoot.dominio.Sorte;
@@ -15,8 +16,10 @@ import br.com.managerfoot.dominio.Sorte;
  *        asterisco temporário no próprio {@link br.com.managerfoot.dominio.Jogador}.
  * @param lesoesPermitidas quantas lesões cada lado ainda pode ter na temporada (SPEC §7.5); lado
  *        ausente tem o limite da temporada inteiro
+ * @param decisivo se a partida precisa de vencedor, com prorrogação e pênaltis (SPEC §8.2)
  */
-public record CondicoesPartida(Map<Lado, Sorte> sorte, Set<Long> bonusExtra, Map<Lado, Integer> lesoesPermitidas) {
+public record CondicoesPartida(Map<Lado, Sorte> sorte, Set<Long> bonusExtra, Map<Lado, Integer> lesoesPermitidas,
+		Optional<JogoDecisivo> decisivo) {
 
 	public static final CondicoesPartida NEUTRAS = new CondicoesPartida(Map.of(), Set.of());
 
@@ -24,6 +27,11 @@ public record CondicoesPartida(Map<Lado, Sorte> sorte, Set<Long> bonusExtra, Map
 		sorte = Map.copyOf(Objects.requireNonNull(sorte));
 		bonusExtra = Set.copyOf(Objects.requireNonNull(bonusExtra));
 		lesoesPermitidas = Map.copyOf(Objects.requireNonNull(lesoesPermitidas));
+		Objects.requireNonNull(decisivo);
+	}
+
+	public CondicoesPartida(Map<Lado, Sorte> sorte, Set<Long> bonusExtra, Map<Lado, Integer> lesoesPermitidas) {
+		this(sorte, bonusExtra, lesoesPermitidas, Optional.empty());
 	}
 
 	public CondicoesPartida(Map<Lado, Sorte> sorte, Set<Long> bonusExtra) {
@@ -32,6 +40,11 @@ public record CondicoesPartida(Map<Lado, Sorte> sorte, Set<Long> bonusExtra, Map
 
 	public static CondicoesPartida comSorte(Map<Lado, Sorte> sorte) {
 		return new CondicoesPartida(sorte, Set.of());
+	}
+
+	/** As mesmas condições numa partida que precisa de vencedor. */
+	public CondicoesPartida comDecisivo(JogoDecisivo jogo) {
+		return new CondicoesPartida(sorte, bonusExtra, lesoesPermitidas, Optional.of(jogo));
 	}
 
 	int lesoesPermitidas(Lado lado, int limiteDaTemporada) {

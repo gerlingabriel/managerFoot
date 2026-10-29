@@ -49,6 +49,22 @@ public final class Premiacao {
 	}
 
 	/**
+	 * Prêmio da copa nacional (SPEC §8.2, rev. 70): o campeão recebe o mesmo que o campeão da 1ª
+	 * divisão e o vice, uma fração disso; os demais, nada.
+	 *
+	 * @param lugar 1 para o campeão, 2 para o vice
+	 * @param forcaReferencia o teto de força da 1ª divisão
+	 */
+	public long premioDaCopa(int lugar, int forcaReferencia) {
+		long campeao = premioDoCampeao(forcaReferencia);
+		return switch (lugar) {
+			case 1 -> campeao;
+			case 2 -> preco.redondo(Math.round(campeao * parametros.viceDaCopa()));
+			default -> 0;
+		};
+	}
+
+	/**
 	 * Patrocínio da temporada pela posição na anterior: o 1º recebe a fração cheia, o 2º um pouco menos
 	 * e cada posição seguinte uma porcentagem menos que a anterior.
 	 */

@@ -211,8 +211,13 @@ final class TimeEmCampo {
 	 * Batedor de pênalti (SPEC §12): o escolhido pelo treinador, se estiver em campo; senão o
 	 * jogador de linha de maior força, com desempate por asterisco e, depois, sorteio.
 	 */
+	/** O batedor escolhido pelo treinador, se está em campo. */
+	Optional<Jogador> batedorPreferidoEmCampo() {
+		return escalacao.batedorPreferido().filter(emCampo()::contains);
+	}
+
 	Jogador batedorPenalti(RandomGenerator aleatorio) {
-		var escolhido = escalacao.batedorPreferido().filter(emCampo()::contains);
+		var escolhido = batedorPreferidoEmCampo();
 		if (escolhido.isPresent()) {
 			return escolhido.get();
 		}
