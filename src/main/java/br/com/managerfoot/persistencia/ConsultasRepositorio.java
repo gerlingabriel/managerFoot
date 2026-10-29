@@ -21,13 +21,17 @@ import br.com.managerfoot.dominio.ParametrosMoral;
 import br.com.managerfoot.dominio.Posicao;
 import br.com.managerfoot.economia.Moeda;
 import br.com.managerfoot.economia.PrecoJogador;
+import br.com.managerfoot.economia.Premiacao;
 import br.com.managerfoot.temporada.Artilharia;
 import br.com.managerfoot.temporada.Classificacao;
 import br.com.managerfoot.temporada.ConfiguracaoLiga;
+import br.com.managerfoot.temporada.ConfrontoCopa;
 import br.com.managerfoot.temporada.Copa;
 import br.com.managerfoot.temporada.Divisao;
+import br.com.managerfoot.temporada.FaseCopa;
 import br.com.managerfoot.temporada.Jogo;
 import br.com.managerfoot.temporada.LinhaClassificacao;
+import br.com.managerfoot.temporada.PlacarCopa;
 import br.com.managerfoot.temporada.Rodada;
 import br.com.managerfoot.temporada.Temporada;
 
@@ -50,6 +54,7 @@ public class ConsultasRepositorio {
 	private final TemporadaRepositorio temporadas;
 	private final CopaRepositorio copas;
 	private final ParametrosMoral parametrosMoral = ParametrosMoral.padrao();
+	private final Premiacao premiacao = Premiacao.padrao();
 
 	public ConsultasRepositorio(JdbcClient jdbc, JogoRepositorio jogos, RodadaRepositorio rodadas,
 			TemporadaRepositorio temporadas, CopaRepositorio copas) {
@@ -188,6 +193,165 @@ public class ConsultasRepositorio {
 		return Optional.of(new VisaoCalendario(linha.clube(), jogos.ano(jogoId, temporada.numero()), nomeDivisao,
 				classificacao.linhas().indexOf(linha) + 1, linha, jogosDoClube, treinador.nome(), forcaEmCampo, moral.valor(),
 				parametrosMoral.maximo(), moral.faixa(parametrosMoral), ultimos));
+	}
+
+	/**
+	 * Aba Copa (modelo 12a, rev. 71): as fases com o momento de cada uma, os confrontos da fase
+	 * escolhida, a chave até a final e os clubes fora da copa. Vazio se a temporada não tem copa.
+	 *
+	 * @param fase a fase mostrada; nula é a fase atual
+	 * @throws NoSuchElementException se o usuário não é treinador do jogo
+	 */
+	@Transactional(readOnly = true)
+	public Optional<VisaoCopa> copa(long jogoId, long usuarioId, FaseCopa fase) {
+		long clubeId = exigirClube(jogoId, usuarioId);
+		Temporada temporada = temporadas.carregarAtual(jogoId);
+		long temporadaId = jdbc.sql("SELECT id FROM jogo_temporada WHERE jogo_id = :jogo AND numero = :numero")
+			.param("jogo", jogoId).param("numero", temporada.numero()).query(Long.class).single();
+		Optional<Copa> carregada = copas.carregar(jogoId, temporadaId);
+		if (carregada.isEmpty()) {
+			return Optional.empty();
+		}
+		Copa copa = carregada.get();
+		List<Copa.Etapa> quadro = copas.quadro(jogoId, temporadaId);
+		FaseCopa mostrada = fase == null || fase.ordinal() < copa.primeiraFase().ordinal() ? copa.faseAtual() : fase;
+		RodadaRepositorio.Proximo proximo = rodadas.proximo(jogoId);
+
+		List<FaseNaCopa> fases = new ArrayList<>();
+		for (FaseCopa f = copa.primeiraFase(); f != null; f = f.seguinte().orElse(null)) {
+			FaseCopa estaFase = f;
+			List<Copa.Etapa> etapas = quadro.stream().filter(e -> e.fase() == estaFase).toList();
+			List<ConfrontoCopa> daFase = copa.confrontosDa(f);
+			boolean feita = !daFase.isEmpty() && daFase.stream().allMatch(ConfrontoCopa::decidido);
+			boolean idaFeita = !daFase.isEmpty() && daFase.stream().allMatch(c -> c.ida().isPresent());
+			String quando = f.jogoUnico() ? (feita ? "feita · jogo único" : "jogo único depois da liga")
+					: feita ? "feita · rodadas " + etapas.get(0).depoisDaRodada() + " e " + etapas.get(1).depoisDaRodada()
+					: idaFeita ? "ida feita · volta depois da " + etapas.get(1).depoisDaRodada()
+					: "depois das rodadas " + etapas.get(0).depoisDaRodada() + " e " + etapas.get(1).depoisDaRodada();
+			SituacaoDaFase situacao = feita ? SituacaoDaFase.TERMINADA
+					: f == copa.faseAtual() ? SituacaoDaFase.JOGANDO : SituacaoDaFase.AGUARDANDO;
+			fases.add(new FaseNaCopa(f, f.nome(), quando, situacao, f == mostrada));
+		}
+
+		List<ConfrontoNaCopa> confrontos = copa.confrontosDa(mostrada).stream()
+			.map(c -> confrontoNaCopa(c, quadro, clubeId))
+			.toList();
+
+		// a chave das fases seguintes (chave fixa, rev. 70): o vencedor do 1 pega o do 2
+		List<FaseDaChave> chave = new ArrayList<>();
+		List<String> anteriores = copa.confrontosDa(mostrada).stream().map(c -> rotuloVencedor(c, clubeId)).toList();
+		List<String> codigos = new ArrayList<>();
+		for (int k = 0; k < anteriores.size(); k++) {
+			codigos.add("Venc. " + (k + 1));
+		}
+		for (FaseCopa f = mostrada.seguinte().orElse(null); f != null; f = f.seguinte().orElse(null)) {
+			List<ConfrontoCopa> criados = copa.confrontosDa(f);
+			List<JogoDaChave> jogosDaChave = new ArrayList<>();
+			List<String> proximosRotulos = new ArrayList<>();
+			List<String> proximosCodigos = new ArrayList<>();
+			String letra = f.nome().substring(0, 1);
+			for (int k = 0; k < codigos.size() / 2; k++) {
+				int ordem = k;
+				Optional<ConfrontoCopa> criado = criados.stream().filter(c -> c.ordem() == ordem).findFirst();
+				String texto = criado.map(c -> c.mandante().nome() + " × " + c.visitante().nome())
+					.orElse(rotulo(anteriores.get(2 * k), codigos.get(2 * k)) + " × "
+							+ rotulo(anteriores.get(2 * k + 1), codigos.get(2 * k + 1)));
+				boolean seu = criado.map(c -> c.mandante().id() == clubeId || c.visitante().id() == clubeId)
+					.orElse(anteriores.get(2 * k).contains(SEU) || anteriores.get(2 * k + 1).contains(SEU));
+				jogosDaChave.add(new JogoDaChave(texto.replace(SEU, " (você)"), seu, criado.isEmpty()));
+				proximosRotulos.add(criado.map(c -> rotuloVencedor(c, clubeId)).orElse(null));
+				proximosCodigos.add("Venc. " + letra + (k + 1));
+			}
+			chave.add(new FaseDaChave(f.jogoUnico() ? f.nome() + " · campo neutro" : f.nome(), jogosDaChave));
+			anteriores = proximosRotulos.stream().map(r -> r == null ? "" : r).toList();
+			codigos = proximosCodigos;
+		}
+
+		List<Clube> inscritos = copa.confrontosDa(copa.primeiraFase()).stream()
+			.flatMap(c -> Stream.of(c.mandante(), c.visitante())).toList();
+		List<String> fora = temporada.divisoes().stream()
+			.flatMap(d -> d.calendario().jogos().stream().flatMap(j -> Stream.of(j.mandante(), j.visitante())))
+			.distinct().filter(c -> !inscritos.contains(c)).map(Clube::nome).toList();
+		Optional<Clube> seuClube = inscritos.stream().filter(c -> c.id() == clubeId).findFirst();
+		String situacaoDoClube = seuClube.map(c -> situacaoNaCopa(copa, c, quadro, proximo))
+			.orElse("Fora da copa nesta temporada");
+		int teto = jogos.carregarLiga(jogoId).divisoes().getFirst().limiteForca();
+		return Optional.of(new VisaoCopa(jogos.ano(jogoId, temporada.numero()), inscritos.size(),
+				jogos.carregarLiga(jogoId).divisoes().size(), premiacao.premioDaCopa(1, teto), premiacao.premioDaCopa(2, teto),
+				Moeda.doPais(jdbc.sql("SELECT pais_codigo FROM jogo WHERE id = :jogo").param("jogo", jogoId)
+					.query(String.class).single()), situacaoDoClube, fases, mostrada.nome(), mostrada.jogoUnico(), confrontos, chave, fora,
+				copa.campeao().map(Clube::nome).orElse(null)));
+	}
+
+	/** Marca, no rótulo da chave, o clube do usuário; trocada por " (você)" na tela. */
+	private static final String SEU = "§";
+
+	/** Nome do vencedor do confronto, ou "A ou B" enquanto ele não foi decidido. */
+	private static String rotuloVencedor(ConfrontoCopa c, long clubeId) {
+		return c.vencedor().map(v -> nomeNaChave(v, clubeId))
+			.orElse(nomeNaChave(c.mandante(), clubeId) + " ou " + nomeNaChave(c.visitante(), clubeId));
+	}
+
+	private static String nomeNaChave(Clube c, long clubeId) {
+		return c.id() == clubeId ? c.nome() + SEU : c.nome();
+	}
+
+	/**
+	 * Na chave, o nome (decidido) ou "A ou B" só no caminho do usuário; nos outros, o código ("Venc. 3"),
+	 * como no modelo 12a.
+	 */
+	private static String rotulo(String rotulo, String codigo) {
+		if (rotulo.isEmpty()) {
+			return codigo;
+		}
+		return !rotulo.contains(" ou ") || rotulo.contains(SEU) ? rotulo : codigo;
+	}
+
+	private static ConfrontoNaCopa confrontoNaCopa(ConfrontoCopa c, List<Copa.Etapa> quadro, long clubeId) {
+		List<Copa.Etapa> etapas = quadro.stream().filter(e -> e.fase() == c.fase()).toList();
+		String ida = c.ida().map(p -> p.golsMandante() + " x " + p.golsVisitante()).orElse("—");
+		// a volta com os gols do primeiro clube primeiro
+		String volta = c.fase().jogoUnico() ? null
+				: c.volta().map(p -> p.golsVisitante() + " x " + p.golsMandante()).orElse("—");
+		String total = c.ida().isEmpty() ? "—" : c.golsDoMandanteSomados() + " x " + c.golsDoVisitanteSomados();
+		Optional<PlacarCopa> decisiva = c.fase().jogoUnico() ? c.ida() : c.volta();
+		String extra;
+		if (c.ida().isEmpty()) {
+			extra = c.fase().jogoUnico() ? "depois da liga" : "ida depois da " + etapas.get(0).depoisDaRodada();
+		} else if (!c.decidido()) {
+			extra = "volta depois da " + etapas.get(1).depoisDaRodada();
+		} else {
+			// pênaltis com os gols do primeiro clube primeiro; na volta ele é o visitante
+			extra = decisiva.flatMap(PlacarCopa::penaltis)
+				.map(p -> c.fase().jogoUnico() ? "pên. " + p.mandante() + " x " + p.visitante()
+						: "pên. " + p.visitante() + " x " + p.mandante())
+				.orElse(decisiva.get().prorrogacao() ? "prorrogação" : null);
+		}
+		Optional<Clube> vencedor = c.vencedor();
+		return new ConfrontoNaCopa(c.ordem() + 1, c.mandante(), c.visitante(), ida, volta, total, extra,
+				vencedor.map(v -> v.equals(c.mandante())).orElse(null), c.mandante().id() == clubeId,
+				c.visitante().id() == clubeId);
+	}
+
+	/** "Nas oitavas · volta depois da rodada 12", "Eliminado nas Quartas de final", "Campeão". */
+	private static String situacaoNaCopa(Copa copa, Clube clube, List<Copa.Etapa> quadro, RodadaRepositorio.Proximo proximo) {
+		if (copa.campeao().map(clube::equals).orElse(false)) {
+			return "Campeão";
+		}
+		Optional<ConfrontoCopa> eliminacao = copa.confrontos().stream()
+			.filter(c -> c.perdedor().map(clube::equals).orElse(false)).findFirst();
+		if (eliminacao.isPresent()) {
+			return eliminacao.get().fase().jogoUnico() ? "Vice-campeão" : "Eliminado: " + eliminacao.get().fase().nome();
+		}
+		String fase = copa.faseAtual().nome();
+		if (proximo instanceof RodadaRepositorio.Proximo.EtapaCopa e && e.etapa().fase() == copa.faseAtual()) {
+			return "Na disputa · " + e.etapa().nome() + " é o próximo jogo";
+		}
+		return quadro.stream().filter(e -> e.fase() == copa.faseAtual())
+			.filter(e -> copa.jogosDo(clube, quadro).stream().noneMatch(j -> j.etapa().equals(e) && j.golsPro() != null))
+			.findFirst()
+			.map(e -> "Na disputa · " + e.nome() + " depois da rodada " + e.depoisDaRodada())
+			.orElse("Na disputa · " + fase);
 	}
 
 	/**
@@ -357,6 +521,56 @@ public class ConsultasRepositorio {
 	}
 
 	public record AbaDivisao(int prioridade, String nome) {
+	}
+
+	/**
+	 * A aba Copa (modelo 12a, rev. 71), em centavos de Real nos prêmios.
+	 *
+	 * @param ano ano da temporada
+	 * @param seuClube situação do clube do usuário na copa
+	 * @param fase nome da fase mostrada
+	 * @param jogoUnico a fase mostrada é a final: sem a coluna da volta
+	 * @param fora clubes das divisões que ficaram fora da copa
+	 * @param campeao nulo enquanto a final não foi jogada
+	 */
+	public record VisaoCopa(int ano, int clubes, int divisoes, long premioCampeao, long premioVice, Moeda moeda,
+			String seuClube, List<FaseNaCopa> fases, String fase, boolean jogoUnico, List<ConfrontoNaCopa> confrontos,
+			List<FaseDaChave> chave, List<String> fora, String campeao) {
+	}
+
+	/**
+	 * @param quando "depois das rodadas 18 e 20", "ida feita · volta depois da 12"
+	 * @param situacao terminada, a atual (jogando) ou futura (aguardando)
+	 */
+	public record FaseNaCopa(FaseCopa fase, String nome, String quando, SituacaoDaFase situacao, boolean mostrada) {
+	}
+
+	/** Situação de uma fase da copa. */
+	public enum SituacaoDaFase {
+		TERMINADA, JOGANDO, AGUARDANDO
+	}
+
+	/**
+	 * Um confronto na aba Copa: o {@code primeiro} jogou a ida em casa; os placares têm os gols dele
+	 * primeiro.
+	 *
+	 * @param volta nula na final
+	 * @param extra pênaltis, prorrogação ou quando falta jogar; pode ser nulo
+	 * @param primeiroPassa nulo enquanto o confronto não foi decidido
+	 */
+	public record ConfrontoNaCopa(int numero, Clube primeiro, Clube segundo, String ida, String volta, String total,
+			String extra, Boolean primeiroPassa, boolean primeiroSeu, boolean segundoSeu) {
+
+		public boolean doUsuario() {
+			return primeiroSeu || segundoSeu;
+		}
+	}
+
+	public record FaseDaChave(String nome, List<JogoDaChave> jogos) {
+	}
+
+	/** @param emAberto o confronto ainda não existe */
+	public record JogoDaChave(String texto, boolean doUsuario, boolean emAberto) {
 	}
 
 	/**

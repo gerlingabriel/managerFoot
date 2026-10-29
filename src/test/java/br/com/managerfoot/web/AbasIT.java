@@ -178,6 +178,20 @@ class AbasIT {
 	}
 
 	@Test
+	void abaCopaMostraAPrimeiraFaseEOutraFasePeloSeletor() throws Exception {
+		mvc.perform(get(base + "/copa").with(como(treinador)))
+			.andExpect(status().isOk())
+			.andExpect(content().string(containsString("Copa · Temporada 2026")))
+			.andExpect(content().string(containsString("aria-current=\"page\">Copa</a>")))
+			.andExpect(content().string(containsString("Chave até a final")));
+		mvc.perform(get(base + "/copa").param("fase", "FINAL").with(como(treinador)))
+			.andExpect(status().isOk())
+			.andExpect(content().string(containsString("Os confrontos desta fase saem quando a anterior terminar.")));
+		mvc.perform(get(base + "/copa").param("fase", "NENHUMA").with(como(treinador)))
+			.andExpect(status().isBadRequest());
+	}
+
+	@Test
 	void historicoAbreSemCampeoesNaPrimeiraTemporada() throws Exception {
 		mvc.perform(get(base + "/historico").with(como(treinador)))
 			.andExpect(status().isOk())

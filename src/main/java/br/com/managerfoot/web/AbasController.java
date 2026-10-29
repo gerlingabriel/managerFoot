@@ -18,6 +18,7 @@ import br.com.managerfoot.persistencia.ClubeNaFilaException;
 import br.com.managerfoot.persistencia.CompraRepositorio;
 import br.com.managerfoot.persistencia.ConsultasRepositorio;
 import br.com.managerfoot.persistencia.EstadioRepositorio;
+import br.com.managerfoot.temporada.FaseCopa;
 import jakarta.servlet.http.HttpServletResponse;
 
 /**
@@ -26,7 +27,8 @@ import jakarta.servlet.http.HttpServletResponse;
  * classificação, {@code calendario=<clube>} abre o calendário do clube (rev. 17 e 36). A aba
  * Finanças mostra só o clube do usuário (modelo 6a, rev. 39). A janela do clube tem também a aba
  * Plantel, com os jogadores à venda ({@code aba=plantel}, modelo 7a, rev. 51). A aba Histórico tem os
- * campeões e o ranking de treinadores (modelo 8a, rev. 54).
+ * campeões e o ranking de treinadores (modelo 8a, rev. 54). A aba Copa tem as fases, os confrontos e a
+ * chave da copa da temporada (modelo 12a, rev. 71).
  */
 @Controller
 class AbasController {
@@ -100,6 +102,16 @@ class AbasController {
 			model.addAttribute("estadio", estadios.janela(jogoId, usuario.id()));
 		}
 		return "financas";
+	}
+
+	/** Aba Copa (SPEC §8.2, modelo 12a, rev. 71): fases, confrontos da fase escolhida e chave. */
+	@GetMapping("/jogos/{jogoId}/copa")
+	String copa(@AuthenticationPrincipal Usuario usuario, @PathVariable long jogoId,
+			@RequestParam(name = "fase", required = false) FaseCopa fase, Model model) {
+		model.addAttribute("usuario", usuario);
+		model.addAttribute("jogoId", jogoId);
+		model.addAttribute("copa", consultas.copa(jogoId, usuario.id(), fase).orElse(null));
+		return "copa";
 	}
 
 	/** Histórico de campeões e ranking de treinadores (SPEC §8.1.1, modelo 8a, rev. 54). */

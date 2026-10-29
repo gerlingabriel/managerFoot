@@ -122,6 +122,35 @@ class CopaNaTemporadaIT {
 	}
 
 	@Test
+	void abaCopaComFasesConfrontosChaveEClubesFora() {
+		jogarAte(10);
+		rodadas.avancarCopa(jogo, 0, List.of());
+		long dono = jdbc.sql("SELECT usuario_id FROM jogo_treinador WHERE jogo_id = :j").param("j", jogo)
+			.query(Long.class).single();
+
+		ConsultasRepositorio.VisaoCopa aba = consultas.copa(jogo, dono, null).orElseThrow();
+
+		// modelo 12a: 16 clubes de 31, a fase atual com a ida feita e a chave até a final
+		assertThat(aba.clubes()).isEqualTo(16);
+		assertThat(aba.fora()).hasSize(15);
+		assertThat(aba.fase()).isEqualTo("Oitavas de final");
+		assertThat(aba.fases()).extracting(ConsultasRepositorio.FaseNaCopa::quando)
+			.containsExactly("ida feita · volta depois da 12", "depois das rodadas 18 e 20", "depois das rodadas 26 e 28",
+					"jogo único depois da liga");
+		assertThat(aba.fases().getFirst().situacao()).isEqualTo(ConsultasRepositorio.SituacaoDaFase.JOGANDO);
+		assertThat(aba.confrontos()).hasSize(8)
+			.allMatch(k -> !k.ida().equals("—") && k.volta().equals("—") && k.extra().equals("volta depois da 12")
+					&& k.primeiroPassa() == null);
+		assertThat(aba.chave()).extracting(f -> f.jogos().size()).containsExactly(4, 2, 1);
+		assertThat(aba.chave().getLast().nome()).isEqualTo("Final · campo neutro");
+		assertThat(aba.chave().get(1).jogos()).extracting(ConsultasRepositorio.JogoDaChave::texto)
+			.containsExactly("Venc. Q1 × Venc. Q2", "Venc. Q3 × Venc. Q4");
+		assertThat(aba.premioCampeao()).isEqualTo(2 * aba.premioVice());
+		// a final ainda não tem confrontos
+		assertThat(consultas.copa(jogo, dono, FaseCopa.FINAL).orElseThrow().confrontos()).isEmpty();
+	}
+
+	@Test
 	void extratoTemALinhaDaCopaDepoisDaRodadaSemSalario() {
 		jogarAte(10);
 		ConfrontoCopa confronto = copas.carregar(jogo, temporada).orElseThrow().confrontosDa(FaseCopa.OITAVAS).getFirst();

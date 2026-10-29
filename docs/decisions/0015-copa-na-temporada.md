@@ -34,6 +34,11 @@
   prioridade 0 (`ProcessamentoRodada.PRIORIDADE_COPA`) e formam um grupo só; o relógio desse grupo tem
   90 minutos ou 120, se uma partida está na prorrogação (calculado ao refazer as partidas).
 - **Temporadas antigas** (antes da V30) não têm copa e seguem só com a liga.
+- **Telas (rev. 71, modelos 12a a 12f):** `Copa.jogosDo` dá os jogos da copa de um clube com o placar
+  do ponto de vista dele, o total e quem passa; o calendário, o extrato e o detalhe do plantel usam esse
+  método do domínio, e não SQL próprio. O extrato separa as linhas pela chave (rodada, competição), com
+  a linha da copa depois da rodada da liga em que foi jogada. A aba Copa (`/jogos/{id}/copa`) é só
+  leitura (`ConsultasRepositorio.copa`). Nenhuma migração nova: tudo sai de V30 e V31.
 
 ## Consequências
 
