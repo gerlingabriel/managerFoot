@@ -47,6 +47,9 @@ class CopaNaTemporadaIT {
 	ConsultasRepositorio consultas;
 
 	@Autowired
+	CaixaRepositorio caixas;
+
+	@Autowired
 	JdbcClient jdbc;
 
 	long jogo;
@@ -116,6 +119,39 @@ class CopaNaTemporadaIT {
 		// a próxima é a rodada 11 da liga
 		assertThat(calendario.stream().filter(ConsultasRepositorio.JogoNoCalendario::proximo).toList())
 			.singleElement().matches(j -> j.copa() == null && j.rodada() == 11);
+	}
+
+	@Test
+	void extratoTemALinhaDaCopaDepoisDaRodadaSemSalario() {
+		jogarAte(10);
+		ConfrontoCopa confronto = copas.carregar(jogo, temporada).orElseThrow().confrontosDa(FaseCopa.OITAVAS).getFirst();
+		// o usuário passa a dirigir quem joga a ida em casa (só para ler o extrato desse clube)
+		jdbc.sql("UPDATE jogo_treinador SET clube_id = :c WHERE jogo_id = :j").param("c", confronto.mandante().id())
+			.param("j", jogo).update();
+		long dono = jdbc.sql("SELECT usuario_id FROM jogo_treinador WHERE jogo_id = :j").param("j", jogo)
+			.query(Long.class).single();
+		rodadas.avancarCopa(jogo, 0, List.of());
+
+		CaixaRepositorio.VisaoFinancas f = caixas.financas(jogo, dono);
+
+		// modelo 12f: a linha "Copa" vem logo depois da rodada 10, com bilheteria e sem salário
+		List<CaixaRepositorio.LinhaExtrato> extrato = f.extrato();
+		CaixaRepositorio.LinhaExtrato copa = extrato.stream().filter(l -> l.copa() != null).findFirst().orElseThrow();
+		CaixaRepositorio.LinhaExtrato antes = extrato.get(extrato.indexOf(copa) - 1);
+		assertThat(antes.rodada()).isEqualTo(10);
+		assertThat(antes.copa()).isNull();
+		assertThat(antes.salarios()).isNegative();
+		assertThat(copa.copa()).isEqualTo("Oitavas de final · ida");
+		assertThat(copa.emCasa()).isTrue();
+		assertThat(copa.adversario()).isEqualTo(confronto.visitante());
+		assertThat(copa.publico()).isPositive();
+		assertThat(copa.bilheteria()).isPositive();
+		assertThat(copa.salarios()).isZero();
+		assertThat(copa.saldo()).isEqualTo(antes.saldo() + copa.resultado());
+		assertThat(f.temCopa()).isTrue();
+		assertThat(f.copaBilheteria()).isEqualTo(copa.bilheteria());
+		assertThat(f.copaResultado()).isEqualTo(copa.resultado());
+		assertThat(extrato.getLast().saldo()).isEqualTo(f.saldo());
 	}
 
 	@Test

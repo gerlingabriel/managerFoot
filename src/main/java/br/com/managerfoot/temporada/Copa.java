@@ -46,6 +46,19 @@ public record Copa(List<ConfrontoCopa> confrontos) {
 	}
 
 	/**
+	 * Um jogo da copa visto por um clube (calendário e extrato, modelos 12d e 12f, rev. 71).
+	 *
+	 * @param indice posição da etapa no quadro
+	 * @param emCasa nulo na final, em campo neutro
+	 * @param golsPro do clube; nulo enquanto o jogo não foi jogado
+	 * @param detalhe na volta, o total ("total 3 x 2 · passa", com os pênaltis) ou, antes dela, a ida
+	 *        ("ida 1 x 1"); na final, os pênaltis; nulo nos outros casos
+	 */
+	public record JogoDoClube(int indice, Etapa etapa, Boolean emCasa, Clube adversario, Integer golsPro,
+			Integer golsContra, String detalhe) {
+	}
+
+	/**
 	 * Uma partida a jogar.
 	 *
 	 * @param jogo mandante e visitante desta partida; a rodada é a da liga depois da qual se joga
@@ -234,6 +247,53 @@ public record Copa(List<ConfrontoCopa> confrontos) {
 	private Optional<ConfrontoCopa> finalDecidida() {
 		return faseAtual() == FaseCopa.FINAL ? Optional.of(confrontos.getLast()).filter(ConfrontoCopa::decidido)
 				: Optional.empty();
+	}
+
+	/**
+	 * Os jogos do clube nas etapas do quadro cujos confrontos já existem, na ordem do quadro, com o
+	 * placar do ponto de vista dele. Vazio se ele não está na copa.
+	 */
+	public List<JogoDoClube> jogosDo(Clube clube, List<Etapa> quadro) {
+		Objects.requireNonNull(clube);
+		List<JogoDoClube> jogos = new ArrayList<>();
+		for (int i = 0; i < quadro.size(); i++) {
+			Etapa etapa = quadro.get(i);
+			int indice = i;
+			confrontosDa(etapa.fase()).stream().filter(c -> c.envolve(clube)).findFirst()
+				.ifPresent(c -> jogos.add(jogoDo(c, etapa, indice, c.mandante().equals(clube))));
+		}
+		return jogos;
+	}
+
+	/** {@code primeiro}: o clube é o mandante da ida (o primeiro do confronto). */
+	private static JogoDoClube jogoDo(ConfrontoCopa c, Etapa etapa, int indice, boolean primeiro) {
+		Clube adversario = primeiro ? c.visitante() : c.mandante();
+		// o placar de cada partida é visto de quem joga em casa nela; na volta, o segundo do confronto
+		boolean emCasaNaPartida = etapa.perna() == Perna.VOLTA ? !primeiro : primeiro;
+		Optional<PlacarCopa> placar = etapa.perna() == Perna.VOLTA ? c.volta() : c.ida();
+		Integer pro = placar.map(p -> emCasaNaPartida ? p.golsMandante() : p.golsVisitante()).orElse(null);
+		Integer contra = placar.map(p -> emCasaNaPartida ? p.golsVisitante() : p.golsMandante()).orElse(null);
+		String penaltis = placar.flatMap(PlacarCopa::penaltis)
+			.map(p -> "pên. " + (emCasaNaPartida ? p.mandante() : p.visitante()) + " x "
+					+ (emCasaNaPartida ? p.visitante() : p.mandante()))
+			.orElse(null);
+		String detalhe = switch (etapa.perna()) {
+			case IDA -> null;
+			case JOGO_UNICO -> penaltis;
+			case VOLTA -> {
+				if (placar.isPresent()) {
+					int somaPro = primeiro ? c.golsDoMandanteSomados() : c.golsDoVisitanteSomados();
+					int somaContra = primeiro ? c.golsDoVisitanteSomados() : c.golsDoMandanteSomados();
+					boolean passa = c.vencedor().orElseThrow().equals(primeiro ? c.mandante() : c.visitante());
+					yield "total " + somaPro + " x " + somaContra + (penaltis == null ? "" : " · " + penaltis)
+							+ (passa ? " · passa" : " · sai");
+				}
+				yield c.ida().map(p -> "ida " + (primeiro ? p.golsMandante() : p.golsVisitante()) + " x "
+						+ (primeiro ? p.golsVisitante() : p.golsMandante())).orElse(null);
+			}
+		};
+		return new JogoDoClube(indice, etapa, etapa.perna() == Perna.JOGO_UNICO ? null : emCasaNaPartida, adversario,
+				pro, contra, detalhe);
 	}
 
 	/** O clube ainda está na copa: inscrito e sem ter sido eliminado. */

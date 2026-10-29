@@ -97,6 +97,13 @@ class FimDeTemporadaIT {
 		mvc.perform(get(plantel).with(como(treinador)))
 			.andExpect(content().string(containsString("Temporada 2026 encerrada")))
 			.andExpect(content().string(containsString("OK, começar a próxima")));
+		// o extrato da temporada inteira abre, com as linhas da copa se o clube a jogou (modelo 12f)
+		boolean jogouCopa = jdbc.sql("""
+				SELECT count(*) > 0 FROM jogo_partida p JOIN jogo_treinador t ON t.clube_id IN (p.mandante_id, p.visitante_id)
+				WHERE t.jogo_id = :j AND p.confronto_id IS NOT NULL""").param("j", jogoId).query(Boolean.class).single();
+		mvc.perform(get("/jogos/" + jogoId + "/financas").with(como(treinador)))
+			.andExpect(status().isOk())
+			.andExpect(content().string(jogouCopa ? containsString("Copa na temporada") : containsString("Extrato por rodada")));
 
 		mvc.perform(post("/jogos/" + jogoId + "/temporada").param("temporada", "1").with(como(treinador)).with(csrf()))
 			.andExpect(redirectedUrl(plantel))

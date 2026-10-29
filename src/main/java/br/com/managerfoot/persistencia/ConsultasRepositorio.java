@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.TreeMap;
+import java.util.stream.Stream;
 
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
@@ -23,12 +24,10 @@ import br.com.managerfoot.economia.PrecoJogador;
 import br.com.managerfoot.temporada.Artilharia;
 import br.com.managerfoot.temporada.Classificacao;
 import br.com.managerfoot.temporada.ConfiguracaoLiga;
-import br.com.managerfoot.temporada.ConfrontoCopa;
 import br.com.managerfoot.temporada.Copa;
 import br.com.managerfoot.temporada.Divisao;
 import br.com.managerfoot.temporada.Jogo;
 import br.com.managerfoot.temporada.LinhaClassificacao;
-import br.com.managerfoot.temporada.PlacarCopa;
 import br.com.managerfoot.temporada.Rodada;
 import br.com.managerfoot.temporada.Temporada;
 
@@ -192,9 +191,8 @@ public class ConsultasRepositorio {
 	}
 
 	/**
-	 * Os jogos da copa do clube na temporada, na ordem do quadro, com o placar do ponto de vista dele
-	 * e, na volta, o total ou o placar da ida (modelo 12d, rev. 71). A rodada é a da liga depois da
-	 * qual o jogo é disputado.
+	 * Os jogos da copa do clube na temporada, na ordem do quadro (modelo 12d, rev. 71). A rodada é a da
+	 * liga depois da qual o jogo é disputado.
 	 */
 	private List<JogoNoCalendario> jogosDaCopa(long jogoId, long temporadaId, long clubeId,
 			RodadaRepositorio.Proximo proximo) {
@@ -202,63 +200,17 @@ public class ConsultasRepositorio {
 		if (copa.isEmpty()) {
 			return List.of();
 		}
-		List<Copa.Etapa> quadro = copas.quadro(jogoId, temporadaId);
-		List<JogoNoCalendario> lista = new ArrayList<>();
-		for (int i = 0; i < quadro.size(); i++) {
-			Copa.Etapa etapa = quadro.get(i);
-			boolean ehProximo = proximo instanceof RodadaRepositorio.Proximo.EtapaCopa e && e.indice() == i;
-			copa.get().confrontosDa(etapa.fase()).stream()
-				.filter(c -> c.mandante().id() == clubeId || c.visitante().id() == clubeId)
-				.findFirst()
-				.ifPresent(c -> lista.add(jogoDaCopa(c, etapa, c.mandante().id() == clubeId, ehProximo)));
+		Optional<Clube> clube = copa.get().confrontos().stream()
+			.flatMap(c -> Stream.of(c.mandante(), c.visitante())).filter(c -> c.id() == clubeId)
+			.findFirst();
+		if (clube.isEmpty()) {
+			return List.of();
 		}
-		return lista;
-	}
-
-	private static JogoNoCalendario jogoDaCopa(ConfrontoCopa c, Copa.Etapa etapa, boolean ehMandante, boolean proximo) {
-		Clube adversario = ehMandante ? c.visitante() : c.mandante();
-		String nome = "Copa · " + etapa.nome();
-		return switch (etapa.perna()) {
-			case IDA -> {
-				Optional<PlacarCopa> p = c.ida();
-				yield new JogoNoCalendario(etapa.depoisDaRodada(), ehMandante, adversario,
-						p.map(x -> ehMandante ? x.golsMandante() : x.golsVisitante()).orElse(null),
-						p.map(x -> ehMandante ? x.golsVisitante() : x.golsMandante()).orElse(null), proximo, nome, null);
-			}
-			case VOLTA -> {
-				// na volta quem manda é o visitante da ida
-				Optional<PlacarCopa> p = c.volta();
-				String detalhe = null;
-				if (p.isPresent()) {
-					int pro = ehMandante ? c.golsDoMandanteSomados() : c.golsDoVisitanteSomados();
-					int contra = ehMandante ? c.golsDoVisitanteSomados() : c.golsDoMandanteSomados();
-					String penaltis = p.get().penaltis()
-						.map(x -> " · pên. " + (ehMandante ? x.visitante() : x.mandante()) + " x "
-								+ (ehMandante ? x.mandante() : x.visitante()))
-						.orElse("");
-					boolean passa = c.vencedor().map(v -> v.equals(ehMandante ? c.mandante() : c.visitante())).orElse(false);
-					detalhe = "total " + pro + " x " + contra + penaltis + (passa ? " · passa" : " · sai");
-				} else if (c.ida().isPresent()) {
-					PlacarCopa ida = c.ida().get();
-					detalhe = "ida " + (ehMandante ? ida.golsMandante() : ida.golsVisitante()) + " x "
-							+ (ehMandante ? ida.golsVisitante() : ida.golsMandante());
-				}
-				yield new JogoNoCalendario(etapa.depoisDaRodada(), !ehMandante, adversario,
-						p.map(x -> ehMandante ? x.golsVisitante() : x.golsMandante()).orElse(null),
-						p.map(x -> ehMandante ? x.golsMandante() : x.golsVisitante()).orElse(null), proximo, nome, detalhe);
-			}
-			case JOGO_UNICO -> {
-				Optional<PlacarCopa> p = c.ida();
-				String detalhe = p.flatMap(PlacarCopa::penaltis)
-					.map(x -> "pên. " + (ehMandante ? x.mandante() : x.visitante()) + " x "
-							+ (ehMandante ? x.visitante() : x.mandante()))
-					.orElse(null);
-				// campo neutro: sem casa nem fora
-				yield new JogoNoCalendario(etapa.depoisDaRodada(), null, adversario,
-						p.map(x -> ehMandante ? x.golsMandante() : x.golsVisitante()).orElse(null),
-						p.map(x -> ehMandante ? x.golsVisitante() : x.golsMandante()).orElse(null), proximo, nome, detalhe);
-			}
-		};
+		return copa.get().jogosDo(clube.get(), copas.quadro(jogoId, temporadaId)).stream()
+			.map(j -> new JogoNoCalendario(j.etapa().depoisDaRodada(), j.emCasa(), j.adversario(), j.golsPro(),
+					j.golsContra(), proximo instanceof RodadaRepositorio.Proximo.EtapaCopa e && e.indice() == j.indice(),
+					"Copa · " + j.etapa().nome(), j.detalhe()))
+			.toList();
 	}
 
 	private List<LinhaArtilheiro> linhas(List<Artilharia.Artilheiro> ranking) {

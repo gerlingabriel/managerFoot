@@ -213,4 +213,45 @@ class CopaTest {
 		assertThatIllegalStateException()
 			.isThrownBy(() -> semUm.comPlacar(FaseCopa.SEMIFINAL, 0, Copa.Perna.IDA, PlacarCopa.de(1, 0)));
 	}
+
+	@Test
+	void jogosDoClubeComPlacarDoPontoDeVistaDeleTotalEPenaltis() {
+		Clube a = new Clube(1, "A", 30);
+		Clube b = new Clube(2, "B", 30);
+		Clube fora = new Clube(3, "C", 30);
+		// ida A 2 x 1 B; volta B 1 x 0 A, total 2 x 2, B nos pênaltis 4 x 3
+		ConfrontoCopa confronto = ConfrontoCopa.novo(FaseCopa.OITAVAS, 0, a, b).comIda(PlacarCopa.de(2, 1))
+			.comVolta(new PlacarCopa(1, 0, true, Optional.of(new PlacarCopa.Penaltis(4, 3))));
+		Copa copa = new Copa(List.of(confronto));
+		List<Copa.Etapa> quadro = Copa.quadro(FaseCopa.OITAVAS, 30, parametros);
+
+		List<Copa.JogoDoClube> deA = copa.jogosDo(a, quadro);
+		assertThat(deA).hasSize(2);
+		assertThat(deA.get(0)).isEqualTo(new Copa.JogoDoClube(0, quadro.get(0), true, b, 2, 1, null));
+		assertThat(deA.get(1)).isEqualTo(new Copa.JogoDoClube(1, quadro.get(1), false, b, 0, 1, "total 2 x 2 · pên. 3 x 4 · sai"));
+		List<Copa.JogoDoClube> deB = copa.jogosDo(b, quadro);
+		assertThat(deB.get(0).emCasa()).isFalse();
+		assertThat(deB.get(0).golsPro()).isEqualTo(1);
+		assertThat(deB.get(1).detalhe()).isEqualTo("total 2 x 2 · pên. 4 x 3 · passa");
+		assertThat(copa.jogosDo(fora, quadro)).isEmpty();
+
+		// antes da volta, a ida embaixo
+		Copa soIda = new Copa(List.of(ConfrontoCopa.novo(FaseCopa.OITAVAS, 0, a, b).comIda(PlacarCopa.de(2, 1))));
+		assertThat(soIda.jogosDo(b, quadro).get(1)).isEqualTo(new Copa.JogoDoClube(1, quadro.get(1), true, a, null, null, "ida 1 x 2"));
+	}
+
+	@Test
+	void finalDoClubeEmCampoNeutroComPenaltis() {
+		Clube a = new Clube(1, "A", 30);
+		Clube b = new Clube(2, "B", 30);
+		Copa copa = new Copa(List.of(ConfrontoCopa.novo(FaseCopa.FINAL, 0, a, b)
+			.comIda(new PlacarCopa(1, 1, true, Optional.of(new PlacarCopa.Penaltis(5, 4))))));
+		List<Copa.Etapa> quadro = Copa.quadro(FaseCopa.FINAL, 30, parametros);
+
+		Copa.JogoDoClube final_ = copa.jogosDo(b, quadro).getFirst();
+		assertThat(final_.emCasa()).isNull();
+		assertThat(final_.adversario()).isEqualTo(a);
+		assertThat(final_.detalhe()).isEqualTo("pên. 4 x 5");
+		assertThat(final_.etapa().nome()).isEqualTo("Final");
+	}
 }

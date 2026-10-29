@@ -1501,3 +1501,10 @@ a.financas-link:hover, a.financas-link:focus-visible { border-color: var(--desta
 .clube-faixa-numero { font: 700 26px 'Barlow Condensed', sans-serif; }
 .clube-faixa-ultimos { font-size: 22px; letter-spacing: 0.08em; }
 .clube-faixa-escala { font-size: 12px; }
+
+/* Linhas da copa no extrato (modelo 12f, rev. 71) */
+.tabela-extrato tr.da-copa td { background: rgba(242, 201, 76, 0.05); }
+.extrato-copa { color: var(--destaque); font-weight: 700; }
+.extrato-etapa { color: var(--destaque); }
+.financas-copa { border-color: var(--destaque); }
+.financas-copa .rotulo { color: var(--destaque); }
