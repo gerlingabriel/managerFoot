@@ -217,6 +217,16 @@ class RodadaIT {
 			.andExpect(content().string(containsString("Copa · 16 avos de final · ida: ")))
 			.andExpect(content().string(containsString("Próximo jogo · Rodada 4")));
 		assertThat(rodadas.proximo(jogoId)).isEqualTo(new RodadaRepositorio.Proximo.Liga(4));
+
+		// na volta, a linha de detalhe do modelo 12c: o placar da ida ou o clube fora da copa
+		rodadas.avancar(jogoId, 4);
+		rodadas.avancar(jogoId, 5);
+		boolean naCopa = jdbc.sql("""
+				SELECT count(*) > 0 FROM jogo_copa_confronto c JOIN jogo_treinador t ON t.clube_id IN (c.mandante_id, c.visitante_id)
+				WHERE t.jogo_id = :j""").param("j", jogoId).query(Boolean.class).single();
+		mvc.perform(get(plantel).with(como(treinador)))
+			.andExpect(content().string(containsString("Próximo jogo · Copa · 16 avos de final · volta")))
+			.andExpect(content().string(naCopa ? containsString(">Ida ") : containsString("Seu clube não está na copa desta temporada")));
 	}
 
 	@Test

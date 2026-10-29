@@ -42,16 +42,18 @@ public class PlantelRepositorio {
 	private final RodadaRepositorio rodadas;
 	private final EscalacaoRepositorio escalacoes;
 	private final CaixaRepositorio caixas;
+	private final CopaRepositorio copas;
 	private final ParametrosMoral parametrosMoral = ParametrosMoral.padrao();
 
 	public PlantelRepositorio(JdbcClient jdbc, JogoRepositorio jogos, TemporadaRepositorio temporadas,
-			RodadaRepositorio rodadas, EscalacaoRepositorio escalacoes, CaixaRepositorio caixas) {
+			RodadaRepositorio rodadas, EscalacaoRepositorio escalacoes, CaixaRepositorio caixas, CopaRepositorio copas) {
 		this.jdbc = jdbc;
 		this.jogos = jogos;
 		this.temporadas = temporadas;
 		this.rodadas = rodadas;
 		this.escalacoes = escalacoes;
 		this.caixas = caixas;
+		this.copas = copas;
 	}
 
 	/**
@@ -108,12 +110,21 @@ public class PlantelRepositorio {
 		Optional<Jogo> proximo;
 		String etapaCopa = null;
 		Integer indiceCopa = null;
+		String detalheCopa = null;
+		boolean finalCopa = false;
 		if (seguinte instanceof RodadaRepositorio.Proximo.EtapaCopa(int indice, Copa.Etapa etapa)) {
 			// a etapa da copa vem antes da próxima rodada da liga (SPEC §8.2, rev. 70)
 			etapaCopa = "Copa · " + etapa.nome();
 			indiceCopa = indice;
+			finalCopa = etapa.perna() == Copa.Perna.JOGO_UNICO;
 			proximo = rodadas.partidasDaEtapa(jogoId, etapa).stream().map(Copa.PartidaCopa::jogo).filter(j -> envolve(j, clube))
 				.findFirst();
+			// linha de detalhe do modelo 12c (rev. 71): a ida, o campo neutro ou por que o clube saiu
+			long temporadaId = jdbc.sql("SELECT id FROM jogo_temporada WHERE jogo_id = :jogo AND numero = :numero")
+				.param("jogo", jogoId).param("numero", temporada.numero()).query(Long.class).single();
+			detalheCopa = copas.carregar(jogoId, temporadaId)
+				.flatMap(c -> c.detalheDoProximo(oClube, copas.quadro(jogoId, temporadaId), indice))
+				.orElse(null);
 		} else {
 			proximo = processadas >= total ? Optional.empty()
 					: divisao.calendario().jogos().stream().filter(j -> j.rodada() == processadas + 1 && envolve(j, clube))
@@ -122,7 +133,7 @@ public class PlantelRepositorio {
 
 		return Optional.of(new VisaoPlantel(jogoId, temporada.numero(), jogos.ano(jogoId, temporada.numero()), oClube, nomeDivisao, classificacao.linhas().indexOf(linha) + 1,
 				linha.pontos(), linha.jogos(), moral.valor(), parametrosMoral.maximo(), moral.faixa(parametrosMoral),
-				processadas + 1, seguinte instanceof RodadaRepositorio.Proximo.Fim, etapaCopa, indiceCopa,
+				processadas + 1, seguinte instanceof RodadaRepositorio.Proximo.Fim, etapaCopa, indiceCopa, detalheCopa, finalCopa,
 				proximo.map(j -> j.mandante().id() == clube).orElse(null),
 				proximo.map(j -> j.mandante().id() == clube ? j.visitante() : j.mandante()).orElse(null), escalacao,
 				linhas, problemas, goleiroImprovisado, caixas.saldo(clube, plantel), caixas.moeda(jogoId)));
@@ -239,13 +250,15 @@ public class PlantelRepositorio {
 	 * @param ano ano da temporada, mostrado na tela
 	 * @param etapaCopa nome da etapa da copa que vem antes da próxima rodada; nulo se a próxima é da liga
 	 * @param indiceCopa índice da etapa no quadro da copa, para o pedido de jogá-la; nulo se a próxima é da liga
+	 * @param detalheCopa linha embaixo do próximo jogo da copa (modelo 12c); pode ser nulo
+	 * @param finalCopa a próxima é a final da copa, em campo neutro
 	 * @param emCasa nulo quando não há próximo jogo (folga, fora da etapa da copa ou temporada encerrada)
 	 * @param adversario nulo quando não há próximo jogo
 	 * @param saldo caixa do clube em centavos de Real, para saber se pode contratar (rev. 39)
 	 */
 	public record VisaoPlantel(long jogoId, int temporada, int ano, Clube clube, String divisao, int posicao, int pontos, int jogos,
 			int moral, int moralMaxima, Moral.Faixa faixaMoral, int rodada, boolean temporadaEncerrada, String etapaCopa,
-			Integer indiceCopa, Boolean emCasa,
+			Integer indiceCopa, String detalheCopa, boolean finalCopa, Boolean emCasa,
 			Clube adversario, EscalacaoDoTreinador escalacao, List<LinhaJogador> jogadores, List<String> problemas,
 			String goleiroImprovisado, long saldo, Moeda moeda) {
 	}

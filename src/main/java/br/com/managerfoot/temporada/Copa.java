@@ -265,6 +265,32 @@ public record Copa(List<ConfrontoCopa> confrontos) {
 		return jogos;
 	}
 
+	/**
+	 * Linha embaixo do próximo jogo no plantel (modelo 12c, rev. 71): na volta, o placar da ida; na
+	 * final, o campo neutro; com o clube fora da etapa, por que ele saiu.
+	 *
+	 * @param indice posição da etapa no {@code quadro}
+	 * @return vazio na ida
+	 */
+	public Optional<String> detalheDoProximo(Clube clube, List<Etapa> quadro, int indice) {
+		Etapa etapa = quadro.get(indice);
+		List<JogoDoClube> jogos = jogosDo(clube, quadro);
+		Optional<JogoDoClube> nesta = jogos.stream().filter(j -> j.indice() == indice).findFirst();
+		if (nesta.isPresent()) {
+			return switch (etapa.perna()) {
+				case IDA -> Optional.empty();
+				case VOLTA -> Optional.ofNullable(nesta.get().detalhe()).map(d -> "Ida" + d.substring("ida".length()));
+				case JOGO_UNICO -> Optional.of("Jogo único no maior estádio dos dois · bilheteria dividida");
+			};
+		}
+		return jogos.stream()
+			.filter(j -> j.detalhe() != null && j.detalhe().endsWith(" · sai"))
+			.findFirst()
+			.map(j -> "Eliminado por " + j.adversario().nome() + " · " + j.etapa().fase().nome() + " · "
+					+ j.detalhe().substring(0, j.detalhe().length() - " · sai".length()))
+			.or(() -> jogos.isEmpty() ? Optional.of("Seu clube não está na copa desta temporada") : Optional.empty());
+	}
+
 	/** {@code primeiro}: o clube é o mandante da ida (o primeiro do confronto). */
 	private static JogoDoClube jogoDo(ConfrontoCopa c, Etapa etapa, int indice, boolean primeiro) {
 		Clube adversario = primeiro ? c.visitante() : c.mandante();

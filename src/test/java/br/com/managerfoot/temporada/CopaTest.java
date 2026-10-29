@@ -254,4 +254,28 @@ class CopaTest {
 		assertThat(final_.detalhe()).isEqualTo("pên. 4 x 5");
 		assertThat(final_.etapa().nome()).isEqualTo("Final");
 	}
+
+	@Test
+	void detalheDoProximoJogoNoPlantel() {
+		Clube a = new Clube(1, "A", 30);
+		Clube b = new Clube(2, "B", 30);
+		Clube c = new Clube(3, "C", 30);
+		Clube d = new Clube(4, "D", 30);
+		List<Copa.Etapa> quadro = Copa.quadro(FaseCopa.SEMIFINAL, 30, parametros);
+		ConfrontoCopa ab = ConfrontoCopa.novo(FaseCopa.SEMIFINAL, 0, a, b).comIda(PlacarCopa.de(1, 1));
+		Copa idaJogada = new Copa(List.of(ab, ConfrontoCopa.novo(FaseCopa.SEMIFINAL, 1, c, d).comIda(PlacarCopa.de(0, 2))));
+
+		assertThat(idaJogada.detalheDoProximo(a, quadro, 0)).isEmpty();
+		assertThat(idaJogada.detalheDoProximo(b, quadro, 1)).contains("Ida 1 x 1");
+		assertThat(idaJogada.detalheDoProximo(c, quadro, 1)).contains("Ida 0 x 2");
+		assertThat(idaJogada.detalheDoProximo(new Clube(9, "Fora", 30), quadro, 1))
+			.contains("Seu clube não está na copa desta temporada");
+
+		// B passa nos pênaltis; a final é entre B e D
+		Copa naFinal = new Copa(List.of(ab.comVolta(new PlacarCopa(0, 0, true, Optional.of(new PlacarCopa.Penaltis(4, 3)))),
+				ConfrontoCopa.novo(FaseCopa.SEMIFINAL, 1, c, d).comIda(PlacarCopa.de(0, 2)).comVolta(PlacarCopa.de(1, 0)),
+				ConfrontoCopa.novo(FaseCopa.FINAL, 0, b, d)));
+		assertThat(naFinal.detalheDoProximo(a, quadro, 2)).contains("Eliminado por B · Semifinal · total 1 x 1 · pên. 3 x 4");
+		assertThat(naFinal.detalheDoProximo(d, quadro, 2)).contains("Jogo único no maior estádio dos dois · bilheteria dividida");
+	}
 }
