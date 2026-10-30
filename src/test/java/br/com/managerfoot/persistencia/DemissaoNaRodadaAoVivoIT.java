@@ -5,10 +5,12 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.inOrder;
 
 import java.time.Instant;
 
 import org.junit.jupiter.api.Test;
+import org.mockito.InOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
@@ -17,6 +19,9 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.util.AopTestUtils;
 
 import br.com.managerfoot.TestcontainersConfiguration;
+import br.com.managerfoot.bancopadrao.GeradorBancoPadrao;
+import br.com.managerfoot.bancopadrao.ParametrosBancoPadrao;
+import br.com.managerfoot.motor.ParametrosMotor;
 import br.com.managerfoot.persistencia.RodadaAoVivoRepositorio.EstadoRodada;
 
 /** O usuário demitido ao fim da rodada ao vivo muda de clube no meio do fechamento: a rodada não pode travar. */
@@ -47,8 +52,17 @@ class DemissaoNaRodadaAoVivoIT {
 	@Autowired
 	JdbcClient jdbc;
 
+	@Autowired
+	BancoPadraoRepositorio bancoPadrao;
+
 	@MockitoSpyBean
 	TrocaRepositorio trocas;
+
+	@MockitoSpyBean
+	CopaRepositorio copas;
+
+	@MockitoSpyBean
+	ContinentalRepositorio continentais;
 
 	@Test
 	void fimDaRodadaGravaEMostraOJogoDoClubeAntigo() {
@@ -72,5 +86,29 @@ class DemissaoNaRodadaAoVivoIT {
 		assertThat(jogos.clubeDoTreinador(jogo, usuario)).contains(novo);
 		assertThat(fim.jogoDoUsuario()).isNotNull();
 		assertThat(fim.jogoDoUsuario().mandante().id() == antigo || fim.jogoDoUsuario().visitante().id() == antigo).isTrue();
+	}
+
+	/** O crédito de uma final é de quem dirigiu o clube nela, mesmo que a final o demita. */
+	@Test
+	void tituloDaFinalGravaAntesDaDemissao() {
+		bancoPadrao.carregar(new GeradorBancoPadrao(ParametrosBancoPadrao.padrao(), ParametrosMotor.padrao()).gerarBanco());
+		long brasil = moldes.campeonatosDisponiveis(bancoPadrao.moldeId().orElseThrow()).stream()
+			.filter(c -> c.codigoPais().equals("BRA")).findFirst().orElseThrow().paisId();
+		long jogo = jogos.criarJogoComClubeSorteado(brasil, LigaDeTeste.participante(contas).id(), 5);
+		temporadas.iniciarPrimeiraTemporada(jogo, 2026);
+		for (int r = 1; r <= rodadas.totalDeRodadas(jogo); r++) {
+			RodadasDeTeste.semDecisoesDoTreinador(jdbc, jogo);
+			RodadasDeTeste.jogarRodada(rodadas, jogo, r);
+		}
+		RodadasDeTeste.jogarCopaPendente(rodadas, jogo);
+
+		TrocaRepositorio trocasReal = AopTestUtils.getTargetObject(trocas);
+		CopaRepositorio copasReal = AopTestUtils.getTargetObject(copas);
+		ContinentalRepositorio continentaisReal = AopTestUtils.getTargetObject(continentais);
+		InOrder ordem = inOrder(copasReal, continentaisReal, trocasReal);
+		ordem.verify(copasReal).gravarCampeao(anyLong(), anyInt(), any(), any());
+		ordem.verify(trocasReal).demitirDepoisDaRodada(anyLong(), anyLong(), anyInt(), any(), any());
+		ordem.verify(continentaisReal).gravarCampeao(anyLong(), anyInt(), any(), any());
+		ordem.verify(trocasReal).demitirDepoisDaRodada(anyLong(), anyLong(), anyInt(), any(), any());
 	}
 }

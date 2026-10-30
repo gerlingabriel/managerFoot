@@ -244,7 +244,6 @@ public class RodadaRepositorio {
 		caixas.lancarCopa(jogoId, linha.id(), temporada, resultado.partidas(), etapa.fase() == FaseCopa.FINAL, planteis);
 		patrocinios.pagarVitorias(linha.id(), rodada, resultado.partidas(), Competicao.COPA);
 		evoluir(jogoId, new SplittableRandom(temporada.semente() * 43 + indice), aoVivo, resultado, planteis);
-		gravarMoralEDemitir(jogoId, linha.id(), rodada, moralAntes, resultado);
 
 		int atualizadas = jdbc.sql("""
 				UPDATE jogo_temporada SET etapas_copa_processadas = :etapa
@@ -261,6 +260,8 @@ public class RodadaRepositorio {
 			caixas.pagarPremiosDaCopa(jogoId, linha.id(), rodada, copa.campeao().get(), copa.vice().orElseThrow());
 			copas.gravarCampeao(jogoId, temporada.numero(), copa.campeao().get(), copa.vice().orElseThrow());
 		}
+		// depois do título: o crédito é de quem dirigiu o clube na final, não de quem chega com a demissão
+		gravarMoralEDemitir(jogoId, linha.id(), rodada, moralAntes, resultado);
 		return new EtapaJogada(indice, etapa, resultado, copa);
 	}
 
@@ -321,10 +322,6 @@ public class RodadaRepositorio {
 		caixas.lancarContinental(jogoId, linha.id(), temporada, resultado.partidas(), finalDaEtapa, doPais);
 		patrocinios.pagarVitorias(linha.id(), rodada, resultado.partidas(), Competicao.CONTINENTAL);
 		evoluir(jogoId, new SplittableRandom(temporada.semente() * 47 + indice), aoVivo, resultado, doPais);
-		Map<Long, Moral> moralDoPais = new HashMap<>(resultado.moral());
-		moralDoPais.keySet().retainAll(doPais.keySet());
-		gravarMoralEDemitir(jogoId, linha.id(), rodada, moralAntes,
-				new ProcessamentoRodada.Resultado(resultado.partidas(), resultado.disciplina(), moralDoPais));
 
 		int atualizadas = jdbc.sql("""
 				UPDATE jogo_temporada SET etapas_continental_processadas = :etapa
@@ -342,6 +339,11 @@ public class RodadaRepositorio {
 					continental.vice().orElseThrow());
 			continentais.gravarCampeao(jogoId, temporada.numero(), continental.campeao().get(), continental.vice().orElseThrow());
 		}
+		// depois do título, como na copa
+		Map<Long, Moral> moralDoPais = new HashMap<>(resultado.moral());
+		moralDoPais.keySet().retainAll(doPais.keySet());
+		gravarMoralEDemitir(jogoId, linha.id(), rodada, moralAntes,
+				new ProcessamentoRodada.Resultado(resultado.partidas(), resultado.disciplina(), moralDoPais));
 		return new EtapaContinentalJogada(indice, etapa, resultado, continental);
 	}
 
