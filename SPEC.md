@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 81 — 2026-10-30)
+-   **Status:** versão inicial para revisão (rev. 82 — 2026-10-30)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 82 (2026-10-30):** pelo usuário: som só nos gols do jogo dele, com dois sons curtos (§10.2); marca de expulsão pequena junto ao nome (§10.2).
 -   **rev. 81 (2026-10-30):** pelo usuário: a substituição não muda a tática: a formação da partida fica a mesma e quem entra ocupa a vaga de quem saiu (§7.4.1); o título da liga fica com quem está no clube na virada da temporada, mesmo que tenha chegado depois da última rodada (§5.4); jogador com contrato firmado não vai a leilão até a temporada seguinte (§9.5).
 -   **rev. 80 (2026-10-30):** agente: a próxima temporada também espera a resposta do convite para assumir outro clube, como a rodada; antes, um pedido direto virava a temporada com o convite aberto, e o plantel deixava de abrir quando um dos clubes caía para a fila (§5.4). Provisório.
 -   **rev. 79 (2026-10-30):** pelo usuário: modelos 13a a 13d aprovados; o quadro "Todos os títulos" substitui o ranking só da 1ª divisão; o quadro da Liga fica sem a 2ª divisão; todos os grupos da continental jogam num bloco só, para em rede todos verem os seus jogos e os dos amigos (§8.1.1, §8.3.6). Telas prontas e continental ligada para os jogos novos (ADR 0016).
@@ -2561,6 +2562,10 @@ visual do andamento da partida.
 
 Gols podem ter efeitos visuais e som opcional, controlado nas
 configurações.
+
+**Definido (rev. 82):** só os gols do jogo do usuário têm som, um para o gol
+feito e outro para o sofrido, ambos curtos para caber na velocidade rápida.
+A marca de expulsão é bem pequena e fica junto ao nome do clube.
 
 **Referência visual (rev. 14):** tela de jogos da rodada do Elifoot 98,
 enviada pelo usuário. Descrição registrada em `docs/referencia-tela-jogos.md`.

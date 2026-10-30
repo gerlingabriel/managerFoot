@@ -508,7 +508,8 @@ public class RodadaAoVivoRepositorio {
 			.param("jogo", jogoId).param("usuario", usuarioId).query(Boolean.class).single();
 		Long janelaLesao = !terminada && linha.pausadaNaLesao() && doUsuario != null ? doUsuario.mandante().id() : null;
 		return new EstadoRodada(jogoId, temporada, linha.rodada(), copa, divisoes, atual, minuto, relogio.minutos(),
-				linha.andandoDesde() == null, terminada, velocidade, relogio.comUsuario().get(atual), placares, doUsuario, som,
+				linha.andandoDesde() == null, terminada, velocidade, relogio.comUsuario().get(atual), placares, doUsuario,
+				doUsuario != null && doUsuario.mandante().id() == clube, som,
 				janelaLesao);
 	}
 
@@ -724,7 +725,7 @@ public class RodadaAoVivoRepositorio {
 	 */
 	public record EstadoRodada(long jogoId, int temporada, int rodada, String copa, List<DivisaoNaRodada> divisoes,
 			int divisaoAtual, int minuto, int minutos, boolean pausada, boolean terminada, Velocidade velocidade, boolean comUsuario,
-			List<PlacarAoVivo> partidas, PlacarAoVivo jogoDoUsuario, boolean somGols, Long janelaLesao) {
+			List<PlacarAoVivo> partidas, PlacarAoVivo jogoDoUsuario, boolean usuarioEmCasa, boolean somGols, Long janelaLesao) {
 
 		/** É uma etapa da continental (modelo 13c, rev. 79). */
 		public boolean continental() {
@@ -739,9 +740,14 @@ public class RodadaAoVivoRepositorio {
 
 		private static final String PREFIXO_CONTINENTAL = "Continental · ";
 
-		/** Gols da divisão em jogo até o minuto: a tela toca o som quando o número sobe. */
-		public int golsNaDivisao() {
-			return partidas.stream().mapToInt(p -> p.golsCasa() + p.golsFora()).sum();
+		/** Gols do clube do usuário até o minuto: a tela toca o som quando o número sobe; nulo na folga. */
+		public Integer golsPro() {
+			return jogoDoUsuario == null ? null : usuarioEmCasa ? jogoDoUsuario.golsCasa() : jogoDoUsuario.golsFora();
+		}
+
+		/** Gols sofridos pelo clube do usuário até o minuto; nulo na folga. */
+		public Integer golsContra() {
+			return jogoDoUsuario == null ? null : usuarioEmCasa ? jogoDoUsuario.golsFora() : jogoDoUsuario.golsCasa();
 		}
 	}
 }

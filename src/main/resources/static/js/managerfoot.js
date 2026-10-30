@@ -22,9 +22,10 @@ document.addEventListener('change', function (e) {
 	if (e.target.matches('select[data-enviar-ao-mudar]')) e.target.form.requestSubmit();
 });
 
-// Som dos gols no quadro da rodada (SPEC §10.2 e §10.4): o servidor diz quantos gols a divisão em
-// jogo já teve; quando o número sobe e o som está ligado, toca um apito curto. Gerado pelo Web
-// Audio, sem arquivo. O navegador só libera o áudio depois de um clique na página.
+// Som dos gols no quadro da rodada (SPEC §10.2 e §10.4): o servidor diz os gols do clube do usuário;
+// quando um número sobe e o som está ligado, toca um som curto, um para o gol feito e outro para o
+// sofrido. Gerado pelo Web Audio, sem arquivo. O navegador só libera o áudio depois de um clique na
+// página.
 (function () {
 	var contexto = null;
 	var anterior = null;
@@ -36,29 +37,48 @@ document.addEventListener('change', function (e) {
 		return contexto;
 	}
 
-	function apito() {
+	// Algumas vozes quase iguais passam por um filtro em volta de uma vogal: parece gente, não apito.
+	function coro(de, para, vogal, duracao, ganho) {
 		var ctx = audio();
 		if (!ctx) return;
-		[0, 0.22].forEach(function (atraso) {
+		var agora = ctx.currentTime;
+		var volume = ctx.createGain();
+		var filtro = ctx.createBiquadFilter();
+		filtro.type = 'bandpass';
+		filtro.frequency.value = vogal;
+		filtro.Q.value = 1.2;
+		volume.gain.setValueAtTime(0.0001, agora);
+		volume.gain.exponentialRampToValueAtTime(ganho, agora + 0.04);
+		volume.gain.setValueAtTime(ganho, agora + duracao * 0.6);
+		volume.gain.exponentialRampToValueAtTime(0.0001, agora + duracao);
+		filtro.connect(volume).connect(ctx.destination);
+		[-9, 0, 7].forEach(function (desvio) {
 			var osc = ctx.createOscillator();
-			var volume = ctx.createGain();
-			osc.type = 'triangle';
-			osc.frequency.value = 1760;
-			volume.gain.setValueAtTime(0.0001, ctx.currentTime + atraso);
-			volume.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + atraso + 0.02);
-			volume.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + atraso + 0.18);
-			osc.connect(volume).connect(ctx.destination);
-			osc.start(ctx.currentTime + atraso);
-			osc.stop(ctx.currentTime + atraso + 0.2);
+			osc.type = 'sawtooth';
+			osc.detune.value = desvio;
+			osc.frequency.setValueAtTime(de, agora);
+			osc.frequency.exponentialRampToValueAtTime(para, agora + duracao);
+			osc.connect(filtro);
+			osc.start(agora);
+			osc.stop(agora + duracao);
 		});
+	}
+
+	function golFeito() {
+		coro(330, 520, 750, 0.4, 0.5);
+	}
+
+	function golSofrido() {
+		coro(190, 95, 380, 0.45, 0.6);
 	}
 
 	function conferir() {
 		var quadro = document.getElementById('quadro');
-		if (!quadro || quadro.dataset.gols === undefined) return;
-		var atual = { gols: Number(quadro.dataset.gols), divisao: quadro.dataset.divisao };
-		if (anterior && anterior.divisao === atual.divisao && atual.gols > anterior.gols && quadro.dataset.som === 'true') {
-			apito();
+		if (!quadro || quadro.dataset.som === undefined) return;
+		var atual = { pro: Number(quadro.dataset.golsPro || 0), contra: Number(quadro.dataset.golsContra || 0) };
+		if (anterior && quadro.dataset.som === 'true') {
+			if (atual.pro > anterior.pro) golFeito();
+			else if (atual.contra > anterior.contra) golSofrido();
 		}
 		anterior = atual;
 	}

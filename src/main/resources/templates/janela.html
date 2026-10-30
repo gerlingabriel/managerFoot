@@ -17,7 +17,7 @@
 </div>
 <h2 id="t-janela" class="janela-placar">
 <span class="janela-clube mandante">
-<span th:if="${p.expulsaoCasa}" class="cartao vermelho" role="img" aria-label="Expulsão"></span>
+<span th:if="${p.expulsaoCasa}" class="expulsao" role="img" aria-label="Expulsão"></span>
 <span class="jogo-nome" th:text="${p.mandante.nome}">Mandante</span>
 <span aria-hidden="true" th:style="${@escudos.estilo(p.mandante.escudo, 24, 28)}"></span>
 </span>
@@ -25,7 +25,7 @@
 <span class="janela-clube">
 <span aria-hidden="true" th:style="${@escudos.estilo(p.visitante.escudo, 24, 28)}"></span>
 <span class="jogo-nome" th:text="${p.visitante.nome}">Visitante</span>
-<span th:if="${p.expulsaoFora}" class="cartao vermelho" role="img" aria-label="Expulsão"></span>
+<span th:if="${p.expulsaoFora}" class="expulsao" role="img" aria-label="Expulsão"></span>
 </span>
 </h2>
 </div>

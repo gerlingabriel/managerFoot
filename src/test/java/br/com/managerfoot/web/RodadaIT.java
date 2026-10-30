@@ -318,7 +318,10 @@ class RodadaIT {
 	@Test
 	void somDosGolsLigaEDesliga() throws Exception {
 		iniciar();
-		mvc.perform(get(rodada).with(como(treinador))).andExpect(content().string(containsString("data-som=\"true\"")));
+		mvc.perform(get(rodada).with(como(treinador)))
+			.andExpect(content().string(containsString("data-som=\"true\"")))
+			.andExpect(content().string(containsString("data-gols-pro=\"0\"")))
+			.andExpect(content().string(containsString("data-gols-contra=\"0\"")));
 
 		mvc.perform(post(rodada + "/som").param("ligado", "false").with(como(treinador)).with(csrf()))
 			.andExpect(redirectedUrl(rodada));

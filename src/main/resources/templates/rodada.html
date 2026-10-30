@@ -8,7 +8,7 @@
 <!--/* Parado, o quadro fica sem hx-get: sem hx-trigger, o htmx recarregaria a cada clique dentro dele e fecharia a janela. */-->
 <div id="quadro" class="pilha-larga" th:attr="hx-get=${e.comUsuario and e.pausada ? null : '/jogos/' + e.jogoId + '/rodada'},
 		hx-trigger=${e.comUsuario and e.pausada ? null : 'every 1s'},
-		data-gols=${e.golsNaDivisao()}, data-divisao=${e.divisaoAtual}, data-som=${e.somGols}"
+		data-gols-pro=${e.golsPro()}, data-gols-contra=${e.golsContra()}, data-som=${e.somGols}"
 	hx-select="#quadro" hx-swap="outerHTML">
 
 <header class="clube-topo" th:with="atual=${e.divisoes[e.divisaoAtual]}">
@@ -64,7 +64,7 @@
 <div th:each="j : ${e.partidas}" class="jogo-linha" th:classappend="${j.doUsuario} ? 'do-usuario'">
 <span class="jogo-publico" th:text="${#numbers.formatInteger(j.publico, 1, 'POINT')}" th:attr="aria-label=|Público ${#numbers.formatInteger(j.publico, 1, 'POINT')}|">0</span>
 <div class="jogo-clube mandante" th:classappend="${j.passa != null} ? (${j.passa.id == j.mandante.id} ? 'passa' : 'sai')">
-<span th:if="${j.expulsaoCasa}" class="cartao vermelho" role="img" aria-label="Expulsão"></span>
+<span th:if="${j.expulsaoCasa}" class="expulsao" role="img" aria-label="Expulsão"></span>
 <form th:if="${e.comUsuario}" th:action="@{/jogos/{id}/rodada/janela(id=${e.jogoId})}" method="post" class="clube-clicavel">
 <input type="hidden" name="mandante" th:value="${j.mandante.id}">
 <button type="submit" class="jogo-nome" th:text="${j.mandante.nome}" th:attr="aria-label=|${j.mandante.nome}: pausar e ver o jogo|">Mandante</button>
@@ -82,7 +82,7 @@
 <button type="submit" class="jogo-nome" th:text="${j.visitante.nome}" th:attr="aria-label=|${j.visitante.nome}: pausar e ver o jogo|">Visitante</button>
 </form>
 <span th:unless="${e.comUsuario}" class="jogo-nome" th:text="${j.visitante.nome}">Visitante</span>
-<span th:if="${j.expulsaoFora}" class="cartao vermelho" role="img" aria-label="Expulsão"></span>
+<span th:if="${j.expulsaoFora}" class="expulsao" role="img" aria-label="Expulsão"></span>
 </div>
 <span th:if="${comTotal}" class="jogo-total">
 <th:block th:if="${j.volta()}">

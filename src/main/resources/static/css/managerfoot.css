@@ -931,10 +931,12 @@ a.clube-linha:hover { color: var(--texto); background: rgba(242, 201, 76, 0.1); 
 .ultimo-lance { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 15px; color: var(--texto-claro); }
 .lance-texto { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-.lance, .cartao { flex: none; }
+.lance, .expulsao { flex: none; }
 .lance.gol { width: 14px; height: 14px; border-radius: 50%; background: var(--texto); box-shadow: inset 0 0 0 3px #1A1A12, 0 0 0 1px var(--texto); }
 .lance.amarelo { width: 10px; height: 14px; border-radius: 2px; background: var(--destaque); }
-.lance.vermelho, .cartao.vermelho { width: 10px; height: 14px; border-radius: 2px; background: var(--erro); }
+.lance.vermelho { width: 10px; height: 14px; border-radius: 2px; background: var(--erro); }
+/* Time com um a menos: bem pequeno, junto ao nome. */
+.expulsao { width: 7px; height: 10px; border-radius: 1px; background: var(--erro); }
 /* Lesão (SPEC §7.5): cruz na cor de erro. */
 .lance.lesao { width: 14px; height: 14px; background: linear-gradient(var(--erro), var(--erro)) center / 4px 100% no-repeat, linear-gradient(var(--erro), var(--erro)) center / 100% 4px no-repeat; }
 
