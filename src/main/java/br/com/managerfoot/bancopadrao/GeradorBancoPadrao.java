@@ -71,8 +71,10 @@ public final class GeradorBancoPadrao {
 
 	/** O banco padrão da rev. 73: {@link PaisPadrao#TODOS}, {@link PaisEstrangeiroPadrao#TODOS} e as vagas. */
 	public BancoGerado gerarBanco() {
-		return new BancoGerado(gerar(PaisPadrao.TODOS),
-				gerarEstrangeiros(PaisEstrangeiroPadrao.TODOS, ContinentalPadrao.TODAS), ContinentalPadrao.TODAS);
+		List<EstrangeiroGerado> estrangeiros = new ArrayList<>(
+				gerarEstrangeiros(PaisEstrangeiroPadrao.TODOS, ContinentalPadrao.TODAS));
+		PaisEstrangeiroPadrao.DO_MUNDIAL.forEach(p -> estrangeiros.add(gerar(p, PaisEstrangeiroPadrao.CLUBES_DO_MUNDIAL)));
+		return new BancoGerado(gerar(PaisPadrao.TODOS), estrangeiros, ContinentalPadrao.TODAS);
 	}
 
 	public List<PaisGerado> gerar(List<PaisPadrao> paises) {
@@ -162,7 +164,7 @@ public final class GeradorBancoPadrao {
 	/** Os países do banco, menos o do clube; os da região dele pesam mais. A ordem é fixa, para a semente valer. */
 	private List<OrigemEstrangeiro> origens(String codigoPais, Regiao regiao) {
 		return Stream.concat(PaisPadrao.TODOS.stream().map(p -> Map.entry(p.codigo(), p.idioma())),
-				PaisEstrangeiroPadrao.TODOS.stream().map(p -> Map.entry(p.codigo(), p.idioma())))
+				semLiga().map(p -> Map.entry(p.codigo(), p.idioma())))
 			.filter(p -> !p.getKey().equals(codigoPais))
 			.map(p -> new OrigemEstrangeiro(p.getKey(), p.getValue(), regiaoDe(p.getKey()) == regiao ? parametros.pesoMesmaRegiao() : 1))
 			.toList();
@@ -179,7 +181,16 @@ public final class GeradorBancoPadrao {
 		throw new IllegalStateException("pesos de origem inválidos");
 	}
 
-	private static Regiao regiaoDe(String codigoPais) {
+	private static Stream<PaisEstrangeiroPadrao> semLiga() {
+		return Stream.concat(PaisEstrangeiroPadrao.TODOS.stream(), PaisEstrangeiroPadrao.DO_MUNDIAL.stream());
+	}
+
+	/** A região do país do banco padrão: a da competição em que ele tem vagas ou a do Mundial (rev. 88). */
+	public static Regiao regiaoDe(String codigoPais) {
+		Regiao doMundial = PaisEstrangeiroPadrao.REGIOES_DO_MUNDIAL.get(codigoPais);
+		if (doMundial != null) {
+			return doMundial;
+		}
 		return ContinentalPadrao.TODAS.stream().filter(c -> c.vagas().containsKey(codigoPais)).map(ContinentalPadrao::regiao)
 			.findFirst().orElseThrow(() -> new IllegalArgumentException("país sem região: " + codigoPais));
 	}
@@ -235,7 +246,7 @@ public final class GeradorBancoPadrao {
 	 */
 	public Jogador jogadorDeReposicao(String codigoPais, Posicao posicao, int forca, Set<String> usados, SplittableRandom aleatorio) {
 		Idioma idioma = Stream.concat(PaisPadrao.TODOS.stream().filter(p -> p.codigo().equals(codigoPais)).map(PaisPadrao::idioma),
-				PaisEstrangeiroPadrao.TODOS.stream().filter(p -> p.codigo().equals(codigoPais)).map(PaisEstrangeiroPadrao::idioma))
+				semLiga().filter(p -> p.codigo().equals(codigoPais)).map(PaisEstrangeiroPadrao::idioma))
 			.findFirst().orElseThrow(() -> new IllegalArgumentException("país sem idioma: " + codigoPais));
 		return new Jogador(1, nomeDoJogador(idioma, usados, aleatorio), posicao, forca, temperamento(aleatorio), codigoPais);
 	}

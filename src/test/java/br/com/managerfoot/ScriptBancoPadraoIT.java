@@ -56,7 +56,7 @@ class ScriptBancoPadraoIT {
 			.param("nome", BancoPadraoRepositorio.NOME_MOLDE)
 			.query(Long.class)
 			.single()).isEqualTo(1);
-		assertThat(contarJogadores(molde)).isEqualTo(jogadores).isEqualTo((44 * 4 + 43 + 39 + 72) * 20L);
+		assertThat(contarJogadores(molde)).isEqualTo(jogadores).isEqualTo((44 * 4 + 43 + 39 + 72 + 44) * 20L);
 
 		List<CampeonatoDisponivel> campeonatos = moldes.campeonatosDisponiveis(molde);
 		assertThat(campeonatos).extracting(CampeonatoDisponivel::codigoPais)

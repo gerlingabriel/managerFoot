@@ -1,12 +1,15 @@
 package br.com.managerfoot.persistencia;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.SplittableRandom;
+import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -203,6 +206,43 @@ public class JogoRepositorio {
 				copiarEstrangeiros(jogoId, pais.moldeId(), vaga.getKey());
 			}
 		}
+		copiarClubesDoMundial(jogoId, pais.moldeId(), continental.get().regiao());
+	}
+
+	/** Clubes de cada outra região copiados para concorrer ao Mundial (SPEC §8.3.4, rev. 88). */
+	private static final int CLUBES_DO_MUNDIAL_POR_REGIAO = 8;
+
+	/**
+	 * Os mais fortes de cada região fora a do país jogado, de onde sai o representante dela no Mundial. A
+	 * região do país jogado é representada pelo campeão continental. Molde sem região: o jogo fica sem Mundial.
+	 */
+	private void copiarClubesDoMundial(long jogoId, long moldeId, String regiaoJogada) {
+		record PaisDaRegiao(long id, String codigo, String regiao) {
+		}
+		record Candidato(String codigo, String regiao, Clube clube) {
+		}
+		List<Candidato> candidatos = new ArrayList<>();
+		jdbc.sql("SELECT id, codigo, regiao FROM molde_pais WHERE molde_id = :molde AND regiao IS NOT NULL AND regiao <> :jogada ORDER BY id")
+			.param("molde", moldeId)
+			.param("jogada", regiaoJogada)
+			.query((rs, n) -> new PaisDaRegiao(rs.getLong("id"), rs.getString("codigo"), rs.getString("regiao")))
+			.list()
+			.forEach(p -> moldes.carregarClubes(p.id()).forEach(c -> candidatos.add(new Candidato(p.codigo(), p.regiao(), c))));
+		candidatos.stream()
+			.collect(Collectors.groupingBy(Candidato::regiao, TreeMap::new, Collectors.toList()))
+			.forEach((regiao, daRegiao) -> daRegiao.stream()
+				.sorted(Comparator.comparingInt((Candidato c) -> c.clube().forca()).reversed()
+					.thenComparingLong(c -> c.clube().id()))
+				.limit(CLUBES_DO_MUNDIAL_POR_REGIAO)
+				.forEach(c -> {
+					Clube destino = TabelasLiga.JOGO.inserirEstrangeiro(jdbc, jogoId, c.codigo(), c.clube());
+					TabelasLiga.MOLDE.carregarPlantel(jdbc, c.clube().id())
+						.forEach(j -> TabelasLiga.JOGO.inserirJogador(jdbc, destino.id(), j));
+					jdbc.sql("UPDATE jogo_clube SET regiao_mundial = :regiao WHERE id = :clube")
+						.param("regiao", regiao)
+						.param("clube", destino.id())
+						.update();
+				}));
 	}
 
 	private void copiarEstrangeiros(long jogoId, long moldeId, String codigo) {

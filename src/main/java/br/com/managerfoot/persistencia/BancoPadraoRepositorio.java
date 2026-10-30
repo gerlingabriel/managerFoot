@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import br.com.managerfoot.bancopadrao.ContinentalPadrao;
 import br.com.managerfoot.bancopadrao.GeradorBancoPadrao.BancoGerado;
 import br.com.managerfoot.bancopadrao.GeradorBancoPadrao.ClubeGerado;
+import br.com.managerfoot.bancopadrao.GeradorBancoPadrao;
 import br.com.managerfoot.bancopadrao.GeradorBancoPadrao.EstrangeiroGerado;
 import br.com.managerfoot.bancopadrao.GeradorBancoPadrao.PaisGerado;
 import br.com.managerfoot.dominio.Clube;
@@ -27,9 +28,9 @@ public class BancoPadraoRepositorio {
 	public static final String NOME_MOLDE = "Banco padrão";
 	/**
 	 * Versão do gerador: muda quando o banco gerado muda (2 na rev. 60: 2 divisões e 20 jogadores; 3 na
-	 * rev. 73: países sem liga e vagas da continental; 4 na rev. 87: estrangeiros nos planteis e mais asteriscos).
+	 * rev. 73: países sem liga e vagas da continental; 4 na rev. 87: estrangeiros nos planteis e mais asteriscos; 5 na rev. 88: regiões e clubes do Mundial).
 	 */
-	public static final int VERSAO = 4;
+	public static final int VERSAO = 5;
 
 	private final JdbcClient jdbc;
 	private final MoldeRepositorio moldes;
@@ -66,6 +67,7 @@ public class BancoPadraoRepositorio {
 			.update();
 		for (PaisGerado gerado : paises) {
 			long pais = moldes.criarPais(molde, gerado.pais().codigo(), gerado.pais().nome());
+			moldes.definirRegiao(pais, GeradorBancoPadrao.regiaoDe(gerado.pais().codigo()).name());
 			moldes.criarLiga(pais, gerado.pais().formato().nome());
 			for (FormatoDivisao divisao : gerado.pais().formato().divisoes()) {
 				moldes.adicionarDivisao(pais, divisao.nome(), divisao.quantidadeClubes(), divisao.limiteForca(),
@@ -79,6 +81,7 @@ public class BancoPadraoRepositorio {
 		// sem liga: os clubes ficam no país e a liga não é criada (SPEC §8.3.3)
 		for (EstrangeiroGerado gerado : banco.estrangeiros()) {
 			long pais = moldes.criarPais(molde, gerado.pais().codigo(), gerado.pais().nome());
+			moldes.definirRegiao(pais, GeradorBancoPadrao.regiaoDe(gerado.pais().codigo()).name());
 			for (ClubeGerado clube : gerado.clubes()) {
 				Clube gravado = moldes.adicionarClube(pais, clube.clube(), clube.treinador());
 				moldes.adicionarJogadores(gravado.id(), clube.jogadores());

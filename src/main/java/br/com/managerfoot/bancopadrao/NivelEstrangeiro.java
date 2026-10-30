@@ -5,5 +5,5 @@ package br.com.managerfoot.bancopadrao;
  * provisório). A faixa de cada nível fica em {@link ParametrosBancoPadrao#faixasEstrangeiros()}.
  */
 public enum NivelEstrangeiro {
-	A, B, C
+	A, B, C, D
 }

@@ -1,9 +1,9 @@
 package br.com.managerfoot.bancopadrao;
 
 /**
- * Região de uma competição continental (SPEC §8.3.1). A rev. 73 só tem vagas padrão para a América
- * do Sul e a Europa; as outras entram quando houver país jogável delas no banco padrão.
+ * Região do mundo (SPEC §8.3.1 e §8.3.4). Só a América do Sul e a Europa têm competição continental; as
+ * outras têm clubes gerados só para o Mundial (rev. 88).
  */
 public enum Regiao {
-	AMERICA_DO_SUL, EUROPA
+	AMERICA_DO_SUL, EUROPA, AMERICA_DO_NORTE, ASIA, AFRICA, OCEANIA
 }

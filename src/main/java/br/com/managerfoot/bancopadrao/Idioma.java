@@ -134,6 +134,23 @@ enum Idioma {
 					"Pawłowski", "Piotrowski", "Szymański", "Wieczorek", "Wiśniewski", "Wojciechowski", "Wójcik",
 					"Woźniak", "Zając", "Zieliński")),
 
+	JAPONES(List.of("Akira", "Daiki", "Haruto", "Hiroshi", "Kaito", "Kenji", "Koji", "Makoto", "Naoki", "Ren", "Riku",
+			"Ryota", "Satoshi", "Shinji", "Sota", "Takashi", "Takumi", "Tomoya", "Yuki", "Yuto"),
+			List.of("Aoki", "Endo", "Fujita", "Hayashi", "Inoue", "Ishii", "Kato", "Kimura", "Kobayashi", "Maeda", "Matsuda",
+					"Mori", "Nakamura", "Ogawa", "Okada", "Saito", "Sasaki", "Suzuki", "Takahashi", "Tanaka", "Ueda", "Watanabe",
+					"Yamada", "Yoshida")),
+
+	COREANO(List.of("Dong-hyun", "Hyun-woo", "Ji-hoon", "Jin-su", "Joon-ho", "Jung-min", "Kang-in", "Ki-hyun", "Min-jae",
+			"Sang-ho", "Seung-woo", "Sung-min", "Tae-hee", "Woo-jin", "Young-gwon", "Yu-jin"),
+			List.of("Bae", "Cha", "Choi", "Han", "Hong", "Hwang", "Jang", "Jeon", "Jung", "Kang", "Kim", "Ko", "Kwon", "Lee", "Lim",
+					"Moon", "Oh", "Park", "Ryu", "Seo", "Shin", "Son", "Yang", "Yoon")),
+
+	ARABE(List.of("Abdullah", "Ahmed", "Ali", "Amir", "Ayman", "Bilal", "Fahad", "Hamza", "Hassan", "Ibrahim", "Karim",
+			"Khaled", "Mahmoud", "Mohamed", "Mustafa", "Nabil", "Omar", "Rashid", "Salem", "Tarek", "Yasser", "Youssef"),
+			List.of("Abdelaziz", "Al-Amri", "Al-Farsi", "Al-Harbi", "Al-Otaibi", "Amrani", "Belhadj", "El-Sayed", "Fathi", "Ghanem",
+					"Hakimi", "Haddad", "Hassani", "Khalil", "Mansour", "Naser", "Rahimi", "Saber", "Salah", "Soliman", "Tazi",
+					"Zaki", "Ziani", "Zidan")),
+
 	NORUEGUES(List.of("Anders", "Bjørn", "Eirik", "Erlend", "Even", "Fredrik", "Håkon", "Henrik", "Jonas", "Jørgen",
 			"Kjetil", "Kristian", "Lars", "Magnus", "Marius", "Martin", "Mats", "Morten", "Ole", "Ørjan", "Petter",
 			"Rune", "Sander", "Sindre", "Sondre", "Stian", "Thomas", "Tor", "Vegard"),

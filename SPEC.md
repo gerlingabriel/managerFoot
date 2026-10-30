@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 87 — 2026-10-30)
+-   **Status:** versão inicial para revisão (rev. 88 — 2026-10-30)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 88 (2026-10-30):** pelo usuário: formato do Mundial: uma semifinal é Europa × um clube sorteado entre Ásia, África e Oceania, a outra é América do Norte/Central × América do Sul; jogadas depois da final da continental, com o campeão dela; o agente cria clubes para as regiões sem clube, com a força que achar adequada (§8.3.4). Agente: países, níveis e demais detalhes (Provisório).
 -   **rev. 87 (2026-10-30):** pelo usuário: som dos gols pela metade (§10.2); todo clube tem jogadores estrangeiros, que ajudam o usuário a comprar por sair mais baratos, e mais jogadores com asterisco (§5.2, §5.3); nos clubes europeus, os cidadãos da União Europeia são de outro país, mas não contam como estrangeiros (§8.4). Agente: quantidades e origem dos estrangeiros, novo teto e chances de asterisco, Inglaterra equipara a União Europeia (Provisório). Banco padrão versão 4; jogos já criados não mudam.
 -   **rev. 86 (2026-10-30):** pelo usuário: clicar na tática completa os titulares que faltam com os mais fortes da posição; no empate, asterisco e depois sorte; botão para retirar todos os jogadores (§10.3); som de comemoração no gol feito e vaia no sofrido (§10.2). Agente: o que sobra na tática nova vai para o banco, o banco é completado junto e os escolhidos respeitam o limite de asteriscos (Provisório).
 -   **rev. 85 (2026-10-30):** pelo usuário: modelo 14b aprovado, com as propostas fixa, com meta de vitórias e com meta de posição, dependentes da força do clube (§9.6). Agente: em ligas de outro tamanho, faixas e vitórias na mesma proporção (Provisório).
@@ -1714,12 +1715,37 @@ O formato exato, o número de participantes, os critérios de classificação e 
 
 **Definido:** para haver Mundial, é preciso ter pelo menos um clube cadastrado de cada região: Europa, Ásia, América do Norte/Central e Caribe e América do Sul. Exemplo: jogando na Inglaterra, é preciso ter pelo menos um clube sul-americano.
 
-**Em aberto:**
-- Se o representante de uma região é o campeão da competição continental
-  dela, ou um clube escolhido por força quando a competição dessa região não
-  é jogada.
-- As regiões fora da liga do usuário têm competição continental própria
-  simulada em segundo plano?
+~~**Em aberto:** se o representante é o campeão da região ou um clube por força;
+se as outras regiões têm continental simulada em segundo plano.~~
+
+**Definido (rev. 88), pelo usuário — formato, simplificado por ser um jogo
+para brincar:**
+- **4 clubes:** uma semifinal é **Europa × um clube escolhido entre Ásia, África
+  e Oceania**; a outra é **América do Norte/Central × América do Sul**.
+- Os jogos vêm **depois da final da continental**, e o **campeão dela**
+  representa a própria região no Mundial.
+- As regiões sem clube ganham **clubes criados**, com a força que o agente
+  achar adequada.
+
+A exigência acima de clube de "cada região" passa a valer assim: Europa, as
+duas Américas e pelo menos uma entre Ásia, África e Oceania.
+
+**Provisório (rev. 88), proposta do agente:**
+- **Sem continental simulada:** o representante das outras regiões sai por força
+  com sorteio (§8.3.2 item 2). Entre Ásia, África e Oceania, sorteia-se primeiro
+  a região, com chance igual, e depois o clube.
+- **Países e níveis** (§8.3.6), com 4 clubes por país: México e Estados Unidos
+  (B), Costa Rica (C); Japão e Coreia do Sul (B), Arábia Saudita (C); Marrocos
+  (B), Egito e Senegal (C); Nova Zelândia e Fiji (nível novo **D**, força de 22 a
+  32). Esses países também cedem estrangeiros aos planteis (§5.2).
+- **Clubes no jogo:** na criação, copiam-se os **8 mais fortes** de cada região
+  fora a do país jogado. Viram clubes de fora (§9.4, rev. 84). Jogos criados
+  antes ficam sem Mundial.
+- **Jogos:** jogo único em campo neutro, com prorrogação e pênaltis, nas semifinais
+  e na final; as semifinais passam juntas na tela; sem disputa de 3º lugar.
+- **Efeitos e prêmio:** como na continental: cartões, suspensões e lesões contam,
+  bilheteria dividida ao meio e prêmio igual ao da continental, a ajustar por
+  simulação.
 
 A participação de cada região dependerá da existência de pelo menos um clube elegível para representá-la. Regiões sem clubes elegíveis não deverão gerar participantes fictícios.
 

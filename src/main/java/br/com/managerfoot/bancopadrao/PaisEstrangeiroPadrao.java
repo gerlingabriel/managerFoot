@@ -1,6 +1,7 @@
 package br.com.managerfoot.bancopadrao;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * País sem liga jogada, gerado só com clubes para a competição continental (SPEC §8.3.6, rev. 73).
@@ -32,6 +33,48 @@ public record PaisEstrangeiroPadrao(String codigo, String nome, Idioma idioma, N
 	private static final List<String> MODELOS_TCHEQUIA = List.of("FK %s", "SK %s", "Slovan %s", "Dukla %s");
 	private static final List<String> MODELOS_POLONIA = List.of("KS %s", "Polonia %s", "Górnik %s", "Lech %s");
 	private static final List<String> MODELOS_NORUEGA = List.of("%s IL", "%s FK", "%s BK", "IF %s");
+
+	private static final List<String> MODELOS_INGLES = List.of("%s United", "%s City", "%s FC", "%s Rangers", "%s Athletic",
+			"%s Rovers");
+	private static final List<String> MODELOS_JAPAO = List.of("%s FC", "%s SC", "FC %s", "%s United", "%s Athletic");
+	private static final List<String> MODELOS_COREIA = List.of("%s FC", "%s United", "FC %s", "%s Citizen", "%s Hyundae");
+	private static final List<String> MODELOS_ARABE = List.of("Al-%s", "Al-%s Club", "Ittihad %s", "Nadi %s", "Ahli %s");
+	private static final List<String> MODELOS_FRANCES_AFRICA = List.of("AS %s", "ASC %s", "Jaraaf de %s", "US %s", "Stade de %s");
+
+	/** Clubes gerados de cada país que só joga o Mundial (rev. 88). */
+	public static final int CLUBES_DO_MUNDIAL = 4;
+
+	/** Países sem continental, gerados para representar a região deles no Mundial (rev. 88). */
+	public static final List<PaisEstrangeiroPadrao> DO_MUNDIAL = List.of(
+			new PaisEstrangeiroPadrao("MEX", "México", Idioma.ESPANHOL, NivelEstrangeiro.B, MODELOS_ESPANHOL,
+					List.of("Sierra Alta", "Valle Dorado", "Puerto Azteca", "Altamira Norte")),
+			new PaisEstrangeiroPadrao("USA", "Estados Unidos", Idioma.INGLES, NivelEstrangeiro.B, MODELOS_INGLES,
+					List.of("Pine Harbor", "Red Valley", "Lakeview", "Stone Creek")),
+			new PaisEstrangeiroPadrao("CRC", "Costa Rica", Idioma.ESPANHOL, NivelEstrangeiro.C, MODELOS_ESPANHOL,
+					List.of("Monteverde Alto", "Puerto Limón Viejo", "Valle Central", "Río Celeste")),
+			new PaisEstrangeiroPadrao("JPN", "Japão", Idioma.JAPONES, NivelEstrangeiro.B, MODELOS_JAPAO,
+					List.of("Sakura Minato", "Aoyama", "Kitahama", "Shirakawa")),
+			new PaisEstrangeiroPadrao("KOR", "Coreia do Sul", Idioma.COREANO, NivelEstrangeiro.B, MODELOS_COREIA,
+					List.of("Hanbit", "Namhae", "Seorak", "Dongmun")),
+			new PaisEstrangeiroPadrao("KSA", "Arábia Saudita", Idioma.ARABE, NivelEstrangeiro.C, MODELOS_ARABE,
+					List.of("Nakheel", "Wadi", "Sahra", "Rimal")),
+			new PaisEstrangeiroPadrao("MAR", "Marrocos", Idioma.ARABE, NivelEstrangeiro.B, MODELOS_ARABE,
+					List.of("Atlas", "Maghreb", "Medina", "Saidia Nova")),
+			new PaisEstrangeiroPadrao("EGY", "Egito", Idioma.ARABE, NivelEstrangeiro.C, MODELOS_ARABE,
+					List.of("Nil", "Delta", "Wahat", "Sinai Norte")),
+			new PaisEstrangeiroPadrao("SEN", "Senegal", Idioma.FRANCES, NivelEstrangeiro.C, MODELOS_FRANCES_AFRICA,
+					List.of("Casamance Nord", "Petite Côte", "Ngor Neuf", "Saloum")),
+			new PaisEstrangeiroPadrao("NZL", "Nova Zelândia", Idioma.INGLES, NivelEstrangeiro.D, MODELOS_INGLES,
+					List.of("Kauri Bay", "Southern Lakes", "Tasman Point", "Rangi")),
+			new PaisEstrangeiroPadrao("FIJ", "Fiji", Idioma.INGLES, NivelEstrangeiro.D, MODELOS_INGLES,
+					List.of("Coral Coast", "Nadi Bay", "Viti Levu Sul", "Lautoka Nova")));
+
+	/** A região de cada país de {@link #DO_MUNDIAL}. */
+	public static final Map<String, Regiao> REGIOES_DO_MUNDIAL = Map.ofEntries(Map.entry("MEX", Regiao.AMERICA_DO_NORTE),
+			Map.entry("USA", Regiao.AMERICA_DO_NORTE), Map.entry("CRC", Regiao.AMERICA_DO_NORTE), Map.entry("JPN", Regiao.ASIA),
+			Map.entry("KOR", Regiao.ASIA), Map.entry("KSA", Regiao.ASIA), Map.entry("MAR", Regiao.AFRICA),
+			Map.entry("EGY", Regiao.AFRICA), Map.entry("SEN", Regiao.AFRICA), Map.entry("NZL", Regiao.OCEANIA),
+			Map.entry("FIJ", Regiao.OCEANIA));
 
 	/** Os países gerados da rev. 73: os da tabela de vagas que não têm liga no banco padrão. */
 	public static final List<PaisEstrangeiroPadrao> TODOS = List.of(

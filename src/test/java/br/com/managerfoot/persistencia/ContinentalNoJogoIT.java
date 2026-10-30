@@ -63,7 +63,7 @@ class ContinentalNoJogoIT {
 	}
 
 	Map<String, Long> estrangeirosPorPais(long jogo) {
-		return jdbc.sql("SELECT pais_codigo FROM jogo_clube WHERE jogo_id = :jogo AND pais_codigo IS NOT NULL")
+		return jdbc.sql("SELECT pais_codigo FROM jogo_clube WHERE jogo_id = :jogo AND pais_codigo IS NOT NULL AND regiao_mundial IS NULL")
 			.param("jogo", jogo)
 			.query(String.class)
 			.list()
@@ -94,6 +94,21 @@ class ContinentalNoJogoIT {
 				WHERE p.molde_id = :molde AND p.codigo = 'ARG' AND c.forca > :forca""")
 			.param("molde", molde).param("forca", maisFracoCopiado).query(Long.class).single();
 		assertThat(argentinosNoMoldeMaisFortes).isLessThan(20);
+	}
+
+	@Test
+	void jogoNoBrasilCopiaOsClubesDoMundialDasOutrasRegioesSemMisturarComAContinental() {
+		long jogo = criarJogo("BRA");
+		Map<String, Long> porRegiao = jdbc.sql("SELECT regiao_mundial FROM jogo_clube WHERE jogo_id = :jogo AND regiao_mundial IS NOT NULL")
+			.param("jogo", jogo).query(String.class).list().stream()
+			.collect(Collectors.groupingBy(r -> r, Collectors.counting()));
+		assertThat(porRegiao).containsOnlyKeys("EUROPA", "AMERICA_DO_NORTE", "ASIA", "AFRICA", "OCEANIA")
+			.allSatisfy((regiao, clubes) -> assertThat(clubes).isEqualTo(8L));
+		assertThat(jdbc.sql("SELECT count(*) FROM jogo_jogador j JOIN jogo_clube c ON c.id = j.clube_id WHERE c.jogo_id = :jogo AND c.regiao_mundial = 'ASIA'")
+			.param("jogo", jogo).query(Long.class).single()).isEqualTo(8 * 20L);
+		// a região jogada é representada pelo campeão continental
+		assertThat(jdbc.sql("SELECT count(*) FROM jogo_clube WHERE jogo_id = :jogo AND regiao_mundial = 'AMERICA_DO_SUL'")
+			.param("jogo", jogo).query(Long.class).single()).isZero();
 	}
 
 	@Test

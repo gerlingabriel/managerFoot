@@ -71,9 +71,10 @@ public record ParametrosBancoPadrao(long semente, List<FaixaForca> faixas, Map<P
 		}
 	}
 
-	/** Níveis da rev. 73: A com a faixa da 1ª divisão, B e C abaixo (a conferir por simulação). */
+	/** Níveis da rev. 73: A com a faixa da 1ª divisão, B e C abaixo (a conferir por simulação); D na rev. 88. */
 	public static final Map<NivelEstrangeiro, FaixaForca> FAIXAS_ESTRANGEIROS = Map.of(NivelEstrangeiro.A,
-			FAIXAS.getFirst(), NivelEstrangeiro.B, new FaixaForca(31, 45), NivelEstrangeiro.C, new FaixaForca(27, 40));
+			FAIXAS.getFirst(), NivelEstrangeiro.B, new FaixaForca(31, 45), NivelEstrangeiro.C, new FaixaForca(27, 40), NivelEstrangeiro.D,
+			new FaixaForca(22, 32));
 
 	public static ParametrosBancoPadrao padrao() {
 		return new ParametrosBancoPadrao(19980101L, FAIXAS,
@@ -85,6 +86,9 @@ public record ParametrosBancoPadrao(long semente, List<FaixaForca> faixas, Map<P
 				List.of("#FFFFFF", "#000000", "#C8102E", "#003DA5", "#00843D", "#FFD100", "#6CACE4", "#7A263A",
 						"#F57C00", "#5B2C83", "#1B365D", "#8A8D8F"),
 				FAIXAS_ESTRANGEIROS,
-				Map.of(Regiao.AMERICA_DO_SUL, new FaixaQuantidade(2, 5), Regiao.EUROPA, new FaixaQuantidade(5, 9)), 3);
+				Map.of(Regiao.AMERICA_DO_SUL, new FaixaQuantidade(2, 5), Regiao.EUROPA, new FaixaQuantidade(5, 9),
+						Regiao.AMERICA_DO_NORTE, new FaixaQuantidade(2, 5), Regiao.ASIA, new FaixaQuantidade(2, 5), Regiao.AFRICA,
+						new FaixaQuantidade(1, 3), Regiao.OCEANIA, new FaixaQuantidade(1, 3)),
+				3);
 	}
 }
