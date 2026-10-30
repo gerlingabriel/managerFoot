@@ -258,7 +258,7 @@ public class RodadaAoVivoRepositorio {
 		if (terminada) {
 			finalizar(jogoId, atual, substituicoes);
 		}
-		return Optional.of(montar(jogoId, clube, atual, rodada, porDivisao, relogio, progresso, terminada,
+		return Optional.of(montar(jogoId, usuarioId, clube, atual, rodada, porDivisao, relogio, progresso, terminada,
 				velocidade));
 	}
 
@@ -469,7 +469,7 @@ public class RodadaAoVivoRepositorio {
 				: rodadas.prepararCopa(jogoId, linha.etapaCopa(), substituicoes);
 	}
 
-	private EstadoRodada montar(long jogoId, long clube, Linha linha, RodadaAoVivo rodada,
+	private EstadoRodada montar(long jogoId, long usuarioId, long clube, Linha linha, RodadaAoVivo rodada,
 			Map<Integer, List<PartidaDaRodada>> porDivisao, RelogioRodada relogio, double progresso, boolean terminada,
 			Velocidade velocidade) {
 		List<Integer> prioridades = new ArrayList<>(porDivisao.keySet());
@@ -512,8 +512,9 @@ public class RodadaAoVivoRepositorio {
 		int temporada = jdbc.sql("""
 				SELECT j.ano_inicial + max(t.numero) - 1 FROM jogo j JOIN jogo_temporada t ON t.jogo_id = j.id
 				WHERE j.id = :jogo GROUP BY j.ano_inicial""").param("jogo", jogoId).query(Integer.class).single();
-		boolean som = jdbc.sql("SELECT som_gols FROM jogo_treinador WHERE jogo_id = :jogo AND clube_id = :clube")
-			.param("jogo", jogoId).param("clube", clube).query(Boolean.class).single();
+		// pelo usuário: demitido no fim da rodada, ele já está em outro clube e "clube" é o da rodada
+		boolean som = jdbc.sql("SELECT som_gols FROM jogo_treinador WHERE jogo_id = :jogo AND usuario_id = :usuario")
+			.param("jogo", jogoId).param("usuario", usuarioId).query(Boolean.class).single();
 		Long janelaLesao = !terminada && linha.pausadaNaLesao() && doUsuario != null ? doUsuario.mandante().id() : null;
 		return new EstadoRodada(jogoId, temporada, linha.rodada(), copa, divisoes, atual, minuto, relogio.minutos(),
 				linha.andandoDesde() == null, terminada, velocidade, relogio.comUsuario().get(atual), placares, doUsuario, som,
