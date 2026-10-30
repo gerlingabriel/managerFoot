@@ -47,6 +47,7 @@ import br.com.managerfoot.persistencia.JogosDoTreinadorRepositorio;
 import br.com.managerfoot.persistencia.MoldeRepositorio;
 import br.com.managerfoot.persistencia.PatrocinioRepositorio;
 import br.com.managerfoot.persistencia.RodadaRepositorio;
+import br.com.managerfoot.persistencia.RodadasDeTeste;
 import br.com.managerfoot.temporada.RodadaAoVivo.PartidaDaRodada;
 
 /** Jogos da rodada ao vivo pela tela (modelo 1a; docs/decisions/0010), com o relógio do teste. */
@@ -194,7 +195,7 @@ class RodadaIT {
 		jdbc.sql("DELETE FROM jogo_escalacao e USING jogo_clube c WHERE c.id = e.clube_id AND c.jogo_id = :j")
 			.param("j", jogoId).update();
 		for (int r = 1; r <= 3; r++) {
-			rodadas.avancar(jogoId, r);
+			RodadasDeTeste.jogarRodada(rodadas, jogoId, r);
 		}
 		mvc.perform(get(plantel).with(como(treinador)))
 			.andExpect(content().string(containsString("Próximo jogo · Copa · 16 avos de final · ida")))
@@ -219,8 +220,8 @@ class RodadaIT {
 		assertThat(rodadas.proximo(jogoId)).isEqualTo(new RodadaRepositorio.Proximo.Liga(4));
 
 		// na volta, a linha de detalhe do modelo 12c: o placar da ida ou o clube fora da copa
-		rodadas.avancar(jogoId, 4);
-		rodadas.avancar(jogoId, 5);
+		RodadasDeTeste.jogarRodada(rodadas, jogoId, 4);
+		RodadasDeTeste.jogarRodada(rodadas, jogoId, 5);
 		boolean naCopa = jdbc.sql("""
 				SELECT count(*) > 0 FROM jogo_copa_confronto c JOIN jogo_treinador t ON t.clube_id IN (c.mandante_id, c.visitante_id)
 				WHERE t.jogo_id = :j""").param("j", jogoId).query(Boolean.class).single();

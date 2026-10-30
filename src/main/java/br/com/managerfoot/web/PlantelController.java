@@ -30,6 +30,7 @@ import br.com.managerfoot.motor.RegrasPartida;
 import br.com.managerfoot.persistencia.AumentoRepositorio;
 import br.com.managerfoot.persistencia.ClubeNaFilaException;
 import br.com.managerfoot.persistencia.ConsultasRepositorio;
+import br.com.managerfoot.persistencia.DecisaoPendenteException;
 import br.com.managerfoot.persistencia.FimDeTemporadaRepositorio;
 import br.com.managerfoot.persistencia.FimDeTemporadaRepositorio.NovaTemporada;
 import br.com.managerfoot.persistencia.JogoRepositorio;
@@ -226,6 +227,9 @@ class PlantelController {
 				.orElse("");
 			redirect.addFlashAttribute("resultado", "Começou a temporada " + jogo.ano(jogoId, nova.temporada().numero()) + "."
 					+ destino + venda);
+		}
+		catch (DecisaoPendenteException e) {
+			redirect.addFlashAttribute("erro", e.getMessage());
 		}
 		catch (IllegalStateException e) {
 			redirect.addFlashAttribute("erro", "A temporada " + jogo.ano(jogoId, temporada) + " já foi encerrada.");

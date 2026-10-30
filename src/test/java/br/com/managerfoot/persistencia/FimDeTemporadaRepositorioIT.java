@@ -77,6 +77,7 @@ class FimDeTemporadaRepositorioIT {
 	@Test
 	void caixaNegativoVendeUmJogadorNoInicioDaTemporadaMesmoComTodosRenovados() {
 		for (int rodada = 1; rodada <= 30; rodada++) {
+			RodadasDeTeste.semDecisoesDoTreinador(jdbc, jogo);
 			RodadasDeTeste.jogarRodada(rodadas, jogo, rodada);
 		}
 		long clube = jdbc.sql("SELECT clube_id FROM jogo_treinador WHERE jogo_id = ?").param(jogo).query(Long.class).single();
@@ -84,6 +85,7 @@ class FimDeTemporadaRepositorioIT {
 		jdbc.sql("UPDATE jogo_jogador SET contrato_temporada = 1 WHERE clube_id = ?").param(clube).update();
 		jdbc.sql("UPDATE jogo_clube SET saldo = -1000000000 WHERE id = ?").param(clube).update();
 
+		RodadasDeTeste.semDecisoesDoTreinador(jdbc, jogo);
 		FimDeTemporadaRepositorio.NovaTemporada nova = fim.avancarTemporada(jogo, 1, SEMENTE_NOVA);
 
 		assertThat(nova.vendas()).hasSize(1);
@@ -101,6 +103,7 @@ class FimDeTemporadaRepositorioIT {
 	@Test
 	void fimDaTemporadaPromoveRebaixaZeraAmarelosEIniciaASeguinte() {
 		for (int rodada = 1; rodada <= 30; rodada++) {
+			RodadasDeTeste.semDecisoesDoTreinador(jdbc, jogo);
 			RodadasDeTeste.jogarRodada(rodadas, jogo, rodada);
 		}
 		ConfiguracaoLiga liga = jogos.carregarLiga(jogo);
@@ -113,6 +116,7 @@ class FimDeTemporadaRepositorioIT {
 		assertThat(contar("SELECT count(*) FROM jogo_jogador j JOIN jogo_clube c ON c.id = j.clube_id "
 				+ "WHERE c.jogo_id = ? AND j.amarelos > 0")).isPositive();
 
+		RodadasDeTeste.semDecisoesDoTreinador(jdbc, jogo);
 		FimDeTemporadaRepositorio.NovaTemporada nova = fim.avancarTemporada(jogo, 1, SEMENTE_NOVA);
 
 		assertThat(nova.transicao()).isEqualTo(esperada);
@@ -144,13 +148,15 @@ class FimDeTemporadaRepositorioIT {
 				+ "AND (usuario_id IS NULL) = (treinador_maquina_id IS NULL)")).isZero();
 		long usuario = jdbc.sql("SELECT usuario_id FROM jogo_treinador WHERE jogo_id = ?").param(jogo).query(Long.class).single();
 		ConsultasRepositorio.VisaoHistorico historico = consultas.historico(jogo, usuario);
-		assertThat(historico.anos()).hasSize(1);
-		assertThat(historico.anos().get(0).ano()).isEqualTo(2026);
-		assertThat(historico.anos().get(0).campeoes()).extracting(ConsultasRepositorio.CampeaoNoAno::clube)
-			.containsExactlyInAnyOrderElementsOf(lideres);
-		assertThat(historico.ranking()).hasSize(1);
-		assertThat(historico.ranking().get(0).posicao()).isEqualTo(1);
-		assertThat(historico.ranking().get(0).titulos()).isEqualTo(1);
+		// o quadro da Liga só com a 1ª divisão, com campeão, vice e 3º (modelo 13a, rev. 79)
+		assertThat(historico.liga()).hasSize(1);
+		assertThat(historico.liga().get(0).ano()).isEqualTo(2026);
+		assertThat(lideres).contains(historico.liga().get(0).campeao().clube());
+		assertThat(historico.liga().get(0).vice().treinador()).isNotBlank();
+		assertThat(historico.liga().get(0).terceiro().treinador()).isNotBlank();
+		assertThat(historico.titulos()).isNotEmpty();
+		assertThat(historico.titulos().get(0).posicao()).isEqualTo(1);
+		assertThat(historico.titulos().stream().mapToInt(ConsultasRepositorio.TreinadorNoRanking::liga).sum()).isEqualTo(1);
 
 		// prêmio da liga na última rodada da temporada 1 e patrocínio na rodada 0 da 2 (rev. 45 e 46)
 		Premiacao premiacao = Premiacao.padrao();
@@ -216,6 +222,7 @@ class FimDeTemporadaRepositorioIT {
 	@Test
 	void treinadorComClubeNaFilaEhDemitidoEAssumeUmDosMaisFracosDaUltimaDivisao() {
 		for (int rodada = 1; rodada <= 30; rodada++) {
+			RodadasDeTeste.semDecisoesDoTreinador(jdbc, jogo);
 			RodadasDeTeste.jogarRodada(rodadas, jogo, rodada);
 		}
 		long usuario = jdbc.sql("SELECT usuario_id FROM jogo_treinador WHERE jogo_id = :j").param("j", jogo)
@@ -230,6 +237,7 @@ class FimDeTemporadaRepositorioIT {
 		jdbc.sql("INSERT INTO jogo_escalacao (clube_id, formacao) VALUES (:c, 'F_4_4_2') ON CONFLICT DO NOTHING")
 			.param("c", antigo).update();
 
+		RodadasDeTeste.semDecisoesDoTreinador(jdbc, jogo);
 		FimDeTemporadaRepositorio.NovaTemporada nova = fim.avancarTemporada(jogo, 1, SEMENTE_NOVA);
 
 		assertThat(nova.transicao().proxima().filaDeEspera()).extracting(Clube::id).contains(antigo);

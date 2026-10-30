@@ -66,6 +66,7 @@ class CopaNaTemporadaIT {
 
 	private void jogarAte(int rodada) {
 		for (int r = rodadas.rodadasProcessadas(jogo) + 1; r <= rodada; r++) {
+			RodadasDeTeste.semDecisoesDoTreinador(jdbc, jogo);
 			RodadasDeTeste.jogarRodada(rodadas, jogo, r);
 		}
 	}
@@ -237,15 +238,17 @@ class CopaNaTemporadaIT {
 				WHERE temporada_id = :t AND competicao = 'COPA' AND tipo = 'BILHETERIA' AND rodada = :r""")
 			.param("t", temporada).param("r", total).query(Long.class).single()).isEqualTo(2);
 
-		// a coluna Copa do Histórico (modelo 12e, rev. 71) com o placar da final
+		// o quadro da Copa no Histórico (modelo 13a, rev. 79) com o placar da final
 		long dono = jdbc.sql("SELECT usuario_id FROM jogo_treinador WHERE jogo_id = :j").param("j", jogo)
 			.query(Long.class).single();
 		ConsultasRepositorio.VisaoHistorico historico = consultas.historico(jogo, dono);
-		assertThat(historico.temCopa()).isTrue();
-		ConsultasRepositorio.CampeaoNoAno naCopa = historico.anos().getFirst().copa();
-		assertThat(naCopa.clube()).isEqualTo(copa.campeao().get().nome());
-		assertThat(naCopa.detalhe()).startsWith("final ").endsWith(" sobre " + copa.vice().get().nome());
+		ConsultasRepositorio.LinhaDaDecisao naCopa = historico.copa().getFirst();
+		assertThat(naCopa.campeao().clube()).isEqualTo(copa.campeao().get().nome());
+		assertThat(naCopa.campeao().detalhe()).startsWith("final ");
+		assertThat(naCopa.vice().clube()).isEqualTo(copa.vice().get().nome());
+		assertThat(naCopa.vice().treinador()).isNotBlank();
 
+		RodadasDeTeste.semDecisoesDoTreinador(jdbc, jogo);
 		fins.avancarTemporada(jogo, 1, 3);
 		long nova = jdbc.sql("SELECT id FROM jogo_temporada WHERE jogo_id = :j AND numero = 2").param("j", jogo)
 			.query(Long.class).single();

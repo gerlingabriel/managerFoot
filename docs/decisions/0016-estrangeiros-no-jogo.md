@@ -51,6 +51,18 @@ Opção 2 (V33).
   confronto, nas consultas da liga (calendário, total de rodadas, público, classificação do clube). As
   consultas da copa olham `competicao = 'COPA'` do confronto. Gravar um placar filtra pela competição,
   porque as finais da copa e da continental caem na mesma rodada e podem ter os mesmos clubes.
-- O sorteio dos grupos no início da temporada (`ContinentalRepositorio.criar`) só roda com
-  `managerfoot.continental.ativa=true`. A chave fica desligada até as telas da continental serem
-  aprovadas, para nenhum jogo parar numa etapa que a interface não mostra.
+- O sorteio dos grupos no início da temporada (`ContinentalRepositorio.criar`) ficou atrás de uma
+  chave até as telas serem aprovadas; a chave saiu na rev. 79, com as telas prontas.
+
+## Adendo (2026-10-30, V36, SPEC rev. 79): telas e Histórico
+
+- A etapa ao vivo usa a mesma tela e o mesmo relógio da copa, com `jogo_rodada_ao_vivo.etapa_continental`
+  e todos os grupos num bloco só: em rede, todos veem o seu jogo e os dos amigos. O bloco com clube de
+  usuário corre na velocidade dele; sem clube, rápido.
+- O Histórico passou a quadros. Para mostrar o treinador embaixo do vice e do 3º, o nome dele é copiado
+  na gravação, como o do clube. O placar da final é procurado pelo confronto da competição, porque cada
+  temporada agora tem duas finais de jogo único.
+- O quadro "Todos os títulos" substitui o ranking só da 1ª divisão. Campeão de fora não tem treinador no
+  jogo e não entra nele.
+- Para um jogo novo ter a continental, o banco padrão precisa estar na versão 3
+  (`--carregar-banco-padrao`). Jogos criados antes continuam sem ela.

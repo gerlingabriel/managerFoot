@@ -45,6 +45,11 @@
 <span class="financas-numero" th:classappend="${f.copaResultado() < 0} ? 'negativo' : 'positivo'" th:text="${f.moeda.formatarComSinal(f.copaResultado())}">+ R$ 0</span>
 <span class="suave" th:text="|bilheteria ${f.moeda.formatar(f.copaBilheteria())} · prêmio e bônus ${f.moeda.formatar(f.copaPremios())} · custos ${f.moeda.formatar(-f.copaCustos())}|">copa</span>
 </div>
+<div th:if="${f.temContinental()}" class="financas-quadro financas-continental">
+<span class="rotulo">Continental na temporada</span>
+<span class="financas-numero" th:classappend="${f.continentalResultado() < 0} ? 'negativo' : 'positivo'" th:text="${f.moeda.formatarComSinal(f.continentalResultado())}">+ R$ 0</span>
+<span class="suave" th:text="|bilheteria ${f.moeda.formatar(f.continentalBilheteria())} · prêmio e bônus ${f.moeda.formatar(f.continentalPremios())} · custos ${f.moeda.formatar(-f.continentalCustos())}|">continental</span>
+</div>
 </div>
 
 <section aria-labelledby="t-extrato" class="painel grupo">
@@ -76,13 +81,13 @@
 <td class="num resultado positivo" th:text="${f.moeda.formatarComSinal(f.patrocinio)}">+ R$ 0</td>
 <td class="num saldo" th:text="${f.moeda.formatar(f.saldoInicioTemporada())}">R$ 0</td>
 </tr>
-<tr th:each="l : ${f.extrato}" th:classappend="${l.copa != null} ? 'da-copa'">
+<tr th:each="l : ${f.extrato}" th:classappend="${l.continental} ? 'da-continental' : (${l.copa != null} ? 'da-copa')">
 <td th:if="${l.copa == null}" class="num suave" th:text="${l.rodada == 0} ? '—' : ${l.rodada}">1</td>
-<td th:if="${l.copa != null}" class="num extrato-copa">Copa</td>
+<td th:if="${l.copa != null}" class="num" th:classappend="${l.continental} ? 'extrato-continental' : 'extrato-copa'" th:text="${l.continental} ? 'Continental' : 'Copa'">Copa</td>
 <td>
 <span th:if="${l.rodada == 0 and l.copa == null}" class="suave">Antes da 1ª rodada</span>
-<span th:if="${l.copa != null}" class="extrato-detalhe extrato-etapa" th:text="${l.copa}">Oitavas de final · ida</span>
-<span th:if="${l.adversario != null}" class="clube-celula"><span class="extrato-local" th:text="${l.emCasa == null} ? 'Neutro' : (${l.emCasa} ? 'Casa' : 'Fora')">Casa</span><span aria-hidden="true" th:style="${@escudos.estilo(l.adversario.escudo, 18, 22)}"></span><span class="jogo-nome calendario-nome" th:text="${l.adversario.nome}">Adversário</span></span>
+<span th:if="${l.copa != null}" class="extrato-detalhe" th:classappend="${l.continental} ? 'extrato-continental' : 'extrato-etapa'" th:text="${l.copa}">Oitavas de final · ida</span>
+<span th:if="${l.adversario != null}" class="clube-celula"><span class="extrato-local" th:text="${l.emCasa == null} ? 'Neutro' : (${l.emCasa} ? 'Casa' : 'Fora')">Casa</span><span aria-hidden="true" th:style="${@escudos.estilo(l.adversario.escudo, 18, 22)}"></span><span class="jogo-nome calendario-nome" th:text="${l.adversario.nome}">Adversário</span><span th:if="${l.paisAdversario != null}" class="sigla-pais" th:text="${l.paisAdversario}">ARG</span></span>
 <span th:if="${l.adversario == null and l.rodada != 0 and l.copa == null}" class="suave">Folga</span>
 <span th:each="d : ${l.detalhes}" class="extrato-detalhe" th:text="${d}">Compra: Jogador (Z, 31)</span>
 </td>
@@ -114,6 +119,7 @@
 <footer class="suave pilha-curta">
 <span>O caixa entra no fim de cada rodada. Jogo em casa: bilheteria (público × ingresso) menos o custo do jogo. Jogo fora: deslocamento. Salários em toda rodada da liga com jogo.</span>
 <span>Copa: linha própria, com "Copa" na coluna da rodada, na ordem em que foi jogada, sem salário. Na ida e na volta o mandante fica com a bilheteria e o visitante paga o deslocamento; na final, em campo neutro, bilheteria e custo do jogo são divididos ao meio, e o prêmio da copa entra na mesma linha.</span>
+<span th:if="${f.temContinental()}">Continental: como a copa, com linha própria depois da copa. O clube de fora não tem caixa: só o seu clube aparece aqui.</span>
 <span>Patrocínio: pela posição na temporada anterior; a parte à vista entra no início da temporada. Mercado e prêmios: patrocínio por vitória ou por acesso, compras (−) e vendas de jogadores feitas depois daquela rodada, ampliação do estádio (−) e o prêmio da liga na última rodada.</span>
 </footer>
 

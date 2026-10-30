@@ -179,12 +179,16 @@ public class ContinentalRepositorio {
 	public void gravarCampeao(long jogoId, int temporada, Clube campeao, Clube vice) {
 		jdbc.sql("""
 				INSERT INTO jogo_campeao_continental (jogo_id, temporada, ano, clube_id, clube_nome, clube_pais, vice_id,
-				                                      vice_nome, vice_pais, usuario_id, treinador_maquina_id)
+				                                      vice_nome, vice_pais, usuario_id, treinador_maquina_id, vice_treinador,
+				                                      vice_usuario_id)
 				SELECT j.id, :temporada, j.ano_inicial + :temporada - 1, c.id, c.nome, c.pais_codigo, v.id, v.nome,
 				       v.pais_codigo,
 				       (SELECT t.usuario_id FROM jogo_treinador t WHERE t.clube_id = c.id),
 				       CASE WHEN NOT EXISTS (SELECT 1 FROM jogo_treinador t WHERE t.clube_id = c.id)
-				            THEN (SELECT m.id FROM jogo_treinador_maquina m WHERE m.clube_id = c.id) END
+				            THEN (SELECT m.id FROM jogo_treinador_maquina m WHERE m.clube_id = c.id) END,
+				       coalesce((SELECT u.nome FROM jogo_treinador t JOIN usuario u ON u.id = t.usuario_id WHERE t.clube_id = v.id),
+				            (SELECT m.nome FROM jogo_treinador_maquina m WHERE m.clube_id = v.id)),
+				       (SELECT t.usuario_id FROM jogo_treinador t WHERE t.clube_id = v.id)
 				FROM jogo j JOIN jogo_clube c ON c.id = :campeao JOIN jogo_clube v ON v.id = :vice
 				WHERE j.id = :jogo""")
 			.param("temporada", temporada)

@@ -16,6 +16,7 @@ import br.com.managerfoot.contas.Usuario;
 import br.com.managerfoot.persistencia.CaixaRepositorio;
 import br.com.managerfoot.persistencia.ClubeNaFilaException;
 import br.com.managerfoot.persistencia.CompraRepositorio;
+import br.com.managerfoot.persistencia.ConsultasContinentalRepositorio;
 import br.com.managerfoot.persistencia.ConsultasRepositorio;
 import br.com.managerfoot.persistencia.EstadioRepositorio;
 import br.com.managerfoot.temporada.FaseCopa;
@@ -37,13 +38,15 @@ class AbasController {
 	private final CaixaRepositorio caixas;
 	private final CompraRepositorio compras;
 	private final EstadioRepositorio estadios;
+	private final ConsultasContinentalRepositorio continentais;
 
 	AbasController(ConsultasRepositorio consultas, CaixaRepositorio caixas, CompraRepositorio compras,
-			EstadioRepositorio estadios) {
+			EstadioRepositorio estadios, ConsultasContinentalRepositorio continentais) {
 		this.consultas = consultas;
 		this.caixas = caixas;
 		this.compras = compras;
 		this.estadios = estadios;
+		this.continentais = continentais;
 	}
 
 	@GetMapping("/jogos/{jogoId}/classificacao")
@@ -102,6 +105,17 @@ class AbasController {
 			model.addAttribute("estadio", estadios.janela(jogoId, usuario.id()));
 		}
 		return "financas";
+	}
+
+	/** Aba Continental (SPEC §8.3.6, modelo 13b, rev. 79): fases, grupos ou confrontos da fase escolhida e chave. */
+	@GetMapping("/jogos/{jogoId}/continental")
+	String continental(@AuthenticationPrincipal Usuario usuario, @PathVariable long jogoId,
+			@RequestParam(name = "fase", required = false) String fase,
+			@RequestParam(name = "grupo", required = false) Integer grupo, Model model) {
+		model.addAttribute("usuario", usuario);
+		model.addAttribute("jogoId", jogoId);
+		model.addAttribute("continental", continentais.visao(jogoId, usuario.id(), fase, grupo).orElse(null));
+		return "continental";
 	}
 
 	/** Aba Copa (SPEC §8.2, modelo 12a, rev. 71): fases, confrontos da fase escolhida e chave. */

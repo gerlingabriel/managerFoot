@@ -27,6 +27,7 @@ import br.com.managerfoot.economia.PublicoDoJogo;
 import br.com.managerfoot.economia.TipoLancamento;
 import br.com.managerfoot.temporada.Classificacao;
 import br.com.managerfoot.temporada.ConfiguracaoLiga;
+import br.com.managerfoot.temporada.Continental;
 import br.com.managerfoot.temporada.Copa;
 import br.com.managerfoot.temporada.Divisao;
 import br.com.managerfoot.temporada.Jogo;
@@ -49,17 +50,19 @@ public class CaixaRepositorio {
 	private final TemporadaRepositorio temporadas;
 	private final ClassificacaoRepositorio classificacoes;
 	private final CopaRepositorio copas;
+	private final ContinentalRepositorio continentais;
 	private final CaixaDaRodada caixa = CaixaDaRodada.padrao();
 	private final PublicoDoJogo publico = PublicoDoJogo.padrao();
 	private final Premiacao premiacao = Premiacao.padrao();
 
 	public CaixaRepositorio(JdbcClient jdbc, JogoRepositorio jogos, TemporadaRepositorio temporadas,
-			ClassificacaoRepositorio classificacoes, CopaRepositorio copas) {
+			ClassificacaoRepositorio classificacoes, CopaRepositorio copas, ContinentalRepositorio continentais) {
 		this.jdbc = jdbc;
 		this.jogos = jogos;
 		this.temporadas = temporadas;
 		this.classificacoes = classificacoes;
 		this.copas = copas;
+		this.continentais = continentais;
 	}
 
 	/**
@@ -320,13 +323,17 @@ public class CaixaRepositorio {
 			.param("temporada", situacao.temporadaId())
 			.query(rs -> {
 				int rodada = rs.getInt("rodada");
-				Chave chave = new Chave(rodada, "COPA".equals(rs.getString("competicao")));
+				Chave chave = new Chave(rodada, Competicao.valueOf(rs.getString("competicao")));
 				TipoLancamento tipo = TipoLancamento.valueOf(rs.getString("tipo"));
 				porRodada.computeIfAbsent(chave, r -> new HashMap<>()).merge(tipo, rs.getLong("valor"), Long::sum);
 				String detalhe = switch (tipo) {
 					case COMPRA, VENDA -> (tipo == TipoLancamento.COMPRA ? "Compra: " : "Venda: ") + rs.getString("nome")
 							+ " (" + sigla(rs.getString("posicao")) + ", " + rs.getInt("forca") + ")";
-					case PREMIO -> chave.copa() ? "Prêmio da copa" : "Prêmio da liga";
+					case PREMIO -> switch (chave.competicao()) {
+						case COPA -> "Prêmio da copa";
+						case CONTINENTAL -> "Prêmio da continental";
+						case LIGA -> "Prêmio da liga";
+					};
 					case ESTADIO -> "Ampliação do estádio";
 					case PATROCINIO -> rodada == 0 ? null : "Patrocínio";
 					default -> null;
@@ -349,6 +356,22 @@ public class CaixaRepositorio {
 		copas.carregar(jogoId, situacao.temporadaId()).ifPresent(c -> c
 			.jogosDo(oClube, copas.quadro(jogoId, situacao.temporadaId()))
 			.forEach(j -> daCopa.put(j.etapa().depoisDaRodada(), j)));
+		Map<Integer, Integer> publicosDaContinental = new HashMap<>();
+		jdbc.sql("""
+				SELECT rodada, publico FROM jogo_partida
+				WHERE temporada_id = :temporada AND publico IS NOT NULL
+				  AND (grupo IS NOT NULL OR EXISTS (SELECT 1 FROM jogo_copa_confronto k WHERE k.id = confronto_id AND k.competicao = 'CONTINENTAL'))
+				  AND (mandante_id = :clube OR (perna = 'JOGO_UNICO' AND visitante_id = :clube))""")
+			.param("temporada", situacao.temporadaId())
+			.param("clube", clube)
+			.query(rs -> {
+				publicosDaContinental.put(rs.getInt("rodada"), rs.getInt("publico"));
+			});
+		Map<Integer, Continental.JogoDoClube> daContinental = new HashMap<>();
+		continentais.carregar(jogoId, situacao.temporadaId()).ifPresent(c -> c
+			.jogosDo(oClube, continentais.quadro(situacao.temporadaId()))
+			.forEach(j -> daContinental.put(j.etapa().depoisDaRodada(), j)));
+		Map<Long, String> deFora = daContinental.isEmpty() ? Map.of() : continentais.paisesDeFora(jogoId);
 		Map<Integer, Integer> publicos = new HashMap<>();
 		jdbc.sql("""
 				SELECT rodada, publico FROM jogo_partida
@@ -362,12 +385,13 @@ public class CaixaRepositorio {
 		long saldo = saldo(clube, plantel);
 		long saldoAnterior = saldo
 				- porRodada.values().stream().flatMap(v -> v.values().stream()).mapToLong(Long::longValue).sum();
-		long patrocinio = porRodada.getOrDefault(new Chave(0, false), Map.of()).getOrDefault(TipoLancamento.PATROCINIO, 0L);
+		long patrocinio = porRodada.getOrDefault(new Chave(0, Competicao.LIGA), Map.of()).getOrDefault(TipoLancamento.PATROCINIO, 0L);
 		List<LinhaExtrato> extrato = new ArrayList<>();
 		long acumulado = saldoAnterior + patrocinio;
 		for (Map.Entry<Chave, Map<TipoLancamento, Long>> e : porRodada.entrySet()) {
 			int rodada = e.getKey().rodada();
-			boolean naCopa = e.getKey().copa();
+			boolean naCopa = e.getKey().competicao() == Competicao.COPA;
+			boolean naContinental = e.getKey().competicao() == Competicao.CONTINENTAL;
 			Map<TipoLancamento, Long> valores = e.getValue();
 			long mercado = valores.getOrDefault(TipoLancamento.COMPRA, 0L) + valores.getOrDefault(TipoLancamento.VENDA, 0L)
 					+ valores.getOrDefault(TipoLancamento.PREMIO, 0L) + valores.getOrDefault(TipoLancamento.ESTADIO, 0L)
@@ -384,7 +408,18 @@ public class CaixaRepositorio {
 						valores.getOrDefault(TipoLancamento.BILHETERIA, 0L), valores.getOrDefault(TipoLancamento.CUSTO_DO_JOGO, 0L),
 						valores.getOrDefault(TipoLancamento.DESLOCAMENTO, 0L), valores.getOrDefault(TipoLancamento.SALARIOS, 0L),
 						mercado, detalhes.getOrDefault(e.getKey(), List.of()), acumulado,
-						jogo == null ? "Copa" : jogo.etapa().nome()));
+						jogo == null ? "Copa" : jogo.etapa().nome(), false, null));
+				continue;
+			}
+			if (naContinental) {
+				Continental.JogoDoClube jogo = daContinental.get(rodada);
+				extrato.add(new LinhaExtrato(rodada, jogo == null ? null : jogo.emCasa(),
+						jogo == null ? null : jogo.adversario(), publicosDaContinental.get(rodada),
+						valores.getOrDefault(TipoLancamento.BILHETERIA, 0L), valores.getOrDefault(TipoLancamento.CUSTO_DO_JOGO, 0L),
+						valores.getOrDefault(TipoLancamento.DESLOCAMENTO, 0L), valores.getOrDefault(TipoLancamento.SALARIOS, 0L),
+						mercado, detalhes.getOrDefault(e.getKey(), List.of()), acumulado,
+						jogo == null ? "Continental" : jogo.etapa().nome(), true,
+						jogo == null ? null : deFora.get(jogo.adversario().id())));
 				continue;
 			}
 			Optional<Jogo> jogo = divisao.calendario().jogos().stream()
@@ -394,7 +429,7 @@ public class CaixaRepositorio {
 					publicos.get(rodada), valores.getOrDefault(TipoLancamento.BILHETERIA, 0L),
 					valores.getOrDefault(TipoLancamento.CUSTO_DO_JOGO, 0L),
 					valores.getOrDefault(TipoLancamento.DESLOCAMENTO, 0L), valores.getOrDefault(TipoLancamento.SALARIOS, 0L),
-					mercado, detalhes.getOrDefault(e.getKey(), List.of()), acumulado, null));
+					mercado, detalhes.getOrDefault(e.getKey(), List.of()), acumulado, null, false, null));
 		}
 		Integer publicoMedio = publicos.isEmpty() ? null
 				: (int) Math.round(publicos.values().stream().mapToInt(Integer::intValue).average().orElseThrow());
@@ -732,12 +767,14 @@ public class CaixaRepositorio {
 	 *
 	 * @param mercado compras (negativas), vendas e prêmio da liga
 	 * @param detalhes o que entrou em {@code mercado}, para mostrar embaixo do jogo
-	 * @param copa na linha da copa, o nome da etapa ("Oitavas de final · ida"); nulo na liga. Na final
-	 *        {@code emCasa} é nulo (campo neutro)
+	 * @param copa na linha da copa ou da continental, o nome da etapa ("Oitavas de final · ida"); nulo na
+	 *        liga. Na final {@code emCasa} é nulo (campo neutro)
+	 * @param continental a linha é da continental, com a etapa em {@code copa} (modelo 13d, rev. 79)
+	 * @param paisAdversario sigla do adversário de fora, na continental; nulo nos outros casos
 	 */
 	public record LinhaExtrato(int rodada, Boolean emCasa, Clube adversario, Integer publico, long bilheteria,
 			long custoDoJogo, long deslocamento, long salarios, long mercado, List<String> detalhes, long saldo,
-			String copa) {
+			String copa, boolean continental, String paisAdversario) {
 
 		public LinhaExtrato {
 			detalhes = List.copyOf(detalhes);
@@ -811,25 +848,52 @@ public class CaixaRepositorio {
 
 		/** A temporada já tem lançamentos da copa: mostra o quadro "Copa na temporada" (modelo 12f). */
 		public boolean temCopa() {
-			return extrato.stream().anyMatch(l -> l.copa() != null);
+			return extrato.stream().anyMatch(VisaoFinancas::daCopa);
+		}
+
+		private static boolean daCopa(LinhaExtrato l) {
+			return l.copa() != null && !l.continental();
 		}
 
 		public long copaBilheteria() {
-			return extrato.stream().filter(l -> l.copa() != null).mapToLong(LinhaExtrato::bilheteria).sum();
+			return extrato.stream().filter(VisaoFinancas::daCopa).mapToLong(LinhaExtrato::bilheteria).sum();
 		}
 
 		/** Prêmio da copa e bônus do patrocínio por vitória na copa. */
 		public long copaPremios() {
-			return extrato.stream().filter(l -> l.copa() != null).mapToLong(LinhaExtrato::mercado).sum();
+			return extrato.stream().filter(VisaoFinancas::daCopa).mapToLong(LinhaExtrato::mercado).sum();
 		}
 
 		/** Custo do jogo e deslocamento na copa, negativos. */
 		public long copaCustos() {
-			return extrato.stream().filter(l -> l.copa() != null).mapToLong(l -> l.custoDoJogo() + l.deslocamento()).sum();
+			return extrato.stream().filter(VisaoFinancas::daCopa).mapToLong(l -> l.custoDoJogo() + l.deslocamento()).sum();
 		}
 
 		public long copaResultado() {
-			return extrato.stream().filter(l -> l.copa() != null).mapToLong(LinhaExtrato::resultado).sum();
+			return extrato.stream().filter(VisaoFinancas::daCopa).mapToLong(LinhaExtrato::resultado).sum();
+		}
+
+		/** A temporada já tem lançamentos da continental: mostra o quadro "Continental na temporada" (modelo 13d). */
+		public boolean temContinental() {
+			return extrato.stream().anyMatch(LinhaExtrato::continental);
+		}
+
+		public long continentalBilheteria() {
+			return extrato.stream().filter(LinhaExtrato::continental).mapToLong(LinhaExtrato::bilheteria).sum();
+		}
+
+		/** Prêmio da continental e bônus do patrocínio por vitória nela. */
+		public long continentalPremios() {
+			return extrato.stream().filter(LinhaExtrato::continental).mapToLong(LinhaExtrato::mercado).sum();
+		}
+
+		/** Custo do jogo e deslocamento na continental, negativos. */
+		public long continentalCustos() {
+			return extrato.stream().filter(LinhaExtrato::continental).mapToLong(l -> l.custoDoJogo() + l.deslocamento()).sum();
+		}
+
+		public long continentalResultado() {
+			return extrato.stream().filter(LinhaExtrato::continental).mapToLong(LinhaExtrato::resultado).sum();
 		}
 
 		/** Ocupação média do estádio, em %; nula sem jogo em casa. */
@@ -838,12 +902,12 @@ public class CaixaRepositorio {
 		}
 	}
 
-	/** Linha do extrato: a rodada e, depois da linha da liga, a da copa jogada depois dela. */
-	private record Chave(int rodada, boolean copa) implements Comparable<Chave> {
+	/** Linha do extrato: a rodada e, depois da linha da liga, a da copa e a da continental jogadas depois dela. */
+	private record Chave(int rodada, Competicao competicao) implements Comparable<Chave> {
 
 		@Override
 		public int compareTo(Chave outra) {
-			return rodada != outra.rodada ? Integer.compare(rodada, outra.rodada) : Boolean.compare(copa, outra.copa);
+			return rodada != outra.rodada ? Integer.compare(rodada, outra.rodada) : competicao.compareTo(outra.competicao);
 		}
 	}
 }

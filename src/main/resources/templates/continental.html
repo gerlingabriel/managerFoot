@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: cabeca('Continental')}"></head>
+<body>
+<div class="campo campo-pagina">
+<div class="pagina">
+<header th:replace="~{fragmentos :: topo}"></header>
+<nav th:replace="~{fragmentos :: abas(${jogoId}, 'continental')}"></nav>
+
+<!-- Aba Continental (modelo 13b, rev. 79): fases, grupos ou confrontos da fase escolhida e chave. -->
+<p th:if="${continental == null}" class="painel texto linha-jogo">Esta temporada não tem competição continental. Ela é sorteada no início de cada temporada, nos jogos criados depois que ela passou a existir.</p>
+
+<th:block th:if="${continental != null}" th:with="c=${continental}">
+<header class="clube-topo">
+<div class="pilha-curta">
+<h1 class="titulo-pagina" th:text="|${c.nome} · Temporada ${c.ano}|">Competição · Temporada 2026</h1>
+<span class="suave" th:text="|${c.clubes} clubes de ${c.paises} países · 8 grupos de 4, turno e returno, passam 2 · mata-mata de ida e volta, final única em campo neutro · prêmio: campeão ${c.moeda.formatar(c.premioCampeao)}, vice ${c.moeda.formatar(c.premioVice)}|">32 clubes</span>
+</div>
+<div class="pilha-curta copa-seu-clube">
+<span class="rotulo">Seu clube</span>
+<span class="copa-situacao" th:text="${c.seuClube}">Grupo C · 2º lugar</span>
+</div>
+</header>
+
+<ol class="copa-fases" aria-label="Fases da continental">
+<li th:each="f : ${c.fases}" class="copa-fase" th:classappend="|${f.situacao.name().toLowerCase()} ${f.mostrada ? 'mostrada' : ''}|">
+<a th:href="@{/jogos/{id}/continental(id=${jogoId},fase=${f.parametro})}" th:attr="aria-current=${f.mostrada ? 'page' : null}">
+<span class="copa-fase-nome" th:text="${f.nome}">Grupos</span>
+<span class="copa-fase-quando" th:text="${f.quando}">depois das rodadas 19 e 21</span>
+</a>
+</li>
+</ol>
+
+<section th:if="${c.nosGrupos}" class="painel grupo" aria-labelledby="t-grupos">
+<div class="painel-titulo painel-cabecalho">
+<div class="pilha-curta">
+<h2 id="t-grupos" class="titulo-secao pequeno">Grupos</h2>
+<span class="suave">Pontos, saldo, gols pró e sorteio · faixa verde: os 2 que passam agora</span>
+</div>
+</div>
+<div class="grupos-continental">
+<div th:each="g : ${c.grupos}" class="grupo-caixa" th:classappend="${g.seu} ? 'seu'">
+<table class="grupo-tabela">
+<caption><a th:href="@{/jogos/{id}/continental(id=${jogoId},fase='GRUPOS',grupo=${g.indice})}" th:text="${g.seu} ? |${g.nome} · seu grupo| : ${g.nome}">Grupo A</a></caption>
+<thead><tr><th scope="col">Clube</th><th scope="col" class="num">J</th><th scope="col" class="num">P</th><th scope="col" class="num">SG</th></tr></thead>
+<tbody>
+<tr th:each="l : ${g.linhas}" th:classappend="|${l.passa ? 'passa' : ''} ${l.voce ? 'do-usuario' : ''}|">
+<td class="nome"><span th:text="${l.voce} ? |${l.clube} (você)| : ${l.clube}">Clube</span> <span th:if="${l.pais != null}" class="sigla-pais" th:text="${l.pais}">ARG</span></td>
+<td class="num" th:text="${l.jogos}">0</td><td class="num" th:text="${l.pontos}">0</td><td class="num" th:text="${l.saldoTexto()}">0</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<p class="suave historico-nota">Clube de fora com a sigla do país; os do país jogado, sem sigla. Clique no nome de um grupo para ver os 12 jogos dele.</p>
+</section>
+
+<section th:if="${c.nosGrupos}" class="painel grupo" aria-labelledby="t-jogos">
+<div class="painel-titulo painel-cabecalho">
+<div class="pilha-curta">
+<h2 id="t-jogos" class="titulo-secao pequeno" th:text="|Jogos do ${c.grupoDosJogos}|">Jogos do Grupo C</h2>
+<span class="suave">Na ordem em que são jogados · gols do mandante primeiro</span>
+</div>
+</div>
+<div class="rolagem">
+<table class="tabela-classificacao tabela-copa">
+<thead><tr><th scope="col">Jogo</th><th scope="col">Mandante</th><th scope="col" class="centro">Placar</th><th scope="col">Visitante</th></tr></thead>
+<tbody>
+<tr th:each="j : ${c.jogos}" th:classappend="${j.doUsuario} ? 'do-usuario'">
+<td class="suave" th:text="${j.jogo}">1º · depois da 2</td>
+<td><span th:text="${j.mandante}">Mandante</span> <span th:if="${j.paisMandante != null}" class="sigla-pais" th:text="${j.paisMandante}">ARG</span></td>
+<td class="centro copa-placar" th:classappend="${j.placar == '—'} ? 'suave'" th:text="${j.placar}">—</td>
+<td><span th:text="${j.visitante}">Visitante</span> <span th:if="${j.paisVisitante != null}" class="sigla-pais" th:text="${j.paisVisitante}">ARG</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+
+<section th:unless="${c.nosGrupos}" class="painel grupo" aria-labelledby="t-fase">
+<div class="painel-titulo painel-cabecalho">
+<h2 id="t-fase" class="titulo-secao pequeno" th:text="${c.fase}">Oitavas de final</h2>
+<span class="suave" th:text="${c.jogoUnico} ? 'jogo único em campo neutro · gols do primeiro clube primeiro' : 'o primeiro clube jogou a ida em casa · gols dele primeiro'">nota</span>
+</div>
+<p th:if="${c.confrontos.isEmpty()}" class="texto linha-jogo">Os confrontos desta fase saem quando a anterior terminar.</p>
+<div th:unless="${c.confrontos.isEmpty()}" class="rolagem">
+<table class="tabela-classificacao tabela-copa">
+<thead>
+<tr><th scope="col" class="num">Nº</th><th scope="col">Clube</th><th scope="col" class="centro" th:text="${c.jogoUnico} ? 'Final' : 'Ida'">Ida</th>
+<th th:unless="${c.jogoUnico}" scope="col" class="centro">Volta</th><th scope="col">Clube</th><th scope="col" class="num">Total</th></tr>
+</thead>
+<tbody>
+<tr th:each="k : ${c.confrontos}" th:classappend="${k.doUsuario()} ? 'do-usuario'">
+<td class="num suave" th:text="${k.numero}">1</td>
+<td><span class="clube-celula"><span aria-hidden="true" th:style="${@escudos.estilo(k.primeiro.escudo, 18, 22)}"></span>
+<span class="jogo-nome calendario-nome" th:classappend="${k.primeiroPassa == null} ? '' : (${k.primeiroPassa} ? 'copa-passa' : 'copa-sai')" th:text="${k.primeiroSeu} ? |${k.primeiro.nome} (você)| : ${k.primeiro.nome}">Clube</span></span></td>
+<td class="centro copa-placar" th:text="${k.ida}">1 x 1</td>
+<td th:unless="${c.jogoUnico}" class="centro copa-placar" th:classappend="${k.volta == '—'} ? 'suave'" th:text="${k.volta}">—</td>
+<td><span class="clube-celula"><span aria-hidden="true" th:style="${@escudos.estilo(k.segundo.escudo, 18, 22)}"></span>
+<span class="jogo-nome calendario-nome" th:classappend="${k.primeiroPassa == null} ? '' : (${k.primeiroPassa} ? 'copa-sai' : 'copa-passa')" th:text="${k.segundoSeu} ? |${k.segundo.nome} (você)| : ${k.segundo.nome}">Clube</span></span></td>
+<td class="num"><span class="copa-total"><strong th:text="${k.total}">1 x 1</strong><span th:if="${k.extra != null}" class="suave" th:text="${k.extra}">volta depois da 21</span></span></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p class="suave historico-nota">Sem gol fora de casa: empate no total vai à prorrogação e aos pênaltis. Quem passa fica em destaque; quem sai, apagado.</p>
+</section>
+
+<section class="painel grupo" aria-labelledby="t-chave">
+<div class="painel-titulo painel-cabecalho">
+<div class="pilha-curta">
+<h2 id="t-chave" class="titulo-secao pequeno">Chave até a final</h2>
+<span class="suave">Oitavas: cada 1º pega por sorteio um 2º de outro grupo e joga a volta em casa · depois, chave fixa como a da copa</span>
+</div>
+</div>
+<div class="copa-chave">
+<p th:if="${c.campeao != null}" class="copa-campeao" th:text="|Campeão: ${c.campeao}|">Campeão</p>
+<div th:each="f : ${c.chave}" class="pilha-curta">
+<span class="rotulo" th:text="${f.nome}">Quartas de final</span>
+<span th:each="j : ${f.jogos}" class="copa-jogo-chave" th:classappend="${j.doUsuario} ? 'do-usuario' : (${j.emAberto} ? 'em-aberto')" th:text="${j.texto}">Venc. 1 × Venc. 2</span>
+</div>
+</div>
+</section>
+</th:block>
+</div>
+</div>
+</body>
+</html>

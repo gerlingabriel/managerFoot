@@ -11,7 +11,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Propagation;
@@ -36,21 +35,14 @@ public class TemporadaRepositorio {
 	private final MercadoRepositorio mercado;
 	private final CopaRepositorio copas;
 	private final ContinentalRepositorio continentais;
-	private final boolean continentalAtiva;
 
-	/**
-	 * @param continentalAtiva sorteia a competição continental no início da temporada; desligada até
-	 *        as telas dela serem aprovadas (SPEC §8.3.6), para o jogo não parar numa etapa sem tela
-	 */
 	public TemporadaRepositorio(JdbcClient jdbc, JogoRepositorio jogos, MercadoRepositorio mercado,
-			CopaRepositorio copas, ContinentalRepositorio continentais,
-			@Value("${managerfoot.continental.ativa:false}") boolean continentalAtiva) {
+			CopaRepositorio copas, ContinentalRepositorio continentais) {
 		this.jdbc = jdbc;
 		this.jogos = jogos;
 		this.mercado = mercado;
 		this.copas = copas;
 		this.continentais = continentais;
-		this.continentalAtiva = continentalAtiva;
 	}
 
 	/**
@@ -74,7 +66,7 @@ public class TemporadaRepositorio {
 	}
 
 	/**
-	 * Grava a temporada e seus sorteios, sorteia a copa (SPEC §8.2) e completa os jogadores à venda da máquina; quem chama abre a
+	 * Grava a temporada e seus sorteios, sorteia a copa (SPEC §8.2) e a continental (§8.3.6) e completa os jogadores à venda da máquina; quem chama abre a
 	 * transação, trava o jogo e já pôs os treinadores nos clubes da nova temporada.
 	 */
 	@Transactional(propagation = Propagation.MANDATORY)
@@ -109,9 +101,7 @@ public class TemporadaRepositorio {
 			inserirBonus(temporadaId, divisaoId, sorteios.bonus().bonusExtra(), true);
 		}
 		copas.criar(jogoId, temporadaId, semente);
-		if (continentalAtiva) {
-			continentais.criar(jogoId, temporadaId, temporada.numero(), semente);
-		}
+		continentais.criar(jogoId, temporadaId, temporada.numero(), semente);
 		mercado.reporAVenda(jogoId, MercadoRepositorio.semente(semente, 0));
 	}
 

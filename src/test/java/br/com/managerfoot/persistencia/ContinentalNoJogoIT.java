@@ -127,7 +127,7 @@ class ContinentalNoJogoIT {
 		assertThat(jdbc.sql("""
 				SELECT count(*) FROM jogo_partida p JOIN jogo_temporada t ON t.id = p.temporada_id
 				JOIN jogo_clube c ON c.id IN (p.mandante_id, p.visitante_id)
-				WHERE t.jogo_id = :jogo AND c.pais_codigo IS NOT NULL""")
+				WHERE t.jogo_id = :jogo AND c.pais_codigo IS NOT NULL AND p.grupo IS NULL AND p.confronto_id IS NULL""")
 			.param("jogo", jogo).query(Long.class).single()).isZero();
 		assertThat(daLiga).hasSize(40);
 		assertThat(liga.divisoes()).extracting(Divisao::prioridade).containsExactly(1, 2);

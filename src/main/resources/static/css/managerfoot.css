@@ -1415,6 +1415,7 @@ a.link-clube:hover { color: var(--destaque); text-decoration: underline; }
 .historico { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
 .historico > .painel { flex: 1 1 420px; min-width: 0; }
 .historico > .painel:first-child { flex-basis: 640px; }
+.historico > .painel.historico-largo { flex-basis: 100%; }
 .rolagem { overflow-x: auto; }
 .tabela-historico, .tabela-ranking { min-width: 0; }
 .tabela-historico td { vertical-align: top; }
@@ -1510,6 +1511,22 @@ a.financas-link:hover, a.financas-link:focus-visible { border-color: var(--desta
 /* Continental em azul-claro, para não confundir com a copa em amarelo (modelos 13c e 13d, rev. 79). */
 .jogo-grupo { font: 700 15px 'Barlow Condensed', sans-serif; text-transform: uppercase; letter-spacing: 0.04em; color: var(--texto-suave); }
 .rotulo.rotulo-continental { color: var(--continental); }
+.grupos-continental { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; padding: 16px; }
+.grupo-caixa { background: var(--cartao); border: 1px solid var(--borda); border-radius: 10px; padding: 12px; min-width: 0; }
+.grupo-caixa.seu { border-color: var(--destaque); }
+.grupo-tabela { width: 100%; border-collapse: collapse; font-size: 15px; font-variant-numeric: tabular-nums; }
+.grupo-tabela caption { text-align: left; font: 700 20px 'Barlow Condensed', sans-serif; padding: 0 0 6px; }
+.grupo-tabela th { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--texto-suave); text-align: left; padding: 4px 6px; }
+.grupo-tabela td { padding: 6px; border-top: 1px solid rgba(31, 90, 58, 0.6); }
+.grupo-tabela .num { text-align: right; }
+.grupo-tabela .nome { font-weight: 600; }
+.grupo-tabela tr.passa td:first-child { box-shadow: inset 4px 0 0 #3FB37F; }
+.grupo-tabela tr.do-usuario td { background: rgba(242, 201, 76, 0.12); }
+.calendario-continental { font-weight: 700; font-size: 14px; color: var(--continental); line-height: 1.2; }
+.tabela-calendario tr.da-continental td, .tabela-extrato tr.da-continental td { background: rgba(142, 201, 240, 0.06); }
+.extrato-continental { color: var(--continental); font-weight: 700; }
+.financas-continental { border-color: var(--continental); }
+.financas-continental .rotulo { color: var(--continental); }
 .financas-copa { border-color: var(--destaque); }
 .financas-copa .rotulo { color: var(--destaque); }
 

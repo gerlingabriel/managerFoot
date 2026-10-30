@@ -84,11 +84,11 @@ class FimDeTemporadaIT {
 		jogoId = jogos.criarComSorteio(portugal, treinador.id(), 5).jogoId();
 		plantel = "/jogos/" + jogoId + "/plantel";
 		// a máquina escala o clube do treinador: suspensões não param a temporada do teste
-		jdbc.sql("DELETE FROM jogo_escalacao e USING jogo_clube c WHERE c.id = e.clube_id AND c.jogo_id = :j")
-			.param("j", jogoId).update();
 		for (int rodada = 1; rodada <= rodadas.totalDeRodadas(jogoId); rodada++) {
+			RodadasDeTeste.semDecisoesDoTreinador(jdbc, jogoId);
 			RodadasDeTeste.jogarRodada(rodadas, jogoId, rodada);
 		}
+		RodadasDeTeste.semDecisoesDoTreinador(jdbc, jogoId);
 	}
 
 	@Test
@@ -121,8 +121,8 @@ class FimDeTemporadaIT {
 			.andExpect(content().string(containsString(">2026<")))
 			.andExpect(content().string(containsString(campeao)))
 			.andExpect(content().string(not(containsString("Ninguém foi campeão ainda."))))
-			// a coluna Copa com o campeão e o placar da final (modelo 12e, rev. 71)
-			.andExpect(content().string(containsString(">Copa</th>")))
+			// o quadro da Copa com o campeão e o placar da final (modelo 13a, rev. 79)
+			.andExpect(content().string(containsString(">Copa</h2>")))
 			.andExpect(content().string(containsString(jdbc.sql("SELECT clube_nome FROM jogo_campeao_copa WHERE jogo_id = :j")
 				.param("j", jogoId).query(String.class).single())))
 			.andExpect(content().string(containsString("final ")));
@@ -132,6 +132,33 @@ class FimDeTemporadaIT {
 		mvc.perform(get(plantel).with(como(treinador)))
 			.andExpect(status().isOk())
 			.andExpect(content().string(containsString(naFila ? "fila de espera" : "Próximo jogo · Rodada 1")));
+	}
+
+	@Test
+	void convitePendenteSeguraAProximaTemporada() throws Exception {
+		long clube = jogo.clubeDoTreinador(jogoId, treinador.id()).orElseThrow();
+		long outro = jdbc.sql("""
+				SELECT id FROM jogo_clube WHERE jogo_id = :j AND id <> :c AND divisao_id IS NOT NULL ORDER BY id LIMIT 1""")
+			.param("j", jogoId).param("c", clube).query(Long.class).single();
+		long convite = jdbc.sql("""
+				INSERT INTO jogo_troca_treinador (jogo_id, temporada_id, rodada, clube_id, outro_clube_id, convidado_id, situacao)
+				SELECT :j, t.id, t.rodadas_processadas, :outro, :c, :u, 'CONVITE' FROM jogo_temporada t WHERE t.jogo_id = :j
+				RETURNING id""")
+			.param("j", jogoId).param("outro", outro).param("c", clube).param("u", treinador.id())
+			.query(Long.class).single();
+
+		mvc.perform(post("/jogos/" + jogoId + "/temporada").param("temporada", "1").with(como(treinador)).with(csrf()))
+			.andExpect(redirectedUrl(plantel))
+			.andExpect(flash().attribute("erro",
+					"Responda ao convite para assumir outro clube antes de começar a próxima temporada."));
+		assertThat(jdbc.sql("SELECT max(numero) FROM jogo_temporada WHERE jogo_id = :j").param("j", jogoId)
+			.query(Integer.class).single()).isEqualTo(1);
+
+		mvc.perform(post("/jogos/" + jogoId + "/convite").param("convite", String.valueOf(convite))
+			.param("resposta", "RECUSAR").with(como(treinador)).with(csrf()))
+			.andExpect(flash().attribute("resultado", containsString("Convite recusado")));
+		mvc.perform(post("/jogos/" + jogoId + "/temporada").param("temporada", "1").with(como(treinador)).with(csrf()))
+			.andExpect(flash().attribute("resultado", containsString("Começou a temporada 2027.")));
 	}
 
 	@Test

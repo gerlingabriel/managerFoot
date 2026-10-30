@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 79 — 2026-10-30)
+-   **Status:** versão inicial para revisão (rev. 80 — 2026-10-30)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,10 +15,11 @@
 
 ### Histórico de revisões
 
--   **rev. 79 (2026-10-30):** pelo usuário: modelos 13a a 13d aprovados; o quadro "Todos os títulos" substitui o ranking só da 1ª divisão; o quadro da Liga fica sem a 2ª divisão; todos os grupos da continental jogam num bloco só, para em rede todos verem os seus jogos e os dos amigos (§8.1.1, §8.3.6).
--   **rev. 78 (2026-10-29):** etapas da continental jogadas entre as rodadas (grupos, mata-mata, final depois da da copa), com prêmio, campeão e vice no Histórico e vice e 3º da liga gravados (V35); a 2ª temporada escolhe os clubes do país pela tabela anterior e pelo campeão da copa. Agente: público e caixa com o estrangeiro marcados Provisório (§8.3.6). Ainda sem tela e desligado por configuração.
+-   **rev. 80 (2026-10-30):** agente: a próxima temporada também espera a resposta do convite para assumir outro clube, como a rodada; antes, um pedido direto virava a temporada com o convite aberto, e o plantel deixava de abrir quando um dos clubes caía para a fila (§5.4). Provisório.
+-   **rev. 79 (2026-10-30):** pelo usuário: modelos 13a a 13d aprovados; o quadro "Todos os títulos" substitui o ranking só da 1ª divisão; o quadro da Liga fica sem a 2ª divisão; todos os grupos da continental jogam num bloco só, para em rede todos verem os seus jogos e os dos amigos (§8.1.1, §8.3.6). Telas prontas e continental ligada para os jogos novos (ADR 0016).
+-   **rev. 78 (2026-10-29):** etapas da continental jogadas entre as rodadas (grupos, mata-mata, final depois da da copa), com prêmio, campeão e vice no Histórico e vice e 3º da liga gravados (V35); a 2ª temporada escolhe os clubes do país pela tabela anterior e pelo campeão da copa. Agente: público e caixa com o estrangeiro marcados Provisório (§8.3.6). Ainda sem tela e desligado por configuração (telas e ligação na rev. 79).
 -   **rev. 77 (2026-10-29):** pelo usuário: todas as partidas de todos os torneios passam na tela, na velocidade cadastrada quando há clube do usuário e muito rápido quando não há; ordem do fim da temporada: última rodada da liga, final da copa, final da continental; o campeão continental vai ao Histórico, que passa a ter quadros (liga com campeão, vice e 3º; copa com campeão e vice; continental com campeão e vice; Mundial depois) e um quadro com todos os títulos, só de treinadores nacionais (§8.1.1, §8.3.6). Agente: o quadro de todos os títulos substitui o ranking só da 1ª divisão (rev. 46) — a confirmar no modelo de tela.
--   **rev. 76 (2026-10-29):** grupos da continental sorteados e gravados no início da temporada, com as partidas no calendário (V34, ADR 0016); ainda não são jogados. Desligado por configuração até as telas da continental serem aprovadas.
+-   **rev. 76 (2026-10-29):** grupos da continental sorteados e gravados no início da temporada, com as partidas no calendário (V34, ADR 0016); ainda não são jogados. Desligado por configuração até as telas da continental serem aprovadas (ligado na rev. 79).
 -   **rev. 75 (2026-10-29):** pelo usuário: de um país com liga que não é jogada (ex.: a Argentina, jogando no Brasil), concorrem às vagas só os mais fortes, no tamanho da 1ª divisão dele, sempre por força com sorteio (§8.3.6). O jogo copia na criação a competição da região e os clubes estrangeiros (V33, ADR 0016); jogos criados antes ficam sem continental.
 -   **rev. 74 (2026-10-29):** domínio da competição continental feito (grupos, oitavas, escolha dos clubes). Agente: detalhes da escolha por força com sorteio, da tabela dos grupos, da chave das oitavas e da edição com menos de 32 clubes marcados Provisório (§8.3.6).
 -   **rev. 73 (2026-10-29):** pelo usuário: provisórios da rev. 72 aprovados (vagas da América do Sul e da Europa, grupos, oitavas, quadro de rodadas, efeitos e prêmio); a força dos países estrangeiros varia por país (ex.: Argentina mais forte que Venezuela). Agente: níveis de força dos países gerados marcados Provisório, a conferir por simulação (§8.3.6).
@@ -788,6 +789,9 @@ sorteio provisório da rev. 36 para o usuário que cai para a fila):
   rodada. Máquina×máquina troca na hora; usuário chamado recebe o convite
   (11a) no plantel e a rodada seguinte espera; recusa chama o seguinte;
   usuário demitido vê o aviso (11b). Histórico em `jogo_troca_treinador`.
+  - **Provisório (rev. 80):** a próxima temporada também espera a resposta
+    do convite: ele é da temporada que acaba, e os clubes dele podem mudar de
+    divisão ou ir para a fila.
   - O usuário demitido troca só com a máquina (dois usuários não trocam de
     clube; rever no multiplayer).
   - **Não feito:** treinador sem clube para clubes de força até 10 (o jogo

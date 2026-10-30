@@ -7,66 +7,120 @@
 <header th:replace="~{fragmentos :: topo}"></header>
 <nav th:replace="~{fragmentos :: abas(${jogoId}, 'historico')}"></nav>
 
-<!-- Histórico (modelo 8a, rev. 54): campeões por ano e ranking de treinadores. -->
+<!-- Histórico em quadros (modelo 13a, rev. 79): liga, copa, continental, Mundial e todos os títulos. -->
 <div class="historico">
-<section class="painel grupo" aria-labelledby="t-campeoes">
+<section class="painel grupo historico-largo" aria-labelledby="t-liga">
 <div class="painel-titulo painel-cabecalho">
 <div class="pilha-curta">
-<h1 id="t-campeoes" class="titulo-secao pequeno">Campeões</h1>
-<span class="suave" th:text="${h.temCopa} ? 'Por ano, mais recente primeiro · treinador embaixo do clube · Copa ao lado da ' + ${h.divisoes[0].nome} : 'Por ano, mais recente primeiro · treinador embaixo do clube'">Por ano</span>
+<h1 id="t-liga" class="titulo-secao pequeno" th:text="|Liga · ${h.divisao}|">Liga · Série A</h1>
+<span class="suave">Por ano, mais recente primeiro · treinador embaixo do clube</span>
 </div>
 </div>
-<p th:if="${h.anos.isEmpty()}" class="texto linha-jogo">Nenhuma temporada terminou ainda.</p>
-<div th:unless="${h.anos.isEmpty()}" class="rolagem">
+<p th:if="${h.liga.isEmpty()}" class="texto linha-jogo">Nenhuma temporada terminou ainda.</p>
+<div th:unless="${h.liga.isEmpty()}" class="rolagem">
 <table class="tabela-classificacao tabela-historico">
-<thead>
-<tr><th scope="col">Ano</th><th:block th:each="d, i : ${h.divisoes}"><th scope="col" th:text="${d.nome}">Série A</th>
-<th th:if="${i.first and h.temCopa}" scope="col" class="historico-copa">Copa</th></th:block></tr>
-</thead>
+<thead><tr><th scope="col">Ano</th><th scope="col">Campeão</th><th scope="col">Vice</th><th scope="col">3º</th></tr></thead>
 <tbody>
-<tr th:each="a : ${h.anos}">
+<tr th:each="a : ${h.liga}">
 <th scope="row" class="historico-ano" th:text="${a.ano}">2026</th>
-<th:block th:each="campeao, i : ${a.campeoes}">
-<td th:each="c : ${i.first and h.temCopa ? {campeao, a.copa} : {campeao}}" th:classappend="${c != null and c.seu} ? 'seu'">
-<th:block th:if="${c != null}">
-<span class="historico-clube" th:text="${c.clube}">Clube</span>
-<span class="historico-treinador" th:text="${c.seu} ? |${c.treinador} (você)| : ${c.treinador}">Treinador</span>
-<span th:if="${c.detalhe != null}" class="historico-final" th:text="${c.detalhe}">final 2 x 1 sobre Vice</span>
-</th:block>
-<span th:if="${c == null}" class="suave">—</span>
-</td>
-</th:block>
+<td th:replace="~{:: celula(${a.campeao})}"></td>
+<td th:replace="~{:: celula(${a.vice})}"></td>
+<td th:replace="~{:: celula(${a.terceiro})}"></td>
 </tr>
 </tbody>
 </table>
 </div>
 </section>
 
-<section class="painel grupo" aria-labelledby="t-ranking">
+<section class="painel grupo" aria-labelledby="t-copa">
 <div class="painel-titulo painel-cabecalho">
 <div class="pilha-curta">
-<h2 id="t-ranking" class="titulo-secao pequeno">Ranking de treinadores</h2>
-<span class="suave" th:text="|Títulos da ${h.divisoes[0].nome} · empatados dividem a posição|">Títulos</span>
+<h2 id="t-copa" class="titulo-secao pequeno">Copa</h2>
+<span class="suave">Campeão e vice, com o placar da final</span>
 </div>
 </div>
-<p th:if="${h.ranking.isEmpty()}" class="texto linha-jogo">Ninguém foi campeão ainda.</p>
-<table th:unless="${h.ranking.isEmpty()}" class="tabela-classificacao tabela-ranking">
-<thead>
-<tr><th scope="col" class="num">#</th><th scope="col">Treinador</th><th scope="col" class="num">Títulos</th></tr>
-</thead>
+<p th:if="${h.copa.isEmpty()}" class="texto linha-jogo">Nenhuma final foi jogada ainda.</p>
+<table th:unless="${h.copa.isEmpty()}" class="tabela-classificacao tabela-historico">
+<thead><tr><th scope="col">Ano</th><th scope="col">Campeão</th><th scope="col">Vice</th></tr></thead>
 <tbody>
-<tr th:each="r : ${h.ranking}" th:classappend="${r.voce} ? 'do-usuario'">
-<td class="num suave" th:text="|${r.posicao}º|">1º</td>
-<td><span class="historico-clube" th:text="${r.voce} ? |${r.nome} (você)| : ${r.nome}">Nome</span>
-<span class="historico-treinador" th:text="${r.clube != null} ? ${r.clube} : 'Sem clube'">Clube</span></td>
-<td class="num pontos" th:text="${r.titulos}">1</td>
+<tr th:each="a : ${h.copa}">
+<th scope="row" class="historico-ano" th:text="${a.ano}">2026</th>
+<td th:replace="~{:: celula(${a.campeao})}"></td>
+<td th:replace="~{:: celula(${a.vice})}"></td>
 </tr>
 </tbody>
 </table>
-<p class="suave historico-nota" th:text="|Só aparece quem já ganhou a ${h.divisoes[0].nome}. Títulos da copa e das outras divisões ficam só na lista de campeões.|">nota</p>
+</section>
+
+<section th:if="${h.nomeContinental != null}" class="painel grupo" aria-labelledby="t-continental">
+<div class="painel-titulo painel-cabecalho">
+<div class="pilha-curta">
+<h2 id="t-continental" class="titulo-secao pequeno" th:text="${h.nomeContinental}">Continental</h2>
+<span class="suave">Campeão e vice · clube de fora com a sigla do país, sem treinador</span>
+</div>
+</div>
+<p th:if="${h.continental.isEmpty()}" class="texto linha-jogo">Nenhuma final foi jogada ainda.</p>
+<table th:unless="${h.continental.isEmpty()}" class="tabela-classificacao tabela-historico">
+<thead><tr><th scope="col">Ano</th><th scope="col">Campeão</th><th scope="col">Vice</th></tr></thead>
+<tbody>
+<tr th:each="a : ${h.continental}">
+<th scope="row" class="historico-ano" th:text="${a.ano}">2026</th>
+<td th:replace="~{:: celula(${a.campeao})}"></td>
+<td th:replace="~{:: celula(${a.vice})}"></td>
+</tr>
+</tbody>
+</table>
+</section>
+
+<section class="painel grupo" aria-labelledby="t-mundial">
+<div class="painel-titulo painel-cabecalho">
+<div class="pilha-curta">
+<h2 id="t-mundial" class="titulo-secao pequeno">Mundial de Clubes</h2>
+<span class="suave">Campeão e vice</span>
+</div>
+</div>
+<p class="texto linha-jogo">O Mundial ainda não é disputado. O quadro aparece quando houver o primeiro campeão.</p>
+</section>
+
+<section class="painel grupo" aria-labelledby="t-titulos">
+<div class="painel-titulo painel-cabecalho">
+<div class="pilha-curta">
+<h2 id="t-titulos" class="titulo-secao pequeno">Todos os títulos</h2>
+<span class="suave" th:text="|Só treinadores do país · ${h.divisao}, Copa e Continental · empatados dividem a posição|">Títulos</span>
+</div>
+</div>
+<p th:if="${h.titulos.isEmpty()}" class="texto linha-jogo">Ninguém foi campeão ainda.</p>
+<table th:unless="${h.titulos.isEmpty()}" class="tabela-classificacao tabela-ranking">
+<thead>
+<tr><th scope="col" class="num">#</th><th scope="col">Treinador</th><th scope="col" class="num">Liga</th><th scope="col" class="num">Copa</th><th scope="col" class="num">Contin.</th><th scope="col" class="num">Total</th></tr>
+</thead>
+<tbody>
+<tr th:each="r : ${h.titulos}" th:classappend="${r.voce} ? 'do-usuario'">
+<td class="num suave" th:text="|${r.posicao}º|">1º</td>
+<td><span class="historico-clube" th:text="${r.voce} ? |${r.nome} (você)| : ${r.nome}">Nome</span>
+<span class="historico-treinador" th:text="${r.clube != null} ? ${r.clube} : 'Sem clube'">Clube</span></td>
+<td class="num" th:text="${r.liga}">0</td>
+<td class="num" th:text="${r.copa}">0</td>
+<td class="num" th:text="${r.continental}">0</td>
+<td class="num pontos" th:text="${r.total()}">0</td>
+</tr>
+</tbody>
+</table>
+<p class="suave historico-nota" th:text="|Campeões de outros países ficam só nos quadros acima. Só a ${h.divisao} conta na Liga.|">nota</p>
 </section>
 </div>
 </div>
 </div>
+
+<th:block th:if="false">
+<td th:fragment="celula(c)" th:classappend="${c != null and c.seu} ? 'seu'">
+<th:block th:if="${c != null}">
+<span class="historico-clube"><span th:text="${c.clube}">Clube</span> <span th:if="${c.pais != null}" class="sigla-pais" th:text="${c.pais}">ARG</span></span>
+<span th:if="${c.treinador != null}" class="historico-treinador" th:text="${c.seu} ? |${c.treinador} (você)| : ${c.treinador}">Treinador</span>
+<span th:if="${c.detalhe != null}" class="historico-final" th:text="${c.detalhe}">final 2 x 1</span>
+</th:block>
+<span th:if="${c == null}" class="suave">—</span>
+</td>
+</th:block>
 </body>
 </html>

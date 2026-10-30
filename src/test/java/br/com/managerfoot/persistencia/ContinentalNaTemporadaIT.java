@@ -30,7 +30,7 @@ import br.com.managerfoot.temporada.GrupoContinental;
 
 /** Grupos da continental sorteados e gravados no início da temporada (SPEC §8.3.6, V34). */
 @Import(TestcontainersConfiguration.class)
-@SpringBootTest(properties = "managerfoot.continental.ativa=true")
+@SpringBootTest
 class ContinentalNaTemporadaIT {
 
 	@Autowired
@@ -142,8 +142,10 @@ class ContinentalNaTemporadaIT {
 		String forcasAntes = forcasDosEstrangeiros();
 		int total = rodadas.totalDeRodadas(jogo);
 		for (int r = 1; r < total; r++) {
+			RodadasDeTeste.semDecisoesDoTreinador(jdbc, jogo);
 			RodadasDeTeste.jogarRodada(rodadas, jogo, r);
 		}
+		RodadasDeTeste.semDecisoesDoTreinador(jdbc, jogo);
 		RodadasDeTeste.jogarCopaPendente(rodadas, jogo);
 		assertThat(continentais.carregar(jogo, temporada).orElseThrow().mataMata().orElseThrow().faseAtual())
 			.isEqualTo(FaseCopa.FINAL);
@@ -198,6 +200,7 @@ class ContinentalNaTemporadaIT {
 				.orElseGet(() -> jogos.carregarLiga(jogo).filaDeEspera().stream().filter(c -> c.id() == id).findFirst().orElseThrow()));
 		List<Long> esperados = VagasContinental.peloDesempenho(primeira.linhas().stream().map(LinhaClassificacao::clube).toList(),
 				campeaoDaCopa, 7).stream().map(Clube::id).toList();
+		RodadasDeTeste.semDecisoesDoTreinador(jdbc, jogo);
 		fins.avancarTemporada(jogo, 1, 99);
 		Map<String, Object> liga = jdbc.sql("""
 				SELECT vice_id, terceiro_id FROM jogo_campeao WHERE jogo_id = :j AND divisao_prioridade = 1""")

@@ -46,12 +46,13 @@ public class FimDeTemporadaRepositorio {
 	private final EstadioRepositorio estadios;
 	private final PatrocinioRepositorio patrocinios;
 	private final AumentoRepositorio aumentos;
+	private final TrocaRepositorio trocas;
 	private final int candidatosClubeInicial;
 	private final EscalacaoMaquina escalacaoMaquina = new EscalacaoMaquina(ParametrosMotor.padrao());
 
 	public FimDeTemporadaRepositorio(JdbcClient jdbc, JogoRepositorio jogos, TemporadaRepositorio temporadas,
 			RodadaRepositorio rodadas, EscalacaoRepositorio escalacoes, CaixaRepositorio caixas, LeilaoRepositorio leiloes,
-			EstadioRepositorio estadios, PatrocinioRepositorio patrocinios, AumentoRepositorio aumentos, @Value("${managerfoot.jogo.candidatos-clube-inicial}") int candidatosClubeInicial) {
+			EstadioRepositorio estadios, PatrocinioRepositorio patrocinios, AumentoRepositorio aumentos, TrocaRepositorio trocas, @Value("${managerfoot.jogo.candidatos-clube-inicial}") int candidatosClubeInicial) {
 		this.jdbc = jdbc;
 		this.jogos = jogos;
 		this.temporadas = temporadas;
@@ -62,6 +63,7 @@ public class FimDeTemporadaRepositorio {
 		this.estadios = estadios;
 		this.patrocinios = patrocinios;
 		this.aumentos = aumentos;
+		this.trocas = trocas;
 		this.candidatosClubeInicial = candidatosClubeInicial;
 	}
 
@@ -73,6 +75,7 @@ public class FimDeTemporadaRepositorio {
 	 * @return a transição e a nova temporada
 	 * @throws NoSuchElementException se o jogo não existe ou não tem temporada
 	 * @throws IllegalStateException se a temporada não é a atual ou ainda tem rodadas ou etapas da copa a jogar
+	 * @throws DecisaoPendenteException se um treinador ainda não respondeu ao convite de outro clube
 	 */
 	@Transactional
 	public NovaTemporada avancarTemporada(long jogoId, int temporadaAtual, long semente) {
@@ -95,6 +98,10 @@ public class FimDeTemporadaRepositorio {
 		if (rodadas.proximo(jogoId) instanceof RodadaRepositorio.Proximo.EtapaContinental etapa) {
 			throw new IllegalStateException("a temporada " + numero + " do jogo " + jogoId + " ainda tem "
 					+ etapa.etapa().nome() + " da continental a jogar");
+		}
+		if (trocas.algumConvitePendente(jogoId)) {
+			// o convite é da temporada que acaba: os clubes dele podem mudar de divisão ou ir para a fila
+			throw new DecisaoPendenteException("Responda ao convite para assumir outro clube antes de começar a próxima temporada.");
 		}
 
 		Map<Integer, Classificacao> finais = rodadas.classificacao(jogoId);
@@ -138,12 +145,19 @@ public class FimDeTemporadaRepositorio {
 			jdbc.sql("""
 					INSERT INTO jogo_campeao (jogo_id, temporada, ano, divisao_prioridade, divisao_nome, clube_id,
 					                          clube_nome, usuario_id, treinador_maquina_id, vice_id, vice_nome,
-					                          terceiro_id, terceiro_nome)
+					                          terceiro_id, terceiro_nome, vice_treinador, vice_usuario_id,
+					                          terceiro_treinador, terceiro_usuario_id)
 					SELECT j.id, :temporada, j.ano_inicial + :temporada - 1, d.prioridade, d.nome, c.id, c.nome,
 					       (SELECT t.usuario_id FROM jogo_treinador t WHERE t.clube_id = c.id),
 					       CASE WHEN NOT EXISTS (SELECT 1 FROM jogo_treinador t WHERE t.clube_id = c.id)
 					            THEN (SELECT m.id FROM jogo_treinador_maquina m WHERE m.clube_id = c.id) END,
-					       :vice, :viceNome, :terceiro, :terceiroNome
+					       CAST(:vice AS BIGINT), CAST(:viceNome AS TEXT), CAST(:terceiro AS BIGINT), CAST(:terceiroNome AS TEXT),
+					       coalesce((SELECT u.nome FROM jogo_treinador t JOIN usuario u ON u.id = t.usuario_id WHERE t.clube_id = CAST(:vice AS BIGINT)),
+					                (SELECT m.nome FROM jogo_treinador_maquina m WHERE m.clube_id = CAST(:vice AS BIGINT))),
+					       (SELECT t.usuario_id FROM jogo_treinador t WHERE t.clube_id = CAST(:vice AS BIGINT)),
+					       coalesce((SELECT u.nome FROM jogo_treinador t JOIN usuario u ON u.id = t.usuario_id WHERE t.clube_id = CAST(:terceiro AS BIGINT)),
+					                (SELECT m.nome FROM jogo_treinador_maquina m WHERE m.clube_id = CAST(:terceiro AS BIGINT))),
+					       (SELECT t.usuario_id FROM jogo_treinador t WHERE t.clube_id = CAST(:terceiro AS BIGINT))
 					FROM jogo j JOIN jogo_divisao d ON d.jogo_id = j.id AND d.prioridade = :prioridade
 					JOIN jogo_clube c ON c.id = :clube
 					WHERE j.id = :jogo""")

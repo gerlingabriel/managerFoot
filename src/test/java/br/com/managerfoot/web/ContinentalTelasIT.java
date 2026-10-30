@@ -38,9 +38,11 @@ import br.com.managerfoot.economia.PropostasPatrocinio;
 import br.com.managerfoot.motor.EscalacaoMaquina;
 import br.com.managerfoot.motor.ParametrosMotor;
 import br.com.managerfoot.persistencia.BancoPadraoRepositorio;
+import br.com.managerfoot.persistencia.ConsultasRepositorio;
 import br.com.managerfoot.persistencia.ContasRepositorio;
 import br.com.managerfoot.persistencia.ContinentalRepositorio;
 import br.com.managerfoot.persistencia.EscalacaoRepositorio;
+import br.com.managerfoot.persistencia.FimDeTemporadaRepositorio;
 import br.com.managerfoot.persistencia.JogoRepositorio;
 import br.com.managerfoot.persistencia.JogosDoTreinadorRepositorio;
 import br.com.managerfoot.persistencia.MoldeRepositorio;
@@ -51,7 +53,7 @@ import br.com.managerfoot.temporada.Continental;
 
 /** A continental pela tela (SPEC §8.3.6, modelos 13a a 13d, rev. 79), com o relógio do teste. */
 @Import(TestcontainersConfiguration.class)
-@SpringBootTest(properties = "managerfoot.continental.ativa=true")
+@SpringBootTest
 @AutoConfigureMockMvc
 class ContinentalTelasIT {
 
@@ -89,6 +91,12 @@ class ContinentalTelasIT {
 
 	@Autowired
 	PatrocinioRepositorio patrocinios;
+
+	@Autowired
+	FimDeTemporadaRepositorio fins;
+
+	@Autowired
+	ConsultasRepositorio consultas;
 
 	@Autowired
 	JdbcClient jdbc;
@@ -239,6 +247,96 @@ class ContinentalTelasIT {
 			assertThat(p).isPositive();
 			assertThat(tela).contains(String.format(java.util.Locale.forLanguageTag("pt-BR"), "%,d", p));
 		});
+	}
+
+	@Test
+	void abaContinentalComGruposJogosDoGrupoEChave() throws Exception {
+		Clube clube = brasileiroNaContinental();
+		assumir(clube);
+		String aba = "/jogos/" + jogoId + "/continental";
+
+		mvc.perform(get(aba).with(como(treinador)))
+			.andExpect(status().isOk())
+			.andExpect(content().string(containsString("aria-current=\"page\">Continental")))
+			.andExpect(content().string(containsString("Copa dos Clubes da América do Sul · Temporada 2026")))
+			.andExpect(content().string(containsString("32 clubes de 10 países")))
+			.andExpect(content().string(containsString("º lugar")))
+			.andExpect(content().string(containsString("seu grupo")))
+			.andExpect(content().string(containsString("0 de 6 jogos · próximo depois da 2")))
+			.andExpect(content().string(containsString("class=\"sigla-pais\">ARG")))
+			.andExpect(content().string(containsString("Sorteio depois do 6º jogo dos grupos")))
+			.andExpect(content().string(containsString("1º · depois da 2")))
+			.andExpect(content().string(containsString(clube.nome() + " (você)")));
+		// outro grupo pelo link, e uma fase inválida cai na atual
+		mvc.perform(get(aba).param("fase", "GRUPOS").param("grupo", "7").with(como(treinador)))
+			.andExpect(content().string(containsString("Jogos do Grupo H")));
+		mvc.perform(get(aba).param("fase", "QUALQUER").with(como(treinador))).andExpect(status().isOk());
+		mvc.perform(get(aba).param("fase", "QUARTAS").with(como(treinador)))
+			.andExpect(status().isOk())
+			.andExpect(content().string(containsString("Os confrontos desta fase saem quando a anterior terminar.")));
+	}
+
+	@Test
+	void temporadaInteiraAparecePeloCalendarioPelasFinancasEPeloHistorico() throws Exception {
+		Clube clube = brasileiroNaContinental();
+		assumir(clube);
+		patrocinios.assinar(jogoId, treinador.id(), PropostasPatrocinio.Tipo.FIXA);
+		jdbc.sql("DELETE FROM jogo_escalacao WHERE clube_id = :c").param("c", clube.id()).update();
+		int total = rodadas.totalDeRodadas(jogoId);
+		for (int r = 1; r <= total; r++) {
+			RodadasDeTeste.semDecisoesDoTreinador(jdbc, jogoId);
+			RodadasDeTeste.jogarRodada(rodadas, jogoId, r);
+		}
+		assertThat(rodadas.proximo(jogoId)).isInstanceOf(RodadaRepositorio.Proximo.Fim.class);
+
+		mvc.perform(get("/jogos/" + jogoId + "/classificacao").param("calendario", String.valueOf(clube.id())).with(como(treinador)))
+			.andExpect(status().isOk())
+			.andExpect(content().string(containsString("Continental · Grupos · 1º jogo")))
+			.andExpect(content().string(containsString("calendario-continental")))
+			.andExpect(content().string(containsString("class=\"sigla-pais\"")));
+		mvc.perform(get("/jogos/" + jogoId + "/financas").with(como(treinador)))
+			.andExpect(status().isOk())
+			.andExpect(content().string(containsString("Continental na temporada")))
+			.andExpect(content().string(containsString("extrato-continental")));
+		mvc.perform(get("/jogos/" + jogoId + "/continental").with(como(treinador)))
+			.andExpect(status().isOk())
+			.andExpect(content().string(containsString("Campeão: " + continental().campeao().orElseThrow().nome())));
+
+		RodadasDeTeste.semDecisoesDoTreinador(jdbc, jogoId);
+		fins.avancarTemporada(jogoId, 1, 99);
+		Continental encerrada = continentais.carregar(jogoId, temporada).orElseThrow();
+		ConsultasRepositorio.VisaoHistorico historico = consultas.historico(jogoId, treinador.id());
+		assertThat(historico.nomeContinental()).isEqualTo("Copa dos Clubes da América do Sul");
+		assertThat(historico.continental()).singleElement().satisfies(l -> {
+			assertThat(l.campeao().clube()).isEqualTo(encerrada.campeao().orElseThrow().nome());
+			assertThat(l.campeao().detalhe()).startsWith("final ");
+			assertThat(l.vice().clube()).isEqualTo(encerrada.vice().orElseThrow().nome());
+			assertThat(l.campeao().pais()).isEqualTo(continentais.paisesDeFora(jogoId).get(encerrada.campeao().orElseThrow().id()));
+		});
+		assertThat(historico.copa()).singleElement().satisfies(l -> {
+			// a final certa: o placar é o da final da copa, não o da continental
+			String esperado = jdbc.sql("""
+					SELECT 'final ' || CASE WHEN p.mandante_id = c.clube_id THEN p.gols_mandante ELSE p.gols_visitante END || ' x '
+					       || CASE WHEN p.mandante_id = c.clube_id THEN p.gols_visitante ELSE p.gols_mandante END
+					FROM jogo_campeao_copa c JOIN jogo_copa_confronto k ON k.fase = 'FINAL' AND k.competicao = 'COPA' AND k.temporada_id = :t
+					JOIN jogo_partida p ON p.confronto_id = k.id WHERE c.jogo_id = :j""")
+				.param("t", temporada).param("j", jogoId).query(String.class).single();
+			assertThat(l.campeao().detalhe()).startsWith(esperado);
+		});
+		// todos os títulos: só nacionais; somam a liga, a copa e a continental ganha por clube do país
+		boolean campeaoDoPais = !continentais.paisesDeFora(jogoId).containsKey(encerrada.campeao().orElseThrow().id());
+		assertThat(historico.titulos().stream().mapToInt(ConsultasRepositorio.TreinadorNoRanking::total).sum())
+			.isEqualTo(2 + (campeaoDoPais ? 1 : 0));
+		mvc.perform(get("/jogos/" + jogoId + "/historico").with(como(treinador)))
+			.andExpect(status().isOk())
+			.andExpect(content().string(containsString("Liga · ")))
+			.andExpect(content().string(containsString(">Vice</th>")))
+			.andExpect(content().string(containsString(">3º</th>")))
+			.andExpect(content().string(containsString("Copa dos Clubes da América do Sul</h2>")))
+			.andExpect(content().string(containsString("Mundial de Clubes")))
+			.andExpect(content().string(containsString("Todos os títulos")))
+			.andExpect(content().string(not(containsString("Ranking de treinadores"))))
+			.andExpect(content().string(not(containsString(">Série B"))));
 	}
 
 	private static RequestPostProcessor como(Usuario usuario) {

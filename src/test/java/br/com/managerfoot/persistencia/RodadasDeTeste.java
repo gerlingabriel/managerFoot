@@ -2,6 +2,8 @@ package br.com.managerfoot.persistencia;
 
 import java.util.List;
 
+import org.springframework.jdbc.core.simple.JdbcClient;
+
 /** Avanço da temporada nos testes, com as etapas da copa e da continental no meio das rodadas da liga. */
 public final class RodadasDeTeste {
 
@@ -19,6 +21,17 @@ public final class RodadasDeTeste {
 			jogarCopaPendente(rodadas, jogoId);
 		}
 		return jogada;
+	}
+
+	/**
+	 * Deixa o usuário fora do caminho nas temporadas inteiras dos testes: a máquina escala o clube dele,
+	 * inclusive o que ele recebeu numa troca pela moral, e o convite aberto fica recusado.
+	 */
+	public static void semDecisoesDoTreinador(JdbcClient jdbc, long jogoId) {
+		jdbc.sql("DELETE FROM jogo_escalacao e USING jogo_clube c WHERE c.id = e.clube_id AND c.jogo_id = :j")
+			.param("j", jogoId).update();
+		jdbc.sql("UPDATE jogo_troca_treinador SET situacao = 'RECUSADO' WHERE jogo_id = :j AND situacao = 'CONVITE'")
+			.param("j", jogoId).update();
 	}
 
 	/** Joga as etapas da copa e da continental que vêm antes da próxima rodada da liga. */

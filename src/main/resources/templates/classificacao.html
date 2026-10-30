@@ -85,7 +85,7 @@
 <div th:if="${erro}" role="alert" class="alerta janela-aviso" th:text="${erro}">erro</div>
 <th:block th:if="${vitrine == null}">
 <div class="calendario-resumo">
-<span><strong th:text="${k.jogados()}">0</strong> <span th:text="${k.jogados() == 1} ? 'jogo' : 'jogos'">jogos</span><span th:if="${k.jogadosNaCopa() > 0}" th:text="| (${k.jogados() - k.jogadosNaCopa()} liga · ${k.jogadosNaCopa()} copa)|"></span></span>
+<span><strong th:text="${k.jogados()}">0</strong> <span th:text="${k.jogados() == 1} ? 'jogo' : 'jogos'">jogos</span><span th:if="${k.jogadosNaCopa() + k.jogadosNaContinental() > 0}" th:text="| (${k.jogados() - k.jogadosNaCopa() - k.jogadosNaContinental()} liga · ${k.jogadosNaCopa()} copa · ${k.jogadosNaContinental()} continental)|"></span></span>
 <span><strong class="cor-v" th:text="${k.contar('V')}">0</strong> <span th:text="${k.contar('V') == 1} ? 'vitória' : 'vitórias'">vitórias</span></span>
 <span><strong class="cor-e" th:text="${k.contar('E')}">0</strong> <span th:text="${k.contar('E') == 1} ? 'empate' : 'empates'">empates</span></span>
 <span><strong class="cor-d" th:text="${k.contar('D')}">0</strong> <span th:text="${k.contar('D') == 1} ? 'derrota' : 'derrotas'">derrotas</span></span>
@@ -95,12 +95,12 @@
 <table class="tabela-calendario">
 <thead><tr><th scope="col">Jogo</th><th scope="col">Local</th><th scope="col">Adversário</th><th scope="col" class="num">Resultado</th></tr></thead>
 <tbody>
-<tr th:each="j : ${k.jogos}" th:classappend="${j.proximo} ? 'do-usuario' : (${j.copa != null} ? 'da-copa' : (${j.adversario == null} ? 'folga'))">
+<tr th:each="j : ${k.jogos}" th:classappend="${j.proximo} ? 'do-usuario' : (${j.continental()} ? 'da-continental' : (${j.copa != null} ? 'da-copa' : (${j.adversario == null} ? 'folga')))">
 <td th:if="${j.copa == null}" class="suave" th:text="|Rodada ${j.rodada}|">Rodada 1</td>
-<td th:if="${j.copa != null}" class="calendario-copa" th:text="${j.copa}">Copa · Oitavas de final · ida</td>
+<td th:if="${j.copa != null}" th:class="${j.continental()} ? 'calendario-continental' : 'calendario-copa'" th:text="${j.copa}">Copa · Oitavas de final · ida</td>
 <td class="temperamento" th:text="${j.emCasa == null} ? (${j.copa != null} ? 'Neutro' : '—') : (${j.emCasa} ? 'Casa' : 'Fora')">Casa</td>
 <td>
-<span th:if="${j.adversario != null}" class="clube-celula"><span aria-hidden="true" th:style="${@escudos.estilo(j.adversario.escudo, 18, 22)}"></span><span class="jogo-nome calendario-nome" th:text="${j.adversario.nome}">Adversário</span></span>
+<span th:if="${j.adversario != null}" class="clube-celula"><span aria-hidden="true" th:style="${@escudos.estilo(j.adversario.escudo, 18, 22)}"></span><span class="jogo-nome calendario-nome" th:text="${j.adversario.nome}">Adversário</span><span th:if="${j.paisAdversario != null}" class="sigla-pais" th:text="${j.paisAdversario}">ARG</span></span>
 <span th:if="${j.adversario == null}">Folga</span>
 </td>
 <td class="num">
@@ -117,7 +117,7 @@
 </tbody>
 </table>
 </div>
-<p class="suave calendario-nota">Placar com os gols do clube primeiro. Mostra só os jogos que já existem: a liga inteira desde o início da temporada; a copa, em amarelo, na ordem em que é jogada, conforme os confrontos forem criados.</p>
+<p class="suave calendario-nota">Placar com os gols do clube primeiro. Mostra só os jogos que já existem: a liga inteira desde o início da temporada; a copa, em amarelo, e a continental, em azul-claro, na ordem em que são jogadas, conforme os confrontos forem criados.</p>
 </th:block>
 <th:block th:if="${vitrine != null}" th:with="v=${vitrine}">
 <div class="vitrine-caixa">
