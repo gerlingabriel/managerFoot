@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 76 — 2026-10-29)
+-   **Status:** versão inicial para revisão (rev. 78 — 2026-10-29)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,8 @@
 
 ### Histórico de revisões
 
+-   **rev. 78 (2026-10-29):** etapas da continental jogadas entre as rodadas (grupos, mata-mata, final depois da da copa), com prêmio, campeão e vice no Histórico e vice e 3º da liga gravados (V35); a 2ª temporada escolhe os clubes do país pela tabela anterior e pelo campeão da copa. Agente: público e caixa com o estrangeiro marcados Provisório (§8.3.6). Ainda sem tela e desligado por configuração.
+-   **rev. 77 (2026-10-29):** pelo usuário: todas as partidas de todos os torneios passam na tela, na velocidade cadastrada quando há clube do usuário e muito rápido quando não há; ordem do fim da temporada: última rodada da liga, final da copa, final da continental; o campeão continental vai ao Histórico, que passa a ter quadros (liga com campeão, vice e 3º; copa com campeão e vice; continental com campeão e vice; Mundial depois) e um quadro com todos os títulos, só de treinadores nacionais (§8.1.1, §8.3.6). Agente: o quadro de todos os títulos substitui o ranking só da 1ª divisão (rev. 46) — a confirmar no modelo de tela.
 -   **rev. 76 (2026-10-29):** grupos da continental sorteados e gravados no início da temporada, com as partidas no calendário (V34, ADR 0016); ainda não são jogados. Desligado por configuração até as telas da continental serem aprovadas.
 -   **rev. 75 (2026-10-29):** pelo usuário: de um país com liga que não é jogada (ex.: a Argentina, jogando no Brasil), concorrem às vagas só os mais fortes, no tamanho da 1ª divisão dele, sempre por força com sorteio (§8.3.6). O jogo copia na criação a competição da região e os clubes estrangeiros (V33, ADR 0016); jogos criados antes ficam sem continental.
 -   **rev. 74 (2026-10-29):** domínio da competição continental feito (grupos, oitavas, escolha dos clubes). Agente: detalhes da escolha por força com sorteio, da tabela dos grupos, da chave das oitavas e da edição com menos de 32 clubes marcados Provisório (§8.3.6).
@@ -1431,6 +1433,17 @@ os cartões de um time todo calmo (antes, 2,8 vezes).
   treinador ganha a liga da **1ª divisão**. Títulos da 2ª divisão e
   abaixo não contam. Copas: decidir quando existirem. (O histórico de
   campeões continua guardando todas as divisões.)
+- **Definido (rev. 77), pelo usuário — Histórico em quadros:**
+  - **Liga:** campeão, vice e 3º colocado por ano.
+  - **Copa:** campeão e vice por ano.
+  - **Continental:** campeão e vice por ano (§8.3.6).
+  - **Mundial:** quando existir (§8.3.4).
+  - **Todos os títulos:** um quadro que soma os títulos dos treinadores,
+    **só os nacionais**: campeões de outros países não entram.
+  - **Em aberto — a confirmar no modelo de tela:** proposta do agente: o
+    quadro de todos os títulos **substitui** o ranking só da 1ª divisão
+    (rev. 46) e conta 1ª divisão, copa e continental; a 2ª divisão continua
+    sem contar. Se o ranking antigo deve continuar ao lado, o usuário decide.
 - **Definido (rev. 42):** a aba "Artilheiros de todos os tempos" continua.
   Se as abas ficarem muitas, agrupar assuntos parecidos.
 
@@ -1764,6 +1777,23 @@ aprovadas** (vagas, clubes gerados, grupos, oitavas, quadro e efeitos):
     quartas, e assim por diante, com o mando da ida sorteado como na copa.
   - **Menos de 32 clubes** (país sem clubes suficientes): a edição não é
     realizada (§8.3.2 item 5), porque os grupos de 4 não fecham.
+- **Definido (rev. 77), pelo usuário — tela e ordem:**
+  - **Todas as partidas de todos os torneios passam na tela**: com clube do
+    usuário, na velocidade cadastrada; sem ele, muito rápido.
+  - **Fim da temporada:** a última rodada da liga, depois a final da copa e,
+    por último, a final da continental.
+  - O campeão e o vice continentais vão ao Histórico (§8.1.1).
+- **Provisório (rev. 78), proposta do agente — o estrangeiro nos efeitos:**
+  - Ele não tem caixa, moral, patrocínio nem evolução: só os clubes do país
+    jogado recebem os lançamentos (bilheteria em casa, deslocamento fora,
+    metade da final) e o prêmio; o estrangeiro leva cartões, suspensões e
+    lesões, como numa partida comum.
+  - **Público:** na casa do estrangeiro, a mesma conta da copa com o estádio
+    inicial pela força dele e a posição no meio da tabela; para ingresso e
+    deslocamento ele conta como da 1ª divisão.
+  - Joga com sorte neutra e sem bônus de artilharia.
+  - Temporadas encerradas antes da rev. 78 ficam sem vice e 3º da liga no
+    Histórico.
 - **Efeitos:** como a copa (os da liga menos o salário, mesma tela da
   rodada, final com bilheteria 50/50, título no Histórico e não no ranking).
   **Prêmio:** igual ao da copa por enquanto, a ajustar por simulação.

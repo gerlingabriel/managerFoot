@@ -92,6 +92,10 @@ public class FimDeTemporadaRepositorio {
 			throw new IllegalStateException("a temporada " + numero + " do jogo " + jogoId + " ainda tem a "
 					+ etapa.etapa().fase().nome() + " da copa a jogar");
 		}
+		if (rodadas.proximo(jogoId) instanceof RodadaRepositorio.Proximo.EtapaContinental etapa) {
+			throw new IllegalStateException("a temporada " + numero + " do jogo " + jogoId + " ainda tem "
+					+ etapa.etapa().nome() + " da continental a jogar");
+		}
 
 		Map<Integer, Classificacao> finais = rodadas.classificacao(jogoId);
 		gravarCampeoes(jogoId, numero, finais);
@@ -128,16 +132,25 @@ public class FimDeTemporadaRepositorio {
 	private void gravarCampeoes(long jogoId, int temporada, Map<Integer, Classificacao> finais) {
 		finais.forEach((prioridade, classificacao) -> {
 			Clube campeao = classificacao.linhas().getFirst().clube();
+			// vice e 3º para o quadro da liga (rev. 77); divisão com menos clubes fica sem eles
+			Clube vice = classificacao.linhas().size() > 1 ? classificacao.linhas().get(1).clube() : null;
+			Clube terceiro = classificacao.linhas().size() > 2 ? classificacao.linhas().get(2).clube() : null;
 			jdbc.sql("""
 					INSERT INTO jogo_campeao (jogo_id, temporada, ano, divisao_prioridade, divisao_nome, clube_id,
-					                          clube_nome, usuario_id, treinador_maquina_id)
+					                          clube_nome, usuario_id, treinador_maquina_id, vice_id, vice_nome,
+					                          terceiro_id, terceiro_nome)
 					SELECT j.id, :temporada, j.ano_inicial + :temporada - 1, d.prioridade, d.nome, c.id, c.nome,
 					       (SELECT t.usuario_id FROM jogo_treinador t WHERE t.clube_id = c.id),
 					       CASE WHEN NOT EXISTS (SELECT 1 FROM jogo_treinador t WHERE t.clube_id = c.id)
-					            THEN (SELECT m.id FROM jogo_treinador_maquina m WHERE m.clube_id = c.id) END
+					            THEN (SELECT m.id FROM jogo_treinador_maquina m WHERE m.clube_id = c.id) END,
+					       :vice, :viceNome, :terceiro, :terceiroNome
 					FROM jogo j JOIN jogo_divisao d ON d.jogo_id = j.id AND d.prioridade = :prioridade
 					JOIN jogo_clube c ON c.id = :clube
 					WHERE j.id = :jogo""")
+				.param("vice", vice == null ? null : vice.id())
+				.param("viceNome", vice == null ? null : vice.nome())
+				.param("terceiro", terceiro == null ? null : terceiro.id())
+				.param("terceiroNome", terceiro == null ? null : terceiro.nome())
 				.param("temporada", temporada)
 				.param("prioridade", prioridade)
 				.param("clube", campeao.id())

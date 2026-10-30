@@ -117,9 +117,10 @@ public class CaixaRepositorio {
 		for (Partida p : partidas) {
 			Clube mandante = p.jogo().mandante();
 			Clube visitante = p.jogo().visitante();
-			Temporada.SorteiosDivisao divisaoMandante = ProcessamentoRodada.divisaoDe(temporada, mandante);
-			double relativaMandante = relativa(tabela.get(divisaoMandante.prioridade()), mandante.id());
-			double relativaVisitante = relativa(tabela.get(ProcessamentoRodada.divisaoDe(temporada, visitante).prioridade()),
+			// o estrangeiro da continental não tem tabela: conta como o meio da 1ª divisão (rev. 77, provisório)
+			Temporada.SorteiosDivisao divisaoMandante = divisaoOuPrimeira(temporada, mandante);
+			double relativaMandante = relativaOuMeio(tabela.get(divisaoMandante.prioridade()), mandante.id());
+			double relativaVisitante = relativaOuMeio(tabela.get(divisaoOuPrimeira(temporada, visitante).prioridade()),
 					visitante.id());
 			double forcaMandante = MercadoDaMaquina.forcaEmCampo(planteis.getOrDefault(mandante.id(), List.of()));
 			SplittableRandom aleatorio = new SplittableRandom(~p.semente());
@@ -139,6 +140,23 @@ public class CaixaRepositorio {
 		return PublicoDoJogo.relativa(posicao(classificacao, clubeId), classificacao.linhas().size());
 	}
 
+	/** Posição relativa na tabela; o clube de fora dela fica no meio. */
+	private static double relativaOuMeio(Classificacao classificacao, long clubeId) {
+		return classificacao.linhas().stream().anyMatch(l -> l.clube().id() == clubeId) ? relativa(classificacao, clubeId)
+				: MEIO_DA_TABELA;
+	}
+
+	private static final double MEIO_DA_TABELA = 0.5;
+
+	/** A divisão do clube; o estrangeiro conta como da 1ª (ingresso e deslocamento). */
+	private static Temporada.SorteiosDivisao divisaoOuPrimeira(Temporada temporada, Clube clube) {
+		return temporada.divisoes().stream()
+			.filter(d -> d.calendario().jogos().stream().anyMatch(j -> j.envolve(clube)))
+			.findFirst()
+			.orElseGet(() -> temporada.divisoes().stream().min(java.util.Comparator.comparingInt(Temporada.SorteiosDivisao::prioridade))
+				.orElseThrow());
+	}
+
 	/**
 	 * Lança o caixa de uma etapa da copa jogada (SPEC §8.2, rev. 70): público e bilheteria do mandante
 	 * na ida e na volta, deslocamento do visitante e, na final, a bilheteria dividida; sem salário.
@@ -149,9 +167,25 @@ public class CaixaRepositorio {
 	@Transactional(propagation = Propagation.MANDATORY)
 	public void lancarCopa(long jogoId, long temporadaId, Temporada temporada, List<ProcessamentoRodada.PartidaJogada> partidas,
 			boolean finalDaCopa, Map<Long, List<Jogador>> planteis) {
+		lancarEtapa(jogoId, temporadaId, temporada, partidas, finalDaCopa, planteis, Competicao.COPA);
+	}
+
+	/**
+	 * Lança o caixa de uma etapa da continental (SPEC §8.3.6) como o da copa. O estrangeiro não tem
+	 * caixa: só o clube do país jogado recebe os lançamentos.
+	 */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void lancarContinental(long jogoId, long temporadaId, Temporada temporada,
+			List<ProcessamentoRodada.PartidaJogada> partidas, boolean finalDaContinental, Map<Long, List<Jogador>> planteis) {
+		lancarEtapa(jogoId, temporadaId, temporada, partidas, finalDaContinental, planteis, Competicao.CONTINENTAL);
+	}
+
+	private void lancarEtapa(long jogoId, long temporadaId, Temporada temporada, List<ProcessamentoRodada.PartidaJogada> partidas,
+			boolean finalDaEtapa, Map<Long, List<Jogador>> planteis, Competicao competicao) {
 		abrirCaixas(jogoId, planteis);
 		Map<Long, Integer> publicos = publicosDaCopa(jogoId, temporada, temporadaId,
-				partidas.stream().map(p -> new Partida(p.prioridade(), p.jogo(), p.semente())).toList(), finalDaCopa, planteis);
+				partidas.stream().map(p -> new Partida(p.prioridade(), p.jogo(), p.semente())).toList(), finalDaEtapa,
+				comEstrangeiros(partidas, planteis));
 		for (ProcessamentoRodada.PartidaJogada p : partidas) {
 			Jogo jogo = p.jogo();
 			int pagantes = publicos.get(jogo.mandante().id());
@@ -159,18 +193,34 @@ public class CaixaRepositorio {
 					UPDATE jogo_partida SET publico = :publico
 					WHERE temporada_id = :temporada AND rodada = :rodada AND mandante_id = :mandante
 					  AND visitante_id = :visitante
-					  AND EXISTS (SELECT 1 FROM jogo_copa_confronto k WHERE k.id = confronto_id AND k.competicao = 'COPA')""")
+					  AND coalesce((SELECT k.competicao FROM jogo_copa_confronto k WHERE k.id = confronto_id),
+					               CASE WHEN grupo IS NOT NULL THEN 'CONTINENTAL' END) = :competicao""")
 				.param("publico", pagantes)
 				.param("temporada", temporadaId)
 				.param("rodada", jogo.rodada())
 				.param("mandante", jogo.mandante().id())
 				.param("visitante", jogo.visitante().id())
+				.param("competicao", competicao.name())
 				.update();
-			Map<Long, List<Lancamento>> lancamentos = finalDaCopa ? caixa.finalDaCopa(jogo, pagantes)
-					: caixa.jogoDeCopa(jogo, ProcessamentoRodada.divisaoDe(temporada, jogo.mandante()).prioridade(),
-							ProcessamentoRodada.divisaoDe(temporada, jogo.visitante()).prioridade(), pagantes);
-			lancamentos.forEach((clube, l) -> lancar(temporadaId, jogo.rodada(), clube, l, Competicao.COPA));
+			Map<Long, List<Lancamento>> lancamentos = finalDaEtapa ? caixa.finalDaCopa(jogo, pagantes)
+					: caixa.jogoDeCopa(jogo, divisaoOuPrimeira(temporada, jogo.mandante()).prioridade(),
+							divisaoOuPrimeira(temporada, jogo.visitante()).prioridade(), pagantes);
+			lancamentos.forEach((clube, l) -> {
+				if (planteis.containsKey(clube)) {
+					lancar(temporadaId, jogo.rodada(), clube, l, competicao);
+				}
+			});
 		}
+	}
+
+	/** Os planteis do país jogado e, para o público, os dos estrangeiros da etapa. */
+	private Map<Long, List<Jogador>> comEstrangeiros(List<ProcessamentoRodada.PartidaJogada> partidas,
+			Map<Long, List<Jogador>> planteis) {
+		Map<Long, List<Jogador>> todos = new HashMap<>(planteis);
+		partidas.forEach(p -> java.util.stream.Stream.of(p.jogo().mandante(), p.jogo().visitante())
+			.filter(c -> !todos.containsKey(c.id()))
+			.forEach(c -> todos.put(c.id(), TabelasLiga.JOGO.carregarPlantel(jdbc, c.id()))));
+		return todos;
 	}
 
 	/**
@@ -496,6 +546,27 @@ public class CaixaRepositorio {
 				Competicao.COPA);
 		lancar(temporadaId, rodada, vice.id(), List.of(new Lancamento(TipoLancamento.PREMIO, premiacao.premioDaCopa(2, teto))),
 				Competicao.COPA);
+	}
+
+	/**
+	 * Prêmios da continental, por enquanto iguais aos da copa (rev. 72); o estrangeiro não tem caixa e
+	 * não recebe.
+	 */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void pagarPremiosDaContinental(long jogoId, long temporadaId, int rodada, Clube campeao, Clube vice) {
+		ConfiguracaoLiga liga = jogos.carregarLiga(jogoId);
+		int teto = liga.divisoes().getFirst().limiteForca();
+		java.util.Set<Long> doPais = new java.util.HashSet<>();
+		liga.divisoes().forEach(d -> d.clubes().forEach(c -> doPais.add(c.id())));
+		liga.filaDeEspera().forEach(c -> doPais.add(c.id()));
+		if (doPais.contains(campeao.id())) {
+			lancar(temporadaId, rodada, campeao.id(),
+					List.of(new Lancamento(TipoLancamento.PREMIO, premiacao.premioDaCopa(1, teto))), Competicao.CONTINENTAL);
+		}
+		if (doPais.contains(vice.id())) {
+			lancar(temporadaId, rodada, vice.id(),
+					List.of(new Lancamento(TipoLancamento.PREMIO, premiacao.premioDaCopa(2, teto))), Competicao.CONTINENTAL);
+		}
 	}
 
 	private long temporadaAtual(long jogoId) {

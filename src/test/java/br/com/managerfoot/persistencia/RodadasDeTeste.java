@@ -2,7 +2,7 @@ package br.com.managerfoot.persistencia;
 
 import java.util.List;
 
-/** Avanço da temporada nos testes, com as etapas da copa no meio das rodadas da liga (SPEC §8.2). */
+/** Avanço da temporada nos testes, com as etapas da copa e da continental no meio das rodadas da liga. */
 public final class RodadasDeTeste {
 
 	private RodadasDeTeste() {
@@ -21,10 +21,17 @@ public final class RodadasDeTeste {
 		return jogada;
 	}
 
-	/** Joga as etapas da copa que vêm antes da próxima rodada da liga. */
+	/** Joga as etapas da copa e da continental que vêm antes da próxima rodada da liga. */
 	public static void jogarCopaPendente(RodadaRepositorio rodadas, long jogoId) {
-		while (rodadas.proximo(jogoId) instanceof RodadaRepositorio.Proximo.EtapaCopa etapa) {
-			rodadas.avancarCopa(jogoId, etapa.indice(), List.of());
+		while (true) {
+			RodadaRepositorio.Proximo proximo = rodadas.proximo(jogoId);
+			if (proximo instanceof RodadaRepositorio.Proximo.EtapaCopa etapa) {
+				rodadas.avancarCopa(jogoId, etapa.indice(), List.of());
+			} else if (proximo instanceof RodadaRepositorio.Proximo.EtapaContinental etapa) {
+				rodadas.avancarContinental(jogoId, etapa.indice(), List.of());
+			} else {
+				return;
+			}
 		}
 	}
 }

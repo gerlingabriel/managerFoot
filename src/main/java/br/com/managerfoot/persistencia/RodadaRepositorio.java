@@ -22,6 +22,8 @@ import br.com.managerfoot.motor.ParametrosMotor;
 import br.com.managerfoot.motor.TipoEvento;
 import br.com.managerfoot.temporada.Classificacao;
 import br.com.managerfoot.temporada.ConfiguracaoLiga;
+import br.com.managerfoot.temporada.Continental;
+import br.com.managerfoot.temporada.GrupoContinental;
 import br.com.managerfoot.temporada.Copa;
 import br.com.managerfoot.temporada.FaseCopa;
 import br.com.managerfoot.temporada.PlacarCopa;
@@ -56,13 +58,14 @@ public class RodadaRepositorio {
 	private final PatrocinioRepositorio patrocinios;
 	private final TrocaRepositorio trocas;
 	private final CopaRepositorio copas;
+	private final ContinentalRepositorio continentais;
 	private final ProcessamentoRodada processamento = ProcessamentoRodada.padrao();
 	private final EvolucaoForca evolucao = EvolucaoForca.padrao();
 
 	public RodadaRepositorio(JdbcClient jdbc, JogoRepositorio jogos, TemporadaRepositorio temporadas,
 			EscalacaoRepositorio escalacoes, CaixaRepositorio caixas, MercadoRepositorio mercado,
 			ClassificacaoRepositorio classificacoes, EstadioRepositorio estadios, PatrocinioRepositorio patrocinios,
-			TrocaRepositorio trocas, CopaRepositorio copas) {
+			TrocaRepositorio trocas, CopaRepositorio copas, ContinentalRepositorio continentais) {
 		this.jdbc = jdbc;
 		this.jogos = jogos;
 		this.temporadas = temporadas;
@@ -74,6 +77,7 @@ public class RodadaRepositorio {
 		this.patrocinios = patrocinios;
 		this.trocas = trocas;
 		this.copas = copas;
+		this.continentais = continentais;
 	}
 
 	/** O que a temporada atual joga a seguir (SPEC §8.2): uma rodada da liga, uma etapa da copa ou nada. */
@@ -91,7 +95,16 @@ public class RodadaRepositorio {
 		record EtapaCopa(int indice, Copa.Etapa etapa) implements Proximo {
 		}
 
-		/** Liga e copa terminadas: falta o fim de temporada. */
+		/**
+		 * Uma etapa da continental (SPEC §8.3.6), jogada depois da rodada da liga
+		 * {@code etapa.depoisDaRodada()}; a final vem depois da final da copa (rev. 77).
+		 *
+		 * @param indice posição da etapa no quadro da continental
+		 */
+		record EtapaContinental(int indice, Continental.Etapa etapa) implements Proximo {
+		}
+
+		/** Liga, copa e continental terminadas: falta o fim de temporada. */
 		record Fim() implements Proximo {
 		}
 	}
@@ -107,6 +120,11 @@ public class RodadaRepositorio {
 		List<Copa.Etapa> quadro = copas.quadro(jogoId, linha.id());
 		if (linha.etapasCopa() < quadro.size() && quadro.get(linha.etapasCopa()).depoisDaRodada() <= linha.rodadasProcessadas()) {
 			return new Proximo.EtapaCopa(linha.etapasCopa(), quadro.get(linha.etapasCopa()));
+		}
+		List<Continental.Etapa> continental = continentais.quadro(linha.id());
+		if (linha.etapasContinental() < continental.size()
+				&& continental.get(linha.etapasContinental()).depoisDaRodada() <= linha.rodadasProcessadas()) {
+			return new Proximo.EtapaContinental(linha.etapasContinental(), continental.get(linha.etapasContinental()));
 		}
 		if (linha.rodadasProcessadas() < totalDeRodadas(linha)) {
 			return new Proximo.Liga(linha.rodadasProcessadas() + 1);
@@ -148,6 +166,10 @@ public class RodadaRepositorio {
 		if (proximo(jogoId, linha) instanceof Proximo.EtapaCopa(int indice, Copa.Etapa etapa)) {
 			throw new IllegalStateException("o jogo " + jogoId + " joga antes a etapa " + indice + " da copa ("
 					+ etapa.fase().nome() + ")");
+		}
+		if (proximo(jogoId, linha) instanceof Proximo.EtapaContinental(int indice, Continental.Etapa etapa)) {
+			throw new IllegalStateException("o jogo " + jogoId + " joga antes a etapa " + indice + " da continental ("
+					+ etapa.nome() + ")");
 		}
 
 		Map<Long, List<Jogador>> planteis = jogos.carregarPlanteis(jogoId);
@@ -243,6 +265,134 @@ public class RodadaRepositorio {
 	}
 
 	/**
+	 * Avança a etapa da continental (SPEC §8.3.6) com os efeitos da etapa da copa: placares, cartões,
+	 * suspensões, lesões, moral, caixa sem salário, patrocínio por vitória, evolução e demissões, só
+	 * para os clubes do país jogado; o estrangeiro só leva cartões, suspensões e lesões. Terminados os
+	 * grupos, cria as oitavas; terminada uma fase, a seguinte; na final, paga os prêmios e grava o
+	 * campeão. Cada etapa é processada uma só vez.
+	 *
+	 * @param indice a etapa que quem pede espera jogar: a {@link Proximo.EtapaContinental}
+	 * @throws IllegalStateException se a etapa não é a próxima ou a escalação de um treinador não pode jogar
+	 */
+	@Transactional
+	public EtapaContinentalJogada avancarContinental(long jogoId, int indice, List<RodadaAoVivo.Substituicao> substituicoes) {
+		LinhaTemporada linha = temporadaAtual(jogoId, true);
+		if (!(proximo(jogoId, linha) instanceof Proximo.EtapaContinental(int esperado, Continental.Etapa etapa))
+				|| esperado != indice) {
+			throw new IllegalStateException("a etapa " + indice + " da continental não é a próxima do jogo " + jogoId);
+		}
+		Map<Long, List<Jogador>> doPais = jogos.carregarPlanteis(jogoId);
+		Disciplina antes = carregarDisciplina(jogoId);
+		Map<Long, Moral> moralAntes = carregarMoral(jogoId);
+		Temporada temporada = temporadas.carregarAtual(jogoId);
+		Continental continental = continentais.carregar(jogoId, linha.id()).orElseThrow();
+		List<ProcessamentoRodada.PartidaDaEtapa> jogosDaEtapa = partidasDaEtapa(continental, etapa);
+		Map<Long, List<Jogador>> planteis = comEstrangeiros(doPais, jogosDaEtapa);
+		RodadaAoVivo aoVivo = processamento.prepararContinental(temporada, indice, jogosDaEtapa, planteis, antes,
+				escalacoesDosTreinadores(jogoId, "a continental", doPais, antes), substituicoes);
+		ProcessamentoRodada.Resultado resultado = aoVivo.finalizar(moralAntes);
+
+		Copa mataMata = continental.mataMata().orElse(null);
+		List<Copa.PartidaCopa> doMataMata = etapa.grupos() ? List.of() : mataMata.partidas(etapa.mataMata());
+		for (int i = 0; i < jogosDaEtapa.size(); i++) {
+			Jogo jogo = jogosDaEtapa.get(i).jogo();
+			ProcessamentoRodada.PartidaJogada jogada = resultado.partidas().get(i);
+			if (etapa.grupos()) {
+				int grupo = grupoDe(continental, jogo.mandante());
+				continental = continental.comPlacarDoGrupo(grupo, etapa.jogoDoGrupo(), jogo.mandante(),
+						new GrupoContinental.Placar(jogada.resultado().golsCasa(), jogada.resultado().golsFora()));
+				gravarPartida(linha.id(), jogada, null, Competicao.CONTINENTAL);
+			} else {
+				PlacarCopa placar = new PlacarCopa(jogada.resultado().golsCasa(), jogada.resultado().golsFora(),
+						jogada.resultado().prorrogacao(), jogada.resultado().penaltis()
+							.map(d -> new PlacarCopa.Penaltis(d.gols(Lado.CASA), d.gols(Lado.FORA))));
+				Copa.PartidaCopa daCopa = doMataMata.get(i);
+				mataMata = mataMata.comPlacar(etapa.mataMata().fase(), daCopa.confronto().ordem(), daCopa.perna(), placar);
+				gravarPartida(linha.id(), jogada, placar, Competicao.CONTINENTAL);
+			}
+		}
+		if (mataMata != null) {
+			continental = continental.comMataMata(mataMata);
+		}
+		int rodada = etapa.depoisDaRodada();
+		gravarDisciplina(planteis, antes, resultado.disciplina());
+		escalacoes.retirarSuspensos(jogoId);
+		boolean finalDaEtapa = !etapa.grupos() && etapa.mataMata().fase() == FaseCopa.FINAL;
+		caixas.lancarContinental(jogoId, linha.id(), temporada, resultado.partidas(), finalDaEtapa, doPais);
+		patrocinios.pagarVitorias(linha.id(), rodada, resultado.partidas(), Competicao.CONTINENTAL);
+		evoluir(jogoId, new SplittableRandom(temporada.semente() * 47 + indice), aoVivo, resultado, doPais);
+		Map<Long, Moral> moralDoPais = new HashMap<>(resultado.moral());
+		moralDoPais.keySet().retainAll(doPais.keySet());
+		gravarMoralEDemitir(jogoId, linha.id(), rodada, moralAntes,
+				new ProcessamentoRodada.Resultado(resultado.partidas(), resultado.disciplina(), moralDoPais));
+
+		int atualizadas = jdbc.sql("""
+				UPDATE jogo_temporada SET etapas_continental_processadas = :etapa
+				WHERE id = :temporada AND etapas_continental_processadas = :anterior""")
+			.param("etapa", indice + 1)
+			.param("temporada", linha.id())
+			.param("anterior", indice)
+			.update();
+		if (atualizadas != 1) {
+			throw new IllegalStateException("a etapa " + indice + " da continental do jogo " + jogoId + " já foi processada");
+		}
+		continental = continentais.avancar(linha.id(), continental, temporada.semente());
+		if (continental.campeao().isPresent()) {
+			caixas.pagarPremiosDaContinental(jogoId, linha.id(), rodada, continental.campeao().get(),
+					continental.vice().orElseThrow());
+			continentais.gravarCampeao(jogoId, temporada.numero(), continental.campeao().get(), continental.vice().orElseThrow());
+		}
+		return new EtapaContinentalJogada(indice, etapa, resultado, continental);
+	}
+
+	/**
+	 * A etapa da continental pronta para jogar ao vivo, como {@link #prepararCopa}. Não grava nada.
+	 *
+	 * @throws IllegalStateException se a etapa não é a próxima ou a escalação de um treinador não pode jogar
+	 */
+	@Transactional(readOnly = true)
+	public RodadaAoVivo prepararContinental(long jogoId, int indice, List<RodadaAoVivo.Substituicao> substituicoes) {
+		LinhaTemporada linha = temporadaAtual(jogoId, false);
+		if (!(proximo(jogoId, linha) instanceof Proximo.EtapaContinental(int esperado, Continental.Etapa etapa))
+				|| esperado != indice) {
+			throw new IllegalStateException("a etapa " + indice + " da continental não é a próxima do jogo " + jogoId);
+		}
+		Map<Long, List<Jogador>> doPais = jogos.carregarPlanteis(jogoId);
+		Disciplina antes = carregarDisciplina(jogoId);
+		List<ProcessamentoRodada.PartidaDaEtapa> jogosDaEtapa = partidasDaEtapa(
+				continentais.carregar(jogoId, linha.id()).orElseThrow(), etapa);
+		return processamento.prepararContinental(temporadas.carregarAtual(jogoId), indice, jogosDaEtapa,
+				comEstrangeiros(doPais, jogosDaEtapa), antes, escalacoesDosTreinadores(jogoId, "a continental", doPais, antes),
+				substituicoes);
+	}
+
+	/** As partidas da etapa, na ordem dos grupos ou dos confrontos. */
+	private static List<ProcessamentoRodada.PartidaDaEtapa> partidasDaEtapa(Continental continental, Continental.Etapa etapa) {
+		if (etapa.grupos()) {
+			return continental.partidasDosGrupos(etapa.jogoDoGrupo(), etapa.depoisDaRodada()).stream()
+				.map(p -> new ProcessamentoRodada.PartidaDaEtapa(p.jogo(), java.util.Optional.empty()))
+				.toList();
+		}
+		return continental.mataMata().orElseThrow().partidas(etapa.mataMata()).stream()
+			.map(p -> new ProcessamentoRodada.PartidaDaEtapa(p.jogo(), p.decisivo()))
+			.toList();
+	}
+
+	private static int grupoDe(Continental continental, Clube clube) {
+		return continental.grupos().stream().filter(g -> g.clubes().contains(clube)).findFirst().orElseThrow().indice();
+	}
+
+	/** Os planteis do país jogado com os dos estrangeiros que jogam a etapa. */
+	private Map<Long, List<Jogador>> comEstrangeiros(Map<Long, List<Jogador>> doPais,
+			List<ProcessamentoRodada.PartidaDaEtapa> jogosDaEtapa) {
+		Map<Long, List<Jogador>> todos = new HashMap<>(doPais);
+		jogosDaEtapa.forEach(p -> java.util.stream.Stream.of(p.jogo().mandante(), p.jogo().visitante())
+			.filter(c -> !todos.containsKey(c.id()))
+			.forEach(c -> todos.put(c.id(), jogos.carregarPlantel(c.id()))));
+		return todos;
+	}
+
+	/**
 	 * Grava a moral de quem mudou e então as demissões pela moral e as trocas de treinador (SPEC §5.4,
 	 * rev. 62).
 	 */
@@ -281,7 +431,10 @@ public class RodadaRepositorio {
 			}
 			for (Lado lado : Lado.values()) {
 				Clube clube = partida.clube(lado);
-				int teto = tetos.get(clube.id());
+				Integer teto = tetos.get(clube.id());
+				if (teto == null) {
+					continue; // o estrangeiro não evolui (SPEC §8.3.6)
+				}
 				List<Jogador> plantel = planteis.getOrDefault(clube.id(), List.of());
 				List<Jogador> depois = evolucao.aposPartida(plantel, lado == Lado.CASA ? partida.casa() : partida.fora(),
 						jogada.resultado(), lado, teto, clube.forca(), aleatorio);
@@ -386,11 +539,16 @@ public class RodadaRepositorio {
 	}
 
 	private void gravarPartida(long temporadaId, ProcessamentoRodada.PartidaJogada partida) {
-		gravarPartida(temporadaId, partida, null);
+		gravarPartida(temporadaId, partida, null, Competicao.LIGA);
 	}
 
-	/** @param copa o placar da partida da copa, com prorrogação e pênaltis; nulo na liga */
 	private void gravarPartida(long temporadaId, ProcessamentoRodada.PartidaJogada partida, PlacarCopa copa) {
+		gravarPartida(temporadaId, partida, copa, Competicao.COPA);
+	}
+
+	/** @param copa o placar com prorrogação e pênaltis; nulo na liga e nos grupos da continental */
+	private void gravarPartida(long temporadaId, ProcessamentoRodada.PartidaJogada partida, PlacarCopa copa,
+			Competicao competicao) {
 		Jogo jogo = partida.jogo();
 		long partidaId = jdbc.sql("""
 				UPDATE jogo_partida SET gols_mandante = :gm, gols_visitante = :gv, semente = :semente,
@@ -403,7 +561,7 @@ public class RodadaRepositorio {
 			.param("prorrogacao", copa != null && copa.prorrogacao())
 			.param("pm", copa == null ? null : copa.penaltis().map(PlacarCopa.Penaltis::mandante).orElse(null))
 			.param("pv", copa == null ? null : copa.penaltis().map(PlacarCopa.Penaltis::visitante).orElse(null))
-			.param("competicao", (copa != null ? Competicao.COPA : Competicao.LIGA).name())
+			.param("competicao", competicao.name())
 			.param("gm", partida.resultado().golsCasa())
 			.param("gv", partida.resultado().golsFora())
 			.param("semente", partida.semente())
@@ -489,11 +647,12 @@ public class RodadaRepositorio {
 
 	private LinhaTemporada temporadaAtual(long jogoId, boolean travar) {
 		return jdbc.sql("""
-				SELECT id, rodadas_processadas, etapas_copa_processadas FROM jogo_temporada WHERE jogo_id = :jogo
+				SELECT id, rodadas_processadas, etapas_copa_processadas, etapas_continental_processadas
+				FROM jogo_temporada WHERE jogo_id = :jogo
 				ORDER BY numero DESC LIMIT 1""" + (travar ? " FOR UPDATE" : ""))
 			.param("jogo", jogoId)
 			.query((rs, n) -> new LinhaTemporada(rs.getLong("id"), rs.getInt("rodadas_processadas"),
-					rs.getInt("etapas_copa_processadas")))
+					rs.getInt("etapas_copa_processadas"), rs.getInt("etapas_continental_processadas")))
 			.optional()
 			.orElseThrow(() -> new NoSuchElementException("o jogo " + jogoId + " não existe ou não tem temporada"));
 	}
@@ -502,11 +661,16 @@ public class RodadaRepositorio {
 	public record RodadaJogada(int numero, ProcessamentoRodada.Resultado resultado) {
 	}
 
+	/** Etapa da continental jogada pelo avanço, com a competição depois dela. */
+	public record EtapaContinentalJogada(int indice, Continental.Etapa etapa, ProcessamentoRodada.Resultado resultado,
+			Continental continental) {
+	}
+
 	/** Etapa da copa jogada pelo avanço, com a copa depois dela (e da fase seguinte, se criada). */
 	public record EtapaJogada(int indice, Copa.Etapa etapa, ProcessamentoRodada.Resultado resultado, Copa copa) {
 	}
 
-	private record LinhaTemporada(long id, int rodadasProcessadas, int etapasCopa) {
+	private record LinhaTemporada(long id, int rodadasProcessadas, int etapasCopa, int etapasContinental) {
 	}
 
 	private record LinhaDisciplina(long jogadorId, int amarelos, int suspensao, int lesao) {

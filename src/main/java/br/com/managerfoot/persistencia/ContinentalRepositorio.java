@@ -142,6 +142,84 @@ public class ContinentalRepositorio {
 		return tem ? Continental.quadro(ultimaRodada(temporadaId), parametros) : List.of();
 	}
 
+	/**
+	 * Terminados os grupos, cria as oitavas; terminada uma fase do mata-mata, a seguinte (rev. 72). O
+	 * desempate dos grupos usa a semente da temporada, como a tabela na tela.
+	 *
+	 * @return a competição depois do avanço (a mesma, se nada terminou)
+	 */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public Continental avancar(long temporadaId, Continental continental, long semente) {
+		List<Continental.Etapa> quadro = Continental.quadro(ultimaRodada(temporadaId), parametros);
+		if (continental.mataMata().isEmpty()) {
+			if (!continental.gruposEncerrados()) {
+				return continental;
+			}
+			Continental comOitavas = continental.iniciarMataMata(semente,
+					new SplittableRandom((semente ^ MISTURA_CONTINENTAL) * 31));
+			Copa mataMata = comOitavas.mataMata().orElseThrow();
+			inserirConfrontos(temporadaId, mataMata.confrontosDa(mataMata.faseAtual()), quadro);
+			return comOitavas;
+		}
+		Copa mataMata = continental.mataMata().get();
+		if (!mataMata.podeAvancar()) {
+			return continental;
+		}
+		FaseCopa seguinte = mataMata.faseAtual().seguinte().orElseThrow();
+		Copa nova = mataMata.avancar(new SplittableRandom((semente ^ MISTURA_CONTINENTAL) * 31 + seguinte.ordinal()));
+		inserirConfrontos(temporadaId, nova.confrontosDa(seguinte), quadro);
+		return continental.comMataMata(nova);
+	}
+
+	/**
+	 * Grava o campeão e o vice no Histórico (rev. 77): o país do clube de fora e, no clube do país
+	 * jogado, o treinador (o usuário ou, sem usuário, o da máquina).
+	 */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void gravarCampeao(long jogoId, int temporada, Clube campeao, Clube vice) {
+		jdbc.sql("""
+				INSERT INTO jogo_campeao_continental (jogo_id, temporada, ano, clube_id, clube_nome, clube_pais, vice_id,
+				                                      vice_nome, vice_pais, usuario_id, treinador_maquina_id)
+				SELECT j.id, :temporada, j.ano_inicial + :temporada - 1, c.id, c.nome, c.pais_codigo, v.id, v.nome,
+				       v.pais_codigo,
+				       (SELECT t.usuario_id FROM jogo_treinador t WHERE t.clube_id = c.id),
+				       CASE WHEN NOT EXISTS (SELECT 1 FROM jogo_treinador t WHERE t.clube_id = c.id)
+				            THEN (SELECT m.id FROM jogo_treinador_maquina m WHERE m.clube_id = c.id) END
+				FROM jogo j JOIN jogo_clube c ON c.id = :campeao JOIN jogo_clube v ON v.id = :vice
+				WHERE j.id = :jogo""")
+			.param("temporada", temporada)
+			.param("campeao", campeao.id())
+			.param("vice", vice.id())
+			.param("jogo", jogoId)
+			.update();
+	}
+
+	private void inserirConfrontos(long temporadaId, List<ConfrontoCopa> confrontos, List<Continental.Etapa> quadro) {
+		for (ConfrontoCopa c : confrontos) {
+			long id = TabelasLiga.inserir(jdbc, """
+					INSERT INTO jogo_copa_confronto (temporada_id, competicao, fase, ordem, mandante_id, visitante_id)
+					VALUES (:temporada, 'CONTINENTAL', :fase, :ordem, :mandante, :visitante)""",
+					Map.of("temporada", temporadaId, "fase", c.fase().name(), "ordem", c.ordem(), "mandante",
+							c.mandante().id(), "visitante", c.visitante().id()));
+			for (Continental.Etapa etapa : quadro) {
+				if (etapa.grupos() || etapa.mataMata().fase() != c.fase()) {
+					continue;
+				}
+				boolean volta = etapa.mataMata().perna() == Copa.Perna.VOLTA;
+				jdbc.sql("""
+						INSERT INTO jogo_partida (temporada_id, confronto_id, perna, rodada, mandante_id, visitante_id)
+						VALUES (:temporada, :confronto, :perna, :rodada, :mandante, :visitante)""")
+					.param("temporada", temporadaId)
+					.param("confronto", id)
+					.param("perna", etapa.mataMata().perna().name())
+					.param("rodada", etapa.depoisDaRodada())
+					.param("mandante", (volta ? c.visitante() : c.mandante()).id())
+					.param("visitante", (volta ? c.mandante() : c.visitante()).id())
+					.update();
+			}
+		}
+	}
+
 	/** Vagas do país jogado e dos outros, na ordem da tabela; vazio se o jogo não tem continental. */
 	private Map<String, Integer> vagas(long jogoId) {
 		Map<String, Integer> vagas = new LinkedHashMap<>();

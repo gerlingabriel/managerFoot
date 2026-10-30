@@ -290,6 +290,12 @@ public class JogoRepositorio {
 		return planteis;
 	}
 
+	/** Plantel de um clube do jogo, inclusive estrangeiro, em ordem de id. */
+	@Transactional(readOnly = true)
+	public List<Jogador> carregarPlantel(long clubeId) {
+		return TabelasLiga.JOGO.carregarPlantel(jdbc, clubeId);
+	}
+
 	/** Clubes das divisões, na ordem de prioridade, seguidos dos da fila de espera. */
 	private static List<Clube> clubes(ConfiguracaoLiga liga) {
 		List<Clube> clubes = new ArrayList<>();

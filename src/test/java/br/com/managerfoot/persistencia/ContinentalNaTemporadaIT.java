@@ -1,9 +1,11 @@
 package br.com.managerfoot.persistencia;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -19,7 +21,11 @@ import br.com.managerfoot.bancopadrao.ParametrosBancoPadrao;
 import br.com.managerfoot.dominio.Clube;
 import br.com.managerfoot.motor.ParametrosMotor;
 import br.com.managerfoot.persistencia.MoldeRepositorio.CampeonatoDisponivel;
+import br.com.managerfoot.temporada.Classificacao;
 import br.com.managerfoot.temporada.Continental;
+import br.com.managerfoot.temporada.FaseCopa;
+import br.com.managerfoot.temporada.LinhaClassificacao;
+import br.com.managerfoot.temporada.VagasContinental;
 import br.com.managerfoot.temporada.GrupoContinental;
 
 /** Grupos da continental sorteados e gravados no início da temporada (SPEC §8.3.6, V34). */
@@ -47,6 +53,9 @@ class ContinentalNaTemporadaIT {
 
 	@Autowired
 	ContinentalRepositorio continentais;
+
+	@Autowired
+	FimDeTemporadaRepositorio fins;
 
 	@Autowired
 	JdbcClient jdbc;
@@ -105,10 +114,101 @@ class ContinentalNaTemporadaIT {
 		RodadasDeTeste.jogarRodada(rodadas, jogo, 1);
 		RodadasDeTeste.jogarRodada(rodadas, jogo, 2);
 
-		assertThat(rodadas.proximo(jogo)).isEqualTo(new RodadaRepositorio.Proximo.Liga(3));
+		// depois da rodada 2 vem o 1º jogo dos grupos, e a rodada 3 espera
+		assertThat(rodadas.proximo(jogo)).isInstanceOfSatisfying(RodadaRepositorio.Proximo.EtapaContinental.class,
+				e -> assertThat(e.indice()).isZero());
+		assertThatIllegalStateException().isThrownBy(() -> rodadas.avancar(jogo, 3)).withMessageContaining("continental");
 		assertThat(jdbc.sql("SELECT count(*) FROM jogo_partida WHERE temporada_id = :t AND grupo IS NOT NULL AND gols_mandante IS NOT NULL")
 			.param("t", temporada).query(Long.class).single()).isZero();
+		RodadaRepositorio.EtapaContinentalJogada jogada = rodadas.avancarContinental(jogo, 0, List.of());
+		assertThat(jogada.resultado().partidas()).hasSize(16);
+		assertThat(rodadas.proximo(jogo)).isEqualTo(new RodadaRepositorio.Proximo.Liga(3));
+		assertThatIllegalStateException().isThrownBy(() -> rodadas.avancarContinental(jogo, 0, List.of()));
+		assertThat(jdbc.sql("SELECT count(*) FROM jogo_partida WHERE temporada_id = :t AND grupo IS NOT NULL AND gols_mandante IS NOT NULL")
+			.param("t", temporada).query(Long.class).single()).isEqualTo(16);
 		assertThat(rodadas.classificacao(jogo).get(1).linhas()).hasSize(20).allMatch(l -> l.jogos() == 2);
 		assertThat(rodadas.classificacao(jogo).get(2).linhas()).hasSize(20).allMatch(l -> l.jogos() == 2);
+	}
+
+	String forcasDosEstrangeiros() {
+		return jdbc.sql("""
+				SELECT string_agg(j.forca::text, ',' ORDER BY j.id) FROM jogo_jogador j JOIN jogo_clube c ON c.id = j.clube_id
+				WHERE c.jogo_id = :jogo AND c.pais_codigo IS NOT NULL""")
+			.param("jogo", jogo).query(String.class).single();
+	}
+
+	@Test
+	void temporadaInteiraComGruposMataMataFinalDepoisDaDaCopaCampeaoNoHistoricoENovaEdicaoPelaTabela() {
+		String forcasAntes = forcasDosEstrangeiros();
+		int total = rodadas.totalDeRodadas(jogo);
+		for (int r = 1; r < total; r++) {
+			RodadasDeTeste.jogarRodada(rodadas, jogo, r);
+		}
+		RodadasDeTeste.jogarCopaPendente(rodadas, jogo);
+		assertThat(continentais.carregar(jogo, temporada).orElseThrow().mataMata().orElseThrow().faseAtual())
+			.isEqualTo(FaseCopa.FINAL);
+		rodadas.avancar(jogo, total);
+
+		// rev. 77: última rodada da liga, depois a final da copa e por último a da continental
+		assertThat(rodadas.proximo(jogo)).isInstanceOfSatisfying(RodadaRepositorio.Proximo.EtapaCopa.class,
+				e -> assertThat(e.etapa().fase()).isEqualTo(FaseCopa.FINAL));
+		assertThatIllegalStateException().isThrownBy(() -> fins.avancarTemporada(jogo, 1, 99));
+		RodadaRepositorio.Proximo.EtapaCopa finalDaCopa = (RodadaRepositorio.Proximo.EtapaCopa) rodadas.proximo(jogo);
+		rodadas.avancarCopa(jogo, finalDaCopa.indice(), List.of());
+		RodadaRepositorio.Proximo depois = rodadas.proximo(jogo);
+		assertThat(depois).isInstanceOfSatisfying(RodadaRepositorio.Proximo.EtapaContinental.class,
+				e -> assertThat(e.etapa().nome()).isEqualTo("Final"));
+		assertThatIllegalStateException().isThrownBy(() -> fins.avancarTemporada(jogo, 1, 99))
+			.withMessageContaining("continental");
+		RodadaRepositorio.EtapaContinentalJogada finalJogada = rodadas.avancarContinental(jogo,
+				((RodadaRepositorio.Proximo.EtapaContinental) depois).indice(), List.of());
+		assertThat(rodadas.proximo(jogo)).isInstanceOf(RodadaRepositorio.Proximo.Fim.class);
+
+		Continental continental = continentais.carregar(jogo, temporada).orElseThrow();
+		assertThat(continental).isEqualTo(finalJogada.continental());
+		assertThat(continental.grupos()).allMatch(GrupoContinental::encerrado);
+		assertThat(jdbc.sql("SELECT count(*) FROM jogo_copa_confronto WHERE temporada_id = :t AND competicao = 'CONTINENTAL'")
+			.param("t", temporada).query(Long.class).single()).isEqualTo(15);
+		Clube campeao = continental.campeao().orElseThrow();
+		Map<String, Object> historico = jdbc.sql("SELECT clube_id, vice_id, clube_pais FROM jogo_campeao_continental WHERE jogo_id = :j")
+			.param("j", jogo).query().singleRow();
+		assertThat(historico.get("clube_id")).isEqualTo(campeao.id());
+		assertThat(historico.get("vice_id")).isEqualTo(continental.vice().orElseThrow().id());
+		assertThat(historico.get("clube_pais")).isEqualTo(paises().get(campeao.id()).equals("BRA") ? null : paises().get(campeao.id()));
+		// os clubes do país jogado recebem bilheteria da continental; o estrangeiro não tem caixa nem evolui
+		assertThat(jdbc.sql("""
+				SELECT count(*) FROM jogo_lancamento WHERE temporada_id = :t AND competicao = 'CONTINENTAL' AND tipo = 'BILHETERIA'""")
+			.param("t", temporada).query(Long.class).single()).isPositive();
+		assertThat(jdbc.sql("""
+				SELECT count(*) FROM jogo_lancamento l JOIN jogo_clube c ON c.id = l.clube_id
+				WHERE l.temporada_id = :t AND c.pais_codigo IS NOT NULL""")
+			.param("t", temporada).query(Long.class).single()).isZero();
+		assertThat(jdbc.sql("""
+				SELECT count(*) FROM jogo_clube WHERE jogo_id = :j AND pais_codigo IS NOT NULL
+				  AND (saldo IS NOT NULL OR moral IS NOT NULL)""")
+			.param("j", jogo).query(Long.class).single()).isZero();
+		assertThat(forcasDosEstrangeiros()).isEqualTo(forcasAntes);
+
+		// 2ª temporada: os 7 brasileiros saem da tabela da 1ª divisão com o campeão da copa
+		Classificacao primeira = rodadas.classificacao(jogo).get(1);
+		Optional<Clube> campeaoDaCopa = jdbc.sql("SELECT clube_id FROM jogo_campeao_copa WHERE jogo_id = :j")
+			.param("j", jogo).query(Long.class).optional()
+			.map(id -> jogos.carregarLiga(jogo).divisoes().stream().flatMap(d -> d.clubes().stream())
+				.filter(c -> c.id() == id).findFirst()
+				.orElseGet(() -> jogos.carregarLiga(jogo).filaDeEspera().stream().filter(c -> c.id() == id).findFirst().orElseThrow()));
+		List<Long> esperados = VagasContinental.peloDesempenho(primeira.linhas().stream().map(LinhaClassificacao::clube).toList(),
+				campeaoDaCopa, 7).stream().map(Clube::id).toList();
+		fins.avancarTemporada(jogo, 1, 99);
+		Map<String, Object> liga = jdbc.sql("""
+				SELECT vice_id, terceiro_id FROM jogo_campeao WHERE jogo_id = :j AND divisao_prioridade = 1""")
+			.param("j", jogo).query().singleRow();
+		assertThat(liga.get("vice_id")).isEqualTo(primeira.linhas().get(1).clube().id());
+		assertThat(liga.get("terceiro_id")).isEqualTo(primeira.linhas().get(2).clube().id());
+		long segunda = jdbc.sql("SELECT id FROM jogo_temporada WHERE jogo_id = :j AND numero = 2").param("j", jogo)
+			.query(Long.class).single();
+		Map<Long, String> paises = paises();
+		List<Long> brasileiros = continentais.carregar(jogo, segunda).orElseThrow().grupos().stream()
+			.flatMap(g -> g.clubes().stream()).filter(c -> paises.get(c.id()).equals("BRA")).map(Clube::id).toList();
+		assertThat(brasileiros).containsExactlyInAnyOrderElementsOf(esperados);
 	}
 }

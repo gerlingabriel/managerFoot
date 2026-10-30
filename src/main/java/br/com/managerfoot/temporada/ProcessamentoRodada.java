@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.SplittableRandom;
 
@@ -15,8 +16,10 @@ import br.com.managerfoot.dominio.Escalacao;
 import br.com.managerfoot.dominio.Jogador;
 import br.com.managerfoot.dominio.Moral;
 import br.com.managerfoot.dominio.ParametrosMoral;
+import br.com.managerfoot.dominio.Sorte;
 import br.com.managerfoot.motor.CondicoesPartida;
 import br.com.managerfoot.motor.EscalacaoMaquina;
+import br.com.managerfoot.motor.JogoDecisivo;
 import br.com.managerfoot.motor.Lado;
 import br.com.managerfoot.motor.MotorPartida;
 import br.com.managerfoot.motor.ParametrosMotor;
@@ -52,6 +55,13 @@ public final class ProcessamentoRodada {
 
 	/** Mistura o índice da etapa da copa na semente, separada da das rodadas. */
 	private static final long MISTURA_ETAPA_COPA = 0xD6E8FEB86659FD93L;
+
+	/** Mistura o índice da etapa da continental na semente, separada das da liga e da copa. */
+	private static final long MISTURA_ETAPA_CONTINENTAL = 0xA0761D6478BD642FL;
+
+	/** Uma partida de etapa de copa ou continental: o jogo e, na volta e na final, o que decide. */
+	public record PartidaDaEtapa(Jogo jogo, Optional<JogoDecisivo> decisivo) {
+	}
 
 	/** Prioridade das partidas da copa na rodada ao vivo: as divisões começam em 1. */
 	public static final int PRIORIDADE_COPA = 0;
@@ -140,8 +150,8 @@ public final class ProcessamentoRodada {
 					doUsuario.add(Lado.FORA);
 				}
 				partidas.add(new RodadaAoVivo.PartidaDaRodada(divisao.prioridade(), jogo, aleatorio.nextLong(),
-						escalar(jogo.mandante(), divisao, planteis, disciplina, escalacoes),
-						escalar(jogo.visitante(), divisao, planteis, disciplina, escalacoes), doUsuario, condicoes));
+						escalar(jogo.mandante(), divisao.bonus(), planteis, disciplina, escalacoes),
+						escalar(jogo.visitante(), divisao.bonus(), planteis, disciplina, escalacoes), doUsuario, condicoes));
 			}
 		}
 		if (partidas.isEmpty()) {
@@ -165,16 +175,43 @@ public final class ProcessamentoRodada {
 		if (jogos.isEmpty()) {
 			throw new IllegalArgumentException("a etapa " + indice + " da copa não tem partidas");
 		}
-		SplittableRandom aleatorio = new SplittableRandom(temporada.semente() ^ ((indice + 1) * MISTURA_ETAPA_COPA));
+		return prepararEtapa(temporada, new SplittableRandom(temporada.semente() ^ ((indice + 1) * MISTURA_ETAPA_COPA)),
+				jogos.stream().map(p -> new PartidaDaEtapa(p.jogo(), p.decisivo())).toList(), planteis, disciplina,
+				escalacoes, substituicoes);
+	}
+
+	/**
+	 * Prepara uma etapa da competição continental (SPEC §8.3.6) como a da copa. O clube estrangeiro não
+	 * tem divisão: joga com sorte neutra e sem bônus de artilharia.
+	 *
+	 * @param indice posição da etapa em {@link Continental#quadro}
+	 * @throws IllegalArgumentException se a etapa não tem partidas
+	 */
+	public RodadaAoVivo prepararContinental(Temporada temporada, int indice, List<PartidaDaEtapa> jogos,
+			Map<Long, List<Jogador>> planteis, Disciplina disciplina, Map<Long, Escalacao> escalacoes,
+			List<RodadaAoVivo.Substituicao> substituicoes) {
+		if (jogos.isEmpty()) {
+			throw new IllegalArgumentException("a etapa " + indice + " da continental não tem partidas");
+		}
+		return prepararEtapa(temporada,
+				new SplittableRandom(temporada.semente() ^ ((indice + 1) * MISTURA_ETAPA_CONTINENTAL)), jogos, planteis,
+				disciplina, escalacoes, substituicoes);
+	}
+
+	private RodadaAoVivo prepararEtapa(Temporada temporada, SplittableRandom aleatorio, List<PartidaDaEtapa> jogos,
+			Map<Long, List<Jogador>> planteis, Disciplina disciplina, Map<Long, Escalacao> escalacoes,
+			List<RodadaAoVivo.Substituicao> substituicoes) {
 		List<RodadaAoVivo.PartidaDaRodada> partidas = new ArrayList<>();
-		for (Copa.PartidaCopa p : jogos) {
+		for (PartidaDaEtapa p : jogos) {
 			Jogo jogo = p.jogo();
-			Temporada.SorteiosDivisao daCasa = divisaoDe(temporada, jogo.mandante());
-			Temporada.SorteiosDivisao deFora = divisaoDe(temporada, jogo.visitante());
-			Set<Long> bonusExtra = new HashSet<>(daCasa.bonus().bonusExtra());
-			bonusExtra.addAll(deFora.bonus().bonusExtra());
+			Optional<Temporada.SorteiosDivisao> daCasa = divisaoNaLiga(temporada, jogo.mandante());
+			Optional<Temporada.SorteiosDivisao> deFora = divisaoNaLiga(temporada, jogo.visitante());
+			Set<Long> bonusExtra = new HashSet<>();
+			daCasa.ifPresent(d -> bonusExtra.addAll(d.bonus().bonusExtra()));
+			deFora.ifPresent(d -> bonusExtra.addAll(d.bonus().bonusExtra()));
 			CondicoesPartida condicoes = new CondicoesPartida(
-					Map.of(Lado.CASA, daCasa.sorte().de(jogo.mandante()), Lado.FORA, deFora.sorte().de(jogo.visitante())),
+					Map.of(Lado.CASA, daCasa.map(d -> d.sorte().de(jogo.mandante())).orElse(Sorte.NEUTRA), Lado.FORA,
+							deFora.map(d -> d.sorte().de(jogo.visitante())).orElse(Sorte.NEUTRA)),
 					bonusExtra, Map.of(Lado.CASA, lesoesPermitidas(disciplina, jogo.mandante()), Lado.FORA,
 							lesoesPermitidas(disciplina, jogo.visitante())));
 			if (p.decisivo().isPresent()) {
@@ -188,11 +225,24 @@ public final class ProcessamentoRodada {
 				doUsuario.add(Lado.FORA);
 			}
 			partidas.add(new RodadaAoVivo.PartidaDaRodada(PRIORIDADE_COPA, jogo, aleatorio.nextLong(),
-					escalar(jogo.mandante(), daCasa, planteis, disciplina, escalacoes),
-					escalar(jogo.visitante(), deFora, planteis, disciplina, escalacoes), doUsuario, condicoes));
+					escalar(jogo.mandante(), bonusDe(daCasa), planteis, disciplina, escalacoes),
+					escalar(jogo.visitante(), bonusDe(deFora), planteis, disciplina, escalacoes), doUsuario, condicoes));
 		}
 		return new RodadaAoVivo(motor, regras, suspensao, parametrosMoral, partidas, planteis, disciplina,
 				aleatorio.nextLong(), substituicoes);
+	}
+
+	private static final BonusArtilharia SEM_BONUS = new BonusArtilharia(Set.of(), Set.of());
+
+	private static BonusArtilharia bonusDe(Optional<Temporada.SorteiosDivisao> divisao) {
+		return divisao.map(Temporada.SorteiosDivisao::bonus).orElse(SEM_BONUS);
+	}
+
+	/** A divisão do clube na liga da temporada; vazio para o estrangeiro. */
+	private static Optional<Temporada.SorteiosDivisao> divisaoNaLiga(Temporada temporada, Clube clube) {
+		return temporada.divisoes().stream()
+			.filter(d -> d.calendario().jogos().stream().anyMatch(j -> j.envolve(clube)))
+			.findFirst();
 	}
 
 	/** A divisão do clube na temporada, pelo calendário. */
@@ -212,7 +262,7 @@ public final class ProcessamentoRodada {
 	 * A escalação do treinador, se houver, ou a da máquina com quem não está suspenso nem lesionado;
 	 * nas duas, o asterisco temporário da temporada.
 	 */
-	private Escalacao escalar(Clube clube, Temporada.SorteiosDivisao divisao, Map<Long, List<Jogador>> planteis,
+	private Escalacao escalar(Clube clube, BonusArtilharia bonus, Map<Long, List<Jogador>> planteis,
 			Disciplina disciplina, Map<Long, Escalacao> escalacoes) {
 		Escalacao doTreinador = escalacoes.get(clube.id());
 		if (doTreinador != null) {
@@ -224,13 +274,13 @@ public final class ProcessamentoRodada {
 				throw new IllegalStateException(clube.nome() + ": " + fora.nome() + " está "
 						+ (disciplina.suspenso(fora.id()) ? "suspenso" : "lesionado"));
 			}
-			return new Escalacao(doTreinador.formacao(), doTreinador.titulares().stream().map(divisao.bonus()::aplicar).toList(),
-					doTreinador.reservas().stream().map(divisao.bonus()::aplicar).toList(),
-					doTreinador.batedorPreferido().map(divisao.bonus()::aplicar).orElse(null));
+			return new Escalacao(doTreinador.formacao(), doTreinador.titulares().stream().map(bonus::aplicar).toList(),
+					doTreinador.reservas().stream().map(bonus::aplicar).toList(),
+					doTreinador.batedorPreferido().map(bonus::aplicar).orElse(null));
 		}
 		List<Jogador> disponiveis = plantel(clube, planteis).stream()
 			.filter(j -> !disciplina.indisponivel(j.id()))
-			.map(divisao.bonus()::aplicar)
+			.map(bonus::aplicar)
 			.toList();
 		try {
 			return escalacao.escalar(disponiveis);
