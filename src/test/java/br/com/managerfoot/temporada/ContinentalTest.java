@@ -289,6 +289,45 @@ class ContinentalTest {
 	}
 
 	@Test
+	void jogosDoClubeComPlacarDoPontoDeVistaDeleEDetalheDoProximo() {
+		List<Continental.Etapa> quadro = Continental.quadro(38, PARAMETROS);
+		Continental continental = sortear(6);
+		Clube clube = continental.grupos().get(2).clubes().get(1);
+		assertThat(continental.jogosDo(clube, quadro)).hasSize(6).extracting(Continental.JogoDoClube::golsPro).containsOnlyNulls();
+		assertThat(continental.detalheDoProximo(clube, quadro, 0, 1)).hasValueSatisfying(
+				d -> assertThat(d).startsWith("Grupo C: ").contains("º com 0 pontos"));
+
+		Continental.JogoDoClube primeiro = continental.jogosDo(clube, quadro).getFirst();
+		Clube mandante = primeiro.emCasa() ? clube : primeiro.adversario();
+		Continental depois = continental.comPlacarDoGrupo(2, 1, mandante,
+				primeiro.emCasa() ? new Placar(3, 1) : new Placar(1, 3));
+		Continental.JogoDoClube jogado = depois.jogosDo(clube, quadro).getFirst();
+		assertThat(jogado.golsPro()).isEqualTo(3);
+		assertThat(jogado.golsContra()).isEqualTo(1);
+		assertThat(depois.detalheDoProximo(clube, quadro, 1, 1)).hasValue("Grupo C: 1º com 3 pontos");
+
+		Clube fora = new Clube(99, "Fora", 30);
+		assertThat(depois.jogosDo(fora, quadro)).isEmpty();
+		assertThat(depois.detalheDoProximo(fora, quadro, 1, 1)).hasValue("Seu clube não está na continental desta temporada");
+	}
+
+	@Test
+	void noMataMataOsJogosVemDepoisDosGruposEQuemCaiuNosGruposDizIsso() {
+		List<Continental.Etapa> quadro = Continental.quadro(38, PARAMETROS);
+		Continental comOitavas = jogarGrupos(sortear(7)).iniciarMataMata(1, new SplittableRandom(2));
+		ConfrontoCopa confronto = comOitavas.mataMata().orElseThrow().confrontosDa(FaseCopa.OITAVAS).getFirst();
+		List<Continental.JogoDoClube> jogos = comOitavas.jogosDo(confronto.mandante(), quadro);
+		assertThat(jogos).hasSize(8);
+		assertThat(jogos.get(6).etapa().nome()).isEqualTo("Oitavas de final · ida");
+		assertThat(jogos.get(6).indice()).isEqualTo(6);
+		assertThat(jogos.get(6).adversario()).isEqualTo(confronto.visitante());
+		assertThat(jogos.get(7).emCasa()).isFalse();
+
+		Clube eliminado = comOitavas.grupos().getFirst().classificacao(1).getLast().clube();
+		assertThat(comOitavas.detalheDoProximo(eliminado, quadro, 6, 1)).hasValue("Eliminado na fase de grupos");
+	}
+
+	@Test
 	void parametrosRecusamQuadroQueSobrepoeFases() {
 		java.util.Map<FaseCopa, ParametrosCopa.Pernas> mataMata = new java.util.EnumMap<>(FaseCopa.class);
 		mataMata.put(FaseCopa.OITAVAS, new ParametrosCopa.Pernas(15, 17));

@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -29,6 +30,7 @@ import br.com.managerfoot.motor.ParametrosMotor;
 import br.com.managerfoot.motor.Partida;
 import br.com.managerfoot.motor.RegrasPartida;
 import br.com.managerfoot.motor.TipoEvento;
+import br.com.managerfoot.temporada.Continental;
 import br.com.managerfoot.temporada.Copa;
 import br.com.managerfoot.temporada.ProcessamentoRodada;
 import br.com.managerfoot.temporada.RelogioRodada;
@@ -55,10 +57,12 @@ public class RodadaAoVivoRepositorio {
 	private final AumentoRepositorio aumentos;
 	private final TrocaRepositorio trocas;
 	private final CopaRepositorio copas;
+	private final ContinentalRepositorio continentais;
 	private final int minutos = ParametrosMotor.padrao().minutos();
 
 	public RodadaAoVivoRepositorio(JdbcClient jdbc, JogoRepositorio jogos, RodadaRepositorio rodadas,
-			CaixaRepositorio caixas, AumentoRepositorio aumentos, TrocaRepositorio trocas, CopaRepositorio copas) {
+			CaixaRepositorio caixas, AumentoRepositorio aumentos, TrocaRepositorio trocas, CopaRepositorio copas,
+			ContinentalRepositorio continentais) {
 		this.jdbc = jdbc;
 		this.jogos = jogos;
 		this.rodadas = rodadas;
@@ -66,6 +70,7 @@ public class RodadaAoVivoRepositorio {
 		this.aumentos = aumentos;
 		this.trocas = trocas;
 		this.copas = copas;
+		this.continentais = continentais;
 	}
 
 	/** Se o jogo tem rodada ao vivo. */
@@ -88,7 +93,8 @@ public class RodadaAoVivoRepositorio {
 		jogos.travar(jogoId);
 		Optional<Linha> existente = linha(jogoId);
 		if (existente.isPresent()) {
-			if (existente.get().rodada() == rodada && existente.get().etapaCopa() == null) {
+			if (existente.get().rodada() == rodada && existente.get().etapaCopa() == null
+					&& existente.get().etapaContinental() == null) {
 				return;
 			}
 			throw new IllegalStateException("a rodada " + existente.get().rodada() + " já está em andamento");
@@ -154,6 +160,42 @@ public class RodadaAoVivoRepositorio {
 			.update();
 	}
 
+	/**
+	 * Começa a etapa da continental ao vivo (SPEC §8.3.6, rev. 79), na mesma tela da rodada e com todos
+	 * os grupos num bloco só. Pedido repetido da mesma etapa não faz nada.
+	 *
+	 * @param indice a etapa que quem pede espera jogar
+	 * @throws IllegalStateException se a etapa não é a próxima ou se a escalação não pode jogar
+	 * @throws DecisaoPendenteException como em {@link #iniciar}
+	 */
+	@Transactional
+	public void iniciarContinental(long jogoId, long usuarioId, int indice, Instant agora) {
+		exigirClube(jogoId, usuarioId);
+		jogos.travar(jogoId);
+		Optional<Linha> existente = linha(jogoId);
+		if (existente.isPresent()) {
+			if (Integer.valueOf(indice).equals(existente.get().etapaContinental())) {
+				return;
+			}
+			throw new IllegalStateException("a rodada " + existente.get().rodada() + " já está em andamento");
+		}
+		if (!(rodadas.proximo(jogoId) instanceof RodadaRepositorio.Proximo.EtapaContinental(int proxima, Continental.Etapa etapa))
+				|| proxima != indice) {
+			throw new IllegalStateException("a etapa " + indice + " da continental não é a próxima do jogo " + jogoId);
+		}
+		exigirSemDecisaoPendente(jogoId);
+		rodadas.prepararContinental(jogoId, indice, List.of());
+		jdbc.sql("""
+				INSERT INTO jogo_rodada_ao_vivo (jogo_id, temporada_id, rodada, etapa_continental, progresso, andando_desde)
+				SELECT :jogo, id, :rodada, :etapa, 0, :agora FROM jogo_temporada WHERE jogo_id = :jogo
+				ORDER BY numero DESC LIMIT 1""")
+			.param("jogo", jogoId)
+			.param("rodada", etapa.depoisDaRodada())
+			.param("etapa", indice)
+			.param("agora", OffsetDateTime.ofInstant(agora, ZoneOffset.UTC))
+			.update();
+	}
+
 	/** Patrocínio, convite e pedido de aumento esperam a resposta antes de qualquer jogo. */
 	private void exigirSemDecisaoPendente(long jogoId) {
 		boolean semPatrocinio = jdbc.sql("""
@@ -208,7 +250,8 @@ public class RodadaAoVivoRepositorio {
 					.param("ate", progresso)
 					.param("jogo", jogoId)
 					.update();
-				atual = new Linha(atual.rodada(), atual.etapaCopa(), atual.temporadaId(), progresso, null, progresso);
+				atual = new Linha(atual.rodada(), atual.etapaCopa(), atual.etapaContinental(), atual.temporadaId(), progresso,
+						null, progresso);
 			}
 		}
 		boolean terminada = relogio.terminado(progresso);
@@ -303,8 +346,9 @@ public class RodadaAoVivoRepositorio {
 		PartidaDaRodada partida = rodada.partidas().stream()
 			.filter(p -> p.jogo().mandante().id() == clube || p.jogo().visitante().id() == clube)
 			.findFirst()
-			.orElseThrow(() -> new IllegalArgumentException(linha.etapaCopa() == null ? "Seu clube folga nesta rodada."
-					: "Seu clube não joga esta etapa da copa."));
+			.orElseThrow(() -> new IllegalArgumentException(linha.etapaContinental() != null
+					? "Seu clube não joga esta etapa da continental."
+					: linha.etapaCopa() == null ? "Seu clube folga nesta rodada." : "Seu clube não joga esta etapa da copa."));
 		int divisaoAtual = new ArrayList<>(porDivisao.keySet()).get(relogio.divisao(linha.progresso()));
 		if (divisaoAtual != partida.prioridade()) {
 			throw new IllegalArgumentException("A partida do seu clube não está em andamento.");
@@ -387,24 +431,28 @@ public class RodadaAoVivoRepositorio {
 					amarelados, jogo.lesionadoAguardandoTroca(lado).orElse(null)));
 		}
 		return Optional.of(new JanelaJogo(p.jogo().mandante().id(), minuto, linha.get().andandoDesde() == null,
-				placar(rodada, p, minuto, clube, caixas.publicos(jogoId, List.of(p))), eventos.stream().filter(e -> LANCES.contains(e.tipo())).toList(), doUsuario,
+				placar(rodada, p, minuto, clube, caixas.publicos(jogoId, List.of(p)), gruposDosMandantes(jogoId, linha.get())), eventos.stream().filter(e -> LANCES.contains(e.tipo())).toList(), doUsuario,
 				times.get(0), times.get(1), previa, erroPrevia));
 	}
 
 	/**
-	 * Grava a rodada ou a etapa da copa pelo caminho de sempre e encerra a rodada ao vivo; o segundo
+	 * Grava a rodada ou a etapa da copa ou da continental pelo caminho de sempre e encerra a rodada ao vivo; o segundo
 	 * pedido não faz nada.
 	 */
 	private void finalizar(long jogoId, Linha linha, List<RodadaAoVivo.Substituicao> substituicoes) {
 		int apagadas = jdbc.sql("""
 				DELETE FROM jogo_rodada_ao_vivo
-				WHERE jogo_id = :jogo AND rodada = :rodada AND etapa_copa IS NOT DISTINCT FROM :etapa""")
+				WHERE jogo_id = :jogo AND rodada = :rodada AND etapa_copa IS NOT DISTINCT FROM :etapa
+				  AND etapa_continental IS NOT DISTINCT FROM :continental""")
 			.param("jogo", jogoId)
 			.param("rodada", linha.rodada())
 			.param("etapa", linha.etapaCopa())
+			.param("continental", linha.etapaContinental())
 			.update();
 		if (apagadas == 1) {
-			if (linha.etapaCopa() == null) {
+			if (linha.etapaContinental() != null) {
+				rodadas.avancarContinental(jogoId, linha.etapaContinental(), substituicoes);
+			} else if (linha.etapaCopa() == null) {
 				rodadas.avancar(jogoId, linha.rodada(), substituicoes);
 			} else {
 				rodadas.avancarCopa(jogoId, linha.etapaCopa(), substituicoes);
@@ -412,8 +460,11 @@ public class RodadaAoVivoRepositorio {
 		}
 	}
 
-	/** A rodada da liga ou a etapa da copa da linha, pronta para refazer as partidas. */
+	/** A rodada da liga ou a etapa da copa ou da continental da linha, pronta para refazer as partidas. */
 	private RodadaAoVivo preparar(long jogoId, Linha linha, List<RodadaAoVivo.Substituicao> substituicoes) {
+		if (linha.etapaContinental() != null) {
+			return rodadas.prepararContinental(jogoId, linha.etapaContinental(), substituicoes);
+		}
 		return linha.etapaCopa() == null ? rodadas.preparar(jogoId, linha.rodada(), substituicoes)
 				: rodadas.prepararCopa(jogoId, linha.etapaCopa(), substituicoes);
 	}
@@ -433,6 +484,12 @@ public class RodadaAoVivoRepositorio {
 		String copa = linha.etapaCopa() == null ? null
 				: "Copa · " + copas.quadro(jogoId, linha.temporadaId()).get(linha.etapaCopa()).nome();
 		nomes.put(ProcessamentoRodada.PRIORIDADE_COPA, copa);
+		if (linha.etapaContinental() != null) {
+			// o bloco tem o nome da competição; o título, a etapa (modelo 13c, rev. 79)
+			nomes.put(ProcessamentoRodada.PRIORIDADE_COPA, continentais.nome(jogoId));
+			copa = "Continental · " + continentais.quadro(linha.temporadaId()).get(linha.etapaContinental()).nome();
+		}
+		Map<Long, String> grupos = gruposDosMandantes(jogoId, linha);
 		List<DivisaoNaRodada> divisoes = new ArrayList<>();
 		for (int i = 0; i < prioridades.size(); i++) {
 			Situacao situacao = terminada || i < atual ? Situacao.TERMINADA : i == atual ? Situacao.JOGANDO : Situacao.AGUARDANDO;
@@ -440,14 +497,15 @@ public class RodadaAoVivoRepositorio {
 		}
 		Map<Long, Integer> publicos = caixas.publicos(jogoId, rodada.partidas());
 		List<PlacarAoVivo> placares = porDivisao.get(prioridades.get(atual)).stream()
-			.map(p -> placar(rodada, p, minuto, clube, publicos))
+			.map(p -> placar(rodada, p, minuto, clube, publicos, grupos))
 			.toList();
 		// o jogo do usuário no minuto em que ele está: o final, se a divisão dele já terminou
 		PlacarAoVivo doUsuario = null;
 		for (int i = 0; i < prioridades.size(); i++) {
 			for (PartidaDaRodada p : porDivisao.get(prioridades.get(i))) {
 				if (p.jogo().mandante().id() == clube || p.jogo().visitante().id() == clube) {
-					doUsuario = placar(rodada, p, terminada || i < atual ? Integer.MAX_VALUE : i == atual ? minuto : 0, clube, publicos);
+					doUsuario = placar(rodada, p, terminada || i < atual ? Integer.MAX_VALUE : i == atual ? minuto : 0, clube, publicos,
+							grupos);
 				}
 			}
 		}
@@ -462,8 +520,20 @@ public class RodadaAoVivoRepositorio {
 				janelaLesao);
 	}
 
+	/** Nome do grupo de cada mandante, numa etapa dos grupos da continental; vazio nos outros casos. */
+	private Map<Long, String> gruposDosMandantes(long jogoId, Linha linha) {
+		if (linha.etapaContinental() == null
+				|| !continentais.quadro(linha.temporadaId()).get(linha.etapaContinental()).grupos()) {
+			return Map.of();
+		}
+		Map<Long, String> grupos = new HashMap<>();
+		continentais.carregar(jogoId, linha.temporadaId()).orElseThrow().grupos()
+			.forEach(g -> g.clubes().forEach(c -> grupos.put(c.id(), g.nome())));
+		return grupos;
+	}
+
 	private static PlacarAoVivo placar(RodadaAoVivo rodada, PartidaDaRodada p, int minuto, long clube,
-			Map<Long, Integer> publicos) {
+			Map<Long, Integer> publicos, Map<Long, String> grupos) {
 		Partida partida = rodada.noMinuto(p, minuto);
 		List<EventoPartida> eventos = partida.resultado().eventos();
 		Optional<DisputaPenaltis> penaltis = partida.terminada() ? partida.resultado().penaltis() : Optional.<DisputaPenaltis>empty();
@@ -481,14 +551,16 @@ public class RodadaAoVivoRepositorio {
 					: penaltis.orElseThrow().gols(Lado.CASA) > penaltis.get().gols(Lado.FORA);
 			passa = casaPassa ? p.jogo().mandante() : p.jogo().visitante();
 		}
+		String grupo = grupos.get(p.jogo().mandante().id());
 		return new PlacarAoVivo(p.jogo().mandante(), p.jogo().visitante(), publicos.get(p.jogo().mandante().id()),
 				golsCasa, golsFora,
 				p.jogo().mandante().id() == clube || p.jogo().visitante().id() == clube, ultimo,
 				eventos.stream().anyMatch(e -> EXPULSOES.contains(e.tipo()) && e.lado() == Lado.CASA),
 				eventos.stream().anyMatch(e -> EXPULSOES.contains(e.tipo()) && e.lado() == Lado.FORA), partida.prorrogacao(),
 				penaltis.map(d -> d.gols(Lado.CASA)).orElse(null), penaltis.map(d -> d.gols(Lado.FORA)).orElse(null),
-				p.prioridade() == ProcessamentoRodada.PRIORIDADE_COPA && decisivo.isEmpty(),
-				volta.map(JogoDecisivo::golsCasaAntes).orElse(null), volta.map(JogoDecisivo::golsForaAntes).orElse(null), passa);
+				p.prioridade() == ProcessamentoRodada.PRIORIDADE_COPA && decisivo.isEmpty() && grupo == null,
+				volta.map(JogoDecisivo::golsCasaAntes).orElse(null), volta.map(JogoDecisivo::golsForaAntes).orElse(null), passa,
+				grupo);
 	}
 
 	/** Partidas por divisão, na ordem de exibição (da maior prioridade para a 1ª). */
@@ -531,12 +603,14 @@ public class RodadaAoVivoRepositorio {
 
 	private Optional<Linha> linha(long jogoId) {
 		return jdbc.sql("""
-				SELECT rodada, etapa_copa, temporada_id, progresso, andando_desde, lesao_ate FROM jogo_rodada_ao_vivo
+				SELECT rodada, etapa_copa, etapa_continental, temporada_id, progresso, andando_desde, lesao_ate
+				FROM jogo_rodada_ao_vivo
 				WHERE jogo_id = :jogo""")
 			.param("jogo", jogoId)
 			.query((rs, n) -> {
 				OffsetDateTime desde = rs.getObject("andando_desde", OffsetDateTime.class);
-				return new Linha(rs.getInt("rodada"), rs.getObject("etapa_copa", Integer.class), rs.getLong("temporada_id"),
+				return new Linha(rs.getInt("rodada"), rs.getObject("etapa_copa", Integer.class),
+						rs.getObject("etapa_continental", Integer.class), rs.getLong("temporada_id"),
 						rs.getDouble("progresso"), desde == null ? null : desde.toInstant(), rs.getDouble("lesao_ate"));
 			})
 			.optional();
@@ -566,10 +640,11 @@ public class RodadaAoVivoRepositorio {
 	}
 
 	/**
-	 * @param etapaCopa índice da etapa da copa no quadro; nulo numa rodada da liga
+	 * @param etapaCopa índice da etapa da copa no quadro; nulo fora dela
+	 * @param etapaContinental índice da etapa da continental no quadro; nulo fora dela
 	 * @param lesaoAte progresso da última lesão do usuário que já pausou a rodada
 	 */
-	private record Linha(int rodada, Integer etapaCopa, long temporadaId, double progresso, Instant andandoDesde,
+	private record Linha(int rodada, Integer etapaCopa, Integer etapaContinental, long temporadaId, double progresso, Instant andandoDesde,
 			double lesaoAte) {
 
 		/** Parada na lesão, esperando a troca do usuário. */
@@ -623,10 +698,11 @@ public class RodadaAoVivoRepositorio {
 	 * @param primeiroJogo a ida de um confronto da copa
 	 * @param idaCasa na volta da copa, os gols que o mandante desta partida marcou na ida; nulo fora da volta
 	 * @param passa no fim da volta ou da final, quem segue na copa; nulo antes do fim e fora delas
+	 * @param grupo nos grupos da continental, o nome do grupo ("Grupo C"); nulo fora deles
 	 */
 	public record PlacarAoVivo(Clube mandante, Clube visitante, int publico, int golsCasa, int golsFora, boolean doUsuario,
 			EventoPartida ultimoLance, boolean expulsaoCasa, boolean expulsaoFora, boolean prorrogacao, Integer penaltisCasa,
-			Integer penaltisFora, boolean primeiroJogo, Integer idaCasa, Integer idaFora, Clube passa) {
+			Integer penaltisFora, boolean primeiroJogo, Integer idaCasa, Integer idaFora, Clube passa, String grupo) {
 
 		/** É a volta da copa: a tela mostra a ida e o total (modelo 12b). */
 		public boolean volta() {
@@ -646,7 +722,8 @@ public class RodadaAoVivoRepositorio {
 	 * O quadro da rodada num instante.
 	 *
 	 * @param temporada ano da temporada
-	 * @param copa nome da etapa da copa ("Copa · Oitavas de final · ida"); nulo numa rodada da liga
+	 * @param copa nome da etapa ("Copa · Oitavas de final · ida", "Continental · Grupos · 5º jogo"); nulo
+	 *        numa rodada da liga
 	 * @param minutos duração do relógio de cada divisão: 90, ou 120 na etapa da copa com prorrogação
 	 * @param divisaoAtual índice em {@code divisoes} da divisão em jogo
 	 * @param comUsuario se a divisão em jogo tem clube do usuário (só ela tem velocidade e pausa)
@@ -658,6 +735,19 @@ public class RodadaAoVivoRepositorio {
 	public record EstadoRodada(long jogoId, int temporada, int rodada, String copa, List<DivisaoNaRodada> divisoes,
 			int divisaoAtual, int minuto, int minutos, boolean pausada, boolean terminada, Velocidade velocidade, boolean comUsuario,
 			List<PlacarAoVivo> partidas, PlacarAoVivo jogoDoUsuario, boolean somGols, Long janelaLesao) {
+
+		/** É uma etapa da continental (modelo 13c, rev. 79). */
+		public boolean continental() {
+			return copa != null && copa.startsWith(PREFIXO_CONTINENTAL);
+		}
+
+		/** Título do bloco em jogo: o nome dele e, na continental, também a etapa. */
+		public String tituloDoBloco() {
+			String nome = divisoes.get(divisaoAtual).nome();
+			return continental() ? nome + " · " + copa.substring(PREFIXO_CONTINENTAL.length()) : nome;
+		}
+
+		private static final String PREFIXO_CONTINENTAL = "Continental · ";
 
 		/** Gols da divisão em jogo até o minuto: a tela toca o som quando o número sobe. */
 		public int golsNaDivisao() {

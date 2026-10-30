@@ -9,6 +9,7 @@
 	--texto-claro: #DDE7DA;
 	--destaque: #F2C94C;
 	--destaque-claro: #FFE08A;
+	--continental: #8EC9F0;
 	--erro: #E5484D;
 	--erro-texto: #FFB4B6;
 	--erro-alerta: #FFD7D8;
@@ -1506,6 +1507,9 @@ a.financas-link:hover, a.financas-link:focus-visible { border-color: var(--desta
 .tabela-extrato tr.da-copa td { background: rgba(242, 201, 76, 0.05); }
 .extrato-copa { color: var(--destaque); font-weight: 700; }
 .extrato-etapa { color: var(--destaque); }
+/* Continental em azul-claro, para não confundir com a copa em amarelo (modelos 13c e 13d, rev. 79). */
+.jogo-grupo { font: 700 15px 'Barlow Condensed', sans-serif; text-transform: uppercase; letter-spacing: 0.04em; color: var(--texto-suave); }
+.rotulo.rotulo-continental { color: var(--continental); }
 .financas-copa { border-color: var(--destaque); }
 .financas-copa .rotulo { color: var(--destaque); }
 

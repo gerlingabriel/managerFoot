@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 78 — 2026-10-29)
+-   **Status:** versão inicial para revisão (rev. 79 — 2026-10-30)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 79 (2026-10-30):** pelo usuário: modelos 13a a 13d aprovados; o quadro "Todos os títulos" substitui o ranking só da 1ª divisão; o quadro da Liga fica sem a 2ª divisão; todos os grupos da continental jogam num bloco só, para em rede todos verem os seus jogos e os dos amigos (§8.1.1, §8.3.6).
 -   **rev. 78 (2026-10-29):** etapas da continental jogadas entre as rodadas (grupos, mata-mata, final depois da da copa), com prêmio, campeão e vice no Histórico e vice e 3º da liga gravados (V35); a 2ª temporada escolhe os clubes do país pela tabela anterior e pelo campeão da copa. Agente: público e caixa com o estrangeiro marcados Provisório (§8.3.6). Ainda sem tela e desligado por configuração.
 -   **rev. 77 (2026-10-29):** pelo usuário: todas as partidas de todos os torneios passam na tela, na velocidade cadastrada quando há clube do usuário e muito rápido quando não há; ordem do fim da temporada: última rodada da liga, final da copa, final da continental; o campeão continental vai ao Histórico, que passa a ter quadros (liga com campeão, vice e 3º; copa com campeão e vice; continental com campeão e vice; Mundial depois) e um quadro com todos os títulos, só de treinadores nacionais (§8.1.1, §8.3.6). Agente: o quadro de todos os títulos substitui o ranking só da 1ª divisão (rev. 46) — a confirmar no modelo de tela.
 -   **rev. 76 (2026-10-29):** grupos da continental sorteados e gravados no início da temporada, com as partidas no calendário (V34, ADR 0016); ainda não são jogados. Desligado por configuração até as telas da continental serem aprovadas.
@@ -1440,10 +1441,11 @@ os cartões de um time todo calmo (antes, 2,8 vezes).
   - **Mundial:** quando existir (§8.3.4).
   - **Todos os títulos:** um quadro que soma os títulos dos treinadores,
     **só os nacionais**: campeões de outros países não entram.
-  - **Em aberto — a confirmar no modelo de tela:** proposta do agente: o
-    quadro de todos os títulos **substitui** o ranking só da 1ª divisão
-    (rev. 46) e conta 1ª divisão, copa e continental; a 2ª divisão continua
-    sem contar. Se o ranking antigo deve continuar ao lado, o usuário decide.
+  - **Definido (rev. 79), modelo 13a aprovado:** o quadro de todos os títulos
+    **substitui** o ranking só da 1ª divisão (rev. 46): conta 1ª divisão, copa
+    e continental (colunas Liga, Copa, Contin. e Total). O quadro da Liga
+    mostra só a 1ª divisão; a 2ª divisão não aparece nem conta (o banco
+    continua guardando o campeão dela).
 - **Definido (rev. 42):** a aba "Artilheiros de todos os tempos" continua.
   Se as abas ficarem muitas, agrupar assuntos parecidos.
 
@@ -1777,6 +1779,14 @@ aprovadas** (vagas, clubes gerados, grupos, oitavas, quadro e efeitos):
     quartas, e assim por diante, com o mando da ida sorteado como na copa.
   - **Menos de 32 clubes** (país sem clubes suficientes): a edição não é
     realizada (§8.3.2 item 5), porque os grupos de 4 não fecham.
+- **Definido (rev. 79), pelo usuário — modelos 13b, 13c e 13d aprovados:**
+  - **Aba Continental** com fases, os 8 grupos (os 2 que passam marcados), os
+    jogos do grupo do clube e a chave até a final.
+  - **Etapa ao vivo:** todos os grupos num bloco só, com a letra do grupo em
+    cada linha: em rede, todos veem o seu jogo e os dos amigos.
+  - **Calendário, plantel e finanças:** a continental em azul-claro (a copa
+    segue em amarelo), botão "Confirmar e jogar a continental", linhas
+    "Continental" no extrato e o quadro "Continental na temporada".
 - **Definido (rev. 77), pelo usuário — tela e ordem:**
   - **Todas as partidas de todos os torneios passam na tela**: com clube do
     usuário, na velocidade cadastrada; sem ele, muito rápido.

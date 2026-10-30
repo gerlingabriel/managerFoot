@@ -94,7 +94,7 @@ public class CaixaRepositorio {
 			return publicosDaCopa(jogoId, temporadas.carregarAtual(jogoId), temporadaAtual(jogoId), partidas.stream()
 				.map(p -> new Partida(p.prioridade(), p.jogo(), p.semente()))
 				.toList(), partidas.stream().anyMatch(p -> p.condicoes().decisivo().filter(d -> d.campoNeutro()).isPresent()),
-					jogos.carregarPlanteis(jogoId));
+					comEstrangeiros(partidas.stream().map(RodadaAoVivo.PartidaDaRodada::jogo).toList(), jogos.carregarPlanteis(jogoId)));
 		}
 		return publicos(jogoId, temporadas.carregarAtual(jogoId), temporadaAtual(jogoId),
 				partidas.stream().map(p -> new Partida(p.prioridade(), p.jogo(), p.semente())).toList(),
@@ -185,7 +185,7 @@ public class CaixaRepositorio {
 		abrirCaixas(jogoId, planteis);
 		Map<Long, Integer> publicos = publicosDaCopa(jogoId, temporada, temporadaId,
 				partidas.stream().map(p -> new Partida(p.prioridade(), p.jogo(), p.semente())).toList(), finalDaEtapa,
-				comEstrangeiros(partidas, planteis));
+				comEstrangeiros(partidas.stream().map(ProcessamentoRodada.PartidaJogada::jogo).toList(), planteis));
 		for (ProcessamentoRodada.PartidaJogada p : partidas) {
 			Jogo jogo = p.jogo();
 			int pagantes = publicos.get(jogo.mandante().id());
@@ -214,10 +214,9 @@ public class CaixaRepositorio {
 	}
 
 	/** Os planteis do país jogado e, para o público, os dos estrangeiros da etapa. */
-	private Map<Long, List<Jogador>> comEstrangeiros(List<ProcessamentoRodada.PartidaJogada> partidas,
-			Map<Long, List<Jogador>> planteis) {
+	private Map<Long, List<Jogador>> comEstrangeiros(List<Jogo> partidas, Map<Long, List<Jogador>> planteis) {
 		Map<Long, List<Jogador>> todos = new HashMap<>(planteis);
-		partidas.forEach(p -> java.util.stream.Stream.of(p.jogo().mandante(), p.jogo().visitante())
+		partidas.forEach(p -> java.util.stream.Stream.of(p.mandante(), p.visitante())
 			.filter(c -> !todos.containsKey(c.id()))
 			.forEach(c -> todos.put(c.id(), TabelasLiga.JOGO.carregarPlantel(jdbc, c.id()))));
 		return todos;

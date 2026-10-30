@@ -59,11 +59,13 @@ class RodadaController {
 	/**
 	 * "Confirmar e jogar rodada" (SPEC §10.3): antes, os leilões da máquina (SPEC §9.4, rev. 41;
 	 * modelo 7b); sem leilão pendente, começa a rodada ao vivo. Com {@code etapa}, começa a etapa da
-	 * copa (SPEC §8.2, rev. 70), sem leilões. Repetir não começa outra.
+	 * copa (SPEC §8.2, rev. 70) ou, com {@code continental}, a da continental (§8.3.6, rev. 79), sem
+	 * leilões. Repetir não começa outra.
 	 */
 	@PostMapping("/jogos/{jogoId}/rodada")
 	String iniciar(@AuthenticationPrincipal Usuario usuario, @PathVariable long jogoId, @RequestParam("rodada") int rodada,
-			@RequestParam(name = "etapa", required = false) Integer etapa, RedirectAttributes redirect) {
+			@RequestParam(name = "etapa", required = false) Integer etapa,
+			@RequestParam(name = "continental", defaultValue = "false") boolean continental, RedirectAttributes redirect) {
 		PlantelRepositorio.VisaoPlantel visao = plantel.visao(jogoId, usuario.id()).orElseThrow(NoSuchElementException::new);
 		// clique repetido numa rodada já jogada: a escalação pode ter mudado depois (suspensão), mas o aviso é este
 		if (rodada < visao.rodada()) {
@@ -72,7 +74,7 @@ class RodadaController {
 		}
 		if (etapa == null && visao.indiceCopa() != null) {
 			// página antiga: a etapa da copa vem antes da rodada da liga (SPEC §8.2, rev. 70)
-			redirect.addFlashAttribute("erro", "Antes da rodada " + rodada + ", jogue a copa.");
+			redirect.addFlashAttribute("erro", "Antes da rodada " + rodada + ", jogue a " + (visao.continental() ? "continental." : "copa."));
 			return "redirect:/jogos/" + jogoId + "/plantel";
 		}
 		if (!visao.problemas().isEmpty()) {
@@ -86,7 +88,11 @@ class RodadaController {
 		}
 		try {
 			if (etapa != null) {
-				aoVivo.iniciarCopa(jogoId, usuario.id(), etapa, relogio.instant());
+				if (continental) {
+					aoVivo.iniciarContinental(jogoId, usuario.id(), etapa, relogio.instant());
+				} else {
+					aoVivo.iniciarCopa(jogoId, usuario.id(), etapa, relogio.instant());
+				}
 				return "redirect:/jogos/" + jogoId + "/rodada";
 			}
 			if (leiloes.preparar(jogoId, usuario.id(), rodada) != Etapa.RODADA) {
@@ -99,7 +105,7 @@ class RodadaController {
 			return "redirect:/jogos/" + jogoId + "/plantel";
 		}
 		catch (IllegalStateException e) {
-			redirect.addFlashAttribute("erro", (etapa != null ? "Esta etapa da copa" : "A rodada " + rodada)
+			redirect.addFlashAttribute("erro", (etapa != null ? (continental ? "Esta etapa da continental" : "Esta etapa da copa") : "A rodada " + rodada)
 					+ " já foi jogada. Confira o plantel.");
 			return "redirect:/jogos/" + jogoId + "/plantel";
 		}

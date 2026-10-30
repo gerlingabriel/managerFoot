@@ -513,6 +513,14 @@ public class RodadaRepositorio {
 		return copas.carregar(jogoId, temporadaAtual(jogoId, false).id()).map(c -> c.partidas(etapa)).orElse(List.of());
 	}
 
+	/** As partidas da etapa da continental na temporada atual, na ordem dos grupos ou dos confrontos. */
+	@Transactional(readOnly = true)
+	public List<Jogo> partidasDaEtapa(long jogoId, Continental.Etapa etapa) {
+		return continentais.carregar(jogoId, temporadaAtual(jogoId, false).id())
+			.map(c -> partidasDaEtapa(c, etapa).stream().map(ProcessamentoRodada.PartidaDaEtapa::jogo).toList())
+			.orElse(List.of());
+	}
+
 	/** Rodadas já jogadas na temporada atual. */
 	@Transactional(readOnly = true)
 	public int rodadasProcessadas(long jogoId) {

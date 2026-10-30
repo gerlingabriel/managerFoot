@@ -220,6 +220,25 @@ public class ContinentalRepositorio {
 		}
 	}
 
+	/** O nome da competição do jogo, como o editor o deixou no molde. */
+	@Transactional(readOnly = true)
+	public String nome(long jogoId) {
+		return jdbc.sql("SELECT nome FROM jogo_continental WHERE jogo_id = :jogo").param("jogo", jogoId)
+			.query(String.class).single();
+	}
+
+	/** O país dos clubes de fora do jogo, pelo id do clube. */
+	@Transactional(readOnly = true)
+	public Map<Long, String> paisesDeFora(long jogoId) {
+		Map<Long, String> paises = new HashMap<>();
+		jdbc.sql("SELECT id, pais_codigo FROM jogo_clube WHERE jogo_id = :jogo AND pais_codigo IS NOT NULL")
+			.param("jogo", jogoId)
+			.query(rs -> {
+				paises.put(rs.getLong("id"), rs.getString("pais_codigo"));
+			});
+		return paises;
+	}
+
 	/** Vagas do país jogado e dos outros, na ordem da tabela; vazio se o jogo não tem continental. */
 	private Map<String, Integer> vagas(long jogoId) {
 		Map<String, Integer> vagas = new LinkedHashMap<>();

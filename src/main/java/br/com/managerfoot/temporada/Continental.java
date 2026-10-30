@@ -279,6 +279,83 @@ public record Continental(List<GrupoContinental> grupos, Optional<Copa> mataMata
 		return mataMata.flatMap(Copa::vice);
 	}
 
+	/**
+	 * Um jogo da continental visto por um clube (calendário e extrato, modelo 13d, rev. 79).
+	 *
+	 * @param indice posição da etapa no quadro
+	 * @param emCasa nulo na final, em campo neutro
+	 * @param golsPro do clube; nulo enquanto o jogo não foi jogado
+	 * @param detalhe no mata-mata, como em {@link Copa.JogoDoClube}; nulo nos grupos
+	 */
+	public record JogoDoClube(int indice, Etapa etapa, Boolean emCasa, Clube adversario, Integer golsPro,
+			Integer golsContra, String detalhe) {
+	}
+
+	/** O grupo do clube nesta edição. */
+	public Optional<GrupoContinental> grupoDo(Clube clube) {
+		return grupos.stream().filter(g -> g.clubes().contains(clube)).findFirst();
+	}
+
+	/** Os jogos do clube cujos adversários já existem, na ordem do quadro; vazio se ele não participa. */
+	public List<JogoDoClube> jogosDo(Clube clube, List<Etapa> quadro) {
+		Objects.requireNonNull(clube);
+		List<JogoDoClube> jogos = new ArrayList<>();
+		Optional<GrupoContinental> grupo = grupoDo(clube);
+		int nosGrupos = 0;
+		for (int i = 0; i < quadro.size() && quadro.get(i).grupos(); i++) {
+			nosGrupos++;
+			Etapa etapa = quadro.get(i);
+			int indice = i;
+			grupo.ifPresent(g -> g.partidasDoJogo(etapa.jogoDoGrupo()).stream().filter(p -> p.envolve(clube)).findFirst()
+				.ifPresent(p -> {
+					boolean emCasa = p.mandante().equals(clube);
+					jogos.add(new JogoDoClube(indice, etapa, emCasa, emCasa ? p.visitante() : p.mandante(),
+							p.placar().map(l -> emCasa ? l.golsMandante() : l.golsVisitante()).orElse(null),
+							p.placar().map(l -> emCasa ? l.golsVisitante() : l.golsMandante()).orElse(null), null));
+				}));
+		}
+		int deslocamento = nosGrupos;
+		mataMata.ifPresent(m -> m.jogosDo(clube, quadroDoMataMata(quadro))
+			.forEach(j -> jogos.add(new JogoDoClube(j.indice() + deslocamento, quadro.get(j.indice() + deslocamento), j.emCasa(),
+					j.adversario(), j.golsPro(), j.golsContra(), j.detalhe()))));
+		return jogos;
+	}
+
+	private static List<Copa.Etapa> quadroDoMataMata(List<Etapa> quadro) {
+		return quadro.stream().filter(e -> !e.grupos()).map(Etapa::mataMata).toList();
+	}
+
+	/**
+	 * Linha embaixo do próximo jogo no plantel (modelo 13d, rev. 79): nos grupos, o lugar do clube; no
+	 * mata-mata, como na copa; com o clube fora da etapa, por que ele saiu.
+	 *
+	 * @param indice posição da etapa no {@code quadro}
+	 * @param sementeSorteio a do desempate dos grupos
+	 */
+	public Optional<String> detalheDoProximo(Clube clube, List<Etapa> quadro, int indice, long sementeSorteio) {
+		Optional<GrupoContinental> grupo = grupoDo(clube);
+		if (grupo.isEmpty()) {
+			return Optional.of("Seu clube não está na continental desta temporada");
+		}
+		Etapa etapa = quadro.get(indice);
+		if (etapa.grupos()) {
+			List<LinhaClassificacao> tabela = grupo.get().classificacao(sementeSorteio);
+			for (int i = 0; i < tabela.size(); i++) {
+				if (tabela.get(i).clube().equals(clube)) {
+					int pontos = tabela.get(i).pontos();
+					return Optional.of(grupo.get().nome() + ": " + (i + 1) + "º com " + pontos
+							+ (pontos == 1 ? " ponto" : " pontos"));
+				}
+			}
+		}
+		boolean noMataMata = mataMata.map(m -> m.confrontos().stream().anyMatch(c -> c.envolve(clube))).orElse(false);
+		if (!noMataMata) {
+			return Optional.of("Eliminado na fase de grupos");
+		}
+		int nosGrupos = (int) quadro.stream().filter(Etapa::grupos).count();
+		return mataMata.get().detalheDoProximo(clube, quadroDoMataMata(quadro), indice - nosGrupos);
+	}
+
 	/** O clube está nos grupos desta edição. */
 	public boolean participa(Clube clube) {
 		return grupos.stream().anyMatch(g -> g.clubes().contains(clube));

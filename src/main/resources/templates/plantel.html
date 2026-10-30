@@ -32,10 +32,10 @@
 	th:text="${v.moeda.formatar(v.saldo)}" th:attr="aria-label=|Caixa ${v.moeda.formatar(v.saldo)}, ver finanças|">R$ 0</a>
 </div>
 <div class="pilha-curta">
-<span class="rotulo" th:text="${v.temporadaEncerrada} ? 'Temporada' : (${v.etapaCopa != null} ? |Próximo jogo · ${v.etapaCopa}| : |Próximo jogo · Rodada ${v.rodada}|)">Próximo jogo</span>
+<span class="rotulo" th:classappend="${v.continental} ? 'rotulo-continental'" th:text="${v.temporadaEncerrada} ? 'Temporada' : (${v.etapaCopa != null} ? |Próximo jogo · ${v.etapaCopa}| : |Próximo jogo · Rodada ${v.rodada}|)">Próximo jogo</span>
 <span class="proximo-jogo" th:if="${v.temporadaEncerrada}">Temporada encerrada</span>
 <span class="proximo-jogo" th:if="${!v.temporadaEncerrada and v.adversario == null}" th:text="${v.etapaCopa != null} ? 'Seu clube não joga' : 'Folga'">Folga</span>
-<span class="proximo-jogo" th:if="${v.adversario != null}" th:text="|${v.finalCopa ? 'Campo neutro' : (v.emCasa ? 'Em casa' : 'Fora')} · ${v.adversario.nome}|">Fora · Adversário</span>
+<span class="proximo-jogo" th:if="${v.adversario != null}"><span th:text="|${v.finalCopa ? 'Campo neutro' : (v.emCasa ? 'Em casa' : 'Fora')} · ${v.adversario.nome}|">Fora · Adversário</span> <span th:if="${v.paisAdversario != null}" class="sigla-pais" th:text="${v.paisAdversario}">ARG</span></span>
 <span th:if="${!v.temporadaEncerrada and v.detalheCopa != null}" class="suave" th:text="${v.detalheCopa}">Ida 1 x 1</span>
 </div>
 </div>
@@ -95,8 +95,9 @@
 <form th:unless="${v.temporadaEncerrada}" th:action="@{/jogos/{id}/rodada(id=${v.jogoId})}" method="post" class="pilha-curta" data-envio-unico>
 <input type="hidden" name="rodada" th:value="${v.rodada}">
 <input th:if="${v.indiceCopa != null}" type="hidden" name="etapa" th:value="${v.indiceCopa}">
+<input th:if="${v.continental}" type="hidden" name="continental" value="true">
 <button type="submit" class="botao botao-largo" th:disabled="${!v.problemas.isEmpty()}"
-	aria-describedby="jogar-ajuda" th:text="${v.finalCopa} ? 'Confirmar e jogar a final' : (${v.etapaCopa != null} ? 'Confirmar e jogar a copa' : 'Confirmar e jogar rodada')">Confirmar e jogar rodada</button>
+	aria-describedby="jogar-ajuda" th:text="${v.continental} ? (${v.finalCopa} ? 'Confirmar e jogar a final da continental' : 'Confirmar e jogar a continental') : (${v.finalCopa} ? 'Confirmar e jogar a final' : (${v.etapaCopa != null} ? 'Confirmar e jogar a copa' : 'Confirmar e jogar rodada'))">Confirmar e jogar rodada</button>
 <span id="jogar-ajuda" class="suave centro"
 	th:text="${!v.problemas.isEmpty()} ? 'Complete a escalação para jogar.' : (${v.etapaCopa != null} ? |${v.etapaCopa}.| : |Rodada ${v.rodada}.|)">ajuda</span>
 </form>
