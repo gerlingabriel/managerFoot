@@ -81,12 +81,12 @@
 <td class="num resultado positivo" th:text="${f.moeda.formatarComSinal(f.patrocinio)}">+ R$ 0</td>
 <td class="num saldo" th:text="${f.moeda.formatar(f.saldoInicioTemporada())}">R$ 0</td>
 </tr>
-<tr th:each="l : ${f.extrato}" th:classappend="${l.continental} ? 'da-continental' : (${l.copa != null} ? 'da-copa')">
+<tr th:each="l : ${f.extrato}" th:classappend="${l.mundial} ? 'do-mundial' : (${l.continental} ? 'da-continental' : (${l.copa != null} ? 'da-copa'))">
 <td th:if="${l.copa == null}" class="num suave" th:text="${l.rodada == 0} ? '—' : ${l.rodada}">1</td>
-<td th:if="${l.copa != null}" class="num" th:classappend="${l.continental} ? 'extrato-continental' : 'extrato-copa'" th:text="${l.continental} ? 'Continental' : 'Copa'">Copa</td>
+<td th:if="${l.copa != null}" class="num" th:classappend="${l.mundial} ? 'extrato-mundial' : (${l.continental} ? 'extrato-continental' : 'extrato-copa')" th:text="${l.mundial} ? 'Mundial' : (${l.continental} ? 'Continental' : 'Copa')">Copa</td>
 <td>
 <span th:if="${l.rodada == 0 and l.copa == null}" class="suave">Antes da 1ª rodada</span>
-<span th:if="${l.copa != null}" class="extrato-detalhe" th:classappend="${l.continental} ? 'extrato-continental' : 'extrato-etapa'" th:text="${l.copa}">Oitavas de final · ida</span>
+<span th:if="${l.copa != null}" class="extrato-detalhe" th:classappend="${l.mundial} ? 'extrato-mundial' : (${l.continental} ? 'extrato-continental' : 'extrato-etapa')" th:text="${l.copa}">Oitavas de final · ida</span>
 <span th:if="${l.adversario != null}" class="clube-celula"><span class="extrato-local" th:text="${l.emCasa == null} ? 'Neutro' : (${l.emCasa} ? 'Casa' : 'Fora')">Casa</span><span aria-hidden="true" th:style="${@escudos.estilo(l.adversario.escudo, 18, 22)}"></span><a th:replace="~{fragmentos :: clube(${l.adversario.id}, ${l.adversario.nome}, 'jogo-nome calendario-nome')}">Adversário</a><span th:if="${l.paisAdversario != null}" class="sigla-pais" th:text="${l.paisAdversario}">ARG</span></span>
 <span th:if="${l.adversario == null and l.rodada != 0 and l.copa == null}" class="suave">Folga</span>
 <span th:each="d : ${l.detalhes}" class="extrato-detalhe" th:text="${d}">Compra: Jogador (Z, 31)</span>

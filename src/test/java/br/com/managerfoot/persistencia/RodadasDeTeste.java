@@ -34,7 +34,7 @@ public final class RodadasDeTeste {
 			.param("j", jogoId).update();
 	}
 
-	/** Joga as etapas da copa e da continental que vêm antes da próxima rodada da liga. */
+	/** Joga as etapas da copa, da continental e do Mundial que vêm antes da próxima rodada da liga. */
 	public static void jogarCopaPendente(RodadaRepositorio rodadas, long jogoId) {
 		while (true) {
 			RodadaRepositorio.Proximo proximo = rodadas.proximo(jogoId);
@@ -42,6 +42,8 @@ public final class RodadasDeTeste {
 				rodadas.avancarCopa(jogoId, etapa.indice(), List.of());
 			} else if (proximo instanceof RodadaRepositorio.Proximo.EtapaContinental etapa) {
 				rodadas.avancarContinental(jogoId, etapa.indice(), List.of());
+			} else if (proximo instanceof RodadaRepositorio.Proximo.EtapaMundial etapa) {
+				rodadas.avancarMundial(jogoId, etapa.indice(), List.of());
 			} else {
 				return;
 			}

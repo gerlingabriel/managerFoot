@@ -76,23 +76,33 @@
 <div class="painel-titulo painel-cabecalho">
 <div class="pilha-curta">
 <h2 id="t-mundial" class="titulo-secao pequeno">Mundial de Clubes</h2>
-<span class="suave">Campeão e vice</span>
+<span class="suave">Campeão e vice · clube de fora com a sigla do país, sem treinador</span>
 </div>
 </div>
-<p class="texto linha-jogo">O Mundial ainda não é disputado. O quadro aparece quando houver o primeiro campeão.</p>
+<p th:if="${h.mundial.isEmpty()}" class="texto linha-jogo">Nenhuma final foi jogada ainda.</p>
+<table th:unless="${h.mundial.isEmpty()}" class="tabela-classificacao tabela-historico">
+<thead><tr><th scope="col">Ano</th><th scope="col">Campeão</th><th scope="col">Vice</th></tr></thead>
+<tbody>
+<tr th:each="a : ${h.mundial}">
+<th scope="row" class="historico-ano" th:text="${a.ano}">2026</th>
+<td th:replace="~{:: celula(${a.campeao})}"></td>
+<td th:replace="~{:: celula(${a.vice})}"></td>
+</tr>
+</tbody>
+</table>
 </section>
 
 <section class="painel grupo" aria-labelledby="t-titulos">
 <div class="painel-titulo painel-cabecalho">
 <div class="pilha-curta">
 <h2 id="t-titulos" class="titulo-secao pequeno">Todos os títulos</h2>
-<span class="suave" th:text="|Só treinadores do país · ${h.divisao}, Copa e Continental · empatados dividem a posição|">Títulos</span>
+<span class="suave" th:text="|Só treinadores do país · ${h.divisao}, Copa, Continental e Mundial · empatados dividem a posição|">Títulos</span>
 </div>
 </div>
 <p th:if="${h.titulos.isEmpty()}" class="texto linha-jogo">Ninguém foi campeão ainda.</p>
 <table th:unless="${h.titulos.isEmpty()}" class="tabela-classificacao tabela-ranking">
 <thead>
-<tr><th scope="col" class="num">#</th><th scope="col">Treinador</th><th scope="col" class="num">Liga</th><th scope="col" class="num">Copa</th><th scope="col" class="num">Contin.</th><th scope="col" class="num">Total</th></tr>
+<tr><th scope="col" class="num">#</th><th scope="col">Treinador</th><th scope="col" class="num">Liga</th><th scope="col" class="num">Copa</th><th scope="col" class="num">Contin.</th><th scope="col" class="num">Mund.</th><th scope="col" class="num">Total</th></tr>
 </thead>
 <tbody>
 <tr th:each="r : ${h.titulos}" th:classappend="${r.voce} ? 'do-usuario'">
@@ -102,6 +112,7 @@
 <td class="num" th:text="${r.liga}">0</td>
 <td class="num" th:text="${r.copa}">0</td>
 <td class="num" th:text="${r.continental}">0</td>
+<td class="num" th:text="${r.mundial}">0</td>
 <td class="num pontos" th:text="${r.total()}">0</td>
 </tr>
 </tbody>

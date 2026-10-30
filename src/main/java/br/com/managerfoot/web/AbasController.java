@@ -16,6 +16,7 @@ import br.com.managerfoot.contas.Usuario;
 import br.com.managerfoot.persistencia.CaixaRepositorio;
 import br.com.managerfoot.persistencia.ClubeNaFilaException;
 import br.com.managerfoot.persistencia.ConsultasContinentalRepositorio;
+import br.com.managerfoot.persistencia.MundialRepositorio;
 import br.com.managerfoot.persistencia.ConsultasRepositorio;
 import br.com.managerfoot.persistencia.EstadioRepositorio;
 import br.com.managerfoot.temporada.FaseCopa;
@@ -35,9 +36,11 @@ class AbasController {
 	private final CaixaRepositorio caixas;
 	private final EstadioRepositorio estadios;
 	private final ConsultasContinentalRepositorio continentais;
+	private final MundialRepositorio mundiais;
 
 	AbasController(ConsultasRepositorio consultas, CaixaRepositorio caixas,
-			EstadioRepositorio estadios, ConsultasContinentalRepositorio continentais) {
+			EstadioRepositorio estadios, ConsultasContinentalRepositorio continentais, MundialRepositorio mundiais) {
+		this.mundiais = mundiais;
 		this.consultas = consultas;
 		this.caixas = caixas;
 		this.estadios = estadios;
@@ -101,6 +104,15 @@ class AbasController {
 		model.addAttribute("jogoId", jogoId);
 		model.addAttribute("continental", continentais.visao(jogoId, usuario.id(), fase, grupo).orElse(null));
 		return "continental";
+	}
+
+	/** Aba Mundial (SPEC §8.3.4, modelo 15a, rev. 88): semifinais, final e participantes. */
+	@GetMapping("/jogos/{jogoId}/mundial")
+	String mundial(@AuthenticationPrincipal Usuario usuario, @PathVariable long jogoId, Model model) {
+		model.addAttribute("usuario", usuario);
+		model.addAttribute("jogoId", jogoId);
+		model.addAttribute("mundial", mundiais.visao(jogoId, usuario.id()));
+		return "mundial";
 	}
 
 	/** Aba Copa (SPEC §8.2, modelo 12a, rev. 71): fases, confrontos da fase escolhida e chave. */

@@ -32,6 +32,7 @@ import br.com.managerfoot.temporada.Divisao;
 import br.com.managerfoot.temporada.FaseCopa;
 import br.com.managerfoot.temporada.Jogo;
 import br.com.managerfoot.temporada.LinhaClassificacao;
+import br.com.managerfoot.temporada.Mundial;
 import br.com.managerfoot.temporada.PlacarCopa;
 import br.com.managerfoot.temporada.Rodada;
 import br.com.managerfoot.temporada.Temporada;
@@ -55,11 +56,14 @@ public class ConsultasRepositorio {
 	private final TemporadaRepositorio temporadas;
 	private final CopaRepositorio copas;
 	private final ContinentalRepositorio continentais;
+	private final MundialRepositorio mundiais;
 	private final ParametrosMoral parametrosMoral = ParametrosMoral.padrao();
 	private final Premiacao premiacao = Premiacao.padrao();
 
 	public ConsultasRepositorio(JdbcClient jdbc, JogoRepositorio jogos, RodadaRepositorio rodadas,
-			TemporadaRepositorio temporadas, CopaRepositorio copas, ContinentalRepositorio continentais) {
+			TemporadaRepositorio temporadas, CopaRepositorio copas, ContinentalRepositorio continentais,
+			MundialRepositorio mundiais) {
+		this.mundiais = mundiais;
 		this.jdbc = jdbc;
 		this.jogos = jogos;
 		this.rodadas = rodadas;
@@ -194,6 +198,7 @@ public class ConsultasRepositorio {
 			.param("jogo", jogoId).param("numero", temporada.numero()).query(Long.class).single();
 		List<JogoNoCalendario> daCopa = jogosDaCopa(jogoId, temporadaId, clubeId, proximo);
 		List<JogoNoCalendario> daContinental = jogosDaContinental(jogoId, temporadaId, clubeId, proximo);
+		List<JogoNoCalendario> doMundial = jogosDoMundial(jogoId, temporadaId, clubeId, proximo);
 		List<JogoNoCalendario> jogosDoClube = new ArrayList<>();
 		for (Rodada rodada : divisao.get().calendario().rodadas()) {
 			Optional<Jogo> jogo = rodada.jogos().stream()
@@ -207,6 +212,7 @@ public class ConsultasRepositorio {
 			daCopa.stream().filter(c -> c.rodada() == rodada.numero()).forEach(jogosDoClube::add);
 			daContinental.stream().filter(c -> c.rodada() == rodada.numero()).forEach(jogosDoClube::add);
 		}
+		jogosDoClube.addAll(doMundial);
 		Classificacao classificacao = rodadas.classificacao(jogoId).get(divisao.get().prioridade());
 		LinhaClassificacao linha = classificacao.linhas().stream().filter(l -> l.clube().id() == clubeId).findFirst()
 			.orElseThrow();
@@ -438,6 +444,37 @@ public class ConsultasRepositorio {
 			.toList();
 	}
 
+	/** Os jogos do Mundial do clube (rev. 88), em campo neutro; a rodada vem depois da última da liga. */
+	private List<JogoNoCalendario> jogosDoMundial(long jogoId, long temporadaId, long clubeId, RodadaRepositorio.Proximo proximo) {
+		Optional<Mundial> mundial = mundiais.carregar(jogoId, temporadaId);
+		if (mundial.isEmpty()) {
+			return List.of();
+		}
+		Map<Long, String> deFora = continentais.paisesDeFora(jogoId);
+		List<JogoNoCalendario> jogos = new ArrayList<>();
+		for (int indice = 0; indice < Mundial.ETAPAS.size(); indice++) {
+			FaseCopa fase = Mundial.ETAPAS.get(indice);
+			for (Mundial.Confronto c : mundial.get().confrontos(fase)) {
+				if (c.primeiro().id() != clubeId && c.segundo().id() != clubeId) {
+					continue;
+				}
+				boolean primeiro = c.primeiro().id() == clubeId;
+				Clube adversario = primeiro ? c.segundo() : c.primeiro();
+				Integer pro = c.placar().map(p -> primeiro ? p.golsMandante() : p.golsVisitante()).orElse(null);
+				Integer contra = c.placar().map(p -> primeiro ? p.golsVisitante() : p.golsMandante()).orElse(null);
+				String detalhe = c.placar().flatMap(PlacarCopa::penaltis)
+					.map(q -> "pên. " + (primeiro ? q.mandante() : q.visitante()) + " x " + (primeiro ? q.visitante() : q.mandante()))
+					.orElse(null);
+				int etapa = indice;
+				jogos.add(new JogoNoCalendario(mundiais.rodada(temporadaId, indice), null, adversario, pro, contra,
+						proximo instanceof RodadaRepositorio.Proximo.EtapaMundial e && e.indice() == etapa, PREFIXO_MUNDIAL + fase.nome(),
+						detalhe, deFora.get(adversario.id())));
+			}
+		}
+		return jogos;
+	}
+
+	private static final String PREFIXO_MUNDIAL = "Mundial · ";
 	private static final String PREFIXO_CONTINENTAL = "Continental · ";
 
 	private List<LinhaArtilheiro> linhas(List<Artilharia.Artilheiro> ranking) {
@@ -508,6 +545,7 @@ public class ConsultasRepositorio {
 		List<LinhaDaDecisao> copa = decisoes(jogoId, usuarioId, "jogo_campeao_copa", "COPA", "NULL", "NULL");
 		List<LinhaDaDecisao> continental = decisoes(jogoId, usuarioId, "jogo_campeao_continental", "CONTINENTAL", "c.clube_pais",
 				"c.vice_pais");
+		List<LinhaDaDecisao> mundial = decisoes(jogoId, usuarioId, "jogo_campeao_mundial", "MUNDIAL", "c.clube_pais", "c.vice_pais");
 		String nomeContinental = jdbc.sql("SELECT nome FROM jogo_continental WHERE jogo_id = :jogo").param("jogo", jogoId)
 			.query(String.class).optional().orElse(null);
 		Map<String, Long> ids = new HashMap<>();
@@ -518,7 +556,8 @@ public class ConsultasRepositorio {
 		liga = liga.stream().map(l -> new LinhaDaLiga(l.ano(), comId(l.campeao(), ids), comId(l.vice(), ids), comId(l.terceiro(), ids))).toList();
 		copa = comIds(copa, ids);
 		continental = comIds(continental, ids);
-		return new VisaoHistorico(jogos.carregarLiga(jogoId).divisoes().getFirst().nome(), liga, copa, nomeContinental, continental,
+		mundial = comIds(mundial, ids);
+		return new VisaoHistorico(jogos.carregarLiga(jogoId).divisoes().getFirst().nome(), liga, copa, nomeContinental, continental, mundial,
 				titulos(jogoId, usuarioId));
 	}
 
@@ -582,11 +621,13 @@ public class ConsultasRepositorio {
 				    WHERE jogo_id = :jogo AND divisao_prioridade = 1
 				    UNION ALL SELECT usuario_id, treinador_maquina_id, 'COPA' FROM jogo_campeao_copa WHERE jogo_id = :jogo
 				    UNION ALL SELECT usuario_id, treinador_maquina_id, 'CONTINENTAL' FROM jogo_campeao_continental WHERE jogo_id = :jogo
+				    UNION ALL SELECT usuario_id, treinador_maquina_id, 'MUNDIAL' FROM jogo_campeao_mundial WHERE jogo_id = :jogo
 				)
 				SELECT c.usuario_id, coalesce(u.nome, m.nome) AS nome, coalesce(cu.nome, cm.nome) AS clube,
 				       count(*) FILTER (WHERE c.competicao = 'LIGA') AS liga,
 				       count(*) FILTER (WHERE c.competicao = 'COPA') AS copa,
-				       count(*) FILTER (WHERE c.competicao = 'CONTINENTAL') AS continental
+				       count(*) FILTER (WHERE c.competicao = 'CONTINENTAL') AS continental,
+				       count(*) FILTER (WHERE c.competicao = 'MUNDIAL') AS mundial
 				FROM conquista c
 				LEFT JOIN usuario u ON u.id = c.usuario_id
 				LEFT JOIN jogo_treinador t ON t.jogo_id = :jogo AND t.usuario_id = c.usuario_id
@@ -601,12 +642,13 @@ public class ConsultasRepositorio {
 				int liga = rs.getInt("liga");
 				int copa = rs.getInt("copa");
 				int continental = rs.getInt("continental");
-				int total = liga + copa + continental;
+				int mundial = rs.getInt("mundial");
+				int total = liga + copa + continental + mundial;
 				// empatados dividem a posição
 				int posicao = titulos.isEmpty() || titulos.getLast().total() != total ? titulos.size() + 1
 						: titulos.getLast().posicao();
 				Long usuario = (Long) rs.getObject("usuario_id");
-				titulos.add(new TreinadorNoRanking(posicao, rs.getString("nome"), rs.getString("clube"), liga, copa, continental,
+				titulos.add(new TreinadorNoRanking(posicao, rs.getString("nome"), rs.getString("clube"), liga, copa, continental, mundial,
 						usuario != null && usuario == usuarioId));
 			});
 		return titulos;
@@ -692,7 +734,7 @@ public class ConsultasRepositorio {
 	 * @param titulos todos os títulos dos treinadores do país
 	 */
 	public record VisaoHistorico(String divisao, List<LinhaDaLiga> liga, List<LinhaDaDecisao> copa, String nomeContinental,
-			List<LinhaDaDecisao> continental, List<TreinadorNoRanking> titulos) {
+			List<LinhaDaDecisao> continental, List<LinhaDaDecisao> mundial, List<TreinadorNoRanking> titulos) {
 	}
 
 	/** @param vice nulo nas temporadas encerradas antes da rev. 78, como {@code terceiro} */
@@ -720,10 +762,10 @@ public class ConsultasRepositorio {
 	}
 
 	/** @param clube clube atual do treinador; nulo se ele está sem clube */
-	public record TreinadorNoRanking(int posicao, String nome, String clube, int liga, int copa, int continental, boolean voce) {
+	public record TreinadorNoRanking(int posicao, String nome, String clube, int liga, int copa, int continental, int mundial, boolean voce) {
 
 		public int total() {
-			return liga + copa + continental;
+			return liga + copa + continental + mundial;
 		}
 	}
 
@@ -762,6 +804,11 @@ public class ConsultasRepositorio {
 	 */
 	public record JogoNoCalendario(int rodada, Boolean emCasa, Clube adversario, Integer golsPro, Integer golsContra,
 			boolean proximo, String copa, String detalhe, String paisAdversario) {
+
+		/** É jogo do Mundial, em lilás na tela (modelo 15b, rev. 88). */
+		public boolean mundial() {
+			return copa != null && copa.startsWith(PREFIXO_MUNDIAL);
+		}
 
 		/** É jogo da continental, em azul-claro na tela (modelo 13d, rev. 79). */
 		public boolean continental() {

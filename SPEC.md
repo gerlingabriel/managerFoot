@@ -1746,6 +1746,9 @@ duas Américas e pelo menos uma entre Ásia, África e Oceania.
 - **Efeitos e prêmio:** como na continental: cartões, suspensões e lesões contam,
   bilheteria dividida ao meio e prêmio igual ao da continental, a ajustar por
   simulação.
+- **Telas (modelos 15a a 15c):** aba Mundial com jogos e participantes; plantel,
+  calendário e extrato com o Mundial em lilás, mesma tela ao vivo da continental;
+  quadro no Histórico e coluna "Mund." em Todos os títulos.
 
 A participação de cada região dependerá da existência de pelo menos um clube elegível para representá-la. Regiões sem clubes elegíveis não deverão gerar participantes fictícios.
 
@@ -3086,7 +3089,7 @@ seções indicadas.
 | 9 | Fórmulas financeiras | **Em aberto:** a referência não cobre; precisam de tabelas próprias (§9.1) |
 | 10 | Estádio e rebaixamento | **Em aberto** (§9.2) |
 | 11 | Copas: classificação, sorteio, não potência de 2 | **Definido:** ida e volta, final única, prorrogação e pênaltis, exclusão do mais fraco (§8.2). Restam detalhes em aberto |
-| 12 | Mundial de clubes | **Definido:** exige clube de cada região (§8.3.4). **Em aberto:** formato exato |
+| 12 | Mundial de clubes | **Definido (rev. 88):** 4 clubes, Europa × sorteado entre Ásia, África e Oceania e América do Norte × América do Sul (§8.3.4) |
 | 13 | Pausa ao abrir tela de gestão durante a partida | **Em aberto** (§11.3) |
 | 14 | Imagem de fundo | **Em aberto** (§10.1) |
 | 15 | Escopo do primeiro protótipo | **Definido:** etapas 0 a 2 da §15 |

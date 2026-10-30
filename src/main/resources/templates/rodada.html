@@ -108,7 +108,7 @@
 </section>
 
 <footer class="rodape-rodada suave">
-<span th:text="${e.comUsuario} ? 'A linha mostra o último lance. Clique num clube para pausar e ver todos os lances; no seu clube, também as substituições.' : (${e.continental()} ? 'Seu clube não joga esta etapa da continental: os jogos correm rápido.' : (${e.copa != null} ? 'Seu clube não joga esta etapa da copa: os jogos correm rápido.' : 'Nenhum clube desta divisão é seu: os jogos correm sempre rápido.'))">texto</span>
+<span th:text="${e.comUsuario} ? 'A linha mostra o último lance. Clique num clube para pausar e ver todos os lances; no seu clube, também as substituições.' : (${e.mundial()} ? 'Seu clube não joga esta etapa do Mundial: os jogos correm rápido.' : (${e.continental()} ? 'Seu clube não joga esta etapa da continental: os jogos correm rápido.' : (${e.copa != null} ? 'Seu clube não joga esta etapa da copa: os jogos correm rápido.' : 'Nenhum clube desta divisão é seu: os jogos correm sempre rápido.')))">texto</span>
 <span th:text="${e.divisaoAtual == e.divisoes.size() - 1} ? 'Ao fim desta divisão você volta ao plantel.' : 'Ao terminar, começa a próxima divisão.'">texto</span>
 <span th:if="${!e.partidas.?[volta()].isEmpty()}">Ida · total: o placar da ida e o total, com os gols do mandante desta partida primeiro. Total empatado (em amarelo) vai à prorrogação e aos pênaltis.</span>
 </footer>

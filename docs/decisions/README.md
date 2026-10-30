@@ -27,3 +27,5 @@ consideradas, decisão e consequências.
 | [0013](0013-treinadores-da-maquina.md) | Treinadores da máquina e histórico | Aceita |
 | [0014](0014-troca-de-treinador.md) | Troca de treinador pela moral no banco | Aceita |
 | [0015](0015-copa-na-temporada.md) | Copa nacional entre as rodadas da liga | Aceita |
+| [0016](0016-estrangeiros-no-jogo.md) | Clubes estrangeiros no jogo para a continental | Aceita |
+| [0017](0017-mundial-na-temporada.md) | Mundial de Clubes na temporada | Aceita |

@@ -164,7 +164,7 @@ class ContinentalNaTemporadaIT {
 			.withMessageContaining("continental");
 		RodadaRepositorio.EtapaContinentalJogada finalJogada = rodadas.avancarContinental(jogo,
 				((RodadaRepositorio.Proximo.EtapaContinental) depois).indice(), List.of());
-		assertThat(rodadas.proximo(jogo)).isInstanceOf(RodadaRepositorio.Proximo.Fim.class);
+		assertThat(rodadas.proximo(jogo)).isEqualTo(new RodadaRepositorio.Proximo.EtapaMundial(0, FaseCopa.SEMIFINAL));
 
 		Continental continental = continentais.carregar(jogo, temporada).orElseThrow();
 		assertThat(continental).isEqualTo(finalJogada.continental());
@@ -200,6 +200,8 @@ class ContinentalNaTemporadaIT {
 				.orElseGet(() -> jogos.carregarLiga(jogo).filaDeEspera().stream().filter(c -> c.id() == id).findFirst().orElseThrow()));
 		List<Long> esperados = VagasContinental.peloDesempenho(primeira.linhas().stream().map(LinhaClassificacao::clube).toList(),
 				campeaoDaCopa, 7).stream().map(Clube::id).toList();
+		RodadasDeTeste.semDecisoesDoTreinador(jdbc, jogo);
+		RodadasDeTeste.jogarCopaPendente(rodadas, jogo);
 		RodadasDeTeste.semDecisoesDoTreinador(jdbc, jogo);
 		fins.avancarTemporada(jogo, 1, 99);
 		Map<String, Object> liga = jdbc.sql("""

@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: cabeca('Mundial')}"></head>
+<body>
+<div class="campo campo-pagina">
+<div class="pagina">
+<header th:replace="~{fragmentos :: topo}"></header>
+<nav th:replace="~{fragmentos :: abas(${jogoId}, 'mundial')}"></nav>
+
+<!-- Aba Mundial (modelo 15a, rev. 88): semifinais, final e quem representa cada região. -->
+<th:block th:with="m=${mundial}">
+<header class="clube-topo">
+<div class="pilha-curta">
+<h1 class="titulo-pagina" th:text="|Mundial de Clubes · Temporada ${m.ano}|">Mundial de Clubes · Temporada 2026</h1>
+<span class="suave">4 clubes · jogo único em campo neutro, com prorrogação e pênaltis · depois da final da continental</span>
+</div>
+<div th:if="${m.campeao != null}" class="pilha-curta copa-seu-clube">
+<span class="rotulo">Campeão</span>
+<span class="copa-situacao" th:text="${m.campeao}">Clube</span>
+</div>
+</header>
+
+<p th:if="${m.semifinais.isEmpty()}" class="painel texto linha-jogo">O Mundial é sorteado depois da final da continental. Uma semifinal é Europa contra um clube da Ásia, da África ou da Oceania; a outra, América do Norte e Central contra América do Sul. Jogos criados antes do Mundial não o disputam.</p>
+
+<th:block th:unless="${m.semifinais.isEmpty()}">
+<section class="painel grupo" aria-labelledby="t-jogos">
+<div class="painel-titulo painel-cabecalho"><h2 id="t-jogos" class="titulo-secao pequeno">Jogos</h2></div>
+<div class="mundial-chave">
+<div class="pilha-curta">
+<span class="rotulo">Semifinais</span>
+<th:block th:each="j : ${m.semifinais}"><div th:replace="~{:: jogo(${j})}"></div></th:block>
+</div>
+<div class="pilha-curta">
+<span class="rotulo">Final</span>
+<th:block th:if="${m.decisao != null}"><div th:replace="~{:: jogo(${m.decisao})}"></div></th:block>
+<p th:if="${m.decisao == null}" class="suave">Os vencedores das semifinais.</p>
+</div>
+</div>
+</section>
+
+<section class="painel grupo" aria-labelledby="t-participantes">
+<div class="painel-titulo painel-cabecalho"><h2 id="t-participantes" class="titulo-secao pequeno">Participantes</h2></div>
+<div class="rolagem">
+<table class="tabela-classificacao tabela-copa">
+<thead><tr><th scope="col">Região</th><th scope="col">Clube</th><th scope="col">Como chegou</th></tr></thead>
+<tbody>
+<tr th:each="p : ${m.participantes}" th:classappend="${p.seu} ? 'do-usuario'">
+<td th:text="${p.regiao}">Europa</td>
+<td><span th:text="${p.seu} ? |${p.clube} (você)| : ${p.clube}">Clube</span> <span th:if="${p.pais != null}" class="sigla-pais" th:text="${p.pais}">GER</span></td>
+<td class="suave" th:text="${p.comoChegou}">Por força com sorteio</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+</th:block>
+</th:block>
+
+<th:block th:if="false">
+<div th:fragment="jogo(j)" class="mundial-jogo">
+<span th:classappend="${j.primeiroVenceu} ? 'mundial-venceu' : (${j.placar != null} ? 'suave')"><span th:text="${j.primeiroSeu} ? |${j.primeiro} (você)| : ${j.primeiro}">Clube</span> <span th:if="${j.paisPrimeiro != null}" class="sigla-pais" th:text="${j.paisPrimeiro}">GER</span></span>
+<strong class="mundial-placar" th:classappend="${j.placar == null} ? 'suave'" th:text="${j.placar != null} ? ${j.placar} : '—'">—</strong>
+<span th:classappend="${j.segundoVenceu} ? 'mundial-venceu' : (${j.placar != null} ? 'suave')"><span th:text="${j.segundoSeu} ? |${j.segundo} (você)| : ${j.segundo}">Clube</span> <span th:if="${j.paisSegundo != null}" class="sigla-pais" th:text="${j.paisSegundo}">MEX</span></span>
+</div>
+</th:block>
+</div>
+</div>
+</body>
+</html>

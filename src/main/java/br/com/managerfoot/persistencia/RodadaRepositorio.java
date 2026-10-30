@@ -16,6 +16,7 @@ import br.com.managerfoot.dominio.Clube;
 import br.com.managerfoot.dominio.Escalacao;
 import br.com.managerfoot.dominio.Jogador;
 import br.com.managerfoot.dominio.Moral;
+import br.com.managerfoot.motor.JogoDecisivo;
 import br.com.managerfoot.motor.EventoPartida;
 import br.com.managerfoot.motor.Lado;
 import br.com.managerfoot.motor.ParametrosMotor;
@@ -30,6 +31,7 @@ import br.com.managerfoot.temporada.PlacarCopa;
 import br.com.managerfoot.temporada.Disciplina;
 import br.com.managerfoot.temporada.EvolucaoForca;
 import br.com.managerfoot.temporada.Jogo;
+import br.com.managerfoot.temporada.Mundial;
 import br.com.managerfoot.temporada.ProcessamentoRodada;
 import br.com.managerfoot.temporada.RodadaAoVivo;
 import br.com.managerfoot.temporada.Temporada;
@@ -59,13 +61,16 @@ public class RodadaRepositorio {
 	private final TrocaRepositorio trocas;
 	private final CopaRepositorio copas;
 	private final ContinentalRepositorio continentais;
+	private final MundialRepositorio mundiais;
 	private final ProcessamentoRodada processamento = ProcessamentoRodada.padrao();
 	private final EvolucaoForca evolucao = EvolucaoForca.padrao();
 
 	public RodadaRepositorio(JdbcClient jdbc, JogoRepositorio jogos, TemporadaRepositorio temporadas,
 			EscalacaoRepositorio escalacoes, CaixaRepositorio caixas, MercadoRepositorio mercado,
 			ClassificacaoRepositorio classificacoes, EstadioRepositorio estadios, PatrocinioRepositorio patrocinios,
-			TrocaRepositorio trocas, CopaRepositorio copas, ContinentalRepositorio continentais) {
+			TrocaRepositorio trocas, CopaRepositorio copas, ContinentalRepositorio continentais,
+			MundialRepositorio mundiais) {
+		this.mundiais = mundiais;
 		this.jdbc = jdbc;
 		this.jogos = jogos;
 		this.temporadas = temporadas;
@@ -101,6 +106,10 @@ public class RodadaRepositorio {
 		 *
 		 * @param indice posição da etapa no quadro da continental
 		 */
+		/** Uma etapa do Mundial, depois da final da continental (SPEC §8.3.4, rev. 88). */
+		record EtapaMundial(int indice, FaseCopa fase) implements Proximo {
+		}
+
 		record EtapaContinental(int indice, Continental.Etapa etapa) implements Proximo {
 		}
 
@@ -128,6 +137,10 @@ public class RodadaRepositorio {
 		}
 		if (linha.rodadasProcessadas() < totalDeRodadas(linha)) {
 			return new Proximo.Liga(linha.rodadasProcessadas() + 1);
+		}
+		List<FaseCopa> mundial = mundiais.quadro(linha.id());
+		if (linha.etapasMundial() < mundial.size()) {
+			return new Proximo.EtapaMundial(linha.etapasMundial(), mundial.get(linha.etapasMundial()));
 		}
 		return new Proximo.Fim();
 	}
@@ -338,6 +351,7 @@ public class RodadaRepositorio {
 			caixas.pagarPremiosDaContinental(jogoId, linha.id(), rodada, continental.campeao().get(),
 					continental.vice().orElseThrow());
 			continentais.gravarCampeao(jogoId, temporada.numero(), continental.campeao().get(), continental.vice().orElseThrow());
+			mundiais.criar(jogoId, linha.id(), temporada.semente(), continental.campeao().get());
 		}
 		// depois do título, como na copa
 		Map<Long, Moral> moralDoPais = new HashMap<>(resultado.moral());
@@ -366,6 +380,100 @@ public class RodadaRepositorio {
 		return processamento.prepararContinental(temporadas.carregarAtual(jogoId), indice, jogosDaEtapa,
 				comEstrangeiros(doPais, jogosDaEtapa), antes, escalacoesDosTreinadores(jogoId, "a continental", doPais, antes),
 				substituicoes);
+	}
+
+	/**
+	 * Joga e grava uma etapa do Mundial (SPEC §8.3.4, rev. 88), como {@link #avancarContinental}. A final dá o título.
+	 *
+	 * @param indice a etapa que quem pede espera jogar: a {@link Proximo.EtapaMundial}
+	 * @throws IllegalStateException se a etapa não é a próxima ou a escalação de um treinador não pode jogar
+	 */
+	@Transactional
+	public Mundial avancarMundial(long jogoId, int indice, List<RodadaAoVivo.Substituicao> substituicoes) {
+		LinhaTemporada linha = temporadaAtual(jogoId, true);
+		if (!(proximo(jogoId, linha) instanceof Proximo.EtapaMundial(int esperado, FaseCopa fase)) || esperado != indice) {
+			throw new IllegalStateException("a etapa " + indice + " do Mundial não é a próxima do jogo " + jogoId);
+		}
+		Map<Long, List<Jogador>> doPais = jogos.carregarPlanteis(jogoId);
+		Disciplina antes = carregarDisciplina(jogoId);
+		Map<Long, Moral> moralAntes = carregarMoral(jogoId);
+		Temporada temporada = temporadas.carregarAtual(jogoId);
+		Mundial mundial = mundiais.carregar(jogoId, linha.id()).orElseThrow();
+		int rodada = mundiais.rodada(linha.id(), indice);
+		List<Mundial.Confronto> confrontos = mundial.confrontos(fase);
+		List<ProcessamentoRodada.PartidaDaEtapa> jogosDaEtapa = partidasDoMundial(confrontos, rodada);
+		Map<Long, List<Jogador>> planteis = comEstrangeiros(doPais, jogosDaEtapa);
+		RodadaAoVivo aoVivo = processamento.prepararMundial(temporada, indice, jogosDaEtapa, planteis, antes,
+				escalacoesDosTreinadores(jogoId, "o Mundial", doPais, antes), substituicoes);
+		ProcessamentoRodada.Resultado resultado = aoVivo.finalizar(moralAntes);
+		for (int i = 0; i < confrontos.size(); i++) {
+			ProcessamentoRodada.PartidaJogada jogada = resultado.partidas().get(i);
+			PlacarCopa placar = new PlacarCopa(jogada.resultado().golsCasa(), jogada.resultado().golsFora(),
+					jogada.resultado().prorrogacao(), jogada.resultado().penaltis()
+						.map(d -> new PlacarCopa.Penaltis(d.gols(Lado.CASA), d.gols(Lado.FORA))));
+			mundial = mundial.comPlacar(fase, confrontos.get(i).ordem(), placar);
+			gravarPartida(linha.id(), jogada, placar, Competicao.MUNDIAL);
+		}
+		gravarDisciplina(planteis, antes, resultado.disciplina());
+		escalacoes.retirarSuspensos(jogoId);
+		caixas.lancarMundial(jogoId, linha.id(), temporada, resultado.partidas(), doPais);
+		patrocinios.pagarVitorias(linha.id(), rodada, resultado.partidas(), Competicao.MUNDIAL);
+		evoluir(jogoId, new SplittableRandom(temporada.semente() * 53 + indice), aoVivo, resultado, doPais);
+
+		int atualizadas = jdbc.sql("""
+				UPDATE jogo_temporada SET etapas_mundial_processadas = :etapa
+				WHERE id = :temporada AND etapas_mundial_processadas = :anterior""")
+			.param("etapa", indice + 1)
+			.param("temporada", linha.id())
+			.param("anterior", indice)
+			.update();
+		if (atualizadas != 1) {
+			throw new IllegalStateException("a etapa " + indice + " do Mundial do jogo " + jogoId + " já foi processada");
+		}
+		if (fase == FaseCopa.SEMIFINAL) {
+			mundial = mundiais.criarFinal(linha.id(), mundial);
+		} else {
+			Clube campeao = mundial.campeao().orElseThrow();
+			Clube vice = mundial.vice().orElseThrow();
+			caixas.pagarPremiosDaContinental(jogoId, linha.id(), rodada, campeao, vice, Competicao.MUNDIAL);
+			mundiais.gravarCampeao(jogoId, temporada.numero(), campeao, vice);
+		}
+		Map<Long, Moral> moralDoPais = new HashMap<>(resultado.moral());
+		moralDoPais.keySet().retainAll(doPais.keySet());
+		gravarMoralEDemitir(jogoId, linha.id(), rodada, moralAntes,
+				new ProcessamentoRodada.Resultado(resultado.partidas(), resultado.disciplina(), moralDoPais));
+		return mundial;
+	}
+
+	/** A etapa do Mundial pronta para jogar ao vivo, como {@link #prepararContinental}. Não grava nada. */
+	@Transactional(readOnly = true)
+	public RodadaAoVivo prepararMundial(long jogoId, int indice, List<RodadaAoVivo.Substituicao> substituicoes) {
+		LinhaTemporada linha = temporadaAtual(jogoId, false);
+		if (!(proximo(jogoId, linha) instanceof Proximo.EtapaMundial(int esperado, FaseCopa fase)) || esperado != indice) {
+			throw new IllegalStateException("a etapa " + indice + " do Mundial não é a próxima do jogo " + jogoId);
+		}
+		Map<Long, List<Jogador>> doPais = jogos.carregarPlanteis(jogoId);
+		Disciplina antes = carregarDisciplina(jogoId);
+		List<ProcessamentoRodada.PartidaDaEtapa> jogosDaEtapa = partidasDoMundial(
+				mundiais.carregar(jogoId, linha.id()).orElseThrow().confrontos(fase), mundiais.rodada(linha.id(), indice));
+		return processamento.prepararMundial(temporadas.carregarAtual(jogoId), indice, jogosDaEtapa, comEstrangeiros(doPais, jogosDaEtapa),
+				antes, escalacoesDosTreinadores(jogoId, "o Mundial", doPais, antes), substituicoes);
+	}
+
+	/** Os jogos da etapa do Mundial, para o plantel mostrar o próximo. */
+	@Transactional(readOnly = true)
+	public List<Jogo> partidasDoMundial(long jogoId, int indice, FaseCopa fase) {
+		LinhaTemporada linha = temporadaAtual(jogoId, false);
+		return partidasDoMundial(mundiais.carregar(jogoId, linha.id()).orElseThrow().confrontos(fase), mundiais.rodada(linha.id(), indice))
+			.stream().map(ProcessamentoRodada.PartidaDaEtapa::jogo).toList();
+	}
+
+	/** Todos em jogo único, em campo neutro, com prorrogação e pênaltis. */
+	private static List<ProcessamentoRodada.PartidaDaEtapa> partidasDoMundial(List<Mundial.Confronto> confrontos, int rodada) {
+		return confrontos.stream()
+			.map(c -> new ProcessamentoRodada.PartidaDaEtapa(new Jogo(rodada, c.primeiro(), c.segundo()),
+					java.util.Optional.of(JogoDecisivo.FINAL)))
+			.toList();
 	}
 
 	/** As partidas da etapa, na ordem dos grupos ou dos confrontos. */
@@ -657,12 +765,12 @@ public class RodadaRepositorio {
 
 	private LinhaTemporada temporadaAtual(long jogoId, boolean travar) {
 		return jdbc.sql("""
-				SELECT id, rodadas_processadas, etapas_copa_processadas, etapas_continental_processadas
+				SELECT id, rodadas_processadas, etapas_copa_processadas, etapas_continental_processadas, etapas_mundial_processadas
 				FROM jogo_temporada WHERE jogo_id = :jogo
 				ORDER BY numero DESC LIMIT 1""" + (travar ? " FOR UPDATE" : ""))
 			.param("jogo", jogoId)
 			.query((rs, n) -> new LinhaTemporada(rs.getLong("id"), rs.getInt("rodadas_processadas"),
-					rs.getInt("etapas_copa_processadas"), rs.getInt("etapas_continental_processadas")))
+					rs.getInt("etapas_copa_processadas"), rs.getInt("etapas_continental_processadas"), rs.getInt("etapas_mundial_processadas")))
 			.optional()
 			.orElseThrow(() -> new NoSuchElementException("o jogo " + jogoId + " não existe ou não tem temporada"));
 	}
@@ -680,7 +788,7 @@ public class RodadaRepositorio {
 	public record EtapaJogada(int indice, Copa.Etapa etapa, ProcessamentoRodada.Resultado resultado, Copa copa) {
 	}
 
-	private record LinhaTemporada(long id, int rodadasProcessadas, int etapasCopa, int etapasContinental) {
+	private record LinhaTemporada(long id, int rodadasProcessadas, int etapasCopa, int etapasContinental, int etapasMundial) {
 	}
 
 	private record LinhaDisciplina(long jogadorId, int amarelos, int suspensao, int lesao) {

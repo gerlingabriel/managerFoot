@@ -99,6 +99,10 @@ public class FimDeTemporadaRepositorio {
 			throw new IllegalStateException("a temporada " + numero + " do jogo " + jogoId + " ainda tem "
 					+ etapa.etapa().nome() + " da continental a jogar");
 		}
+		if (rodadas.proximo(jogoId) instanceof RodadaRepositorio.Proximo.EtapaMundial etapa) {
+			throw new IllegalStateException("a temporada " + numero + " do jogo " + jogoId + " ainda tem a "
+					+ etapa.fase().nome() + " do Mundial a jogar");
+		}
 		if (trocas.algumConvitePendente(jogoId)) {
 			// o convite é da temporada que acaba: os clubes dele podem mudar de divisão ou ir para a fila
 			throw new DecisaoPendenteException("Responda ao convite para assumir outro clube antes de começar a próxima temporada.");

@@ -26,6 +26,7 @@ import br.com.managerfoot.motor.EscalacaoMaquina;
 import br.com.managerfoot.motor.ParametrosMotor;
 import br.com.managerfoot.temporada.Classificacao;
 import br.com.managerfoot.temporada.Continental;
+import br.com.managerfoot.temporada.FaseCopa;
 import br.com.managerfoot.temporada.Copa;
 import br.com.managerfoot.temporada.Jogo;
 import br.com.managerfoot.temporada.LinhaClassificacao;
@@ -120,6 +121,7 @@ public class PlantelRepositorio {
 		String detalheCopa = null;
 		boolean finalCopa = false;
 		boolean continental = false;
+		boolean mundial = false;
 		if (seguinte instanceof RodadaRepositorio.Proximo.EtapaCopa(int indice, Copa.Etapa etapa)) {
 			// a etapa da copa vem antes da próxima rodada da liga (SPEC §8.2, rev. 70)
 			etapaCopa = "Copa · " + etapa.nome();
@@ -145,6 +147,14 @@ public class PlantelRepositorio {
 			detalheCopa = continentais.carregar(jogoId, temporadaId)
 				.flatMap(c -> c.detalheDoProximo(oClube, continentais.quadro(temporadaId), indice, temporada.semente()))
 				.orElse(null);
+		} else if (seguinte instanceof RodadaRepositorio.Proximo.EtapaMundial(int indice, FaseCopa fase)) {
+			// a etapa do Mundial, como a da continental (modelo 15b, rev. 88)
+			mundial = true;
+			etapaCopa = "Mundial · " + fase.nome();
+			indiceCopa = indice;
+			finalCopa = fase == FaseCopa.FINAL;
+			proximo = rodadas.partidasDoMundial(jogoId, indice, fase).stream().filter(j -> envolve(j, clube)).findFirst();
+			detalheCopa = proximo.isPresent() ? "Jogo único, com prorrogação e pênaltis" : null;
 		} else {
 			proximo = processadas >= total ? Optional.empty()
 					: divisao.calendario().jogos().stream().filter(j -> j.rodada() == processadas + 1 && envolve(j, clube))
@@ -155,8 +165,8 @@ public class PlantelRepositorio {
 		return Optional.of(new VisaoPlantel(jogoId, temporada.numero(), jogos.ano(jogoId, temporada.numero()), oClube, nomeDivisao, classificacao.linhas().indexOf(linha) + 1,
 				linha.pontos(), linha.jogos(), moral.valor(), parametrosMoral.maximo(), moral.faixa(parametrosMoral),
 				processadas + 1, seguinte instanceof RodadaRepositorio.Proximo.Fim, etapaCopa, indiceCopa, detalheCopa, finalCopa,
-				continental, proximo.map(j -> j.mandante().id() == clube).orElse(null), adversario,
-				adversario == null || !continental ? null : continentais.paisesDeFora(jogoId).get(adversario.id()), escalacao,
+				continental, mundial, proximo.map(j -> j.mandante().id() == clube).orElse(null), adversario,
+				adversario == null || !(continental || mundial) ? null : continentais.paisesDeFora(jogoId).get(adversario.id()), escalacao,
 				linhas, problemas, goleiroImprovisado, caixas.saldo(clube, plantel), caixas.moeda(jogoId)));
 	}
 
@@ -300,12 +310,13 @@ public class PlantelRepositorio {
 	 * @param emCasa nulo quando não há próximo jogo (folga, fora da etapa da copa ou temporada encerrada)
 	 * @param adversario nulo quando não há próximo jogo
 	 * @param continental a etapa do próximo jogo é da continental, com o nome em {@code etapaCopa}
+	 * @param mundial a etapa do próximo jogo é do Mundial, com o nome em {@code etapaCopa}
 	 * @param paisAdversario sigla do adversário de fora, na continental; nulo nos outros casos
 	 * @param saldo caixa do clube em centavos de Real, para saber se pode contratar (rev. 39)
 	 */
 	public record VisaoPlantel(long jogoId, int temporada, int ano, Clube clube, String divisao, int posicao, int pontos, int jogos,
 			int moral, int moralMaxima, Moral.Faixa faixaMoral, int rodada, boolean temporadaEncerrada, String etapaCopa,
-			Integer indiceCopa, String detalheCopa, boolean finalCopa, boolean continental, Boolean emCasa,
+			Integer indiceCopa, String detalheCopa, boolean finalCopa, boolean continental, boolean mundial, Boolean emCasa,
 			Clube adversario, String paisAdversario, EscalacaoDoTreinador escalacao, List<LinhaJogador> jogadores, List<String> problemas,
 			String goleiroImprovisado, long saldo, Moeda moeda) {
 	}

@@ -32,6 +32,8 @@ import br.com.managerfoot.motor.Partida;
 import br.com.managerfoot.motor.RegrasPartida;
 import br.com.managerfoot.motor.TipoEvento;
 import br.com.managerfoot.temporada.Continental;
+import br.com.managerfoot.temporada.FaseCopa;
+import br.com.managerfoot.temporada.Mundial;
 import br.com.managerfoot.temporada.Copa;
 import br.com.managerfoot.temporada.ProcessamentoRodada;
 import br.com.managerfoot.temporada.RelogioRodada;
@@ -95,7 +97,7 @@ public class RodadaAoVivoRepositorio {
 		Optional<Linha> existente = linha(jogoId);
 		if (existente.isPresent()) {
 			if (existente.get().rodada() == rodada && existente.get().etapaCopa() == null
-					&& existente.get().etapaContinental() == null) {
+					&& existente.get().etapaContinental() == null && existente.get().etapaMundial() == null) {
 				return;
 			}
 			throw new IllegalStateException("a rodada " + existente.get().rodada() + " já está em andamento");
@@ -197,6 +199,38 @@ public class RodadaAoVivoRepositorio {
 			.update();
 	}
 
+	/**
+	 * Começa ao vivo uma etapa do Mundial (SPEC §8.3.4, rev. 88), como a da continental. Repetir não começa outra.
+	 *
+	 * @throws DecisaoPendenteException como em {@link #iniciar}
+	 */
+	@Transactional
+	public void iniciarMundial(long jogoId, long usuarioId, int indice, Instant agora) {
+		exigirClube(jogoId, usuarioId);
+		jogos.travar(jogoId);
+		Optional<Linha> existente = linha(jogoId);
+		if (existente.isPresent()) {
+			if (Integer.valueOf(indice).equals(existente.get().etapaMundial())) {
+				return;
+			}
+			throw new IllegalStateException("a rodada " + existente.get().rodada() + " já está em andamento");
+		}
+		if (!(rodadas.proximo(jogoId) instanceof RodadaRepositorio.Proximo.EtapaMundial(int proxima, FaseCopa fase)) || proxima != indice) {
+			throw new IllegalStateException("a etapa " + indice + " do Mundial não é a próxima do jogo " + jogoId);
+		}
+		exigirSemDecisaoPendente(jogoId);
+		RodadaAoVivo aoVivo = rodadas.prepararMundial(jogoId, indice, List.of());
+		jdbc.sql("""
+				INSERT INTO jogo_rodada_ao_vivo (jogo_id, temporada_id, rodada, etapa_mundial, progresso, andando_desde)
+				SELECT :jogo, id, :rodada, :etapa, 0, :agora FROM jogo_temporada WHERE jogo_id = :jogo
+				ORDER BY numero DESC LIMIT 1""")
+			.param("jogo", jogoId)
+			.param("rodada", aoVivo.partidas().getFirst().jogo().rodada())
+			.param("etapa", indice)
+			.param("agora", OffsetDateTime.ofInstant(agora, ZoneOffset.UTC))
+			.update();
+	}
+
 	/** Patrocínio, convite e pedido de aumento esperam a resposta antes de qualquer jogo. */
 	private void exigirSemDecisaoPendente(long jogoId) {
 		boolean semPatrocinio = jdbc.sql("""
@@ -251,7 +285,7 @@ public class RodadaAoVivoRepositorio {
 					.param("ate", progresso)
 					.param("jogo", jogoId)
 					.update();
-				atual = new Linha(atual.rodada(), atual.etapaCopa(), atual.etapaContinental(), atual.temporadaId(), progresso,
+				atual = new Linha(atual.rodada(), atual.etapaCopa(), atual.etapaContinental(), atual.etapaMundial(), atual.temporadaId(), progresso,
 						null, progresso);
 			}
 		}
@@ -347,7 +381,8 @@ public class RodadaAoVivoRepositorio {
 		PartidaDaRodada partida = rodada.partidas().stream()
 			.filter(p -> p.jogo().mandante().id() == clube || p.jogo().visitante().id() == clube)
 			.findFirst()
-			.orElseThrow(() -> new IllegalArgumentException(linha.etapaContinental() != null
+			.orElseThrow(() -> new IllegalArgumentException(linha.etapaMundial() != null ? "Seu clube não joga esta etapa do Mundial."
+					: linha.etapaContinental() != null
 					? "Seu clube não joga esta etapa da continental."
 					: linha.etapaCopa() == null ? "Seu clube folga nesta rodada." : "Seu clube não joga esta etapa da copa."));
 		int divisaoAtual = new ArrayList<>(porDivisao.keySet()).get(relogio.divisao(linha.progresso()));
@@ -434,14 +469,18 @@ public class RodadaAoVivoRepositorio {
 		int apagadas = jdbc.sql("""
 				DELETE FROM jogo_rodada_ao_vivo
 				WHERE jogo_id = :jogo AND rodada = :rodada AND etapa_copa IS NOT DISTINCT FROM :etapa
-				  AND etapa_continental IS NOT DISTINCT FROM :continental""")
+				  AND etapa_continental IS NOT DISTINCT FROM :continental
+				  AND etapa_mundial IS NOT DISTINCT FROM :mundial""")
 			.param("jogo", jogoId)
 			.param("rodada", linha.rodada())
 			.param("etapa", linha.etapaCopa())
 			.param("continental", linha.etapaContinental())
+			.param("mundial", linha.etapaMundial())
 			.update();
 		if (apagadas == 1) {
-			if (linha.etapaContinental() != null) {
+			if (linha.etapaMundial() != null) {
+				rodadas.avancarMundial(jogoId, linha.etapaMundial(), substituicoes);
+			} else if (linha.etapaContinental() != null) {
 				rodadas.avancarContinental(jogoId, linha.etapaContinental(), substituicoes);
 			} else if (linha.etapaCopa() == null) {
 				rodadas.avancar(jogoId, linha.rodada(), substituicoes);
@@ -453,6 +492,9 @@ public class RodadaAoVivoRepositorio {
 
 	/** A rodada da liga ou a etapa da copa ou da continental da linha, pronta para refazer as partidas. */
 	private RodadaAoVivo preparar(long jogoId, Linha linha, List<RodadaAoVivo.Substituicao> substituicoes) {
+		if (linha.etapaMundial() != null) {
+			return rodadas.prepararMundial(jogoId, linha.etapaMundial(), substituicoes);
+		}
 		if (linha.etapaContinental() != null) {
 			return rodadas.prepararContinental(jogoId, linha.etapaContinental(), substituicoes);
 		}
@@ -479,6 +521,10 @@ public class RodadaAoVivoRepositorio {
 			// o bloco tem o nome da competição; o título, a etapa (modelo 13c, rev. 79)
 			nomes.put(ProcessamentoRodada.PRIORIDADE_COPA, continentais.nome(jogoId));
 			copa = "Continental · " + continentais.quadro(linha.temporadaId()).get(linha.etapaContinental()).nome();
+		}
+		if (linha.etapaMundial() != null) {
+			nomes.put(ProcessamentoRodada.PRIORIDADE_COPA, "Mundial de Clubes");
+			copa = "Mundial · " + Mundial.ETAPAS.get(linha.etapaMundial()).nome();
 		}
 		Map<Long, String> grupos = gruposDosMandantes(jogoId, linha);
 		List<DivisaoNaRodada> divisoes = new ArrayList<>();
@@ -596,14 +642,14 @@ public class RodadaAoVivoRepositorio {
 
 	private Optional<Linha> linha(long jogoId) {
 		return jdbc.sql("""
-				SELECT rodada, etapa_copa, etapa_continental, temporada_id, progresso, andando_desde, lesao_ate
+				SELECT rodada, etapa_copa, etapa_continental, etapa_mundial, temporada_id, progresso, andando_desde, lesao_ate
 				FROM jogo_rodada_ao_vivo
 				WHERE jogo_id = :jogo""")
 			.param("jogo", jogoId)
 			.query((rs, n) -> {
 				OffsetDateTime desde = rs.getObject("andando_desde", OffsetDateTime.class);
 				return new Linha(rs.getInt("rodada"), rs.getObject("etapa_copa", Integer.class),
-						rs.getObject("etapa_continental", Integer.class), rs.getLong("temporada_id"),
+						rs.getObject("etapa_continental", Integer.class), rs.getObject("etapa_mundial", Integer.class), rs.getLong("temporada_id"),
 						rs.getDouble("progresso"), desde == null ? null : desde.toInstant(), rs.getDouble("lesao_ate"));
 			})
 			.optional();
@@ -635,9 +681,10 @@ public class RodadaAoVivoRepositorio {
 	/**
 	 * @param etapaCopa índice da etapa da copa no quadro; nulo fora dela
 	 * @param etapaContinental índice da etapa da continental no quadro; nulo fora dela
+	 * @param etapaMundial índice da etapa do Mundial; nulo fora dela
 	 * @param lesaoAte progresso da última lesão do usuário que já pausou a rodada
 	 */
-	private record Linha(int rodada, Integer etapaCopa, Integer etapaContinental, long temporadaId, double progresso, Instant andandoDesde,
+	private record Linha(int rodada, Integer etapaCopa, Integer etapaContinental, Integer etapaMundial, long temporadaId, double progresso, Instant andandoDesde,
 			double lesaoAte) {
 
 		/** Parada na lesão, esperando a troca do usuário. */
@@ -732,11 +779,19 @@ public class RodadaAoVivoRepositorio {
 			return copa != null && copa.startsWith(PREFIXO_CONTINENTAL);
 		}
 
-		/** Título do bloco em jogo: o nome dele e, na continental, também a etapa. */
+		/** É uma etapa do Mundial (rev. 88). */
+		public boolean mundial() {
+			return copa != null && copa.startsWith(PREFIXO_MUNDIAL);
+		}
+
+		/** Título do bloco em jogo: o nome dele e, na continental e no Mundial, também a etapa. */
 		public String tituloDoBloco() {
 			String nome = divisoes.get(divisaoAtual).nome();
-			return continental() ? nome + " · " + copa.substring(PREFIXO_CONTINENTAL.length()) : nome;
+			return continental() ? nome + " · " + copa.substring(PREFIXO_CONTINENTAL.length())
+					: mundial() ? nome + " · " + copa.substring(PREFIXO_MUNDIAL.length()) : nome;
 		}
+
+		private static final String PREFIXO_MUNDIAL = "Mundial · ";
 
 		private static final String PREFIXO_CONTINENTAL = "Continental · ";
 

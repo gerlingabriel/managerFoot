@@ -49,9 +49,9 @@
 <table class="tabela-calendario">
 <thead><tr><th scope="col">Jogo</th><th scope="col">Local</th><th scope="col">Adversário</th><th scope="col" class="num">Resultado</th></tr></thead>
 <tbody>
-<tr th:each="j : ${k.jogos}" th:classappend="${j.proximo} ? 'do-usuario' : (${j.continental()} ? 'da-continental' : (${j.copa != null} ? 'da-copa' : (${j.adversario == null} ? 'folga')))">
+<tr th:each="j : ${k.jogos}" th:classappend="${j.proximo} ? 'do-usuario' : (${j.mundial()} ? 'do-mundial' : (${j.continental()} ? 'da-continental' : (${j.copa != null} ? 'da-copa' : (${j.adversario == null} ? 'folga'))))">
 <td th:if="${j.copa == null}" class="suave" th:text="|Rodada ${j.rodada}|">Rodada 1</td>
-<td th:if="${j.copa != null}" th:class="${j.continental()} ? 'calendario-continental' : 'calendario-copa'" th:text="${j.copa}">Copa · Oitavas de final · ida</td>
+<td th:if="${j.copa != null}" th:class="${j.mundial()} ? 'calendario-mundial' : (${j.continental()} ? 'calendario-continental' : 'calendario-copa')" th:text="${j.copa}">Copa · Oitavas de final · ida</td>
 <td class="temperamento" th:text="${j.emCasa == null} ? (${j.copa != null} ? 'Neutro' : '—') : (${j.emCasa} ? 'Casa' : 'Fora')">Casa</td>
 <td>
 <span th:if="${j.adversario != null}" class="clube-celula"><span aria-hidden="true" th:style="${@escudos.estilo(j.adversario.escudo, 18, 22)}"></span><a th:replace="~{fragmentos :: clube(${j.adversario.id}, ${j.adversario.nome}, 'jogo-nome calendario-nome')}">Adversário</a><span th:if="${j.paisAdversario != null}" class="sigla-pais" th:text="${j.paisAdversario}">ARG</span></span>

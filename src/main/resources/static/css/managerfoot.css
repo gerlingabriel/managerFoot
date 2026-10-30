@@ -10,6 +10,7 @@
 	--destaque: #F2C94C;
 	--destaque-claro: #FFE08A;
 	--continental: #8EC9F0;
+	--mundial: #CDB8F5;
 	--erro: #E5484D;
 	--erro-texto: #FFB4B6;
 	--erro-alerta: #FFD7D8;
@@ -1525,6 +1526,15 @@ a.financas-link:hover, a.financas-link:focus-visible { border-color: var(--desta
 /* Continental em azul-claro, para não confundir com a copa em amarelo (modelos 13c e 13d, rev. 79). */
 .jogo-grupo { font: 700 15px 'Barlow Condensed', sans-serif; text-transform: uppercase; letter-spacing: 0.04em; color: var(--texto-suave); }
 .rotulo.rotulo-continental { color: var(--continental); }
+.rotulo.rotulo-mundial { color: var(--mundial); }
+.calendario-mundial { font-weight: 700; font-size: 14px; color: var(--mundial); line-height: 1.2; }
+.tabela-calendario tr.do-mundial td, .tabela-extrato tr.do-mundial td { background: rgba(205, 184, 245, 0.08); }
+.extrato-mundial { color: var(--mundial); font-weight: 700; }
+.mundial-chave { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; padding: 12px 16px; align-items: start; }
+.mundial-jogo { display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; align-items: center; padding: 10px 12px; border: 1px solid var(--borda); border-left: 4px solid var(--mundial); border-radius: 6px; }
+.mundial-jogo > :last-child { text-align: right; }
+.mundial-placar { white-space: nowrap; }
+.mundial-venceu { font-weight: 700; }
 .grupos-continental { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; padding: 16px; }
 .grupo-caixa { background: var(--cartao); border: 1px solid var(--borda); border-radius: 10px; padding: 12px; min-width: 0; }
 .grupo-caixa.seu { border-color: var(--destaque); }

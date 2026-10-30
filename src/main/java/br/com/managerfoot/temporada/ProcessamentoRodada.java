@@ -58,6 +58,7 @@ public final class ProcessamentoRodada {
 
 	/** Mistura o índice da etapa da continental na semente, separada das da liga e da copa. */
 	private static final long MISTURA_ETAPA_CONTINENTAL = 0xA0761D6478BD642FL;
+	private static final long MISTURA_ETAPA_MUNDIAL = 0x8EBC6AF09C88C6E3L;
 
 	/** Uma partida de etapa de copa ou continental: o jogo e, na volta e na final, o que decide. */
 	public record PartidaDaEtapa(Jogo jogo, Optional<JogoDecisivo> decisivo) {
@@ -196,6 +197,21 @@ public final class ProcessamentoRodada {
 		return prepararEtapa(temporada,
 				new SplittableRandom(temporada.semente() ^ ((indice + 1) * MISTURA_ETAPA_CONTINENTAL)), jogos, planteis,
 				disciplina, escalacoes, substituicoes);
+	}
+
+	/**
+	 * Uma etapa do Mundial (SPEC §8.3.4, rev. 88), como a da continental.
+	 *
+	 * @param indice posição da etapa em {@link Mundial#ETAPAS}
+	 * @throws IllegalArgumentException se a etapa não tem partidas
+	 */
+	public RodadaAoVivo prepararMundial(Temporada temporada, int indice, List<PartidaDaEtapa> jogos, Map<Long, List<Jogador>> planteis,
+			Disciplina disciplina, Map<Long, Escalacao> escalacoes, List<RodadaAoVivo.Substituicao> substituicoes) {
+		if (jogos.isEmpty()) {
+			throw new IllegalArgumentException("a etapa " + indice + " do Mundial não tem partidas");
+		}
+		return prepararEtapa(temporada, new SplittableRandom(temporada.semente() ^ ((indice + 1) * MISTURA_ETAPA_MUNDIAL)), jogos,
+				planteis, disciplina, escalacoes, substituicoes);
 	}
 
 	private RodadaAoVivo prepararEtapa(Temporada temporada, SplittableRandom aleatorio, List<PartidaDaEtapa> jogos,
