@@ -197,7 +197,8 @@ class PlantelIT {
 		mvc.perform(get(plantel).with(como(treinador)))
 			.andExpect(content().string(containsString("º mais forte da divisão")))
 			.andExpect(content().string(containsString("jogos na liga")));
-		pedir(post("/jogos/" + jogoId + "/patrocinio").param("proposta", "POR_VITORIA")).andExpect(status().isNotFound());
+		mvc.perform(post("/jogos/" + jogoId + "/patrocinio").param("proposta", "POR_VITORIA").with(como(treinador)).with(csrf()))
+			.andExpect(status().isNotFound());
 		assertThat(saldo()).isEqualTo(saldoAntes);
 
 		pedir(post("/jogos/" + jogoId + "/patrocinio").param("proposta", "META_VITORIAS"))
