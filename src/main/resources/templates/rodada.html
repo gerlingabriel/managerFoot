@@ -5,7 +5,8 @@
 <div class="campo campo-pagina">
 <div class="pagina">
 
-<div id="quadro" class="pilha-larga" th:attr="hx-get=@{/jogos/{id}/rodada(id=${e.jogoId})},
+<!--/* Parado, o quadro fica sem hx-get: sem hx-trigger, o htmx recarregaria a cada clique dentro dele e fecharia a janela. */-->
+<div id="quadro" class="pilha-larga" th:attr="hx-get=${e.comUsuario and e.pausada ? null : '/jogos/' + e.jogoId + '/rodada'},
 		hx-trigger=${e.comUsuario and e.pausada ? null : 'every 1s'},
 		data-gols=${e.golsNaDivisao()}, data-divisao=${e.divisaoAtual}, data-som=${e.somGols}"
 	hx-select="#quadro" hx-swap="outerHTML">

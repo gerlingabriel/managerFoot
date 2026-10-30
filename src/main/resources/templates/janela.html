@@ -53,15 +53,12 @@
 </div>
 <p th:if="${meu.lesionado != null}" role="alert" class="alerta janela-erro"
 	th:text="|${meu.lesionado.nome} se lesionou. Escolha quem entra no lugar dele; se continuar sem trocar, a troca é automática.|">Fulano se lesionou.</p>
-<form th:action="@{/jogos/{id}/rodada/substituir(id=${e.jogoId})}" method="post" class="janela-troca"
-	th:attr="hx-get=@{/jogos/{id}/rodada(id=${e.jogoId})}" hx-trigger="change" hx-params="janela,sai,entra"
-	hx-select="#quadro" hx-target="#quadro" hx-swap="outerHTML">
-<input type="hidden" name="janela" th:value="${janela.mandanteId}">
+<form th:action="@{/jogos/{id}/rodada/substituir(id=${e.jogoId})}" method="post" class="janela-troca">
 <input type="hidden" name="mandante" th:value="${janela.mandanteId}">
 <fieldset class="lista-troca em-campo">
 <legend class="oculto">Em campo: escolha quem sai</legend>
 <label th:each="j : ${meu.emCampo}" class="troca-linha sai">
-<input type="radio" name="sai" th:value="${j.id}" th:checked="${sai == j.id or (sai == null and meu.lesionado != null and meu.lesionado.id == j.id)}" class="oculto">
+<input type="radio" name="sai" th:value="${j.id}" th:checked="${meu.lesionado != null and meu.lesionado.id == j.id}" class="oculto">
 <span class="troca-pos" th:text="${j.posicao.name().substring(0, 1)}">G</span>
 <span class="troca-nome"><span th:text="${j.nome}">Nome</span><span th:if="${j.asterisco}" class="asterisco">★</span></span>
 <span th:if="${meu.amarelados.contains(j.id)}" class="lance amarelo" role="img" aria-label="Cartão amarelo"></span>
@@ -74,14 +71,13 @@
 <legend class="oculto">Banco: escolha quem entra</legend>
 <p th:if="${meu.banco.isEmpty()}" class="suave troca-linha">Ninguém no banco.</p>
 <label th:each="j : ${meu.banco}" class="troca-linha entra">
-<input type="radio" name="entra" th:value="${j.id}" th:checked="${entra == j.id}" class="oculto">
+<input type="radio" name="entra" th:value="${j.id}" class="oculto">
 <span class="troca-pos" th:text="${j.posicao.name().substring(0, 1)}">G</span>
 <span class="troca-nome"><span th:text="${j.nome}">Nome</span><span th:if="${j.asterisco}" class="asterisco">★</span></span>
 <span class="troca-forca" th:text="${j.forca}">0</span>
 </label>
 </fieldset>
-<span th:if="${janela.previa != null}" class="texto pequeno" th:text="|Com a troca, fica ${janela.previa}|">fica 3-4-3</span>
-<span th:if="${janela.erroPrevia != null}" class="erro-campo" th:text="${#strings.capitalize(janela.erroPrevia)}">erro</span>
+<span class="suave pequeno">Quem entra fica na vaga de quem sai; a tática não muda.</span>
 <button type="submit" class="botao" th:disabled="${meu.substituicoesFeitas >= meu.substituicoesMaximas}">Substituir</button>
 </div>
 </form>

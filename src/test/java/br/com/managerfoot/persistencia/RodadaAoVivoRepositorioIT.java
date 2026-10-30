@@ -218,7 +218,7 @@ class RodadaAoVivoRepositorioIT {
 		assertThat(parada.minuto()).isEqualTo(lesao.minuto());
 		long mandante = parada.jogoDoUsuario().mandante().id();
 		assertThat(parada.janelaLesao()).isEqualTo(mandante);
-		RodadaAoVivoRepositorio.JanelaJogo janela = aoVivo.janela(jogo, usuario, mandante, null, null, T0.plusSeconds(200))
+		RodadaAoVivoRepositorio.JanelaJogo janela = aoVivo.janela(jogo, usuario, mandante, T0.plusSeconds(200))
 			.orElseThrow();
 		RodadaAoVivoRepositorio.TimeNaJanela meu = janela.doUsuario() == Lado.CASA ? janela.casa() : janela.fora();
 		assertThat(meu.lesionado().id()).isEqualTo(lesao.jogador().id());
@@ -233,7 +233,7 @@ class RodadaAoVivoRepositorioIT {
 		assertThat(seguinte.janelaLesao()).isNull();
 		assertThat(seguinte.pausada()).isFalse();
 		assertThat(seguinte.minuto()).isEqualTo(lesao.minuto() + 1);
-		RodadaAoVivoRepositorio.JanelaJogo depois = aoVivo.janela(jogo, usuario, mandante, null, null, minutoSeguinte)
+		RodadaAoVivoRepositorio.JanelaJogo depois = aoVivo.janela(jogo, usuario, mandante, minutoSeguinte)
 			.orElseThrow();
 		RodadaAoVivoRepositorio.TimeNaJanela meuDepois = depois.doUsuario() == Lado.CASA ? depois.casa() : depois.fora();
 		assertThat(meuDepois.lesionado()).isNull();

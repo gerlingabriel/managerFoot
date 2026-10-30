@@ -45,17 +45,32 @@ class SubstituicaoTest {
 	}
 
 	@Test
-	void trocarZagueiroPorAtacanteMudaA442Para343() {
+	void trocarZagueiroPorAtacanteMantemATaticaEOSetor() {
 		Partida partida = partida(5);
 		Jogador zagueiro = titular(Posicao.DEFENSOR);
 
 		EventoPartida evento = partida.substituir(Lado.CASA, zagueiro, ATACANTE_RESERVA);
 
-		assertThat(partida.formacaoAtual(Lado.CASA)).isEqualTo(Formacao.F_3_4_3);
+		assertThat(partida.formacaoAtual(Lado.CASA)).isEqualTo(Formacao.F_4_4_2);
 		assertThat(partida.emCampo(Lado.CASA)).contains(ATACANTE_RESERVA).doesNotContain(zagueiro).hasSize(11);
 		assertThat(evento.tipo()).isEqualTo(TipoEvento.SUBSTITUICAO);
 		assertThat(evento.jogador()).isEqualTo(ATACANTE_RESERVA);
 		assertThat(evento.substituido()).isEqualTo(zagueiro);
+	}
+
+	@Test
+	void quemEntraContaNoSetorDeQuemSaiuComAPropriaForca() {
+		TimeEmCampo time = new TimeEmCampo(casa, 0.5, 5);
+		Jogador zagueiro = titular(Posicao.DEFENSOR);
+		double defesa = time.soma(Posicao.DEFENSOR);
+		double ataque = time.soma(Posicao.ATACANTE);
+
+		time.substituir(zagueiro, ATACANTE_RESERVA);
+
+		assertThat(time.jogadoresNa(Posicao.DEFENSOR)).hasSize(4).contains(ATACANTE_RESERVA);
+		assertThat(time.jogadoresNa(Posicao.ATACANTE)).hasSize(2).doesNotContain(ATACANTE_RESERVA);
+		assertThat(time.soma(Posicao.DEFENSOR)).isEqualTo(defesa - zagueiro.forca() + ATACANTE_RESERVA.forca());
+		assertThat(time.soma(Posicao.ATACANTE)).isEqualTo(ataque);
 	}
 
 	@Test
@@ -81,18 +96,15 @@ class SubstituicaoTest {
 	}
 
 	@Test
-	void recusaTrocaQueGeraFormacaoForaDaLista() {
-		// 4-4-2 -> 3-4-3 -> (zagueiro por atacante) 2-4-4, que não existe
+	void nenhumaTrocaDeLinhaERecusadaPelaFormacao() {
+		// antes, 4-4-2 -> 3-4-3 -> 2-4-4 era recusada; agora a tática fica a mesma
 		Partida partida = partida(5);
 		List<Jogador> zagueiros = titulares.stream().filter(j -> j.posicao() == Posicao.DEFENSOR).toList();
 		partida.substituir(Lado.CASA, zagueiros.get(0), ATACANTE_RESERVA);
+		partida.substituir(Lado.CASA, zagueiros.get(1), ATACANTE_RESERVA_2);
 
-		assertThatIllegalArgumentException()
-			.isThrownBy(() -> partida.substituir(Lado.CASA, zagueiros.get(1), ATACANTE_RESERVA_2))
-			.withMessageContaining("fora das permitidas")
-			.withMessageContaining("3-4-3");
-		assertThat(partida.formacaoAtual(Lado.CASA)).isEqualTo(Formacao.F_3_4_3);
-		assertThat(partida.substituicoesRestantes(Lado.CASA)).isEqualTo(4);
+		assertThat(partida.formacaoAtual(Lado.CASA)).isEqualTo(Formacao.F_4_4_2);
+		assertThat(partida.substituicoesRestantes(Lado.CASA)).isEqualTo(3);
 	}
 
 	@Test

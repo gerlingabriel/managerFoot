@@ -997,6 +997,7 @@ a.clube-linha:hover { color: var(--texto); background: rgba(242, 201, 76, 0.1); 
 }
 
 .janela {
+	display: block; /* a regra geral de form é display: contents, que tiraria a caixa da janela */
 	width: 100%;
 	max-width: 640px;
 	background: var(--cartao);
@@ -1219,14 +1220,14 @@ a.janela-fechar { text-decoration: none; }
 a.link-clube { color: var(--texto); text-decoration: none; }
 a.link-clube:hover { color: var(--destaque); text-decoration: underline; }
 
-.janela.calendario { max-width: 600px; }
+.janela.calendario { max-width: 780px; }
 .calendario-topo { flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; }
 .calendario-resumo { display: flex; flex-wrap: wrap; gap: 16px; padding: 10px 16px; border-bottom: 1px solid var(--borda); font-size: 14px; color: var(--texto-claro); }
 .calendario-resumo strong { color: var(--texto); }
 .calendario-resumo .cor-v { color: #3FB37F; }
 .calendario-resumo .cor-e { color: var(--destaque); }
 .calendario-resumo .cor-d { color: var(--erro); }
-.calendario-lista { max-height: 640px; overflow-y: auto; }
+.calendario-lista { max-height: min(640px, 55vh); overflow-y: auto; }
 .tabela-calendario { width: 100%; border-collapse: collapse; font-size: 15px; font-variant-numeric: tabular-nums; }
 
 .tabela-calendario th {
@@ -1310,7 +1311,7 @@ a.link-clube:hover { color: var(--destaque); text-decoration: underline; }
 .tabela-extrato .num { text-align: right; }
 .tabela-extrato .vazio { color: var(--texto-suave); }
 .tabela-extrato .resultado, .tabela-extrato .saldo { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 18px; }
-.tabela-extrato tr.inicio td { color: var(--texto-suave); }
+.tabela-extrato tr.extrato-inicio td { color: var(--texto-suave); }
 .tabela-extrato tr.total td { background: rgba(242, 201, 76, 0.12); border-top: 1px solid #3C7A57; }
 .extrato-local { width: 40px; flex: none; font-size: 14px; color: var(--texto-claro); }
 
@@ -1338,7 +1339,7 @@ a.link-clube:hover { color: var(--destaque); text-decoration: underline; }
 	display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; padding: 10px 16px;
 	border-bottom: 1px solid var(--borda); font-size: 14px;
 }
-.tabela-vitrine { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 15px; font-variant-numeric: tabular-nums; }
+.tabela-vitrine { width: 100%; border-collapse: collapse; font-size: 15px; font-variant-numeric: tabular-nums; }
 .tabela-vitrine th {
 	padding: 8px 10px; text-align: left; font-size: 12px; font-weight: 600; letter-spacing: 0.1em;
 	text-transform: uppercase; color: var(--texto-suave);
@@ -1438,6 +1439,9 @@ a.financas-link:hover, a.financas-link:focus-visible { border-color: var(--desta
 .estadio-ampliar .destaque { color: var(--destaque); }
 .estadio-acoes { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
 .estadio-nota { font-size: 13px; }
+
+/* Janelas de decisão, centralizadas (rev. 81). */
+.janela.patrocinio, .janela.aumento, .janela.convite { margin: auto; }
 
 /* Propostas de patrocínio (modelo 9a, rev. 55). */
 .patrocinio-topo { flex-direction: column; align-items: flex-start; gap: 4px; }

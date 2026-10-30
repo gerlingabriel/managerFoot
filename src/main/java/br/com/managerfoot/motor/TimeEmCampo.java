@@ -18,8 +18,9 @@ import br.com.managerfoot.dominio.Posicao;
  * disponível, a formação atual e os amarelos. Parte da escalação e muda com expulsões
  * (SPEC §7.3) e substituições (SPEC §7.4.1).
  *
- * <p>A formação representa as vagas da tática. Expulsão não muda a formação (fica o buraco);
- * substituição muda conforme a posição de quem sai e de quem entra.
+ * <p>A formação representa as vagas da tática e não muda durante a partida. Expulsão deixa o buraco;
+ * na substituição, quem entra ocupa a vaga de quem saiu e conta naquele setor, com a própria força,
+ * qualquer que seja a posição dele (SPEC §7.4.1, rev. 81).
  */
 final class TimeEmCampo {
 
@@ -29,7 +30,8 @@ final class TimeEmCampo {
 	private final List<Jogador> linha = new ArrayList<>();
 	private final List<Jogador> banco;
 	private final Map<Long, Integer> amarelos = new HashMap<>();
-	private Formacao formacao;
+	private final Map<Long, Posicao> setor = new HashMap<>();
+	private final Formacao formacao;
 	private Jogador goleiro;
 	private boolean goleiroImprovisado;
 	private int substituicoesFeitas;
@@ -41,7 +43,10 @@ final class TimeEmCampo {
 		this.formacao = escalacao.formacao();
 		this.goleiro = escalacao.jogadoresNa(Posicao.GOLEIRO).getFirst();
 		this.banco = new ArrayList<>(escalacao.reservas());
-		escalacao.titulares().stream().filter(j -> j != goleiro).forEach(linha::add);
+		escalacao.titulares().stream().filter(j -> j != goleiro).forEach(j -> {
+			linha.add(j);
+			setor.put(j.id(), j.posicao());
+		});
 	}
 
 	Escalacao escalacao() {
@@ -57,7 +62,7 @@ final class TimeEmCampo {
 		if (posicao == Posicao.GOLEIRO) {
 			return List.of(goleiro);
 		}
-		return linha.stream().filter(j -> j.posicao() == posicao).toList();
+		return linha.stream().filter(j -> setor.get(j.id()) == posicao).toList();
 	}
 
 	List<Jogador> emCampo() {
@@ -114,7 +119,7 @@ final class TimeEmCampo {
 		}
 		Comparator<Jogador> menorForca = Comparator.comparingInt(Jogador::forca);
 		Jogador substituto = linha.stream()
-			.filter(j -> j.posicao() == Posicao.DEFENSOR)
+			.filter(j -> setor.get(j.id()) == Posicao.DEFENSOR)
 			.min(menorForca)
 			.orElseGet(() -> linha.stream().min(menorForca).orElseThrow());
 		linha.remove(substituto);
@@ -127,8 +132,8 @@ final class TimeEmCampo {
 	 * <ul>
 	 * <li>Goleiro reserva só entra no gol: troca o goleiro ou, se houver goleiro improvisado,
 	 * entra no lugar de um jogador de linha e o improvisado volta ao seu setor.</li>
-	 * <li>Jogador de linha entra no lugar de jogador de linha; a formação muda conforme as
-	 * posições e precisa continuar sendo uma das formações permitidas.</li>
+	 * <li>Jogador de linha entra no lugar de jogador de linha e fica no setor dele; a formação não
+	 * muda.</li>
 	 * </ul>
 	 *
 	 * @throws IllegalArgumentException se a troca não for permitida, com o motivo
@@ -176,35 +181,13 @@ final class TimeEmCampo {
 			throw new IllegalArgumentException(
 					"só um goleiro pode entrar no lugar de " + sai.nome() + ", que está no gol");
 		}
-		Formacao nova = formacaoApos(sai.posicao(), entra.posicao())
-			.orElseThrow(() -> new IllegalArgumentException("trocar " + sai.posicao().nome(1) + " por "
-					+ entra.posicao().nome(1) + " deixaria a formação fora das permitidas (atual: "
-					+ formacao.rotulo() + ")"));
 		linha.set(linha.indexOf(sai), entra);
-		formacao = nova;
+		setor.put(entra.id(), setor.get(sai.id()));
 	}
 
-	/** Se a troca de linha manteria uma formação permitida (o goleiro não entra aqui). */
+	/** Se o jogador pode entrar no lugar de outro de linha: o goleiro não entra aqui. */
 	boolean trocaDeLinhaPermitida(Jogador sai, Jogador entra) {
-		return sai != goleiro && entra.posicao() != Posicao.GOLEIRO
-				&& formacaoApos(sai.posicao(), entra.posicao()).isPresent();
-	}
-
-	private Optional<Formacao> formacaoApos(Posicao sai, Posicao entra) {
-		int[] vagas = { formacao.quantidade(Posicao.DEFENSOR), formacao.quantidade(Posicao.MEIO_CAMPISTA),
-				formacao.quantidade(Posicao.ATACANTE) };
-		vagas[indiceLinha(sai)]--;
-		vagas[indiceLinha(entra)]++;
-		return Formacao.com(vagas[0], vagas[1], vagas[2]);
-	}
-
-	private static int indiceLinha(Posicao posicao) {
-		return switch (posicao) {
-			case DEFENSOR -> 0;
-			case MEIO_CAMPISTA -> 1;
-			case ATACANTE -> 2;
-			case GOLEIRO -> throw new IllegalArgumentException("goleiro não ocupa vaga de linha");
-		};
+		return sai != goleiro && entra.posicao() != Posicao.GOLEIRO;
 	}
 
 	/**

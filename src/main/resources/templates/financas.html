@@ -69,12 +69,12 @@
 </tr>
 </thead>
 <tbody>
-<tr class="inicio">
+<tr class="extrato-inicio">
 <td class="num">—</td><td th:text="${f.primeiraTemporada} ? 'Saldo inicial do clube' : 'Saldo do fim da temporada anterior'">Saldo inicial</td>
 <td></td><td></td><td></td><td></td><td></td><td></td><td></td>
 <td class="num saldo" th:text="${f.moeda.formatar(f.saldoAnterior)}">R$ 0</td>
 </tr>
-<tr class="inicio" th:if="${f.patrocinio != 0}">
+<tr class="extrato-inicio" th:if="${f.patrocinio != 0}">
 <td class="num">—</td><td>Patrocínio da temporada</td>
 <td></td><td></td><td></td><td></td><td></td>
 <td th:replace="~{:: valor(${f.moeda}, ${f.patrocinio})}"></td>

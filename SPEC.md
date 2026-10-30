@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 80 — 2026-10-30)
+-   **Status:** versão inicial para revisão (rev. 81 — 2026-10-30)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 81 (2026-10-30):** pelo usuário: a substituição não muda a tática: a formação da partida fica a mesma e quem entra ocupa a vaga de quem saiu (§7.4.1); o título da liga fica com quem está no clube na virada da temporada, mesmo que tenha chegado depois da última rodada (§5.4); jogador com contrato firmado não vai a leilão até a temporada seguinte (§9.5).
 -   **rev. 80 (2026-10-30):** agente: a próxima temporada também espera a resposta do convite para assumir outro clube, como a rodada; antes, um pedido direto virava a temporada com o convite aberto, e o plantel deixava de abrir quando um dos clubes caía para a fila (§5.4). Provisório.
 -   **rev. 79 (2026-10-30):** pelo usuário: modelos 13a a 13d aprovados; o quadro "Todos os títulos" substitui o ranking só da 1ª divisão; o quadro da Liga fica sem a 2ª divisão; todos os grupos da continental jogam num bloco só, para em rede todos verem os seus jogos e os dos amigos (§8.1.1, §8.3.6). Telas prontas e continental ligada para os jogos novos (ADR 0016).
 -   **rev. 78 (2026-10-29):** etapas da continental jogadas entre as rodadas (grupos, mata-mata, final depois da da copa), com prêmio, campeão e vice no Histórico e vice e 3º da liga gravados (V35); a 2ª temporada escolhe os clubes do país pela tabela anterior e pelo campeão da copa. Agente: público e caixa com o estrangeiro marcados Provisório (§8.3.6). Ainda sem tela e desligado por configuração (telas e ligação na rev. 79).
@@ -789,6 +790,10 @@ sorteio provisório da rev. 36 para o usuário que cai para a fila):
   rodada. Máquina×máquina troca na hora; usuário chamado recebe o convite
   (11a) no plantel e a rodada seguinte espera; recusa chama o seguinte;
   usuário demitido vê o aviso (11b). Histórico em `jogo_troca_treinador`.
+  - **Definido (rev. 81), pelo usuário:** o título da liga fica com quem está
+    no clube na virada da temporada, mesmo que tenha chegado por uma troca
+    depois da última rodada. Copa e continental continuam com quem dirigiu o
+    clube na final.
   - **Provisório (rev. 80):** a próxima temporada também espera a resposta
     do convite: ele é da temporada que acaba, e os clubes dele podem mudar de
     divisão ou ir para a fila.
@@ -1183,12 +1188,13 @@ Configuráveis e validados por simulação.
 
 **Definido (rev. 10):**
 - **Banco:** até **7 reservas** por partida, igual em todas as competições.
-- **Mudança de tática:** a substituição muda a formação conforme a posição
-  de quem sai e de quem entra.
-  - Exemplo: no 4-4-2, sai um zagueiro e entra um atacante; a formação
-    vira 3-4-3.
-  - Uma troca que resultaria em formação fora das 8 da §7.2 é recusada,
-    com mensagem.
+- ~~**Mudança de tática** (rev. 10): a substituição muda a formação conforme
+  as posições, e a troca que sai das 8 formações é recusada.~~ Substituída:
+- **Definido (rev. 81), pelo usuário — a substituição não muda a tática:** a
+  formação e o estilo são os do início da partida, para o usuário não precisar
+  rever a tática. Trocar um zagueiro por um atacante não recusa nem vira 3-4-3.
+  - **Proposta do agente:** quem entra ocupa a vaga de quem saiu e conta naquele
+    setor, com a própria força e sem penalidade.
 - **Regras do futebol:**
   - Quem saiu não volta e não aparece mais na lista de substituições.
   - O expulso não é substituído. Fica o buraco, e a expulsão fica
@@ -2362,6 +2368,11 @@ A máquina oferece um pouco abaixo do preço padrão (§9.4).
   tenham crescido. Aceitar renova o contrato e o jogador não pode ser
   vendido naquela rodada; recusar põe o jogador em **leilão**, sem o
   usuário definir o preço (preço da tabela com 20% de desconto).
+- **Definido (rev. 81), pelo usuário:** jogador com contrato renovado não pode
+  ir a leilão naquele ano; só quando começar a temporada seguinte. Substitui o
+  "não pode ser vendido naquela rodada". **Proposta do agente:** vale também
+  para o jogador comprado, que tem o mesmo contrato até o fim da temporada, para
+  a regra ser uma só e a compra não virar revenda imediata.
 - **Dependência:** hoje a força dos jogadores não muda (§6.1 em aberto) e
   o salário segue a força atual; o pedido de aumento só tem efeito depois
   da evolução de força e do salário gravado no contrato.

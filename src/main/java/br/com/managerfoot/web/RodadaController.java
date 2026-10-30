@@ -116,8 +116,6 @@ class RodadaController {
 	@GetMapping("/jogos/{jogoId}/rodada")
 	String quadro(@AuthenticationPrincipal Usuario usuario, @PathVariable long jogoId,
 			@RequestParam(name = "janela", required = false) Long janela,
-			@RequestParam(name = "sai", required = false) Long sai,
-			@RequestParam(name = "entra", required = false) Long entra,
 			@RequestHeader(name = "HX-Request", required = false) String htmx, Model model, HttpServletRequest request,
 			HttpServletResponse response) {
 		Instant agora = relogio.instant();
@@ -142,11 +140,7 @@ class RodadaController {
 			janela = estado.get().janelaLesao();
 		}
 		if (janela != null && estado.get().comUsuario()) {
-			aoVivo.janela(jogoId, usuario.id(), janela, sai, entra, agora).ifPresent(j -> {
-				model.addAttribute("janela", j);
-				model.addAttribute("sai", sai);
-				model.addAttribute("entra", entra);
-			});
+			aoVivo.janela(jogoId, usuario.id(), janela, agora).ifPresent(j -> model.addAttribute("janela", j));
 		}
 		return "rodada";
 	}

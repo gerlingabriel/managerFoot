@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -381,11 +382,10 @@ public class RodadaAoVivoRepositorio {
 
 	/**
 	 * A janela de um jogo da divisão em andamento (SPEC §10.5, rev. 33): lances, os 11 de cada lado e,
-	 * no clube do usuário, o banco e as substituições. Com {@code sai} e {@code entra}, também a
-	 * formação que ficaria com a troca. Vazio se o jogo não é da divisão em andamento.
+	 * no clube do usuário, o banco e as substituições. Vazio se o jogo não é da divisão em andamento.
 	 */
 	@Transactional(readOnly = true)
-	public Optional<JanelaJogo> janela(long jogoId, long usuarioId, long mandanteId, Long sai, Long entra, Instant agora) {
+	public Optional<JanelaJogo> janela(long jogoId, long usuarioId, long mandanteId, Instant agora) {
 		long clube = exigirClube(jogoId, usuarioId);
 		Optional<Linha> linha = linha(jogoId);
 		if (linha.isEmpty()) {
@@ -409,30 +409,21 @@ public class RodadaAoVivoRepositorio {
 		Partida jogo = rodada.noMinuto(p, minuto);
 		List<EventoPartida> eventos = jogo.resultado().eventos();
 		Lado doUsuario = p.jogo().mandante().id() == clube ? Lado.CASA : p.jogo().visitante().id() == clube ? Lado.FORA : null;
-		String previa = null;
-		String erroPrevia = null;
-		if (doUsuario != null && sai != null && entra != null) {
-			try {
-				previa = rodada.formacaoCom(p, minuto, doUsuario, sai, entra).rotulo();
-			}
-			catch (IllegalArgumentException e) {
-				erroPrevia = e.getMessage();
-			}
-		}
 		int maximo = RegrasPartida.padrao().substituicoes();
 		List<TimeNaJanela> times = new ArrayList<>();
 		for (Lado lado : Lado.values()) {
 			Set<Long> amarelados = new HashSet<>();
 			eventos.stream().filter(e -> e.lado() == lado && e.tipo() == TipoEvento.CARTAO_AMARELO)
 				.forEach(e -> amarelados.add(e.jogador().id()));
-			times.add(new TimeNaJanela(p.clube(lado), jogo.formacaoAtual(lado), jogo.emCampo(lado),
+			times.add(new TimeNaJanela(p.clube(lado), jogo.formacaoAtual(lado),
+					jogo.emCampo(lado).stream().sorted(Comparator.comparing(Jogador::posicao)).toList(),
 					lado == doUsuario ? jogo.reservasDisponiveis(lado) : List.of(), maximo - jogo.substituicoesRestantes(lado),
 					maximo, eventos.stream().filter(e -> e.lado() == lado && e.tipo() == TipoEvento.SUBSTITUICAO).toList(),
 					amarelados, jogo.lesionadoAguardandoTroca(lado).orElse(null)));
 		}
 		return Optional.of(new JanelaJogo(p.jogo().mandante().id(), minuto, linha.get().andandoDesde() == null,
 				placar(rodada, p, minuto, clube, caixas.publicos(jogoId, List.of(p)), gruposDosMandantes(jogoId, linha.get())), eventos.stream().filter(e -> LANCES.contains(e.tipo())).toList(), doUsuario,
-				times.get(0), times.get(1), previa, erroPrevia));
+				times.get(0), times.get(1)));
 	}
 
 	/**
@@ -669,11 +660,9 @@ public class RodadaAoVivoRepositorio {
 	 * A janela de um jogo, pausado ou não.
 	 *
 	 * @param doUsuario o lado do clube do usuário; nulo se o jogo não é dele
-	 * @param previa formação com a troca marcada; nula sem troca marcada ou se ela não vale
-	 * @param erroPrevia por que a troca marcada não vale
 	 */
 	public record JanelaJogo(long mandanteId, int minuto, boolean pausada, PlacarAoVivo placar, List<EventoPartida> lances,
-			Lado doUsuario, TimeNaJanela casa, TimeNaJanela fora, String previa, String erroPrevia) {
+			Lado doUsuario, TimeNaJanela casa, TimeNaJanela fora) {
 
 		public List<TimeNaJanela> times() {
 			return List.of(casa, fora);

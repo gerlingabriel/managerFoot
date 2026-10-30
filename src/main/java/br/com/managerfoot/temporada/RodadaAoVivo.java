@@ -99,16 +99,6 @@ public final class RodadaAoVivo {
 		return new Substituicao(partida.jogo().mandante().id(), p.minuto(), lado, saiId, entraId);
 	}
 
-	/**
-	 * A formação que o time teria com a troca, sem gravá-la: a prévia da janela do jogo (SPEC §10.5,
-	 * rev. 33).
-	 *
-	 * @throws IllegalArgumentException se a troca não é permitida, com o motivo para a tela
-	 */
-	public Formacao formacaoCom(PartidaDaRodada partida, int minuto, Lado lado, long saiId, long entraId) {
-		return trocar(partida, minuto, lado, saiId, entraId).formacaoAtual(lado);
-	}
-
 	private Partida trocar(PartidaDaRodada partida, int minuto, Lado lado, long saiId, long entraId) {
 		if (!partida.ladosDoUsuario().contains(lado)) {
 			throw new IllegalArgumentException("Só o treinador do clube faz substituições.");

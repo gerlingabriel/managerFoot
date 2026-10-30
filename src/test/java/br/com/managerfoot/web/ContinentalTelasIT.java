@@ -285,6 +285,8 @@ class ContinentalTelasIT {
 		int total = rodadas.totalDeRodadas(jogoId);
 		for (int r = 1; r <= total; r++) {
 			RodadasDeTeste.semDecisoesDoTreinador(jdbc, jogoId);
+			// sem demissão: o teste olha as finanças do clube que está na continental
+			jdbc.sql("UPDATE jogo_clube SET moral = 30 WHERE id = :clube").param("clube", clube.id()).update();
 			RodadasDeTeste.jogarRodada(rodadas, jogoId, r);
 		}
 		assertThat(rodadas.proximo(jogoId)).isInstanceOf(RodadaRepositorio.Proximo.Fim.class);

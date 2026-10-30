@@ -265,12 +265,12 @@ class RodadaIT {
 			.andExpect(content().string(containsString("class=\"jogo-publico\"")))
 			.andExpect(content().string(containsString("substituições: 0 de 5")))
 			.andExpect(content().string(containsString("Substituir")))
-			.andExpect(content().string(not(containsString("every 1s"))));
+			.andExpect(content().string(containsString("a tática não muda")))
+			.andExpect(content().string(not(containsString("every 1s"))))
+			// com hx-get e sem hx-trigger, o htmx recarrega a cada clique e fecha a janela
+			.andExpect(content().string(not(containsString("hx-get"))));
 
 		Troca troca = troca();
-		mvc.perform(get(rodada).param("janela", String.valueOf(mandante)).param("sai", troca.sai())
-				.param("entra", troca.entra()).with(como(treinador)))
-			.andExpect(content().string(containsString("Com a troca, fica")));
 		mvc.perform(post(rodada + "/substituir").param("mandante", String.valueOf(mandante)).param("sai", troca.sai())
 				.param("entra", troca.entra()).with(como(treinador)).with(csrf()))
 			.andExpect(redirectedUrl(rodada + "?janela=" + mandante))
