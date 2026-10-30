@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 73 — 2026-10-29)
+-   **Status:** versão inicial para revisão (rev. 74 — 2026-10-29)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 74 (2026-10-29):** domínio da competição continental feito (grupos, oitavas, escolha dos clubes). Agente: detalhes da escolha por força com sorteio, da tabela dos grupos, da chave das oitavas e da edição com menos de 32 clubes marcados Provisório (§8.3.6).
 -   **rev. 73 (2026-10-29):** pelo usuário: provisórios da rev. 72 aprovados (vagas da América do Sul e da Europa, grupos, oitavas, quadro de rodadas, efeitos e prêmio); a força dos países estrangeiros varia por país (ex.: Argentina mais forte que Venezuela). Agente: níveis de força dos países gerados marcados Provisório, a conferir por simulação (§8.3.6).
 -   **rev. 72 (2026-10-29):** pelo usuário: competição continental só da região do país jogado, fase de grupos + mata-mata com 32 clubes e vagas padrão somando 32 (sem fase preliminar), estrangeiros gerados pelo banco padrão, vagas do país jogado pela liga anterior com o campeão da copa ocupando uma delas, sem vaga extra do campeão continental (§8.3.6). Agente: vagas padrão da América do Sul e da Europa (com fonte), grupos, oitavas e quadro de rodadas marcados Provisório.
 -   **rev. 71 (2026-10-29):** pelo usuário: modelos 12a a 12f da copa aprovados (aba Copa, etapa ao vivo com "Ida · total" e prorrogação, próximo jogo no plantel, calendário, coluna Copa no Histórico, linhas da copa no extrato com o quadro "Copa na temporada"); as propostas provisórias da rev. 70 (chave fixa, prorrogação, ordem dos batedores, público da final, clique na etapa sem o clube) passam a Definido (§8.2).
@@ -1741,6 +1742,21 @@ aprovadas** (vagas, clubes gerados, grupos, oitavas, quadro e efeitos):
   | Quartas | 22 e 24 |
   | Semifinal | 25 e 27 |
   | Final (jogo único, campo neutro) | depois da final da copa |
+- **Provisório (rev. 74), proposta do agente — detalhes do domínio:**
+  - **Por força com sorteio** (§8.3.2 item 2): sorteio sem reposição em que
+    cada clube pesa a força em campo ao cubo. Num país do nível B com 8
+    clubes e 4 vagas, o mais forte entra bem mais que o mais fraco, mas o
+    mais fraco ainda entra às vezes (`VagasContinental.porForca`).
+  - **Tabela do grupo:** jogos 1 a 3 são o turno (1º x 2º e 3º x 4º; 4º x 1º
+    e 2º x 3º; 1º x 3º e 4º x 2º, na ordem dos potes) e 4 a 6 o returno com o
+    mando invertido; cada clube joga 3 vezes em casa.
+  - **Mesmo país no grupo:** quando não há jeito de evitar (mais de 8 clubes
+    de um país), aceita-se o mínimo de repetições.
+  - **Chave das oitavas:** os confrontos seguem a ordem dos grupos (o 1º do A,
+    o 1º do B...); os vencedores dos confrontos do A e do B se enfrentam nas
+    quartas, e assim por diante, com o mando da ida sorteado como na copa.
+  - **Menos de 32 clubes** (país sem clubes suficientes): a edição não é
+    realizada (§8.3.2 item 5), porque os grupos de 4 não fecham.
 - **Efeitos:** como a copa (os da liga menos o salário, mesma tela da
   rodada, final com bilheteria 50/50, título no Histórico e não no ranking).
   **Prêmio:** igual ao da copa por enquanto, a ajustar por simulação.
