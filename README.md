@@ -44,6 +44,9 @@ ADMIN_EMAIL=admin@exemplo.com ADMIN_NOME="Administrador" \
 unset ADMIN_SENHA
 ```
 
+Cole uma linha por vez: colado em bloco, o `read` toma a linha seguinte como
+senha e o comando acusa que faltam `ADMIN_EMAIL` e `ADMIN_NOME`.
+
 Sem `--spring.main.web-application-type=none`, a aplicação cria o administrador
 e continua rodando normalmente.
 

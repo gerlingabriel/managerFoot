@@ -1,5 +1,6 @@
 package br.com.managerfoot.web;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -21,6 +22,8 @@ class SegurancaConfig {
 	}
 
 	@Bean
+
+	@ConditionalOnWebApplication
 	SecurityFilterChain seguranca(HttpSecurity http, AutenticacaoContas autenticacao,
 			SecurityContextRepository contexto) throws Exception {
 		http.authorizeHttpRequests(a -> a
