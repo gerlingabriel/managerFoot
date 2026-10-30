@@ -291,7 +291,7 @@ class ContinentalTelasIT {
 		}
 		assertThat(rodadas.proximo(jogoId)).isInstanceOf(RodadaRepositorio.Proximo.Fim.class);
 
-		mvc.perform(get("/jogos/" + jogoId + "/classificacao").param("calendario", String.valueOf(clube.id())).with(como(treinador)))
+		mvc.perform(get("/jogos/" + jogoId + "/clube/" + clube.id()).with(como(treinador)))
 			.andExpect(status().isOk())
 			.andExpect(content().string(containsString("Continental · Grupos · 1º jogo")))
 			.andExpect(content().string(containsString("calendario-continental")))

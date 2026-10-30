@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.List;
@@ -22,11 +23,13 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import br.com.managerfoot.TestcontainersConfiguration;
 import br.com.managerfoot.bancopadrao.GeradorBancoPadrao;
 import br.com.managerfoot.bancopadrao.ParametrosBancoPadrao;
 import br.com.managerfoot.contas.Usuario;
+import br.com.managerfoot.dominio.Jogador;
 import br.com.managerfoot.motor.ParametrosMotor;
 import br.com.managerfoot.economia.AmpliacaoEstadio;
 import br.com.managerfoot.economia.CaixaDaRodada;
@@ -46,6 +49,7 @@ import br.com.managerfoot.persistencia.ContasRepositorio;
 import br.com.managerfoot.persistencia.JogoRepositorio;
 import br.com.managerfoot.persistencia.CompraRepositorio;
 import br.com.managerfoot.persistencia.JogosDoTreinadorRepositorio;
+import br.com.managerfoot.persistencia.MercadoRepositorio;
 import br.com.managerfoot.persistencia.MoldeRepositorio;
 import br.com.managerfoot.persistencia.PatrocinioRepositorio;
 import br.com.managerfoot.persistencia.RodadaRepositorio;
@@ -91,6 +95,12 @@ class AbasIT {
 	PatrocinioRepositorio patrocinios;
 
 	@Autowired
+	MercadoRepositorio mercado;
+
+	@Autowired
+	TransactionTemplate transacao;
+
+	@Autowired
 	JdbcClient jdbc;
 
 	Usuario treinador;
@@ -108,6 +118,71 @@ class AbasIT {
 			.andExpect(content().string(containsString("class=\"topo-ano\">2026")));
 		mvc.perform(get(base + "/classificacao").param("divisao", "2").with(como(treinador)))
 			.andExpect(content().string(not(containsString("vaga-continental"))));
+	}
+
+	@Test
+	void clubeDeForaMostraSoOPlantelComDoisAVendaECompraDeVerdade() throws Exception {
+		long fora = jdbc.sql("SELECT id FROM jogo_clube WHERE jogo_id = :j AND pais_codigo IS NOT NULL ORDER BY id LIMIT 1")
+			.param("j", jogoId).query(Long.class).single();
+		CompraRepositorio.Vitrine v = compras.vitrine(jogoId, treinador.id(), fora);
+		assertThat(v.aVenda()).isEqualTo(2);
+
+		// HTMX recebe só a janela; ela não tem aba Calendário e o nome do país aparece
+		mvc.perform(get(base + "/clube/" + fora).header("HX-Request", "true").with(como(treinador)))
+			.andExpect(status().isOk())
+			.andExpect(content().string(not(containsString("<html"))))
+			.andExpect(content().string(not(containsString(">Calendário<"))))
+			.andExpect(content().string(containsString("clube de fora do campeonato")))
+			.andExpect(content().string(containsString("2 à venda")));
+
+		jdbc.sql("UPDATE jogo_clube SET saldo = 999999999999 WHERE id = (SELECT clube_id FROM jogo_treinador WHERE jogo_id = :j)")
+			.param("j", jogoId).update();
+		CompraRepositorio.JogadorNaVitrine alvo = compras.vitrine(jogoId, treinador.id(), fora).jogadores().stream()
+			.filter(CompraRepositorio.JogadorNaVitrine::aVenda).findFirst().orElseThrow();
+		mvc.perform(post(base + "/mercado/comprar").param("jogador", String.valueOf(alvo.jogador().id())).param("clube", String.valueOf(fora))
+				.with(como(treinador)).with(csrf()))
+			.andExpect(redirectedUrl(base + "/clube/" + fora + "?aba=plantel"))
+			.andExpect(flash().attributeExists("resultado"));
+		assertThat(jdbc.sql("SELECT clube_id FROM jogo_jogador WHERE id = :id").param("id", alvo.jogador().id()).query(Long.class).single())
+			.isEqualTo(jogo.clubeDoTreinador(jogoId, treinador.id()).orElseThrow());
+		// o vendido não é reposto no meio da temporada
+		RodadasDeTeste.semDecisoesDoTreinador(jdbc, jogoId);
+		RodadasDeTeste.jogarRodada(rodadas, jogoId, 4);
+		assertThat(compras.vitrine(jogoId, treinador.id(), fora).aVenda()).isEqualTo(1);
+	}
+
+	@Test
+	void naViradaOClubeDeForaGanhaJogadorNovoEVoltaADeixarDoisAVenda() {
+		long fora = jdbc.sql("SELECT id FROM jogo_clube WHERE jogo_id = :j AND pais_codigo IS NOT NULL ORDER BY id LIMIT 1")
+			.param("j", jogoId).query(Long.class).single();
+		String pais = jdbc.sql("SELECT pais_codigo FROM jogo_clube WHERE id = :c").param("c", fora).query(String.class).single();
+		// vendeu os dois anunciados
+		int vendidos = jdbc.sql("DELETE FROM jogo_jogador WHERE clube_id = :c AND a_venda").param("c", fora).update();
+		assertThat(vendidos).isEqualTo(2);
+		double media = jdbc.sql("SELECT avg(forca) FROM jogo_jogador WHERE clube_id = :c").param("c", fora).query(Double.class).single();
+		List<Long> antes = jdbc.sql("SELECT id FROM jogo_jogador WHERE clube_id = :c").param("c", fora).query(Long.class).list();
+
+		transacao.executeWithoutResult(t -> mercado.renovarClubesDeFora(jogoId, 7));
+
+		assertThat(jdbc.sql("SELECT count(*) FROM jogo_jogador WHERE clube_id = :c").param("c", fora).query(Integer.class).single()).isEqualTo(20);
+		assertThat(jdbc.sql("SELECT count(*) FROM jogo_jogador WHERE clube_id = :c AND a_venda").param("c", fora).query(Integer.class).single()).isEqualTo(2);
+		List<Jogador> novos = jogo.carregarPlantel(fora).stream().filter(j -> !antes.contains(j.id())).toList();
+		assertThat(novos).hasSize(2).allSatisfy(j -> {
+			assertThat(j.nacionalidade()).isEqualTo(pais);
+			assertThat(j.forca()).isEqualTo((int) Math.round(media) - 2);
+			assertThat(j.asterisco()).isFalse();
+		});
+		// repetir não cria nem anuncia mais ninguém
+		transacao.executeWithoutResult(t -> mercado.renovarClubesDeFora(jogoId, 8));
+		assertThat(jdbc.sql("SELECT count(*) FROM jogo_jogador WHERE clube_id = :c").param("c", fora).query(Integer.class).single()).isEqualTo(20);
+		assertThat(jdbc.sql("SELECT count(*) FROM jogo_jogador WHERE clube_id = :c AND a_venda").param("c", fora).query(Integer.class).single()).isEqualTo(2);
+	}
+
+	@Test
+	void clubeDeOutroJogoNaoAbre() throws Exception {
+		Usuario outro = contas.criarAdministrador("b" + System.nanoTime() + "@exemplo.com", "Outro", "senha-boa-1");
+		long clubeAlheio = jogo.clubeDoTreinador(jogos.criarComSorteio(brasil, outro.id(), 14).jogoId(), outro.id()).orElseThrow();
+		mvc.perform(get(base + "/clube/" + clubeAlheio).with(como(treinador))).andExpect(status().isNotFound());
 	}
 
 	@BeforeEach
@@ -262,14 +337,13 @@ class AbasIT {
 			.map(JogoNoCalendario::resultado).filter(r -> r != null).toList());
 		assertThat(calendario.forcaEmCampo()).isPositive();
 
-		mvc.perform(get(base + "/classificacao").param("calendario", String.valueOf(clube)).with(como(treinador)))
+		mvc.perform(get(base + "/clube/" + clube).with(como(treinador)))
 			.andExpect(content().string(containsString("aria-label=\"Janela do clube\"")))
 			.andExpect(content().string(containsString("Temporada 2026 · ")))
 			.andExpect(content().string(containsString("Placar com os gols do clube primeiro")))
 			.andExpect(content().string(containsString("Moral do treinador")))
 			.andExpect(content().string(containsString("0–6 vermelho · 7–14 amarelo · 15–30 verde")));
-		mvc.perform(get(base + "/classificacao").param("calendario", "-1").with(como(treinador)))
-			.andExpect(content().string(not(containsString("aria-label=\"Janela do clube\""))));
+		mvc.perform(get(base + "/clube/-1").with(como(treinador))).andExpect(status().isNotFound());
 	}
 
 	@Test
@@ -293,8 +367,7 @@ class AbasIT {
 
 		CompraRepositorio.JogadorNaVitrine alvo = v.jogadores().stream().filter(l -> l.aVenda() && l.impedimento() == null)
 			.findFirst().orElseThrow();
-		mvc.perform(get(base + "/classificacao").param("calendario", String.valueOf(outro)).param("aba", "plantel")
-				.with(como(treinador)))
+		mvc.perform(get(base + "/clube/" + outro).param("aba", "plantel").with(como(treinador)))
 			.andExpect(status().isOk())
 			.andExpect(content().string(containsString("à venda)")))
 			.andExpect(content().string(containsString("Comprar " + alvo.jogador().nome())));

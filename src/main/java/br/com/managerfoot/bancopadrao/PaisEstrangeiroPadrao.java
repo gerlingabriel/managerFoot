@@ -4,7 +4,7 @@ import java.util.List;
 
 /**
  * País sem liga jogada, gerado só com clubes para a competição continental (SPEC §8.3.6, rev. 73).
- * Os clubes não evoluem nem têm caixa ou mercado; quantos são gerados vem de
+ * Os clubes não evoluem nem têm caixa; deixam só uns dois à venda por temporada (rev. 84); quantos são gerados vem de
  * {@link ContinentalPadrao#clubesGerados(String)}.
  *
  * @param codigo código FIFA do país

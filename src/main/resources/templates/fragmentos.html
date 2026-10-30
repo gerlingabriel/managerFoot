@@ -30,6 +30,12 @@
 </div>
 </header>
 
+<!-- Nome de clube que abre a janela do clube por cima da tela atual (modelo 14e, rev. 84). hx-select="unset": dentro
+     do #plantel e do #quadro o atributo seria herdado e descartaria a resposta. -->
+<a th:fragment="clube(id, texto, classes)" class="link-clube" th:classappend="${classes}" th:text="${texto}"
+	th:href="@{/jogos/{j}/clube/{c}(j=${jogoId},c=${id})}" th:attr="hx-get=@{/jogos/{j}/clube/{c}(j=${jogoId},c=${id})}"
+	hx-target="body" hx-swap="beforeend" hx-select="unset" hx-push-url="false">Clube</a>
+
 <nav th:fragment="abas(jogoId, atual)" aria-label="Telas do treinador" class="abas">
 <a th:href="@{/jogos/{id}/plantel(id=${jogoId})}" class="aba" th:classappend="${atual == 'plantel'} ? 'atual'" th:attr="aria-current=${atual == 'plantel' ? 'page' : null}">Plantel</a>
 <a th:href="@{/jogos/{id}/classificacao(id=${jogoId})}" class="aba" th:classappend="${atual == 'classificacao'} ? 'atual'" th:attr="aria-current=${atual == 'classificacao' ? 'page' : null}">Classificação</a>

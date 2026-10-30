@@ -87,7 +87,7 @@
 <td>
 <span th:if="${l.rodada == 0 and l.copa == null}" class="suave">Antes da 1ª rodada</span>
 <span th:if="${l.copa != null}" class="extrato-detalhe" th:classappend="${l.continental} ? 'extrato-continental' : 'extrato-etapa'" th:text="${l.copa}">Oitavas de final · ida</span>
-<span th:if="${l.adversario != null}" class="clube-celula"><span class="extrato-local" th:text="${l.emCasa == null} ? 'Neutro' : (${l.emCasa} ? 'Casa' : 'Fora')">Casa</span><span aria-hidden="true" th:style="${@escudos.estilo(l.adversario.escudo, 18, 22)}"></span><span class="jogo-nome calendario-nome" th:text="${l.adversario.nome}">Adversário</span><span th:if="${l.paisAdversario != null}" class="sigla-pais" th:text="${l.paisAdversario}">ARG</span></span>
+<span th:if="${l.adversario != null}" class="clube-celula"><span class="extrato-local" th:text="${l.emCasa == null} ? 'Neutro' : (${l.emCasa} ? 'Casa' : 'Fora')">Casa</span><span aria-hidden="true" th:style="${@escudos.estilo(l.adversario.escudo, 18, 22)}"></span><a th:replace="~{fragmentos :: clube(${l.adversario.id}, ${l.adversario.nome}, 'jogo-nome calendario-nome')}">Adversário</a><span th:if="${l.paisAdversario != null}" class="sigla-pais" th:text="${l.paisAdversario}">ARG</span></span>
 <span th:if="${l.adversario == null and l.rodada != 0 and l.copa == null}" class="suave">Folga</span>
 <span th:each="d : ${l.detalhes}" class="extrato-detalhe" th:text="${d}">Compra: Jogador (Z, 31)</span>
 </td>

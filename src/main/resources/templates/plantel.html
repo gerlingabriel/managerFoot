@@ -40,7 +40,7 @@
 <span class="rotulo" th:classappend="${v.continental} ? 'rotulo-continental'" th:text="${v.temporadaEncerrada} ? 'Temporada' : (${v.etapaCopa != null} ? |Próximo jogo · ${v.etapaCopa}| : |Próximo jogo · Rodada ${v.rodada}|)">Próximo jogo</span>
 <span class="proximo-jogo" th:if="${v.temporadaEncerrada}">Temporada encerrada</span>
 <span class="proximo-jogo" th:if="${!v.temporadaEncerrada and v.adversario == null}" th:text="${v.etapaCopa != null} ? 'Seu clube não joga' : 'Folga'">Folga</span>
-<span class="proximo-jogo" th:if="${v.adversario != null}"><span th:text="|${v.finalCopa ? 'Campo neutro' : (v.emCasa ? 'Em casa' : 'Fora')} · ${v.adversario.nome}|">Fora · Adversário</span> <span th:if="${v.paisAdversario != null}" class="sigla-pais" th:text="${v.paisAdversario}">ARG</span></span>
+<span class="proximo-jogo" th:if="${v.adversario != null}"><span th:text="|${v.finalCopa ? 'Campo neutro' : (v.emCasa ? 'Em casa' : 'Fora')} ·|">Fora ·</span> <a th:replace="~{fragmentos :: clube(${v.adversario.id}, ${v.adversario.nome}, '')}">Adversário</a> <span th:if="${v.paisAdversario != null}" class="sigla-pais" th:text="${v.paisAdversario}">ARG</span></span>
 <span th:if="${!v.temporadaEncerrada and v.detalheCopa != null}" class="suave" th:text="${v.detalheCopa}">Ida 1 x 1</span>
 </div>
 </div>

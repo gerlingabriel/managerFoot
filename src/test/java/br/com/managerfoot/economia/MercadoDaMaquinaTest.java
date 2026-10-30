@@ -20,6 +20,22 @@ class MercadoDaMaquinaTest {
 	private final MercadoDaMaquina mercado = MercadoDaMaquina.padrao();
 
 	@Test
+	void clubeDeForaCompletaOPlantelNaPosicaoMaisDesfalcadaAbaixoDaMedia() {
+		java.util.Map<Posicao, Integer> composicao = java.util.Map.of(Posicao.GOLEIRO, 1, Posicao.DEFENSOR, 2, Posicao.MEIO_CAMPISTA, 1,
+				Posicao.ATACANTE, 1);
+		List<Jogador> plantel = List.of(new Jogador(1, "G", Posicao.GOLEIRO, 30, Temperamento.NORMAL, "BRA"),
+				new Jogador(2, "M", Posicao.MEIO_CAMPISTA, 40, Temperamento.NORMAL, "BRA"));
+		assertThat(mercado.reposicaoDeFora(plantel, composicao)).containsExactly(
+				new MercadoDaMaquina.VagaDeFora(Posicao.DEFENSOR, 33), new MercadoDaMaquina.VagaDeFora(Posicao.DEFENSOR, 33),
+				new MercadoDaMaquina.VagaDeFora(Posicao.ATACANTE, 33));
+		// plantel completo: ninguém novo; muito fraco: não passa do mínimo
+		assertThat(mercado.reposicaoDeFora(List.of(new Jogador(1, "G", Posicao.GOLEIRO, 1, Temperamento.NORMAL, "BRA")),
+				java.util.Map.of(Posicao.GOLEIRO, 1))).isEmpty();
+		assertThat(mercado.reposicaoDeFora(List.of(new Jogador(1, "G", Posicao.GOLEIRO, 1, Temperamento.NORMAL, "BRA")),
+				java.util.Map.of(Posicao.GOLEIRO, 2)).getFirst().forca()).isEqualTo(Jogador.FORCA_MINIMA);
+	}
+
+	@Test
 	void limiteEDezRodadasDaFolhaEAbaixoDeleOClubeVende() {
 		// 23 jogadores de força 17: folha de R$ 39.100 por rodada (R$ 1.700 cada, faixa −15%)
 		List<Jogador> plantel = plantel(23, 17);

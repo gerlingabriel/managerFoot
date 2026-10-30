@@ -7,6 +7,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Stream;
 import java.util.SplittableRandom;
 
 import br.com.managerfoot.dominio.Clube;
@@ -169,6 +170,18 @@ public final class GeradorBancoPadrao {
 	 * Os 4-4-2 mais fortes nascem perto da força do clube e os demais abaixo; depois a força dos
 	 * titulares que a máquina escolhe é ajustada, de 1 em 1, até a média bater com a do clube.
 	 */
+	/**
+	 * Jogador criado na virada para o clube de fora do campeonato (rev. 84), com nome do país e sem asterisco.
+	 *
+	 * @param usados nomes já no plantel; recebe o novo
+	 */
+	public Jogador jogadorDeReposicao(String codigoPais, Posicao posicao, int forca, Set<String> usados, SplittableRandom aleatorio) {
+		Idioma idioma = Stream.concat(PaisPadrao.TODOS.stream().filter(p -> p.codigo().equals(codigoPais)).map(PaisPadrao::idioma),
+				PaisEstrangeiroPadrao.TODOS.stream().filter(p -> p.codigo().equals(codigoPais)).map(PaisEstrangeiroPadrao::idioma))
+			.findFirst().orElseThrow(() -> new IllegalArgumentException("país sem idioma: " + codigoPais));
+		return new Jogador(1, nomeDoJogador(idioma, usados, aleatorio), posicao, forca, temperamento(aleatorio), codigoPais);
+	}
+
 	private List<Jogador> plantel(Idioma idioma, String nacionalidade, int forcaClube, int teto,
 			SplittableRandom aleatorio) {
 		Map<Posicao, Integer> titulares = Map.of(Posicao.GOLEIRO, 1, Posicao.DEFENSOR, 4, Posicao.MEIO_CAMPISTA, 4,

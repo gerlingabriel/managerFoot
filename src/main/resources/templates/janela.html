@@ -30,6 +30,11 @@
 </h2>
 </div>
 
+<nav class="janela-abas" aria-label="Plantel dos clubes">
+<a th:replace="~{fragmentos :: clube(${p.mandante.id}, |Plantel · ${p.mandante.nome}|, '')}">Plantel · Mandante</a>
+<a th:replace="~{fragmentos :: clube(${p.visitante.id}, |Plantel · ${p.visitante.nome}|, '')}">Plantel · Visitante</a>
+</nav>
+
 <section aria-label="Lances da partida" class="janela-lances">
 <p th:if="${janela.lances.isEmpty()}" class="suave centro">Nenhum lance até agora.</p>
 <div th:each="l : ${janela.lances}" class="janela-lance" th:with="casa=${l.lado.name() == 'CASA'}, tipo=${l.tipo.name()}">

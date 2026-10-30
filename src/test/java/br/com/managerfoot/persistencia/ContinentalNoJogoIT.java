@@ -135,7 +135,7 @@ class ContinentalNoJogoIT {
 
 	String forcasDosEstrangeiros(long jogo) {
 		return jdbc.sql("""
-				SELECT string_agg(c.forca || ':' || j.forca || ':' || j.a_venda, ',' ORDER BY j.id)
+				SELECT string_agg(c.forca || ':' || j.forca, ',' ORDER BY j.id)
 				FROM jogo_jogador j JOIN jogo_clube c ON c.id = j.clube_id
 				WHERE c.jogo_id = :jogo AND c.pais_codigo IS NOT NULL""")
 			.param("jogo", jogo).query(String.class).single();

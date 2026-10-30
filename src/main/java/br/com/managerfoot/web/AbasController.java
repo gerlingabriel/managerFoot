@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import br.com.managerfoot.contas.Usuario;
 import br.com.managerfoot.persistencia.CaixaRepositorio;
 import br.com.managerfoot.persistencia.ClubeNaFilaException;
-import br.com.managerfoot.persistencia.CompraRepositorio;
 import br.com.managerfoot.persistencia.ConsultasContinentalRepositorio;
 import br.com.managerfoot.persistencia.ConsultasRepositorio;
 import br.com.managerfoot.persistencia.EstadioRepositorio;
@@ -24,10 +23,8 @@ import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * Abas Classificação, Artilheiros da temporada e Artilheiros de todos os tempos (SPEC §10.3, rev.
- * 16; modelos aprovados). Com {@code ficha=<id>}, a aba abre a ficha do jogador por cima; na
- * classificação, {@code calendario=<clube>} abre o calendário do clube (rev. 17 e 36). A aba
- * Finanças mostra só o clube do usuário (modelo 6a, rev. 39). A janela do clube tem também a aba
- * Plantel, com os jogadores à venda ({@code aba=plantel}, modelo 7a, rev. 51). A aba Histórico tem os
+ * 16; modelos aprovados). Com {@code ficha=<id>}, a aba abre a ficha do jogador por cima. A aba
+ * Finanças mostra só o clube do usuário (modelo 6a, rev. 39). A aba Histórico tem os
  * campeões e o ranking de treinadores (modelo 8a, rev. 54). A aba Copa tem as fases, os confrontos e a
  * chave da copa da temporada (modelo 12a, rev. 71).
  */
@@ -36,15 +33,13 @@ class AbasController {
 
 	private final ConsultasRepositorio consultas;
 	private final CaixaRepositorio caixas;
-	private final CompraRepositorio compras;
 	private final EstadioRepositorio estadios;
 	private final ConsultasContinentalRepositorio continentais;
 
-	AbasController(ConsultasRepositorio consultas, CaixaRepositorio caixas, CompraRepositorio compras,
+	AbasController(ConsultasRepositorio consultas, CaixaRepositorio caixas,
 			EstadioRepositorio estadios, ConsultasContinentalRepositorio continentais) {
 		this.consultas = consultas;
 		this.caixas = caixas;
-		this.compras = compras;
 		this.estadios = estadios;
 		this.continentais = continentais;
 	}
@@ -52,20 +47,10 @@ class AbasController {
 	@GetMapping("/jogos/{jogoId}/classificacao")
 	String classificacao(@AuthenticationPrincipal Usuario usuario, @PathVariable long jogoId,
 			@RequestParam(name = "divisao", required = false) Integer divisao,
-			@RequestParam(name = "calendario", required = false) Long calendario,
-			@RequestParam(name = "aba", required = false) String aba, Model model) {
+			Model model) {
 		model.addAttribute("usuario", usuario);
 		model.addAttribute("jogoId", jogoId);
 		model.addAttribute("c", consultas.classificacao(jogoId, usuario.id(), divisao));
-		if (calendario != null) {
-			consultas.calendario(jogoId, usuario.id(), calendario).ifPresent(cal -> {
-				model.addAttribute("calendario", cal);
-				// a janela do clube tem as abas Calendário e Plantel (modelo 7a, rev. 51)
-				if ("plantel".equals(aba)) {
-					model.addAttribute("vitrine", compras.vitrine(jogoId, usuario.id(), calendario));
-				}
-			});
-		}
 		return "classificacao";
 	}
 

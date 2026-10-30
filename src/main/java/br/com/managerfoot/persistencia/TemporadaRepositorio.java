@@ -103,6 +103,7 @@ public class TemporadaRepositorio {
 		copas.criar(jogoId, temporadaId, semente);
 		continentais.criar(jogoId, temporadaId, temporada.numero(), semente);
 		mercado.reporAVenda(jogoId, MercadoRepositorio.semente(semente, 0));
+		mercado.renovarClubesDeFora(jogoId, MercadoRepositorio.semente(semente, 0));
 	}
 
 	/**

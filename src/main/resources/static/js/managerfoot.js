@@ -22,6 +22,22 @@ document.addEventListener('change', function (e) {
 	if (e.target.matches('select[data-enviar-ao-mudar]')) e.target.form.requestSubmit();
 });
 
+// Janela do clube por cima da tela (modelo 14e): fechar volta à tela; depois de uma compra, recarrega
+// para o caixa e o plantel aparecerem certos.
+(function () {
+	var comprou = false;
+	document.addEventListener('htmx:afterSettle', function () {
+		if (document.querySelector('[data-recarregar]')) comprou = true;
+	});
+	document.addEventListener('click', function (e) {
+		var fechar = e.target.closest('[data-fechar-janela]');
+		if (!fechar) return;
+		e.preventDefault();
+		if (comprou) location.reload();
+		else fechar.closest('.janela-fundo').remove();
+	});
+})();
+
 // Som dos gols no quadro da rodada (SPEC §10.2 e §10.4): o servidor diz os gols do clube do usuário;
 // quando um número sobe e o som está ligado, toca um som curto, um para o gol feito e outro para o
 // sofrido. Gerado pelo Web Audio, sem arquivo. O navegador só libera o áudio depois de um clique na

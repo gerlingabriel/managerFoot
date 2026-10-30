@@ -115,7 +115,7 @@
 <th:block th:if="false">
 <td th:fragment="celula(c)" th:classappend="${c != null and c.seu} ? 'seu'">
 <th:block th:if="${c != null}">
-<span class="historico-clube"><span th:text="${c.clube}">Clube</span> <span th:if="${c.pais != null}" class="sigla-pais" th:text="${c.pais}">ARG</span></span>
+<span class="historico-clube"><th:block th:if="${c.clubeId != null}"><a th:replace="~{fragmentos :: clube(${c.clubeId}, ${c.clube}, '')}">Clube</a></th:block><span th:if="${c.clubeId == null}" th:text="${c.clube}">Clube</span> <span th:if="${c.pais != null}" class="sigla-pais" th:text="${c.pais}">ARG</span></span>
 <span th:if="${c.treinador != null}" class="historico-treinador" th:text="${c.seu} ? |${c.treinador} (você)| : ${c.treinador}">Treinador</span>
 <span th:if="${c.detalhe != null}" class="historico-final" th:text="${c.detalhe}">final 2 x 1</span>
 </th:block>

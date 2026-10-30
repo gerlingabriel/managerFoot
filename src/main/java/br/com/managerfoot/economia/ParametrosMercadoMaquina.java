@@ -26,14 +26,18 @@ import br.com.managerfoot.dominio.Posicao;
  * @param aVendaMaximo até quantos o sorteio completa
  * @param plantelAlvo abaixo disto o clube com caixa compra até jogador mais fraco que o time, para ter
  *        um plantel maior (usuário, rev. 66: "entre 23 e 25 se o caixa permitir"); 0 desliga
+ * @param aVendaDeFora quantos o clube de fora do campeonato deixa à venda por temporada (usuário, rev. 84: "uns dois")
+ * @param reposicaoAbaixoDaMedia quantos pontos abaixo da média do clube vem o jogador criado na virada para o clube
+ *        de fora (proposta do agente, rev. 84: 2)
  */
 public record ParametrosMercadoMaquina(int rodadasDeFolhaNoLimite, double descontoLance, double acrescimoPelaForca,
 		Map<Posicao, Integer> elencoMinimo, int plantelMinimo, int interesseAbaixoDoTime, int folgaNaCompra,
-		int aVendaMinimo, int aVendaMaximo, int plantelAlvo) {
+		int aVendaMinimo, int aVendaMaximo, int plantelAlvo, int aVendaDeFora, int reposicaoAbaixoDaMedia) {
 
 	public ParametrosMercadoMaquina {
 		if (rodadasDeFolhaNoLimite < 0 || descontoLance < 0 || descontoLance >= 1 || acrescimoPelaForca < 0
-				|| plantelMinimo < 0 || interesseAbaixoDoTime < 0 || folgaNaCompra < 0 || aVendaMinimo < 0 || aVendaMaximo < aVendaMinimo) {
+				|| plantelMinimo < 0 || interesseAbaixoDoTime < 0 || folgaNaCompra < 0 || aVendaMinimo < 0 || aVendaMaximo < aVendaMinimo
+				|| aVendaDeFora < 0 || reposicaoAbaixoDaMedia < 0) {
 			throw new IllegalArgumentException("parâmetros do mercado da máquina inválidos");
 		}
 		elencoMinimo = Map.copyOf(elencoMinimo);
@@ -45,12 +49,12 @@ public record ParametrosMercadoMaquina(int rodadasDeFolhaNoLimite, double descon
 		minimo.put(Posicao.DEFENSOR, 4);
 		minimo.put(Posicao.MEIO_CAMPISTA, 4);
 		minimo.put(Posicao.ATACANTE, 2);
-		return new ParametrosMercadoMaquina(10, 0.10, 0.05, minimo, 14, 5, 5, 5, 6, 23);
+		return new ParametrosMercadoMaquina(10, 0.10, 0.05, minimo, 14, 5, 5, 5, 6, 23, 2, 2);
 	}
 
 	/** Os mesmos valores com outro plantel alvo (rev. 66). */
 	public ParametrosMercadoMaquina comPlantelAlvo(int alvo) {
 		return new ParametrosMercadoMaquina(rodadasDeFolhaNoLimite, descontoLance, acrescimoPelaForca, elencoMinimo,
-				plantelMinimo, interesseAbaixoDoTime, folgaNaCompra, aVendaMinimo, aVendaMaximo, alvo);
+				plantelMinimo, interesseAbaixoDoTime, folgaNaCompra, aVendaMinimo, aVendaMaximo, alvo, aVendaDeFora, reposicaoAbaixoDaMedia);
 	}
 }

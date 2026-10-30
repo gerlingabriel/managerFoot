@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 83 — 2026-10-30)
+-   **Status:** versão inicial para revisão (rev. 84 — 2026-10-30)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 84 (2026-10-30):** pelo usuário: nome de clube abre a janela do clube em toda tela (modelo 14e); clube de fora do campeonato mostra só o plantel, sem calendário, com uns dois jogadores à venda, e na virada ganha jogador novo para repor quem saiu; clube que joga o campeonato segue com leilão, sem jogador criado (§9.4). Durante a rodada dá para ver o plantel e os preços; comprar, só depois dela (modelo 14f). Agente: o jogador criado completa o plantel gerado, na posição mais desfalcada, com força 2 abaixo da média do clube (Provisório); vendido no meio da temporada não é reposto até a virada (Provisório).
 -   **rev. 83 (2026-10-30):** modelos 14a, 14c e 14d, pedidos pelo usuário e sem objeção: ano no topo e patrocinador assinado junto ao escudo; faixa das vagas da continental na 1ª divisão, com a quantidade na legenda, e troféu do campeão matemático (só quando ninguém alcança o líder em pontos; empate possível não decide); coluna com maleta no plantel; ficha com nacionalidade e contrato, sem o bloco de venda enquanto há contrato (§10.3).
 -   **rev. 82 (2026-10-30):** pelo usuário: som só nos gols do jogo dele, com dois sons curtos (§10.2); marca de expulsão pequena junto ao nome (§10.2).
 -   **rev. 81 (2026-10-30):** pelo usuário: a substituição não muda a tática: a formação da partida fica a mesma e quem entra ocupa a vaga de quem saiu (§7.4.1); o título da liga fica com quem está no clube na virada da temporada, mesmo que tenha chegado depois da última rodada (§5.4); jogador com contrato firmado não vai a leilão até a temporada seguinte (§9.5).
@@ -2348,6 +2349,13 @@ A máquina oferece um pouco abaixo do preço padrão (§9.4).
     temporada) e o de baixo vende (1,0 a 2,3); a força em campo do fundo
     cai cerca de 1 ponto na temporada.
 
+**Definido (rev. 84) — clubes de fora do campeonato:** deixam uns dois jogadores
+à venda por temporada, pelo mesmo preço da compra direta. Só eles ganham jogador
+novo: na virada da temporada, quem vendeu repõe até o tamanho do plantel gerado.
+Os clubes que jogam o campeonato seguem com o leilão e não têm jogador criado.
+**Provisório:** o jogador novo entra na posição mais desfalcada, com força 2
+abaixo da média do clube; o vendido no meio da temporada só é reposto na virada.
+
 ### 9.5 Contratos, salários e empréstimos
 
 -   Jogadores possuem contratos com prazo e salário.
@@ -2669,6 +2677,13 @@ estreita entre a posição e o nome mostra uma maleta em quem tem contrato firma
 na temporada. A ficha mostra a nacionalidade e o contrato. A classificação da 1ª
 divisão marca as vagas da continental; o troféu aparece entre a posição e o nome
 do líder quando nenhum clube pode mais alcançá-lo em pontos.
+
+**Definido (rev. 84):** todo nome de clube com jogo identificável abre a janela
+do clube por cima da tela atual, e fechar volta a ela. Clube da liga tem
+Calendário e Plantel; clube de fora do campeonato, só o Plantel. Na janela do
+jogo, durante a rodada, os dois clubes têm o link do plantel com os preços, sem
+compra: ela só vale depois da rodada, porque o resultado é recalculado a partir
+do elenco gravado.
 
 ### 10.4 Configurações
 

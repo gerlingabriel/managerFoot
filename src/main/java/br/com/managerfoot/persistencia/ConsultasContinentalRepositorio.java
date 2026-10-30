@@ -115,7 +115,7 @@ public class ConsultasContinentalRepositorio {
 		List<LinhaDoGrupo> linhas = new ArrayList<>();
 		for (int i = 0; i < tabela.size(); i++) {
 			LinhaClassificacao l = tabela.get(i);
-			linhas.add(new LinhaDoGrupo(l.clube().nome(), paises.get(l.clube().id()), l.jogos(), l.pontos(), l.saldo(),
+			linhas.add(new LinhaDoGrupo(l.clube().id(), l.clube().nome(), paises.get(l.clube().id()), l.jogos(), l.pontos(), l.saldo(),
 					i < ParametrosContinental.CLASSIFICADOS_POR_GRUPO, l.clube().id() == clubeId));
 		}
 		return new GrupoNaTela(g.indice(), g.nome(), linhas, linhas.stream().anyMatch(LinhaDoGrupo::voce));
@@ -241,7 +241,7 @@ public class ConsultasContinentalRepositorio {
 	 * @param pais sigla do clube de fora; nulo no clube do país jogado
 	 * @param passa está entre os que passam agora
 	 */
-	public record LinhaDoGrupo(String clube, String pais, int jogos, int pontos, int saldo, boolean passa, boolean voce) {
+	public record LinhaDoGrupo(long clubeId, String clube, String pais, int jogos, int pontos, int saldo, boolean passa, boolean voce) {
 
 		public String saldoTexto() {
 			return saldo > 0 ? "+" + saldo : String.valueOf(saldo).replace('-', '−');

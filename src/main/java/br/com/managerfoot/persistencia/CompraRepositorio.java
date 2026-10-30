@@ -51,11 +51,7 @@ public class CompraRepositorio {
 		jogos.travar(jogoId);
 		long comprador = jogos.clubeDoTreinador(jogoId, usuarioId)
 			.orElseThrow(() -> new NoSuchElementException("jogo " + jogoId + " não encontrado"));
-		boolean aoVivo = jdbc.sql("SELECT EXISTS (SELECT 1 FROM jogo_rodada_ao_vivo WHERE jogo_id = :jogo)")
-			.param("jogo", jogoId)
-			.query(Boolean.class)
-			.single();
-		if (aoVivo) {
+		if (aoVivo(jogoId)) {
 			throw new CompraRecusadaException("Não dá para comprar durante a rodada.");
 		}
 		long vendedor = jdbc.sql("""
@@ -68,12 +64,11 @@ public class CompraRepositorio {
 			.optional()
 			.orElseThrow(() -> new NoSuchElementException("o jogador " + jogadorId + " não está à venda"));
 
-		var planteis = jogos.carregarPlanteis(jogoId);
-		List<Jogador> plantel = planteis.getOrDefault(comprador, List.of());
+		List<Jogador> plantel = jogos.carregarPlantel(comprador);
 		if (plantel.size() >= Clube.MAXIMO_JOGADORES) {
 			throw new CompraRecusadaException("O plantel já tem " + Clube.MAXIMO_JOGADORES + " jogadores.");
 		}
-		Jogador jogador = planteis.get(vendedor).stream().filter(j -> j.id() == jogadorId).findFirst().orElseThrow();
+		Jogador jogador = jogos.carregarPlantel(vendedor).stream().filter(j -> j.id() == jogadorId).findFirst().orElseThrow();
 		long valor = preco.preco(jogador, paisDaLiga(jogoId));
 		caixas.abrirCaixas(jogoId);
 		long saldo = caixas.saldo(comprador, plantel);
@@ -86,7 +81,7 @@ public class CompraRepositorio {
 	}
 
 	/**
-	 * O plantel inteiro de um clube como o treinador vê ao clicar nele na classificação (modelo 7a,
+	 * O plantel inteiro de um clube, de fora do campeonato inclusive, como o treinador vê ao clicar nele (modelo 7a,
 	 * rev. 51): gols na temporada e, nos anunciados, o preço e se o treinador pode comprar.
 	 *
 	 * @throws NoSuchElementException se o usuário não treina clube no jogo ou o clube não é do jogo
@@ -95,12 +90,15 @@ public class CompraRepositorio {
 	public Vitrine vitrine(long jogoId, long usuarioId, long clubeId) {
 		long doUsuario = jogos.clubeDoTreinador(jogoId, usuarioId)
 			.orElseThrow(() -> new NoSuchElementException("jogo " + jogoId + " não encontrado"));
-		var planteis = jogos.carregarPlanteis(jogoId);
-		List<Jogador> plantel = planteis.get(clubeId);
-		if (plantel == null) {
+		boolean doJogo = jdbc.sql("SELECT EXISTS (SELECT 1 FROM jogo_clube WHERE id = :clube AND jogo_id = :jogo)")
+			.param("clube", clubeId).param("jogo", jogoId).query(Boolean.class).single();
+		if (!doJogo) {
 			throw new NoSuchElementException("o clube " + clubeId + " não é do jogo " + jogoId);
 		}
-		List<Jogador> meu = planteis.getOrDefault(doUsuario, List.of());
+		List<Jogador> plantel = jogos.carregarPlantel(clubeId);
+		List<Jogador> meu = jogos.carregarPlantel(doUsuario);
+		// a tela mostra o preço durante a rodada, mas a compra só vale depois dela (modelo 14f, rev. 84)
+		boolean aoVivo = aoVivo(jogoId);
 		long saldo = caixas.saldo(doUsuario, meu);
 		String pais = paisDaLiga(jogoId);
 		Map<Long, Integer> gols = new HashMap<>();
@@ -127,12 +125,20 @@ public class CompraRepositorio {
 			boolean anunciado = clubeId != doUsuario && aVenda.contains(j.id());
 			Long valor = anunciado ? preco.preco(j, pais) : null;
 			String impedimento = !anunciado ? null
+					: aoVivo ? "Compra depois da rodada"
 					: meu.size() >= Clube.MAXIMO_JOGADORES ? "Plantel cheio"
 					: saldo < valor ? "Caixa insuficiente" : null;
 			linhas.add(new JogadorNaVitrine(j, j.nacionalidade().equals(pais) ? null : j.nacionalidade(),
 					gols.getOrDefault(j.id(), 0), valor, impedimento));
 		}
 		return new Vitrine(clubeId == doUsuario, saldo, caixas.moeda(jogoId), linhas);
+	}
+
+	private boolean aoVivo(long jogoId) {
+		return jdbc.sql("SELECT EXISTS (SELECT 1 FROM jogo_rodada_ao_vivo WHERE jogo_id = :jogo)")
+			.param("jogo", jogoId)
+			.query(Boolean.class)
+			.single();
 	}
 
 	private String paisDaLiga(long jogoId) {
@@ -162,7 +168,8 @@ public class CompraRepositorio {
 	/**
 	 * @param estrangeiro sigla do país, se não é o da liga
 	 * @param preco preço da compra direta; nulo se o jogador não está à venda
-	 * @param impedimento por que o treinador não pode comprar ("Caixa insuficiente", "Plantel cheio");
+	 * @param impedimento por que o treinador não pode comprar ("Caixa insuficiente", "Plantel cheio",
+	 *        "Compra depois da rodada");
 	 *        nulo se pode ou se não está à venda
 	 */
 	public record JogadorNaVitrine(Jogador jogador, String estrangeiro, int gols, Long preco, String impedimento) {

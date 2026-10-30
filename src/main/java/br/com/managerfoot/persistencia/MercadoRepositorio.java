@@ -11,8 +11,11 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import br.com.managerfoot.bancopadrao.GeradorBancoPadrao;
+import br.com.managerfoot.bancopadrao.ParametrosBancoPadrao;
 import br.com.managerfoot.dominio.Jogador;
 import br.com.managerfoot.economia.MercadoDaMaquina;
+import br.com.managerfoot.motor.ParametrosMotor;
 
 /** Estado do mercado no jogo (SPEC §9.4, rev. 43): jogadores à venda para compra direta. */
 @Repository
@@ -21,6 +24,7 @@ public class MercadoRepositorio {
 	private final JdbcClient jdbc;
 	private final JogoRepositorio jogos;
 	private final MercadoDaMaquina mercado = MercadoDaMaquina.padrao();
+	private final GeradorBancoPadrao gerador = new GeradorBancoPadrao(ParametrosBancoPadrao.padrao(), ParametrosMotor.padrao());
 
 	public MercadoRepositorio(JdbcClient jdbc, JogoRepositorio jogos) {
 		this.jdbc = jdbc;
@@ -68,6 +72,44 @@ public class MercadoRepositorio {
 					.update();
 			}
 		}
+	}
+
+	/**
+	 * Virada para os clubes de fora do campeonato (rev. 84): quem vendeu ganha jogador novo até voltar
+	 * ao tamanho do plantel gerado, e o clube deixa uns dois à venda para a temporada. Só aqui: no meio
+	 * da temporada, o vendido não é reposto. Quem chama abre a transação.
+	 */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void renovarClubesDeFora(long jogoId, long semente) {
+		SplittableRandom aleatorio = new SplittableRandom(semente);
+		List<ClubeDeFora> clubes = jdbc.sql("SELECT id, pais_codigo FROM jogo_clube WHERE jogo_id = :jogo AND pais_codigo IS NOT NULL ORDER BY id")
+			.param("jogo", jogoId)
+			.query((rs, n) -> new ClubeDeFora(rs.getLong("id"), rs.getString("pais_codigo")))
+			.list();
+		for (ClubeDeFora clube : clubes) {
+			List<Jogador> plantel = jogos.carregarPlantel(clube.id());
+			Set<String> nomes = new HashSet<>(plantel.stream().map(Jogador::nome).toList());
+			for (MercadoDaMaquina.VagaDeFora vaga : mercado.reposicaoDeFora(plantel, ParametrosBancoPadrao.padrao().composicao())) {
+				Jogador novo = gerador.jogadorDeReposicao(clube.pais(), vaga.posicao(), vaga.forca(), nomes, aleatorio);
+				jdbc.sql("""
+						INSERT INTO jogo_jogador (clube_id, nome, nacionalidade, posicao, forca, temperamento)
+						VALUES (:clube, :nome, :nacionalidade, :posicao, :forca, :temperamento)""")
+					.param("clube", clube.id())
+					.param("nome", novo.nome())
+					.param("nacionalidade", novo.nacionalidade())
+					.param("posicao", novo.posicao().name())
+					.param("forca", novo.forca())
+					.param("temperamento", novo.temperamento().name())
+					.update();
+			}
+			plantel = jogos.carregarPlantel(clube.id());
+			for (Jogador j : mercado.sortearAVendaDeFora(plantel, aVenda(clube.id()), aleatorio)) {
+				jdbc.sql("UPDATE jogo_jogador SET a_venda = true WHERE id = :id").param("id", j.id()).update();
+			}
+		}
+	}
+
+	private record ClubeDeFora(long id, String pais) {
 	}
 
 	/** Semente do sorteio dos anúncios depois da rodada (0 = início da temporada). */

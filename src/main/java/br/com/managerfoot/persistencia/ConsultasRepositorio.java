@@ -144,6 +144,20 @@ public class ConsultasRepositorio {
 				PrecoJogador.padrao().preco(jogador, pais), nacionalidade, contratoAte));
 	}
 
+	/** Clube do jogo fora das divisões (modelo 14e, rev. 84); vazio se o clube não é deste jogo ou joga a liga. */
+	@Transactional(readOnly = true)
+	public Optional<ClubeDeFora> clubeDeFora(long jogoId, long usuarioId, long clubeId) {
+		exigirClube(jogoId, usuarioId);
+		return jdbc.sql("""
+				SELECT c.id, c.nome, c.forca, c.escudo_modelo, c.escudo_cor_1, c.escudo_cor_2, c.pais_codigo, p.nome AS pais
+				FROM jogo_clube c LEFT JOIN pais_fifa p ON p.codigo = c.pais_codigo
+				WHERE c.id = :clube AND c.jogo_id = :jogo AND c.divisao_id IS NULL""")
+			.param("clube", clubeId)
+			.param("jogo", jogoId)
+			.query((rs, n) -> new ClubeDeFora(TabelasLiga.clube(rs), rs.getString("pais_codigo"), rs.getString("pais")))
+			.optional();
+	}
+
 	/**
 	 * Calendário do clube na temporada atual (SPEC §10.3, rev. 17 e 18; modelo 3b, rev. 36): os jogos
 	 * da liga e da copa (modelo 12d, rev. 71), com o resultado dos já jogados, sem detalhes dos gols. Vazio se o clube não joga a
@@ -496,12 +510,28 @@ public class ConsultasRepositorio {
 				"c.vice_pais");
 		String nomeContinental = jdbc.sql("SELECT nome FROM jogo_continental WHERE jogo_id = :jogo").param("jogo", jogoId)
 			.query(String.class).optional().orElse(null);
+		Map<String, Long> ids = new HashMap<>();
+		jdbc.sql("SELECT id, nome FROM jogo_clube WHERE jogo_id = :jogo").param("jogo", jogoId)
+			.query(rs -> {
+				ids.put(rs.getString("nome"), rs.getLong("id"));
+			});
+		liga = liga.stream().map(l -> new LinhaDaLiga(l.ano(), comId(l.campeao(), ids), comId(l.vice(), ids), comId(l.terceiro(), ids))).toList();
+		copa = comIds(copa, ids);
+		continental = comIds(continental, ids);
 		return new VisaoHistorico(jogos.carregarLiga(jogoId).divisoes().getFirst().nome(), liga, copa, nomeContinental, continental,
 				titulos(jogoId, usuarioId));
 	}
 
+	private static NoQuadro comId(NoQuadro no, Map<String, Long> ids) {
+		return no == null ? null : no.comId(ids);
+	}
+
+	private static List<LinhaDaDecisao> comIds(List<LinhaDaDecisao> linhas, Map<String, Long> ids) {
+		return linhas.stream().map(l -> new LinhaDaDecisao(l.ano(), comId(l.campeao(), ids), comId(l.vice(), ids))).toList();
+	}
+
 	private static NoQuadro noQuadro(String clube, String treinador, Long usuario, long usuarioId, String pais, String detalhe) {
-		return clube == null ? null : new NoQuadro(clube, treinador, usuario != null && usuario == usuarioId, pais, detalhe);
+		return clube == null ? null : new NoQuadro(clube, treinador, usuario != null && usuario == usuarioId, pais, detalhe, null);
 	}
 
 	/**
@@ -680,8 +710,13 @@ public class ConsultasRepositorio {
 	 * @param seu o treinador era o usuário que vê a tela
 	 * @param pais sigla do clube de fora; nulo no clube do país jogado
 	 * @param detalhe no campeão, o placar da final ("final 1 x 1 · pên. 4 x 3"); nulo nos outros
+	 * @param clubeId para abrir a janela do clube; o histórico guarda só o nome e o id vem do clube com esse nome
 	 */
-	public record NoQuadro(String clube, String treinador, boolean seu, String pais, String detalhe) {
+	public record NoQuadro(String clube, String treinador, boolean seu, String pais, String detalhe, Long clubeId) {
+
+		NoQuadro comId(Map<String, Long> clubes) {
+			return new NoQuadro(clube, treinador, seu, pais, detalhe, clubes.get(clube));
+		}
 	}
 
 	/** @param clube clube atual do treinador; nulo se ele está sem clube */
@@ -782,6 +817,15 @@ public class ConsultasRepositorio {
 		public int golsContra() {
 			return jogos.stream().filter(j -> j.golsPro() != null).mapToInt(JogoNoCalendario::golsContra).sum();
 		}
+	}
+
+	/**
+	 * Um clube sem jogos na liga: de fora do campeonato ou na fila de espera.
+	 *
+	 * @param sigla código do país do clube de fora; nula na fila de espera
+	 * @param pais nome do país do clube de fora; nulo na fila de espera
+	 */
+	public record ClubeDeFora(Clube clube, String sigla, String pais) {
 	}
 
 	/**

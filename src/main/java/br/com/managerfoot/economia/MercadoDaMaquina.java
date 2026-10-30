@@ -73,10 +73,48 @@ public final class MercadoDaMaquina {
 	 * @return os novos anunciados, possivelmente nenhum
 	 */
 	public List<Jogador> sortearAVenda(List<Jogador> plantel, Set<Long> jaAVenda, RandomGenerator aleatorio) {
-		if (jaAVenda.size() >= parametros.aVendaMinimo()) {
+		return sortearAVenda(plantel, jaAVenda, parametros.aVendaMinimo(), parametros.aVendaMaximo(), aleatorio);
+	}
+
+	/** O clube de fora do campeonato deixa só uns dois à venda, com as mesmas salvaguardas (rev. 84). */
+	public List<Jogador> sortearAVendaDeFora(List<Jogador> plantel, Set<Long> jaAVenda, RandomGenerator aleatorio) {
+		return sortearAVenda(plantel, jaAVenda, parametros.aVendaDeFora(), parametros.aVendaDeFora(), aleatorio);
+	}
+
+	/**
+	 * O que o clube de fora do campeonato precisa criar na virada para voltar ao tamanho do plantel gerado
+	 * (rev. 84): a posição mais desfalcada primeiro, com a força um pouco abaixo da média do clube.
+	 *
+	 * @param composicao jogadores por posição no plantel completo
+	 */
+	public List<VagaDeFora> reposicaoDeFora(List<Jogador> plantel, Map<Posicao, Integer> composicao) {
+		if (plantel.isEmpty()) {
 			return List.of();
 		}
-		int alvo = parametros.aVendaMinimo() + aleatorio.nextInt(parametros.aVendaMaximo() - parametros.aVendaMinimo() + 1);
+		int media = (int) Math.round(plantel.stream().mapToInt(Jogador::forca).average().orElseThrow());
+		int forca = Math.max(Jogador.FORCA_MINIMA, Math.min(Jogador.FORCA_MAXIMA, media - parametros.reposicaoAbaixoDaMedia()));
+		Map<Posicao, Integer> faltam = new EnumMap<>(composicao);
+		plantel.forEach(j -> faltam.merge(j.posicao(), -1, Integer::sum));
+		int total = composicao.values().stream().mapToInt(Integer::intValue).sum();
+		List<VagaDeFora> vagas = new ArrayList<>();
+		for (int n = plantel.size(); n < total; n++) {
+			// o mapa é por enum: no empate fica a primeira posição, sempre a mesma
+			Posicao posicao = faltam.entrySet().stream().max(Map.Entry.comparingByValue()).orElseThrow().getKey();
+			faltam.merge(posicao, -1, Integer::sum);
+			vagas.add(new VagaDeFora(posicao, forca));
+		}
+		return List.copyOf(vagas);
+	}
+
+	/** Um jogador a criar no clube de fora do campeonato. */
+	public record VagaDeFora(Posicao posicao, int forca) {
+	}
+
+	private List<Jogador> sortearAVenda(List<Jogador> plantel, Set<Long> jaAVenda, int minimo, int maximo, RandomGenerator aleatorio) {
+		if (jaAVenda.size() >= minimo) {
+			return List.of();
+		}
+		int alvo = minimo + aleatorio.nextInt(maximo - minimo + 1);
 		Map<Posicao, Integer> sobra = new EnumMap<>(Posicao.class);
 		for (Jogador j : plantel) {
 			sobra.merge(j.posicao(), jaAVenda.contains(j.id()) ? 0 : 1, Integer::sum);

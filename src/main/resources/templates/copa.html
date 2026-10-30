@@ -48,11 +48,11 @@
 <tr th:each="k : ${c.confrontos}" th:classappend="${k.doUsuario()} ? 'do-usuario'">
 <td class="num suave" th:text="${k.numero}">1</td>
 <td><span class="clube-celula"><span aria-hidden="true" th:style="${@escudos.estilo(k.primeiro.escudo, 18, 22)}"></span>
-<span class="jogo-nome calendario-nome" th:classappend="${k.primeiroPassa == null} ? '' : (${k.primeiroPassa} ? 'copa-passa' : 'copa-sai')" th:text="${k.primeiroSeu} ? |${k.primeiro.nome} (você)| : ${k.primeiro.nome}">Clube</span></span></td>
+<a th:replace="~{fragmentos :: clube(${k.primeiro.id}, ${k.primeiroSeu ? k.primeiro.nome + ' (você)' : k.primeiro.nome}, ${'jogo-nome calendario-nome ' + (k.primeiroPassa == null ? '' : (k.primeiroPassa ? 'copa-passa' : 'copa-sai'))})}">Clube</a></span></td>
 <td class="centro copa-placar" th:text="${k.ida}">1 x 1</td>
 <td th:unless="${c.jogoUnico}" class="centro copa-placar" th:classappend="${k.volta == '—'} ? 'suave'" th:text="${k.volta}">—</td>
 <td><span class="clube-celula"><span aria-hidden="true" th:style="${@escudos.estilo(k.segundo.escudo, 18, 22)}"></span>
-<span class="jogo-nome calendario-nome" th:classappend="${k.primeiroPassa == null} ? '' : (${k.primeiroPassa} ? 'copa-sai' : 'copa-passa')" th:text="${k.segundoSeu} ? |${k.segundo.nome} (você)| : ${k.segundo.nome}">Clube</span></span></td>
+<a th:replace="~{fragmentos :: clube(${k.segundo.id}, ${k.segundoSeu ? k.segundo.nome + ' (você)' : k.segundo.nome}, ${'jogo-nome calendario-nome ' + (k.primeiroPassa == null ? '' : (k.primeiroPassa ? 'copa-sai' : 'copa-passa'))})}">Clube</a></span></td>
 <td class="num"><span class="copa-total"><strong th:text="${k.total}">1 x 1</strong><span th:if="${k.extra != null}" class="suave" th:text="${k.extra}">volta depois da 12</span></span></td>
 </tr>
 </tbody>

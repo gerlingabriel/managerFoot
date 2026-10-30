@@ -30,7 +30,7 @@
 <td class="num suave" th:text="${l.posicao}">1</td>
 <td><span class="clube-celula"><span class="pos" th:classappend="|pos-${l.posicaoEmCampo}|" th:text="${l.posicaoEmCampo.name().substring(0, 1)}">A</span>
 <a class="jogador-nome" th:href="|${url}${url.contains('?') ? '&' : '?'}ficha=${l.jogadorId}|" th:text="${l.nome}" th:attr="aria-label=|Ver ficha de ${l.nome}|">Nome</a></span></td>
-<td class="temperamento" th:text="${l.clube}">Clube</td>
+<td class="temperamento"><a th:replace="~{fragmentos :: clube(${l.clubeId}, ${l.clube}, '')}">Clube</a></td>
 <td class="num pontos" th:text="${l.gols}">0</td>
 </tr>
 </tbody>
