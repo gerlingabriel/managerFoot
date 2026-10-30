@@ -29,9 +29,9 @@
 </thead>
 <tbody>
 <tr th:each="l, i : ${c.linhas}"
-	th:classappend="${l.clube.id == c.clubeDoUsuario} ? 'do-usuario' : (${i.count > c.linhas.size() - c.rebaixados} ? 'rebaixado')">
+	th:classappend="|${l.clube.id == c.clubeDoUsuario ? 'do-usuario' : (i.count > c.linhas.size() - c.rebaixados ? 'rebaixado' : '')} ${i.count <= c.vagasContinental ? 'vaga-continental' : ''}|">
 <td class="num" th:text="${i.count}">1</td>
-<td><span class="clube-celula"><span aria-hidden="true" th:style="${@escudos.estilo(l.clube.escudo, 20, 24)}"></span><a class="jogo-nome pequeno link-clube" th:href="@{/jogos/{id}/classificacao(id=${jogoId},divisao=${c.prioridade},calendario=${l.clube.id})}"
+<td><span class="clube-celula"><svg th:if="${i.first and c.campeaoDefinido}" class="trofeu" width="16" height="16" viewBox="0 0 24 24" role="img" aria-label="Campeão matemático" fill="currentColor"><title>Campeão matemático</title><path d="M7 3h10v2h4v3a4 4 0 0 1-4 4h-.5A5 5 0 0 1 13 14.9V18h3v3H8v-3h3v-3.1A5 5 0 0 1 7.500 12H7a4 4 0 0 1-4-4V5h4V3Zm0 4H5v1a2 2 0 0 0 2 2V7Zm10 0v3a2 2 0 0 0 2-2V7h-2Z"></path></svg><span aria-hidden="true" th:style="${@escudos.estilo(l.clube.escudo, 20, 24)}"></span><a class="jogo-nome pequeno link-clube" th:href="@{/jogos/{id}/classificacao(id=${jogoId},divisao=${c.prioridade},calendario=${l.clube.id})}"
 	th:text="${l.clube.nome}" th:attr="aria-label=|Calendário e plantel do ${l.clube.nome}|">Clube</a>
 <span th:if="${i.count > c.linhas.size() - c.rebaixados}" class="oculto">(zona de rebaixamento)</span></span></td>
 <td class="num pontos" th:text="${l.pontos()}">0</td>
@@ -44,6 +44,7 @@
 </table>
 </div>
 <div class="legenda-classificacao suave">
+<span th:if="${c.vagasContinental > 0}" class="legenda"><span class="marca-continental" aria-hidden="true"></span><span th:text="|Continental (${c.vagasContinental} ${c.vagasContinental == 1 ? 'vaga' : 'vagas'}; o campeão da copa ocupa uma delas)|">Continental</span></span>
 <span th:if="${c.rebaixados > 0}" class="legenda"><span class="marca-rebaixado" aria-hidden="true"></span><span th:text="|Rebaixados (${c.rebaixados}, conforme a configuração da liga)|">Rebaixados</span></span>
 <span>Desempate: pontos, vitórias, menos derrotas, menos empates, saldo, gols pró, menos gols sofridos, sorteio.</span>
 </div>

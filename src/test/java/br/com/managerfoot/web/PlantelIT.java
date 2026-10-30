@@ -320,7 +320,13 @@ class PlantelIT {
 		// um pedido por rodada: o outro só pede depois da rodada
 		mvc.perform(get(plantel).with(como(treinador)))
 			.andExpect(content().string(not(containsString("Pedido de aumento"))));
-		// renovou: não vai a leilão até a próxima temporada
+		// renovou: a maleta aparece, a ficha conta o contrato e a venda some
+		mvc.perform(get(plantel).with(como(treinador))).andExpect(content().string(containsString("aria-label=\"Contrato renovado\"")));
+		mvc.perform(get(plantel).param("ficha", String.valueOf(jogador)).with(como(treinador)))
+			.andExpect(content().string(containsString("Renovado até o fim de 2026")))
+			.andExpect(content().string(containsString("Brasil")))
+			.andExpect(content().string(not(containsString("Vender por leilão"))));
+		// e, mesmo pedindo direto, não vai a leilão até a próxima temporada
 		mvc.perform(post("/jogos/" + jogoId + "/mercado/vender").param("jogador", String.valueOf(jogador)).param("minimo", "0")
 			.with(como(treinador)).with(csrf()))
 			.andExpect(flash().attribute("erro", containsString("só pode ir a leilão quando a próxima começar")));

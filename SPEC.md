@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 82 — 2026-10-30)
+-   **Status:** versão inicial para revisão (rev. 83 — 2026-10-30)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 83 (2026-10-30):** modelos 14a, 14c e 14d, pedidos pelo usuário e sem objeção: ano no topo e patrocinador assinado junto ao escudo; faixa das vagas da continental na 1ª divisão, com a quantidade na legenda, e troféu do campeão matemático (só quando ninguém alcança o líder em pontos; empate possível não decide); coluna com maleta no plantel; ficha com nacionalidade e contrato, sem o bloco de venda enquanto há contrato (§10.3).
 -   **rev. 82 (2026-10-30):** pelo usuário: som só nos gols do jogo dele, com dois sons curtos (§10.2); marca de expulsão pequena junto ao nome (§10.2).
 -   **rev. 81 (2026-10-30):** pelo usuário: a substituição não muda a tática: a formação da partida fica a mesma e quem entra ocupa a vaga de quem saiu (§7.4.1); o título da liga fica com quem está no clube na virada da temporada, mesmo que tenha chegado depois da última rodada (§5.4); jogador com contrato firmado não vai a leilão até a temporada seguinte (§9.5).
 -   **rev. 80 (2026-10-30):** agente: a próxima temporada também espera a resposta do convite para assumir outro clube, como a rodada; antes, um pedido direto virava a temporada com o convite aberto, e o plantel deixava de abrir quando um dos clubes caía para a fila (§5.4). Provisório.
@@ -2661,6 +2662,13 @@ da mesma divisão seguem na mesma tela.
 - Contratos, finanças, estádio, copas e competições continentais ganham
   telas próprias nas etapas em que forem implementados, também com modelo
   para aprovação antes.
+
+**Definido (rev. 83):** o topo mostra o ano da temporada ao lado do nome do
+jogo. No plantel, o patrocinador assinado fica junto ao escudo, e uma coluna
+estreita entre a posição e o nome mostra uma maleta em quem tem contrato firmado
+na temporada. A ficha mostra a nacionalidade e o contrato. A classificação da 1ª
+divisão marca as vagas da continental; o troféu aparece entre a posição e o nome
+do líder quando nenhum clube pode mais alcançá-lo em pontos.
 
 ### 10.4 Configurações
 

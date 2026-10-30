@@ -85,7 +85,7 @@ public class PlantelRepositorio {
 		List<LinhaJogador> linhas = plantel.stream().map(j -> {
 			Situacao s = situacoes.getOrDefault(j.id(), Situacao.NENHUMA);
 			return new LinhaJogador(j, escalacao.lugarDe(j.id()), s.gols(), s.amarelos(), s.suspensao() > 0, s.lesao(),
-					j.nacionalidade().equals(paisDoClube) ? null : j.nacionalidade());
+					j.nacionalidade().equals(paisDoClube) ? null : j.nacionalidade(), s.comContrato());
 		}).toList();
 		LongPredicate suspenso = id -> situacoes.getOrDefault(id, Situacao.NENHUMA).suspensao() > 0;
 		LongPredicate lesionado = id -> situacoes.getOrDefault(id, Situacao.NENHUMA).lesao() > 0;
@@ -225,6 +225,8 @@ public class PlantelRepositorio {
 		Map<Long, Situacao> situacoes = new HashMap<>();
 		jdbc.sql("""
 				SELECT j.id, j.amarelos, j.suspensao, j.lesao,
+				       coalesce(j.contrato_temporada = (SELECT max(t.numero) FROM jogo_temporada t JOIN jogo_clube c ON c.jogo_id = t.jogo_id
+				                                        WHERE c.id = j.clube_id), false) AS com_contrato,
 				       (SELECT count(*) FROM jogo_evento e JOIN jogo_partida p ON p.id = e.partida_id
 				        WHERE e.jogador_id = j.id AND e.tipo = 'GOL'
 				          AND p.temporada_id = (SELECT max(t.id) FROM jogo_temporada t JOIN jogo_clube c ON c.jogo_id = t.jogo_id
@@ -233,7 +235,7 @@ public class PlantelRepositorio {
 			.param("clube", clube)
 			.query(rs -> {
 				situacoes.put(rs.getLong("id"), new Situacao(rs.getInt("gols"), rs.getInt("amarelos"), rs.getInt("suspensao"),
-						rs.getInt("lesao")));
+						rs.getInt("lesao"), rs.getBoolean("com_contrato")));
 			});
 		return situacoes;
 	}
@@ -242,9 +244,9 @@ public class PlantelRepositorio {
 		return jogo.mandante().id() == clube || jogo.visitante().id() == clube;
 	}
 
-	private record Situacao(int gols, int amarelos, int suspensao, int lesao) {
+	private record Situacao(int gols, int amarelos, int suspensao, int lesao, boolean comContrato) {
 
-		static final Situacao NENHUMA = new Situacao(0, 0, 0, 0);
+		static final Situacao NENHUMA = new Situacao(0, 0, 0, 0, false);
 
 		boolean disponivel() {
 			return suspensao == 0 && lesao == 0;
@@ -258,7 +260,7 @@ public class PlantelRepositorio {
 	 */
 	/** @param lesao jogos fora por lesão a cumprir (SPEC §7.5); zero se não está lesionado */
 	public record LinhaJogador(Jogador jogador, Lugar lugar, int gols, int amarelos, boolean suspenso, int lesao,
-			String estrangeiro) {
+			String estrangeiro, boolean comContrato) {
 	}
 
 	/**

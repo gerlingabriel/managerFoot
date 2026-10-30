@@ -79,8 +79,17 @@ public class ConsultasRepositorio {
 		ConfiguracaoLiga liga = jogos.carregarLiga(jogoId);
 		Divisao divisao = escolher(liga, clube, prioridade);
 		Classificacao classificacao = rodadas.classificacao(jogoId).get(divisao.prioridade());
+		int jogosPorClube = temporadas.carregarAtual(jogoId).divisoes().stream()
+			.filter(d -> d.prioridade() == divisao.prioridade())
+			.mapToInt(d -> d.calendario().jogos().size() * 2 / divisao.clubes().size())
+			.findFirst().orElse(Integer.MAX_VALUE);
+		// só a 1ª divisão dá vaga, e o jogo salvo antes da continental não tem vagas gravadas
+		int vagas = divisao.prioridade() != 1 ? 0 : jdbc.sql("""
+				SELECT coalesce((SELECT v.vagas FROM jogo_continental_vaga v JOIN jogo j ON j.id = v.jogo_id
+				                 WHERE j.id = :jogo AND v.pais_codigo = j.pais_codigo), 0)""")
+			.param("jogo", jogoId).query(Integer.class).single();
 		return new VisaoClassificacao(abas(liga), divisao.prioridade(), divisao.nome(), rodadas.rodadasProcessadas(jogoId),
-				classificacao.linhas(), divisao.rebaixados(), clube);
+				classificacao.linhas(), divisao.rebaixados(), clube, vagas, classificacao.campeaoDefinido(jogosPorClube));
 	}
 
 	/** Artilheiros da temporada atual entre os jogadores dos clubes da divisão (a do usuário, se nula). */
@@ -122,9 +131,17 @@ public class ConsultasRepositorio {
 		int amarelos = jdbc.sql("SELECT amarelos FROM jogo_jogador WHERE id = :j").param("j", jogadorId)
 			.query(Integer.class).single();
 		String pais = jdbc.sql("SELECT pais_codigo FROM jogo WHERE id = :jogo").param("jogo", jogoId).query(String.class).single();
+		String nacionalidade = jdbc.sql("SELECT nome FROM pais_fifa WHERE codigo = :codigo").param("codigo", jogador.nacionalidade())
+			.query(String.class).single();
+		// o contrato vale até o fim da temporada em que foi firmado (SPEC §9.5)
+		Integer contratoAte = jdbc.sql("""
+				SELECT g.ano_inicial + j.contrato_temporada - 1 FROM jogo_jogador j, jogo g
+				WHERE j.id = :jogador AND g.id = :jogo
+				  AND j.contrato_temporada = (SELECT max(t.numero) FROM jogo_temporada t WHERE t.jogo_id = :jogo)""")
+			.param("jogador", jogadorId).param("jogo", jogoId).query(Integer.class).optional().orElse(null);
 		return Optional.of(new Ficha(jogador, nomeClube, gols(jogoId, true).getOrDefault(jogadorId, 0),
 				gols(jogoId, false).getOrDefault(jogadorId, 0), amarelos, clube.get() == doUsuario, Moeda.doPais(pais),
-				PrecoJogador.padrao().preco(jogador, pais)));
+				PrecoJogador.padrao().preco(jogador, pais), nacionalidade, contratoAte));
 	}
 
 	/**
@@ -678,9 +695,11 @@ public class ConsultasRepositorio {
 	/**
 	 * @param rodadas rodadas já jogadas na temporada
 	 * @param rebaixados quantos caem no fim, marcados na tabela
+	 * @param vagasContinental quantos vão à continental (modelo 14c); 0 fora da 1ª divisão
+	 * @param campeaoDefinido o líder já é campeão matematicamente
 	 */
 	public record VisaoClassificacao(List<AbaDivisao> divisoes, int prioridade, String divisao, int rodadas,
-			List<LinhaClassificacao> linhas, int rebaixados, long clubeDoUsuario) {
+			List<LinhaClassificacao> linhas, int rebaixados, long clubeDoUsuario, int vagasContinental, boolean campeaoDefinido) {
 	}
 
 	public record LinhaArtilheiro(int posicao, long jogadorId, String nome, Posicao posicaoEmCampo,
@@ -768,8 +787,10 @@ public class ConsultasRepositorio {
 	/**
 	 * @param doUsuario o jogador é do clube do treinador: a ficha oferece a venda por leilão
 	 * @param preco preço da compra direta pela tabela, em centavos de Real (referência para o lance mínimo)
+	 * @param nacionalidade nome do país do jogador
+	 * @param contratoAte ano até o fim do qual vale o contrato firmado; nulo se não há contrato nesta temporada
 	 */
 	public record Ficha(Jogador jogador, String clube, int golsTemporada, int golsCarreira, int amarelos,
-			boolean doUsuario, Moeda moeda, long preco) {
+			boolean doUsuario, Moeda moeda, long preco, String nacionalidade, Integer contratoAte) {
 	}
 }

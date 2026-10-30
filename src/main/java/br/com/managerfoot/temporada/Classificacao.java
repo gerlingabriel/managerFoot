@@ -62,6 +62,18 @@ public record Classificacao(List<LinhaClassificacao> linhas) {
 		return new Classificacao(porClube.values().stream().sorted(ordem).toList());
 	}
 
+	/**
+	 * O líder já não pode ser alcançado em pontos, mesmo que os outros vençam tudo o que falta
+	 * (modelo 14c, rev. 83). Empate possível em pontos ainda não decide.
+	 *
+	 * @param jogosPorClube jogos de cada clube na temporada
+	 */
+	public boolean campeaoDefinido(int jogosPorClube) {
+		int lider = linhas.getFirst().pontos();
+		return linhas.stream().skip(1)
+			.allMatch(l -> l.pontos() + (jogosPorClube - l.jogos()) * PONTOS_VITORIA < lider);
+	}
+
 	private static void atualizar(Map<Long, LinhaClassificacao> porClube, Clube clube, int marcados, int sofridos) {
 		LinhaClassificacao linha = porClube.get(clube.id());
 		if (linha == null) {

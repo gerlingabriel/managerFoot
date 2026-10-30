@@ -62,6 +62,13 @@ public class JogoRepositorio {
 	}
 
 	/** Ano da temporada {@code numero} do jogo (SPEC §8.1.1, rev. 40). */
+	public Optional<Integer> anoAtual(long jogoId) {
+		return jdbc.sql("""
+				SELECT j.ano_inicial + max(t.numero) - 1 FROM jogo j JOIN jogo_temporada t ON t.jogo_id = j.id
+				WHERE j.id = :jogo GROUP BY j.ano_inicial""").param("jogo", jogoId).query(Integer.class).optional();
+	}
+
+	/** Ano civil da temporada de número {@code numero}. */
 	public int ano(long jogoId, int numero) {
 		return jdbc.sql("SELECT ano_inicial + :numero - 1 FROM jogo WHERE id = :jogo").param("numero", numero)
 			.param("jogo", jogoId).query(Integer.class).single();

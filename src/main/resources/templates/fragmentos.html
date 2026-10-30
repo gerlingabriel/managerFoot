@@ -21,7 +21,7 @@
 </header>
 
 <header th:fragment="topo" class="topo">
-<a th:href="@{/}" class="topo-marca">managerFoot</a>
+<a th:href="@{/}" class="topo-marca" th:with="ano=${@anos.doJogo(jogoId)}">managerFoot <span th:if="${ano != null}" class="topo-ano" th:text="${ano}">2026</span></a>
 <div class="topo-usuario">
 <span th:text="|${usuario.nome} · ${#strings.toLowerCase(usuario.papel)}|">Nome · papel</span>
 <form th:action="@{/sair}" method="post">
@@ -63,10 +63,13 @@
 </div>
 <dl class="resumo ficha-dados">
 <div><dt>Força</dt><dd th:text="${f.jogador.forca}">0</dd></div>
+<div><dt>Nacionalidade</dt><dd th:text="${f.nacionalidade}">Brasil</dd></div>
+<div><dt>Contrato</dt><dd th:text="${f.contratoAte != null} ? |Renovado até o fim de ${f.contratoAte}| : 'Sem contrato renovado'">Sem contrato renovado</dd></div>
 <div><dt>Temperamento</dt><dd th:text="${#strings.capitalize(#strings.toLowerCase(f.jogador.temperamento.name()))}">Normal</dd></div>
 <div><dt>Amarelos na temporada</dt><dd th:text="${f.amarelos}">0</dd></div>
 </dl>
-<form th:if="${vender != null and f.doUsuario}" th:action="${vender}" method="post" class="ficha-venda" hx-boost="false">
+<p th:if="${vender != null and f.doUsuario and f.contratoAte != null}" class="ficha-contrato" th:text="|Com contrato firmado, não pode ir a leilão nesta temporada. Volta a poder quando ${f.contratoAte + 1} começar.|">Com contrato.</p>
+<form th:if="${vender != null and f.doUsuario and f.contratoAte == null}" th:action="${vender}" method="post" class="ficha-venda" hx-boost="false">
 <input type="hidden" name="jogador" th:value="${f.jogador.id}">
 <label class="leilao-lance">
 <span th:text="|Lance mínimo (${f.moeda.simbolo()})|">Lance mínimo (R$)</span>

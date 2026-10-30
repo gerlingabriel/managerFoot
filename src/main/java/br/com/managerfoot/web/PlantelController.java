@@ -88,7 +88,9 @@ class PlantelController {
 		VisaoPlantel v = plantel.visao(jogoId, usuario.id()).orElseThrow(NoSuchElementException::new);
 		List<LinhaJogador> titulares = grupo(v, Lugar.TITULAR);
 		model.addAttribute("usuario", usuario);
+		model.addAttribute("jogoId", jogoId);
 		model.addAttribute("v", v);
+		patrocinios.patrocinador(jogoId, usuario.id()).ifPresent(p -> model.addAttribute("patrocinador", p));
 		model.addAttribute("formacoes", Formacao.values());
 		List<LinhaJogador> banco = grupo(v, Lugar.BANCO);
 		List<LinhaJogador> fora = grupo(v, Lugar.FORA);

@@ -16,6 +16,10 @@
 <h1 class="titulo-pagina" th:text="${v.clube.nome}">Clube</h1>
 <span class="suave" th:text="|${v.divisao} · ${v.posicao}º lugar · ${v.pontos} ${v.pontos == 1 ? 'ponto' : 'pontos'} em ${v.jogos} ${v.jogos == 1 ? 'jogo' : 'jogos'}|">Divisão</span>
 </div>
+<div th:if="${patrocinador != null}" class="clube-patrocinador">
+<span class="rotulo">Patrocinador</span>
+<span th:text="${patrocinador}">Banco Serra Azul</span>
+</div>
 </div>
 <div class="clube-indicadores">
 <div class="moral" th:with="faixa=${v.faixaMoral.name() == 'VERDE' ? 'verde' : (v.faixaMoral.name() == 'AMARELO' ? 'amarela' : 'vermelha')}">
@@ -114,15 +118,16 @@
 <table class="tabela-plantel">
 <thead>
 <tr>
-<th scope="col">Pos</th><th scope="col">Jogador</th><th scope="col" class="num">Força</th>
+<th scope="col">Pos</th><th scope="col" class="coluna-contrato"><span class="oculto">Contrato</span></th><th scope="col">Jogador</th><th scope="col" class="num">Força</th>
 <th scope="col">Temperamento</th><th scope="col" class="num" title="Gols na temporada">Gols</th>
 <th scope="col" class="num">Amarelos</th><th scope="col"><span class="oculto">Lugar</span></th>
 </tr>
 </thead>
 <tbody>
-<tr th:if="${g.jogadores.isEmpty()}"><td colspan="7" class="suave">Nenhum jogador.</td></tr>
+<tr th:if="${g.jogadores.isEmpty()}"><td colspan="8" class="suave">Nenhum jogador.</td></tr>
 <tr th:each="l : ${g.jogadores}" th:with="j=${l.jogador}">
 <td><span class="pos" th:classappend="|pos-${j.posicao}|" th:text="${j.posicao.name().substring(0, 1)}" th:title="${j.posicao.nome(1)}">G</span></td>
+<td class="coluna-contrato"><svg th:if="${l.comContrato}" class="maleta" width="14" height="14" viewBox="0 0 24 24" role="img" aria-label="Contrato renovado" fill="currentColor"><title>Contrato renovado</title><path d="M9 3h6a2 2 0 0 1 2 2v2h3a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h3V5a2 2 0 0 1 2-2Zm0 2v2h6V5H9Z"></path></svg></td>
 <td class="jogador-celula">
 <a class="jogador-nome" hx-boost="true" th:href="@{/jogos/{id}/plantel(id=${v.jogoId},ficha=${j.id})}" th:text="${j.nome}" th:attr="aria-label=|Ver ficha de ${j.nome}|">Nome</a>
 <span th:if="${j.asterisco}" class="asterisco" title="jogador com asterisco">★</span>
@@ -147,7 +152,7 @@
 </table>
 </div>
 </section>
-<p class="suave legenda"><span class="sigla-pais">ARG</span> estrangeiro. Jogador do país do clube fica sem sigla.</p>
+<p class="suave legenda"><span class="sigla-pais">ARG</span> estrangeiro. Jogador do país do clube fica sem sigla. A maleta marca quem tem contrato firmado nesta temporada.</p>
 </main>
 </div>
 <div th:if="${ficha != null}" hx-boost="true"><div th:replace="~{fragmentos :: ficha(${ficha}, @{/jogos/{id}/plantel(id=${v.jogoId})}, @{/jogos/{id}/mercado/vender(id=${v.jogoId})})}"></div></div>

@@ -1570,3 +1570,16 @@ a.financas-link:hover, a.financas-link:focus-visible { border-color: var(--desta
 .copa-jogo-chave.do-usuario { background: rgba(242, 201, 76, 0.12); border-color: var(--destaque); color: var(--texto); }
 .copa-jogo-chave.em-aberto { border-style: dashed; color: var(--texto-suave); }
 .copa-campeao { margin: 0; font: 700 24px 'Barlow Condensed', sans-serif; color: var(--destaque); text-transform: uppercase; }
+
+/* Ano no topo, patrocinador junto ao escudo e maleta do contrato (modelos 14a e 14d, rev. 83). */
+.topo-ano { font-family: Barlow, system-ui, sans-serif; font-weight: 600; font-size: 13px; color: var(--texto-suave); margin-left: 4px; letter-spacing: 0; }
+.clube-patrocinador { display: flex; flex-direction: column; gap: 1px; padding-left: 14px; border-left: 1px solid var(--borda); font-size: 13px; font-weight: 600; }
+.clube-patrocinador .rotulo { font-size: 10px; }
+.coluna-contrato { width: 18px; padding-left: 0 !important; padding-right: 0 !important; text-align: center; }
+.maleta { color: var(--destaque); vertical-align: -2px; }
+.ficha-contrato { margin: 0 20px 18px; padding: 10px 12px; border: 1px solid var(--borda); border-radius: 8px; font-size: 14px; color: var(--texto-claro); }
+
+/* Vagas da continental e campeão matemático na classificação (modelo 14c, rev. 83). */
+.tabela-classificacao tr.vaga-continental td:first-child { box-shadow: inset 4px 0 0 var(--continental); }
+.marca-continental { width: 12px; height: 12px; border-radius: 3px; background: var(--continental); }
+.trofeu { flex: none; color: var(--destaque); }

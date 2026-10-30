@@ -31,6 +31,20 @@ class ClassificacaoTest {
 	}
 
 	@Test
+	void campeaoSoEDefinidoQuandoNinguemAlcancaEmPontos() {
+		jogo(a, b, 1, 0);
+		jogo(a, c, 1, 0);
+		jogo(a, d, 1, 0);
+		// A tem 9 pontos; B, C e D têm 0 em 1 jogo
+		assertThat(tabela().campeaoDefinido(6)).isFalse();
+		// com 3 jogos a menos, os outros chegam a 9: empate em pontos não decide
+		assertThat(tabela().campeaoDefinido(4)).isFalse();
+		// com 2 jogos a menos, chegam a 6
+		assertThat(tabela().campeaoDefinido(3)).isTrue();
+		assertThat(Classificacao.calcular(clubes, List.of(), 42).campeaoDefinido(6)).isFalse();
+	}
+
+	@Test
 	void vitoriaValeTresEmpateUm() {
 		jogo(a, c, 2, 0);
 		jogo(b, d, 1, 1);

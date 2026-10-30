@@ -57,6 +57,13 @@ public class PatrocinioRepositorio {
 		});
 	}
 
+	/** Nome do patrocinador que o clube do usuário assinou nesta temporada (modelo 14a, rev. 83). */
+	@Transactional(readOnly = true)
+	public Optional<String> patrocinador(long jogoId, long usuarioId) {
+		return oferta(jogoId, clubeDoUsuario(jogoId, usuarioId)).filter(o -> o.escolha() != null)
+			.map(o -> propostas.patrocinadores(o.id()).get(Tipo.valueOf(o.escolha()).ordinal()));
+	}
+
 	/**
 	 * O usuário assina uma das propostas: paga a parte à vista na rodada 0. Um segundo pedido não paga
 	 * de novo.

@@ -98,6 +98,18 @@ class AbasIT {
 	long jogoId;
 	String base;
 
+	@Test
+	void classificacaoMarcaAsVagasDaContinentalSoNaPrimeiraDivisao() throws Exception {
+		int vagas = jdbc.sql("SELECT vagas FROM jogo_continental_vaga WHERE jogo_id = :j AND pais_codigo = 'BRA'")
+			.param("j", jogoId).query(Integer.class).single();
+		mvc.perform(get(base + "/classificacao").param("divisao", "1").with(como(treinador)))
+			.andExpect(content().string(containsString("Continental (" + vagas + " vagas")))
+			.andExpect(content().string(containsString("vaga-continental")))
+			.andExpect(content().string(containsString("class=\"topo-ano\">2026")));
+		mvc.perform(get(base + "/classificacao").param("divisao", "2").with(como(treinador)))
+			.andExpect(content().string(not(containsString("vaga-continental"))));
+	}
+
 	@BeforeEach
 	void jogoComTresRodadas() {
 		bancoPadrao.carregar(new GeradorBancoPadrao(ParametrosBancoPadrao.padrao(), ParametrosMotor.padrao())
