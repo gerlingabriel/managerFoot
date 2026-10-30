@@ -121,6 +121,30 @@ class PublicoDoJogoTest {
 	}
 
 	@Test
+	void metasDependemDaForcaEPagamMaisSoComQuemCumpre() {
+		PropostasPatrocinio propostas = PropostasPatrocinio.padrao();
+		// 20 clubes, 38 jogos: 4 mais fortes, do 5º ao 10º, e do 11º em diante
+		assertThat(propostas.metas(1, 20, 38)).isEqualTo(new PropostasPatrocinio.Metas(22, 1));
+		assertThat(propostas.metas(4, 20, 38)).isEqualTo(new PropostasPatrocinio.Metas(22, 1));
+		assertThat(propostas.metas(5, 20, 38)).isEqualTo(new PropostasPatrocinio.Metas(19, 3));
+		assertThat(propostas.metas(10, 20, 38)).isEqualTo(new PropostasPatrocinio.Metas(19, 3));
+		assertThat(propostas.metas(11, 20, 38)).isEqualTo(new PropostasPatrocinio.Metas(14, 10));
+		// liga menor: tudo na mesma proporção
+		assertThat(propostas.metas(1, 10, 18)).isEqualTo(new PropostasPatrocinio.Metas(10, 1));
+		assertThat(propostas.metas(10, 10, 18).posicao()).isEqualTo(5);
+
+		List<PropostasPatrocinio.Proposta> lista = propostas.propostasComMeta(200_000_00L);
+		assertThat(lista).extracting(PropostasPatrocinio.Proposta::tipo).containsExactly(PropostasPatrocinio.Tipo.FIXA,
+				PropostasPatrocinio.Tipo.META_VITORIAS, PropostasPatrocinio.Tipo.META_POSICAO);
+		assertThat(lista.get(0).total(0, true)).isEqualTo(200_000_00L);
+		// sem meta, menos que a fixa; com a meta, mais
+		assertThat(lista.get(1).total(0, false)).isEqualTo(120_000_00L);
+		assertThat(lista.get(1).total(0, true)).isEqualTo(300_000_00L);
+		assertThat(lista.get(2).total(0, false)).isEqualTo(80_000_00L);
+		assertThat(lista.get(2).total(0, true)).isEqualTo(480_000_00L);
+	}
+
+	@Test
 	void bonusDeAcessoNaPrimeiraValeParaOsTresPrimeirosEOsPatrocinadoresNaoSeRepetem() {
 		PropostasPatrocinio propostas = PropostasPatrocinio.padrao();
 		assertThat(propostas.subiu(1, 3, 0)).isTrue();

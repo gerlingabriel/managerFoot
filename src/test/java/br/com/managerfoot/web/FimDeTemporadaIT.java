@@ -170,8 +170,8 @@ class FimDeTemporadaIT {
 		jdbc.sql("UPDATE jogo_patrocinio SET clube_id = :novo WHERE clube_id = :antigo")
 			.param("novo", clube).param("antigo", antigo).update();
 		jdbc.sql("UPDATE jogo_treinador SET clube_id = :novo WHERE jogo_id = :j").param("novo", clube).param("j", jogoId).update();
-		mvc.perform(post("/jogos/" + jogoId + "/patrocinio").param("proposta", "SE_SUBIR").with(como(treinador)).with(csrf()))
-			.andExpect(redirectedUrl(plantel));
+		// contrato antigo, assinado antes da rev. 85: segue valendo até o fim da temporada dele
+		jdbc.sql("UPDATE jogo_patrocinio SET escolha = 'SE_SUBIR' WHERE clube_id = :c").param("c", clube).update();
 		Classificacao classificacao = tabela.values().stream()
 			.filter(c -> c.linhas().stream().anyMatch(l -> l.clube().id() == clube)).findFirst().orElseThrow();
 		int posicao = 1 + classificacao.linhas().stream().map(l -> l.clube().id()).toList().indexOf(clube);
@@ -182,7 +182,7 @@ class FimDeTemporadaIT {
 			.query(Long.class).single();
 		int jogos = jdbc.sql("SELECT jogos FROM jogo_patrocinio WHERE clube_id = :c").param("c", clube)
 			.query(Integer.class).single();
-		long bonus = PropostasPatrocinio.padrao().propostas(valorDaTabela, jogos).get(2).seSubir();
+		long bonus = PropostasPatrocinio.padrao().propostas(valorDaTabela, jogos).get(2).bonus();
 
 		mvc.perform(post("/jogos/" + jogoId + "/temporada").param("temporada", "1").with(como(treinador)).with(csrf()));
 
@@ -192,6 +192,43 @@ class FimDeTemporadaIT {
 			.param("c", clube).query(Long.class).list();
 		assertThat(subiu).isTrue();
 		assertThat(pagos).containsExactly(bonus);
+	}
+
+	@Test
+	void bonusDaMetaEntraNoFimDoAnoSoParaQuemCumpriu() throws Exception {
+		long antigo = jogo.clubeDoTreinador(jogoId, treinador.id()).orElseThrow();
+		Map<Integer, Classificacao> tabela = rodadas.classificacao(jogoId);
+		var lider = tabela.get(tabela.keySet().stream().max(Integer::compare).orElseThrow()).linhas().getFirst();
+		long clube = lider.clube().id();
+		jdbc.sql("UPDATE jogo_patrocinio SET clube_id = :novo WHERE clube_id = :antigo")
+			.param("novo", clube).param("antigo", antigo).update();
+		jdbc.sql("UPDATE jogo_treinador SET clube_id = :novo WHERE jogo_id = :j").param("novo", clube).param("j", jogoId).update();
+		long valorDaTabela = jdbc.sql("SELECT tabela FROM jogo_patrocinio WHERE clube_id = :c").param("c", clube)
+			.query(Long.class).single();
+		long bonus = PropostasPatrocinio.padrao().propostasComMeta(valorDaTabela).get(2).bonus();
+		jdbc.sql("UPDATE jogo_patrocinio SET escolha = 'META_POSICAO', meta_vitorias = 99, meta_posicao = 1 WHERE clube_id = :c")
+			.param("c", clube).update();
+
+		mvc.perform(post("/jogos/" + jogoId + "/temporada").param("temporada", "1").with(como(treinador)).with(csrf()));
+
+		assertThat(jdbc.sql("""
+				SELECT l.valor FROM jogo_lancamento l JOIN jogo_temporada t ON t.id = l.temporada_id
+				WHERE l.clube_id = :c AND l.tipo = 'PATROCINIO' AND t.numero = 1 AND l.rodada > 0""")
+			.param("c", clube).query(Long.class).list()).containsExactly(bonus);
+	}
+
+	@Test
+	void metaDeVitoriasNaoCumpridaNaoPagaBonus() throws Exception {
+		long antigo = jogo.clubeDoTreinador(jogoId, treinador.id()).orElseThrow();
+		jdbc.sql("UPDATE jogo_patrocinio SET escolha = 'META_VITORIAS', meta_vitorias = 99, meta_posicao = 1 WHERE clube_id = :c")
+			.param("c", antigo).update();
+
+		mvc.perform(post("/jogos/" + jogoId + "/temporada").param("temporada", "1").with(como(treinador)).with(csrf()));
+
+		assertThat(jdbc.sql("""
+				SELECT count(*) FROM jogo_lancamento l JOIN jogo_temporada t ON t.id = l.temporada_id
+				WHERE l.clube_id = :c AND l.tipo = 'PATROCINIO' AND t.numero = 1 AND l.rodada > 0""")
+			.param("c", antigo).query(Long.class).single()).isZero();
 	}
 
 	@Test

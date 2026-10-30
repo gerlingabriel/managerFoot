@@ -185,28 +185,42 @@ class PlantelIT {
 	void propostasDePatrocinioAbremNoPlantelETravamARodadaAteAEscolha() throws Exception {
 		mvc.perform(get(plantel).with(como(treinador)))
 			.andExpect(content().string(containsString("Propostas de patrocínio")))
-			.andExpect(content().string(containsString("a cada vitória na temporada")))
-			.andExpect(content().string(containsString("se subir de divisão")));
+			.andExpect(content().string(containsString("Sem meta")))
+			.andExpect(content().string(containsString("no fim do ano se")));
 		pedir(post(jogarRodada()).param("rodada", "1"))
 			.andExpect(flash().attribute("erro", "Escolha o patrocínio da temporada antes de jogar a rodada."));
 		assertThat(jdbc.sql("SELECT count(*) FROM jogo_rodada_ao_vivo WHERE jogo_id = :j").param("j", jogoId)
 			.query(Long.class).single()).isZero();
 		long saldoAntes = saldo();
 
-		pedir(post("/jogos/" + jogoId + "/patrocinio").param("proposta", "POR_VITORIA"))
+		// a caixa traz as metas e já não aceita as propostas antigas
+		mvc.perform(get(plantel).with(como(treinador)))
+			.andExpect(content().string(containsString("º mais forte da divisão")))
+			.andExpect(content().string(containsString("jogos na liga")));
+		pedir(post("/jogos/" + jogoId + "/patrocinio").param("proposta", "POR_VITORIA")).andExpect(status().isNotFound());
+		assertThat(saldo()).isEqualTo(saldoAntes);
+
+		pedir(post("/jogos/" + jogoId + "/patrocinio").param("proposta", "META_VITORIAS"))
 			.andExpect(flash().attributeExists("resultado"));
 		pedir(post("/jogos/" + jogoId + "/patrocinio").param("proposta", "FIXA"))
 			.andExpect(flash().attributeCount(0));
 
-		Proposta proposta = PropostasPatrocinio.padrao().propostas(
-				jdbc.sql("SELECT tabela FROM jogo_patrocinio WHERE clube_id = :c").param("c", clube).query(Long.class).single(),
+		long tabela = jdbc.sql("SELECT tabela FROM jogo_patrocinio WHERE clube_id = :c").param("c", clube).query(Long.class).single();
+		long agora = PropostasPatrocinio.padrao().propostasComMeta(tabela).get(1).agora();
+		assertThat(jdbc.sql("SELECT valor FROM jogo_lancamento WHERE clube_id = :c AND tipo = 'PATROCINIO' AND rodada = 0")
+			.param("c", clube).query(Long.class).single()).isEqualTo(agora);
+		assertThat(saldo()).isEqualTo(saldoAntes + agora);
+		assertThat(jdbc.sql("SELECT meta_vitorias > 0 AND meta_posicao > 0 FROM jogo_patrocinio WHERE clube_id = :c")
+			.param("c", clube).query(Boolean.class).single()).isTrue();
+		mvc.perform(get(plantel).with(como(treinador)))
+			.andExpect(content().string(not(containsString("Propostas de patrocínio"))))
+			.andExpect(content().string(containsString("clube-patrocinador")));
+
+		// contrato antigo, por vitória, segue pagando até o fim da temporada dele
+		jdbc.sql("UPDATE jogo_patrocinio SET escolha = 'POR_VITORIA' WHERE clube_id = :c").param("c", clube).update();
+		Proposta proposta = PropostasPatrocinio.padrao().propostas(tabela,
 				jdbc.sql("SELECT jogos FROM jogo_patrocinio WHERE clube_id = :c").param("c", clube).query(Integer.class).single())
 			.get(1);
-		assertThat(jdbc.sql("SELECT valor FROM jogo_lancamento WHERE clube_id = :c AND tipo = 'PATROCINIO' AND rodada = 0")
-			.param("c", clube).query(Long.class).single()).isEqualTo(proposta.agora());
-		assertThat(saldo()).isEqualTo(saldoAntes + proposta.agora());
-		mvc.perform(get(plantel).with(como(treinador)))
-			.andExpect(content().string(not(containsString("Propostas de patrocínio"))));
 
 		// cada vitória paga o valor da proposta na rodada dela
 		jdbc.sql("DELETE FROM jogo_escalacao WHERE clube_id = :c").param("c", clube).update();

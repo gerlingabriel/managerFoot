@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 84 — 2026-10-30)
+-   **Status:** versão inicial para revisão (rev. 85 — 2026-10-30)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 85 (2026-10-30):** pelo usuário: modelo 14b aprovado, com as propostas fixa, com meta de vitórias e com meta de posição, dependentes da força do clube (§9.6). Agente: em ligas de outro tamanho, faixas e vitórias na mesma proporção (Provisório).
 -   **rev. 84 (2026-10-30):** pelo usuário: nome de clube abre a janela do clube em toda tela (modelo 14e); clube de fora do campeonato mostra só o plantel, sem calendário, com uns dois jogadores à venda, e na virada ganha jogador novo para repor quem saiu; clube que joga o campeonato segue com leilão, sem jogador criado (§9.4). Durante a rodada dá para ver o plantel e os preços; comprar, só depois dela (modelo 14f). Agente: o jogador criado completa o plantel gerado, na posição mais desfalcada, com força 2 abaixo da média do clube (Provisório); vendido no meio da temporada não é reposto até a virada (Provisório).
 -   **rev. 83 (2026-10-30):** modelos 14a, 14c e 14d, pedidos pelo usuário e sem objeção: ano no topo e patrocinador assinado junto ao escudo; faixa das vagas da continental na 1ª divisão, com a quantidade na legenda, e troféu do campeão matemático (só quando ninguém alcança o líder em pontos; empate possível não decide); coluna com maleta no plantel; ficha com nacionalidade e contrato, sem o bloco de venda enquanto há contrato (§10.3).
 -   **rev. 82 (2026-10-30):** pelo usuário: som só nos gols do jogo dele, com dois sons curtos (§10.2); marca de expulsão pequena junto ao nome (§10.2).
@@ -2513,6 +2514,17 @@ na temporada anterior.
   - **Resultado:** no meio da tabela a fixa e a por vitória pagam o mesmo; no
     topo, por vitória e por acesso pagam 20–30% mais; no fundo, a fixa é
     sempre a melhor. Nenhuma proposta é sempre a melhor.
+- **Definido (rev. 85), pelo usuário — modelo 14b, substitui as propostas das
+  rev. 55 e 57:** a primeira não pode ser sempre a melhor, e a segunda e a
+  terceira só a superam com uma meta difícil para a força do clube. Valores
+  sobre a tabela: **fixa** 100% à vista; **meta de vitórias** 60% à vista e mais
+  90% no fim do ano; **meta de posição** 40% à vista e mais 200% no fim do ano.
+  Metas pela força em campo no início da temporada, em liga de 20 clubes e 38
+  jogos: os 4 mais fortes, 22 vitórias ou campeão; do 5º ao 10º, 19 vitórias ou
+  até o 3º lugar; do 11º em diante, 14 vitórias ou metade de cima. Só contam os
+  jogos da liga. **Provisório:** em ligas de outro tamanho, as faixas e as
+  vitórias seguem a mesma proporção. Contratos por vitória e por acesso já
+  assinados seguem valendo até o fim da temporada deles.
 - **Definido (rev. 57), pelo usuário:** a máquina fica sempre com a
   proposta **fixa** ("mais simples").
 - **Gravado (rev. 57, V25):** no início da temporada o clube do usuário
