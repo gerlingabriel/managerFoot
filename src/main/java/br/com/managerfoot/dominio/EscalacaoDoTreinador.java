@@ -3,11 +3,13 @@ package br.com.managerfoot.dominio;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.EnumMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Random;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.LongPredicate;
@@ -75,6 +77,115 @@ public record EscalacaoDoTreinador(Formacao formacao, Set<Long> titulares, Set<L
 	public EscalacaoDoTreinador sem(Set<Long> jogadores) {
 		return new EscalacaoDoTreinador(formacao, menos(titulares, jogadores), menos(reservas, jogadores),
 				batedor != null && jogadores.contains(batedor) ? null : batedor);
+	}
+
+	/** Todos os jogadores fora do banco e o batedor no automático; a formação fica (SPEC §10.3, rev. 86). */
+	public EscalacaoDoTreinador vazia() {
+		return new EscalacaoDoTreinador(formacao, Set.of(), Set.of(), null);
+	}
+
+	/**
+	 * Ao clicar na tática (SPEC §10.3, rev. 86): se falta titular em algum setor, completa com os mais
+	 * fortes de cada posição, do banco ou de fora; quem já está escalado fica. O que sobra na tática
+	 * nova sai, do mais fraco para o mais forte, para o banco. As vagas livres do banco vão para os
+	 * mais fortes que restaram, com um goleiro primeiro. Sem titular faltando, nada muda.
+	 *
+	 * <p>Empate de força: asterisco primeiro, depois sorte. Os escolhidos aqui respeitam o limite de
+	 * asteriscos sem penalidade, como na máquina, se houver outro jogador na posição.
+	 *
+	 * @param indisponivel suspenso ou lesionado
+	 * @param limiteAsteriscos asteriscos em campo sem penalidade (parâmetro do motor)
+	 * @param sorte desempate; recebida de fora para o resultado poder ser reproduzido
+	 */
+	public EscalacaoDoTreinador completada(List<Jogador> plantel, LongPredicate indisponivel, int limiteAsteriscos,
+			Random sorte) {
+		List<Jogador> disponiveis = plantel.stream().filter(j -> !indisponivel.test(j.id()))
+			.collect(Collectors.toCollection(ArrayList::new));
+		Collections.shuffle(disponiveis, sorte);
+		// a ordenação é estável: quem empata em força e asterisco fica na ordem sorteada
+		disponiveis.sort(Comparator.comparingInt(Jogador::forca).reversed()
+			.thenComparing(Jogador::asterisco, Comparator.reverseOrder()));
+
+		// sem goleiro disponível, um jogador de linha a mais vai para o gol (§9.3)
+		boolean semGoleiro = disponiveis.stream().noneMatch(j -> j.posicao() == Posicao.GOLEIRO);
+		Map<Posicao, Integer> vagas = new EnumMap<>(Posicao.class);
+		for (Posicao posicao : Posicao.values()) {
+			vagas.put(posicao, formacao.quantidade(posicao));
+		}
+		if (semGoleiro) {
+			vagas.merge(disponiveis.stream().anyMatch(j -> j.posicao() == Posicao.DEFENSOR) ? Posicao.DEFENSOR
+					: Posicao.ATACANTE, 1, Integer::sum);
+		}
+
+		Set<Long> novosTitulares = new LinkedHashSet<>();
+		Set<Long> novos = new LinkedHashSet<>();
+		boolean faltava = false;
+		for (Posicao posicao : Posicao.values()) {
+			List<Jogador> daPosicao = disponiveis.stream().filter(j -> j.posicao() == posicao).toList();
+			List<Jogador> escalados = daPosicao.stream().filter(j -> titulares.contains(j.id())).limit(vagas.get(posicao))
+				.toList();
+			escalados.forEach(j -> novosTitulares.add(j.id()));
+			int falta = vagas.get(posicao) - escalados.size();
+			List<Jogador> entram = daPosicao.stream().filter(j -> !titulares.contains(j.id())).limit(falta).toList();
+			entram.forEach(j -> {
+				novosTitulares.add(j.id());
+				novos.add(j.id());
+			});
+			faltava |= !entram.isEmpty();
+		}
+		if (!faltava) {
+			return this;
+		}
+		limitarAsteriscos(disponiveis, novosTitulares, novos, limiteAsteriscos);
+
+		// quem saiu dos titulares vai para o banco; do que ainda couber, goleiro primeiro e os mais fortes
+		Set<Long> novoBanco = new LinkedHashSet<>();
+		disponiveis.stream().filter(j -> titulares.contains(j.id()) && !novosTitulares.contains(j.id()))
+			.map(Jogador::id).forEach(novoBanco::add);
+		disponiveis.stream().filter(j -> reservas.contains(j.id()) && !novosTitulares.contains(j.id()))
+			.map(Jogador::id).forEach(novoBanco::add);
+		List<Jogador> restantes = disponiveis.stream()
+			.filter(j -> !novosTitulares.contains(j.id()) && !novoBanco.contains(j.id())).toList();
+		boolean temGoleiroNoBanco = disponiveis.stream()
+			.anyMatch(j -> j.posicao() == Posicao.GOLEIRO && novoBanco.contains(j.id()));
+		if (!temGoleiroNoBanco) {
+			restantes.stream().filter(j -> j.posicao() == Posicao.GOLEIRO).findFirst().map(Jogador::id)
+				.ifPresent(novoBanco::add);
+		}
+		restantes.stream().map(Jogador::id).filter(id -> !novoBanco.contains(id)).forEach(novoBanco::add);
+		Set<Long> bancoFinal = novoBanco.stream().limit(Escalacao.MAXIMO_RESERVAS)
+			.collect(Collectors.toCollection(LinkedHashSet::new));
+		Long novoBatedor = batedor != null && (novosTitulares.contains(batedor) || bancoFinal.contains(batedor)) ? batedor
+				: null;
+		return new EscalacaoDoTreinador(formacao, novosTitulares, bancoFinal, novoBatedor);
+	}
+
+	/** Troca os asteriscos escolhidos automaticamente além do limite, perdendo o mínimo de força. */
+	private static void limitarAsteriscos(List<Jogador> disponiveis, Set<Long> escolhidos, Set<Long> novos, int limite) {
+		while (disponiveis.stream().filter(j -> j.asterisco() && escolhidos.contains(j.id())).count() > limite) {
+			Jogador sai = null;
+			Jogador entra = null;
+			for (Jogador candidato : disponiveis) {
+				if (!candidato.asterisco() || !novos.contains(candidato.id())) {
+					continue;
+				}
+				Optional<Jogador> substituto = disponiveis.stream()
+					.filter(j -> j.posicao() == candidato.posicao() && !j.asterisco() && !escolhidos.contains(j.id()))
+					.findFirst();
+				if (substituto.isPresent()
+						&& (sai == null || candidato.forca() - substituto.get().forca() < sai.forca() - entra.forca())) {
+					sai = candidato;
+					entra = substituto.get();
+				}
+			}
+			if (sai == null) {
+				return;
+			}
+			escolhidos.remove(sai.id());
+			novos.remove(sai.id());
+			escolhidos.add(entra.id());
+			novos.add(entra.id());
+		}
 	}
 
 	/**

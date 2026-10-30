@@ -192,8 +192,14 @@ class PlantelController {
 
 	@PostMapping("/jogos/{jogoId}/plantel/formacao")
 	String formacao(@AuthenticationPrincipal Usuario usuario, @PathVariable long jogoId,
-			@RequestParam("formacao") Formacao formacao) {
-		plantel.definirFormacao(jogoId, usuario.id(), formacao);
+			@RequestParam("formacao") Formacao formacao, RedirectAttributes redirect) {
+		tentar(redirect, () -> plantel.definirFormacao(jogoId, usuario.id(), formacao, SEMENTES.nextLong()));
+		return voltar(jogoId);
+	}
+
+	@PostMapping("/jogos/{jogoId}/plantel/retirar-todos")
+	String retirarTodos(@AuthenticationPrincipal Usuario usuario, @PathVariable long jogoId, RedirectAttributes redirect) {
+		tentar(redirect, () -> plantel.retirarTodos(jogoId, usuario.id()));
 		return voltar(jogoId);
 	}
 

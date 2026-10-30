@@ -154,6 +154,31 @@ class PlantelIT {
 	}
 
 	@Test
+	void retirarTodosEClicarNaTaticaEscalaOsMaisFortesDeNovo() throws Exception {
+		String formacao = escalacoes.carregar(clube).orElseThrow().formacao().name();
+
+		pedir(post(plantel + "/retirar-todos"));
+		EscalacaoDoTreinador vazia = escalacoes.carregar(clube).orElseThrow();
+		assertThat(vazia.titulares()).isEmpty();
+		assertThat(vazia.reservas()).isEmpty();
+		assertThat(vazia.batedor()).isNull();
+		mvc.perform(get(plantel).with(como(treinador))).andExpect(content().string(containsString("0 de 11")))
+			.andExpect(content().string(containsString("Retirar todos os jogadores")));
+
+		pedir(post(plantel + "/formacao").param("formacao", formacao));
+		EscalacaoDoTreinador depois = escalacoes.carregar(clube).orElseThrow();
+		assertThat(depois.titulares()).hasSize(11);
+		assertThat(depois.reservas()).hasSize(7);
+		mvc.perform(get(plantel).with(como(treinador))).andExpect(content().string(containsString("Escalação válida")));
+	}
+
+	@Test
+	void osSonsDosGolsSaoPublicosComoOsOutrosArquivosDaTela() throws Exception {
+		mvc.perform(get("/audio/gol-feito.wav")).andExpect(status().isOk());
+		mvc.perform(get("/audio/gol-sofrido.wav")).andExpect(status().isOk());
+	}
+
+	@Test
 	void suspensoNaoPodeSerEscalado() throws Exception {
 		long reserva = escalacoes.carregar(clube).orElseThrow().reservas().iterator().next();
 		pedir(post(plantel + "/jogador/" + reserva).param("lugar", "FORA"));

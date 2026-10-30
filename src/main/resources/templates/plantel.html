@@ -63,6 +63,10 @@
 <span class="formacao-estilo" th:text="${f.estilo().name() == 'NORMAL' ? 'Normal' : (f.estilo().name() == 'OFENSIVO' ? 'Ofensiva' : 'Defensiva')}">Normal</span>
 </button>
 </form>
+<form th:action="@{/jogos/{id}/plantel/retirar-todos(id=${v.jogoId})}" method="post" hx-boost="true">
+<button type="submit" class="botao-discreto retirar-todos">Retirar todos os jogadores</button>
+</form>
+<p class="suave pequeno">Clique numa tática para completar o time com os mais fortes.</p>
 <p th:if="${v.problemas.isEmpty()}" class="valida" th:text="${valida}">Escalação válida</p>
 <ul th:unless="${v.problemas.isEmpty()}" class="problemas" aria-label="O que falta na escalação">
 <li th:each="p : ${v.problemas}" th:text="${#strings.capitalize(p)}">faltam 1 defensor</li>

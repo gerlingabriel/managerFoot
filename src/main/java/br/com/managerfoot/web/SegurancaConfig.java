@@ -27,7 +27,7 @@ class SegurancaConfig {
 	SecurityFilterChain seguranca(HttpSecurity http, AutenticacaoContas autenticacao,
 			SecurityContextRepository contexto) throws Exception {
 		http.authorizeHttpRequests(a -> a
-				.requestMatchers("/entrar", "/cadastro", "/css/**", "/js/**", "/webjars/**", "/actuator/health", "/error").permitAll()
+				.requestMatchers("/entrar", "/cadastro", "/css/**", "/js/**", "/audio/**", "/webjars/**", "/actuator/health", "/error").permitAll()
 				.requestMatchers("/jogos/escolher", "/jogos/escolher/**").hasRole("ADMINISTRADOR")
 				.anyRequest().authenticated())
 			.authenticationProvider(autenticacao)

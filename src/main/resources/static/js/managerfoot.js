@@ -39,53 +39,25 @@ document.addEventListener('change', function (e) {
 })();
 
 // Som dos gols no quadro da rodada (SPEC §10.2 e §10.4): o servidor diz os gols do clube do usuário;
-// quando um número sobe e o som está ligado, toca um som curto, um para o gol feito e outro para o
-// sofrido. Gerado pelo Web Audio, sem arquivo. O navegador só libera o áudio depois de um clique na
-// página.
+// quando um número sobe e o som está ligado, toca a torcida: comemoração no gol feito, vaia no sofrido
+// (gravações em /audio, créditos em docs/creditos-sons.md). Ficam fora do #quadro, que o polling troca.
 (function () {
-	var contexto = null;
 	var anterior = null;
+	var somGolFeito = new Audio('/audio/gol-feito.wav');
+	var somGolSofrido = new Audio('/audio/gol-sofrido.wav');
 
-	function audio() {
-		if (!contexto && (window.AudioContext || window.webkitAudioContext)) {
-			contexto = new (window.AudioContext || window.webkitAudioContext)();
-		}
-		return contexto;
-	}
-
-	// Algumas vozes quase iguais passam por um filtro em volta de uma vogal: parece gente, não apito.
-	function coro(de, para, vogal, duracao, ganho) {
-		var ctx = audio();
-		if (!ctx) return;
-		var agora = ctx.currentTime;
-		var volume = ctx.createGain();
-		var filtro = ctx.createBiquadFilter();
-		filtro.type = 'bandpass';
-		filtro.frequency.value = vogal;
-		filtro.Q.value = 1.2;
-		volume.gain.setValueAtTime(0.0001, agora);
-		volume.gain.exponentialRampToValueAtTime(ganho, agora + 0.04);
-		volume.gain.setValueAtTime(ganho, agora + duracao * 0.6);
-		volume.gain.exponentialRampToValueAtTime(0.0001, agora + duracao);
-		filtro.connect(volume).connect(ctx.destination);
-		[-9, 0, 7].forEach(function (desvio) {
-			var osc = ctx.createOscillator();
-			osc.type = 'sawtooth';
-			osc.detune.value = desvio;
-			osc.frequency.setValueAtTime(de, agora);
-			osc.frequency.exponentialRampToValueAtTime(para, agora + duracao);
-			osc.connect(filtro);
-			osc.start(agora);
-			osc.stop(agora + duracao);
-		});
+	function tocar(som) {
+		som.currentTime = 0;
+		// o navegador pode recusar o áudio antes de um clique na página
+		som.play().catch(function () { });
 	}
 
 	function golFeito() {
-		coro(330, 520, 750, 0.4, 0.5);
+		tocar(somGolFeito);
 	}
 
 	function golSofrido() {
-		coro(190, 95, 380, 0.45, 0.6);
+		tocar(somGolSofrido);
 	}
 
 	function conferir() {
@@ -99,10 +71,6 @@ document.addEventListener('change', function (e) {
 		anterior = atual;
 	}
 
-	document.addEventListener('click', function () {
-		var ctx = audio();
-		if (ctx && ctx.state === 'suspended') ctx.resume();
-	});
 	document.addEventListener('DOMContentLoaded', conferir);
 	document.addEventListener('htmx:afterSettle', conferir);
 })();

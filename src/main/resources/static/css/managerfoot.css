@@ -757,6 +757,7 @@ a.clube-linha:hover { color: var(--texto); background: rgba(242, 201, 76, 0.1); 
 .formacao-estilo { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--texto-suave); }
 .formacao[aria-pressed="true"] .formacao-estilo { color: #3A3418; }
 
+.retirar-todos { width: 100%; }
 .valida { margin: 0; font-size: 14px; color: #3FB37F; }
 .problemas { margin: 0; padding-left: 18px; font-size: 14px; color: var(--erro-texto); }
 

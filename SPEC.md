@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 85 — 2026-10-30)
+-   **Status:** versão inicial para revisão (rev. 86 — 2026-10-30)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 86 (2026-10-30):** pelo usuário: clicar na tática completa os titulares que faltam com os mais fortes da posição; no empate, asterisco e depois sorte; botão para retirar todos os jogadores (§10.3); som de comemoração no gol feito e vaia no sofrido (§10.2). Agente: o que sobra na tática nova vai para o banco, o banco é completado junto e os escolhidos respeitam o limite de asteriscos (Provisório).
 -   **rev. 85 (2026-10-30):** pelo usuário: modelo 14b aprovado, com as propostas fixa, com meta de vitórias e com meta de posição, dependentes da força do clube (§9.6). Agente: em ligas de outro tamanho, faixas e vitórias na mesma proporção (Provisório).
 -   **rev. 84 (2026-10-30):** pelo usuário: nome de clube abre a janela do clube em toda tela (modelo 14e); clube de fora do campeonato mostra só o plantel, sem calendário, com uns dois jogadores à venda, e na virada ganha jogador novo para repor quem saiu; clube que joga o campeonato segue com leilão, sem jogador criado (§9.4). Durante a rodada dá para ver o plantel e os preços; comprar, só depois dela (modelo 14f). Agente: o jogador criado completa o plantel gerado, na posição mais desfalcada, com força 2 abaixo da média do clube (Provisório); vendido no meio da temporada não é reposto até a virada (Provisório).
 -   **rev. 83 (2026-10-30):** modelos 14a, 14c e 14d, pedidos pelo usuário e sem objeção: ano no topo e patrocinador assinado junto ao escudo; faixa das vagas da continental na 1ª divisão, com a quantidade na legenda, e troféu do campeão matemático (só quando ninguém alcança o líder em pontos; empate possível não decide); coluna com maleta no plantel; ficha com nacionalidade e contrato, sem o bloco de venda enquanto há contrato (§10.3).
@@ -2588,6 +2589,9 @@ configurações.
 feito e outro para o sofrido, ambos curtos para caber na velocidade rápida.
 A marca de expulsão é bem pequena e fica junto ao nome do clube.
 
+**Definido (rev. 86):** o gol feito toca uma comemoração de torcida e o sofrido,
+uma vaia, ambos curtos. Origem dos sons em `docs/creditos-sons.md`.
+
 **Referência visual (rev. 14):** tela de jogos da rodada do Elifoot 98,
 enviada pelo usuário. Descrição registrada em `docs/referencia-tela-jogos.md`.
 A imagem não fica no repositório.
@@ -2617,6 +2621,16 @@ da mesma divisão seguem na mesma tela.
 
 -   A tela de elenco deve preservar a leitura simples do Elifoot 98, com
     modernizações.
+-   **Definido (rev. 86) — escalação pela tática:** ao clicar numa tática, se
+    faltar titular, o jogo completa as vagas com os jogadores mais fortes de
+    cada posição, do banco ou de fora; quem já está escalado fica. No empate de
+    força, primeiro quem tem asterisco e depois a sorte. Um botão junto à tática
+    retira todos os jogadores, para a tática escalar de novo.
+    - **Provisório (agente):** sem titular faltando, nada muda. Na troca de
+      tática, o mais fraco do setor que sobra vai para o banco; as vagas livres
+      do banco são preenchidas, com um goleiro primeiro; os escolhidos
+      automaticamente respeitam o limite de 3 asteriscos se houver outro na
+      posição; retirar todos também volta o batedor para o automático.
 -   Durante o jogo, ao clicar em um clube, o usuário vê os lances e os 11
     em campo de cada time, sem os reservas. **Exceção (rev. 33):** no
     próprio clube aparece também o banco, para a substituição (§10.5).
