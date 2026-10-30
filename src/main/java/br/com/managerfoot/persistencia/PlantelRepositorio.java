@@ -17,6 +17,7 @@ import br.com.managerfoot.dominio.Clube;
 import br.com.managerfoot.dominio.EscalacaoDoTreinador;
 import br.com.managerfoot.dominio.Formacao;
 import br.com.managerfoot.dominio.Jogador;
+import br.com.managerfoot.dominio.RegraEstrangeiros;
 import br.com.managerfoot.dominio.Lugar;
 import br.com.managerfoot.dominio.Moral;
 import br.com.managerfoot.economia.Moeda;
@@ -86,7 +87,8 @@ public class PlantelRepositorio {
 		List<LinhaJogador> linhas = plantel.stream().map(j -> {
 			Situacao s = situacoes.getOrDefault(j.id(), Situacao.NENHUMA);
 			return new LinhaJogador(j, escalacao.lugarDe(j.id()), s.gols(), s.amarelos(), s.suspensao() > 0, s.lesao(),
-					j.nacionalidade().equals(paisDoClube) ? null : j.nacionalidade(), s.comContrato());
+					RegraEstrangeiros.deOutroPais(j.nacionalidade(), paisDoClube) ? j.nacionalidade() : null,
+					RegraEstrangeiros.equiparado(j.nacionalidade(), paisDoClube), s.comContrato());
 		}).toList();
 		LongPredicate suspenso = id -> situacoes.getOrDefault(id, Situacao.NENHUMA).suspensao() > 0;
 		LongPredicate lesionado = id -> situacoes.getOrDefault(id, Situacao.NENHUMA).lesao() > 0;
@@ -274,10 +276,16 @@ public class PlantelRepositorio {
 	 * Um jogador na tela do plantel.
 	 *
 	 * @param estrangeiro sigla do país, se não é o país do clube
+	 * @param equiparado é de outro país, mas não conta como estrangeiro (SPEC §8.4)
 	 */
 	/** @param lesao jogos fora por lesão a cumprir (SPEC §7.5); zero se não está lesionado */
 	public record LinhaJogador(Jogador jogador, Lugar lugar, int gols, int amarelos, boolean suspenso, int lesao,
-			String estrangeiro, boolean comContrato) {
+			String estrangeiro, boolean equiparado, boolean comContrato) {
+
+		/** Conta entre os estrangeiros em campo. */
+		public boolean contaComoEstrangeiro() {
+			return estrangeiro != null && !equiparado;
+		}
 	}
 
 	/**

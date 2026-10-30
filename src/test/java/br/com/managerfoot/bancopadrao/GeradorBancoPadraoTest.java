@@ -16,6 +16,7 @@ import br.com.managerfoot.bancopadrao.GeradorBancoPadrao.PaisGerado;
 import br.com.managerfoot.dominio.Clube;
 import br.com.managerfoot.dominio.Jogador;
 import br.com.managerfoot.dominio.Posicao;
+import br.com.managerfoot.dominio.RegraEstrangeiros;
 import br.com.managerfoot.dominio.Temperamento;
 import br.com.managerfoot.motor.EscalacaoMaquina;
 import br.com.managerfoot.motor.ParametrosMotor;
@@ -63,7 +64,7 @@ class GeradorBancoPadraoTest {
 	}
 
 	@Test
-	void cadaClubeTem20JogadoresNacionaisNaComposicaoPadrao() {
+	void cadaClubeTem20JogadoresNaComposicaoPadraoEAFaixaDeEstrangeirosDaRegiao() {
 		for (PaisGerado pais : BANCO) {
 			for (ClubeGerado clube : pais.clubes()) {
 				assertThat(clube.jogadores()).hasSize(20);
@@ -71,10 +72,34 @@ class GeradorBancoPadraoTest {
 					.collect(Collectors.groupingBy(Jogador::posicao, () -> new EnumMap<>(Posicao.class), Collectors.counting()));
 				assertThat(porPosicao).containsExactlyInAnyOrderEntriesOf(Map.of(Posicao.GOLEIRO, 3L, Posicao.DEFENSOR, 6L,
 						Posicao.MEIO_CAMPISTA, 6L, Posicao.ATACANTE, 5L));
-				assertThat(clube.jogadores()).allSatisfy(j -> assertThat(j.nacionalidade()).isEqualTo(pais.pais().codigo()));
+				long deFora = clube.jogadores().stream().filter(j -> !j.nacionalidade().equals(pais.pais().codigo())).count();
+				boolean europa = ContinentalPadrao.EUROPA.vagas().containsKey(pais.pais().codigo());
+				assertThat(deFora).as(clube.clube().nome()).isBetween(europa ? 5L : 2L, europa ? 9L : 5L);
 				assertThat(clube.jogadores()).extracting(Jogador::nome).doesNotHaveDuplicates();
 			}
 		}
+	}
+
+	@Test
+	void ligaEuropeiaTemEstrangeirosEEquiparadosEABrasileiraQuaseSoEstrangeiros() {
+		Map<String, long[]> porPais = new java.util.HashMap<>();
+		for (PaisGerado pais : BANCO) {
+			String codigo = pais.pais().codigo();
+			long[] contagem = porPais.computeIfAbsent(codigo, c -> new long[2]);
+			pais.clubes().stream().flatMap(c -> c.jogadores().stream()).forEach(j -> {
+				if (RegraEstrangeiros.contaComoEstrangeiro(j.nacionalidade(), codigo)) {
+					contagem[0]++;
+				}
+				if (RegraEstrangeiros.equiparado(j.nacionalidade(), codigo)) {
+					contagem[1]++;
+				}
+			});
+		}
+		assertThat(porPais.get("ITA")[0]).isPositive();
+		assertThat(porPais.get("ITA")[1]).isGreaterThan(porPais.get("ITA")[0]);
+		assertThat(porPais.get("BRA")[0]).isGreaterThan(porPais.get("BRA")[1] * 3);
+		assertThat(porPais.get("BRA")[1]).isPositive();
+		assertThat(porPais.get("ARG")[1]).isZero();
 	}
 
 	@Test
@@ -104,11 +129,11 @@ class GeradorBancoPadraoTest {
 	}
 
 	@Test
-	void asteriscosVaoDeZeroATresEAparecemMaisNosClubesFortes() {
+	void asteriscosVaoDeZeroACincoEAparecemMaisNosClubesFortes() {
 		double fortes = mediaAsteriscos(c -> c.forca() >= 40);
 		double fracos = mediaAsteriscos(c -> c.forca() <= 22);
 		for (ClubeGerado clube : todosOsClubes()) {
-			assertThat(clube.jogadores().stream().filter(Jogador::asterisco).count()).isBetween(0L, 3L);
+			assertThat(clube.jogadores().stream().filter(Jogador::asterisco).count()).isBetween(0L, 5L);
 		}
 		assertThat(fortes).isGreaterThan(fracos + 0.8);
 	}

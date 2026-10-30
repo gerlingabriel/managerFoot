@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import br.com.managerfoot.dominio.Clube;
 import br.com.managerfoot.dominio.Jogador;
+import br.com.managerfoot.dominio.RegraEstrangeiros;
 import br.com.managerfoot.economia.Leilao.Lance;
 import br.com.managerfoot.economia.LeiloesDaRodada;
 import br.com.managerfoot.economia.LeiloesDaRodada.ClubeNoMercado;
@@ -337,7 +338,8 @@ public class LeilaoRepositorio {
 		List<LeilaoNaTela> naTela = new ArrayList<>();
 		for (LinhaLeilao l : linhas) {
 			Jogador j = c.jogador(l.jogadorId());
-			naTela.add(new LeilaoNaTela(l.id(), j, j.nacionalidade().equals(c.pais()) ? null : j.nacionalidade(),
+			naTela.add(new LeilaoNaTela(l.id(), j, RegraEstrangeiros.deOutroPais(j.nacionalidade(), c.pais()) ? j.nacionalidade() : null,
+					RegraEstrangeiros.equiparado(j.nacionalidade(), c.pais()),
 					c.clube(l.vendedorId()), l.lanceMinimo(), c.moeda().unidadesAcima(l.lanceMinimo()),
 					l.situacao() == Situacao.ABERTO ? impedimento(l, meu, c.moeda()) : null, l.situacao(),
 					l.compradorId() == null ? null : c.clube(l.compradorId()), l.valor(), l.empate(),
@@ -540,6 +542,7 @@ public class LeilaoRepositorio {
 	 * Um leilão na tela.
 	 *
 	 * @param estrangeiro sigla do país, se não é o da liga
+	 * @param equiparado é de outro país, mas não conta como estrangeiro na liga (SPEC §8.4)
 	 * @param minimoNaMoeda o menor lance aceito, inteiro na moeda da liga
 	 * @param impedimento por que o treinador não pode dar lance ("Caixa insuficiente", "Plantel
 	 *        cheio"); nulo se pode ou se o leilão já terminou
@@ -548,7 +551,7 @@ public class LeilaoRepositorio {
 	 * @param seu o treinador levou o jogador
 	 * @param vendidoPorVoce o jogador era do clube do treinador
 	 */
-	public record LeilaoNaTela(long id, Jogador jogador, String estrangeiro, Clube vendedor, long lanceMinimo,
+	public record LeilaoNaTela(long id, Jogador jogador, String estrangeiro, boolean equiparado, Clube vendedor, long lanceMinimo,
 			long minimoNaMoeda, String impedimento, Situacao situacao, Clube comprador, Long valor, boolean empate,
 			Long seuLance, boolean seu, boolean vendidoPorVoce) {
 	}

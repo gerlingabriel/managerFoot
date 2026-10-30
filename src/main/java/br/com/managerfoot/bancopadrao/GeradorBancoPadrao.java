@@ -7,6 +7,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import java.util.SplittableRandom;
 
@@ -29,7 +30,8 @@ import br.com.managerfoot.temporada.FormatoDivisao;
  * <li>Os clubes de cada divisão espalham-se pela faixa de força dela; os da fila entram na faixa da
  * última e, por serem os mais fracos, são os que a distribuição manda para a fila.</li>
  * <li>A força do clube é a média dos 11 que a máquina escalaria (rev. 31).</li>
- * <li>Todos os jogadores são do país do clube (rev. 32); estrangeiros entram pelo editor.</li>
+ * <li>Todo clube tem jogadores de outros países (rev. 87), sorteados depois de pronto o plantel: mudam só o nome e
+ * a nacionalidade, de modo que força, posição e asterisco continuam os mesmos.</li>
  * <li>Os países sem liga da continental (rev. 73) só têm clubes, espalhados pela faixa do nível do
  * país.</li>
  * </ul>
@@ -99,7 +101,7 @@ public final class GeradorBancoPadrao {
 						plantel(pais.idioma(), pais.codigo(), forca, faixa.maxima(), aleatorio)));
 			}
 		}
-		return new PaisGerado(pais, comTreinadores(pais.idioma(), clubes, aleatorio));
+		return new PaisGerado(pais, comTreinadores(pais.idioma(), comEstrangeiros(pais.codigo(), clubes, aleatorio), aleatorio));
 	}
 
 	/** Os clubes do país sem liga, na faixa do nível dele, com a sequência própria do país. */
@@ -115,7 +117,7 @@ public final class GeradorBancoPadrao {
 					escudo(aleatorio));
 			clubes.add(new ClubeGerado(clube, null, plantel(pais.idioma(), pais.codigo(), forca, faixa.maxima(), aleatorio)));
 		}
-		return new EstrangeiroGerado(pais, comTreinadores(pais.idioma(), clubes, aleatorio));
+		return new EstrangeiroGerado(pais, comTreinadores(pais.idioma(), comEstrangeiros(pais.codigo(), clubes, aleatorio), aleatorio));
 	}
 
 	/** Os países sem liga das competições, cada um com os clubes que {@code continentais} pedem. */
@@ -124,6 +126,62 @@ public final class GeradorBancoPadrao {
 		return paises.stream()
 			.map(p -> gerar(p, continentais.stream().mapToInt(c -> c.clubesGerados(p.codigo())).sum()))
 			.toList();
+	}
+
+	/** Gerador próprio: quantos estrangeiros sair não muda os treinadores sorteados depois (rev. 87). */
+	private List<ClubeGerado> comEstrangeiros(String codigoPais, List<ClubeGerado> clubes, SplittableRandom aleatorio) {
+		SplittableRandom paraEstrangeiros = new SplittableRandom(aleatorio.nextLong());
+		Regiao regiao = regiaoDe(codigoPais);
+		ParametrosBancoPadrao.FaixaQuantidade faixa = parametros.estrangeirosNoPlantel().get(regiao);
+		List<OrigemEstrangeiro> origens = origens(codigoPais, regiao);
+		return clubes.stream().map(c -> {
+			int quantidade = paraEstrangeiros.nextInt(faixa.minima(), faixa.maxima() + 1);
+			return new ClubeGerado(c.clube(), c.treinador(), comEstrangeiros(c.jogadores(), quantidade, origens, paraEstrangeiros));
+		}).toList();
+	}
+
+	private List<Jogador> comEstrangeiros(List<Jogador> plantel, int quantidade, List<OrigemEstrangeiro> origens,
+			SplittableRandom aleatorio) {
+		List<Jogador> resultado = new ArrayList<>(plantel);
+		Set<String> nomes = new HashSet<>(plantel.stream().map(Jogador::nome).toList());
+		List<Integer> posicoes = new ArrayList<>(IntStream.range(0, plantel.size()).boxed().toList());
+		for (int i = 0; i < quantidade; i++) {
+			int posicao = posicoes.remove(aleatorio.nextInt(posicoes.size()));
+			Jogador j = resultado.get(posicao);
+			OrigemEstrangeiro origem = sortearOrigem(origens, aleatorio);
+			resultado.set(posicao, new Jogador(j.id(), nomeDoJogador(origem.idioma(), nomes, aleatorio), j.posicao(), j.forca(),
+					j.temperamento(), j.asterisco(), origem.codigo()));
+		}
+		return List.copyOf(resultado);
+	}
+
+	/** País de onde pode vir um estrangeiro, com o peso no sorteio. */
+	private record OrigemEstrangeiro(String codigo, Idioma idioma, int peso) {
+	}
+
+	/** Os países do banco, menos o do clube; os da região dele pesam mais. A ordem é fixa, para a semente valer. */
+	private List<OrigemEstrangeiro> origens(String codigoPais, Regiao regiao) {
+		return Stream.concat(PaisPadrao.TODOS.stream().map(p -> Map.entry(p.codigo(), p.idioma())),
+				PaisEstrangeiroPadrao.TODOS.stream().map(p -> Map.entry(p.codigo(), p.idioma())))
+			.filter(p -> !p.getKey().equals(codigoPais))
+			.map(p -> new OrigemEstrangeiro(p.getKey(), p.getValue(), regiaoDe(p.getKey()) == regiao ? parametros.pesoMesmaRegiao() : 1))
+			.toList();
+	}
+
+	private static OrigemEstrangeiro sortearOrigem(List<OrigemEstrangeiro> origens, SplittableRandom aleatorio) {
+		int sorteio = aleatorio.nextInt(origens.stream().mapToInt(OrigemEstrangeiro::peso).sum());
+		for (OrigemEstrangeiro origem : origens) {
+			sorteio -= origem.peso();
+			if (sorteio < 0) {
+				return origem;
+			}
+		}
+		throw new IllegalStateException("pesos de origem inválidos");
+	}
+
+	private static Regiao regiaoDe(String codigoPais) {
+		return ContinentalPadrao.TODAS.stream().filter(c -> c.vagas().containsKey(codigoPais)).map(ContinentalPadrao::regiao)
+			.findFirst().orElseThrow(() -> new IllegalArgumentException("país sem região: " + codigoPais));
 	}
 
 	/** Gerador próprio: os treinadores (rev. 54) não mudam os clubes e planteis já gerados. */

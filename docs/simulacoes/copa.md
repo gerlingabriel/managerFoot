@@ -6,7 +6,7 @@ Gerado por `RelatorioCopaTest` (ferramenta de desenvolvimento). 200 copas de cad
 
 | Partidas decisivas (voltas e finais) | Com prorrogação | Nos pênaltis |
 |---|---|---|
-| 37200 | 15.9% | 8.3% |
+| 37200 | 16.2% | 8.5% |
 
 ## Zebras
 
@@ -14,9 +14,9 @@ Confrontos ganhos pelo clube de menor força em campo, pela diferença entre os 
 
 | Diferença de força em campo | Confrontos | Zebras |
 |---|---|---|
-| menos de 3 | 9423 | 43.8% |
-| de 3 a 8 | 10780 | 34.1% |
-| 8 ou mais | 16997 | 13.9% |
+| menos de 3 | 9405 | 44.6% |
+| de 3 a 8 | 10850 | 34.5% |
+| 8 ou mais | 16945 | 14.2% |
 
 ## Campeão
 
@@ -24,4 +24,4 @@ Posição do campeão entre os inscritos, pela força em campo.
 
 | O mais forte | 2º a 4º | 5º a 8º | 9º em diante | Da 2ª divisão |
 |---|---|---|---|---|
-| 18.3% | 33.3% | 26.4% | 22.0% | 0.1% |
+| 17.3% | 34.0% | 26.0% | 22.8% | 0.2% |

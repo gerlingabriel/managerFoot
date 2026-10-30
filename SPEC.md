@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 86 — 2026-10-30)
+-   **Status:** versão inicial para revisão (rev. 87 — 2026-10-30)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 87 (2026-10-30):** pelo usuário: som dos gols pela metade (§10.2); todo clube tem jogadores estrangeiros, que ajudam o usuário a comprar por sair mais baratos, e mais jogadores com asterisco (§5.2, §5.3); nos clubes europeus, os cidadãos da União Europeia são de outro país, mas não contam como estrangeiros (§8.4). Agente: quantidades e origem dos estrangeiros, novo teto e chances de asterisco, Inglaterra equipara a União Europeia (Provisório). Banco padrão versão 4; jogos já criados não mudam.
 -   **rev. 86 (2026-10-30):** pelo usuário: clicar na tática completa os titulares que faltam com os mais fortes da posição; no empate, asterisco e depois sorte; botão para retirar todos os jogadores (§10.3); som de comemoração no gol feito e vaia no sofrido (§10.2). Agente: o que sobra na tática nova vai para o banco, o banco é completado junto e os escolhidos respeitam o limite de asteriscos (Provisório).
 -   **rev. 85 (2026-10-30):** pelo usuário: modelo 14b aprovado, com as propostas fixa, com meta de vitórias e com meta de posição, dependentes da força do clube (§9.6). Agente: em ligas de outro tamanho, faixas e vitórias na mesma proporção (Provisório).
 -   **rev. 84 (2026-10-30):** pelo usuário: nome de clube abre a janela do clube em toda tela (modelo 14e); clube de fora do campeonato mostra só o plantel, sem calendário, com uns dois jogadores à venda, e na virada ganha jogador novo para repor quem saiu; clube que joga o campeonato segue com leilão, sem jogador criado (§9.4). Durante a rodada dá para ver o plantel e os preços; comprar, só depois dela (modelo 14f). Agente: o jogador criado completa o plantel gerado, na posição mais desfalcada, com força 2 abaixo da média do clube (Provisório); vendido no meio da temporada não é reposto até a virada (Provisório).
@@ -579,6 +580,21 @@ rankings de artilheiros e o histórico de cartões de cada jogador (§7.4).
   jogador, o editor permite escolher qualquer país.
   - **Conflito resolvido (rev. 32):** a instrução do usuário substitui a
     regra dos 5 a 7 estrangeiros.
+- **Substituído na rev. 87, pelo usuário:** **todo clube tem estrangeiros**,
+  como nos elencos de hoje, e eles ajudam o usuário a comprar, porque saem
+  mais baratos (§9.4).
+  **Provisório (rev. 87), proposta do agente:**
+  - **Quantos, dos 20:** de **2 a 5** nos clubes da América do Sul; de **5 a
+    9** nos da Europa (`ParametrosBancoPadrao.estrangeirosNoPlantel`). Vale
+    também para os clubes gerados só para a continental.
+  - **De onde:** dos países do banco padrão, menos o do clube; um país da
+    região do clube pesa **3** e os outros pesam 1. O nome vem do idioma do
+    país do jogador.
+  - **Quem:** sorteado entre os 20, em qualquer posição e força. Força,
+    posição, asterisco e temperamento não mudam: a média do clube continua a
+    mesma.
+  - O jogador criado na virada para o clube de fora (rev. 84) continua sendo
+    do país do clube.
 
 **Definido (rev. 17) — composição padrão:**
 - ~~O cadastro padrão gera **23 jogadores**: 3 goleiros, 7 defensores,
@@ -591,7 +607,7 @@ rankings de artilheiros e o histórico de cartões de cada jogador (§7.4).
   venda e dependem das finanças. A máquina também precisa dessa folga para
   negociar.
 - ~~Os 5 a 7 estrangeiros continuam valendo dentro dos 23.~~ (rev. 32: sem
-  estrangeiros no banco padrão.)
+  estrangeiros no banco padrão; rev. 87: voltam, com outras quantidades.)
 
 **Definido (rev. 17) — bônus de artilharia da temporada:**
 - No início de cada temporada, o sistema sorteia cerca de **15 jogadores**
@@ -626,8 +642,18 @@ Violento 7% (`ParametrosBancoPadrao`).
 
 ### 5.3 Jogadores com asterisco
 
-**Definido (rev. 31) — banco padrão:** cada clube tem de **0 a 3**
+**Definido (rev. 31) — banco padrão:** cada clube tem ~~de **0 a 3**~~
 jogadores com asterisco, com mais chance nos clubes mais fortes.
+
+**Definido (rev. 87), pelo usuário:** mais jogadores com asterisco.
+**Provisório (rev. 87), proposta do agente:** de **0 a 5** por clube, com
+chance de cada um de 15% no clube mais fraco a 60% no de força 50 (eram 10% a
+70% de 3). Em média: 3,0 no clube de força 50, 1,8 no de 35 e 0,75 no de 22. O
+limite de 3 em campo sem penalidade não muda: quem passa disso fica no banco.
+**Simulação (rev. 87, `docs/simulacoes/`):** o motor segue nas metas (2,19
+gols por partida, 45,6% de vitórias do mandante). Na 1ª divisão, a folha média
+sobe cerca de 8% e a sobra média da temporada cai de R$ 1,85 mi para R$ 1,08 mi;
+clubes que ficam negativos em algum momento vão de 0% a 1%.
 
 O asterisco indica um jogador especial, mais caro e potencialmente mais
 influente na finalização: - Jogadores com asterisco têm custo maior. -
@@ -1838,10 +1864,24 @@ administrador, sem ficar fixo no código.
   **não** são estrangeiros.
 - **Definido (rev. 21):** o plantel mostra se o jogador é estrangeiro e se
   conta no limite (§10.3).
+- **Definido (rev. 87), pelo usuário:** nos clubes europeus, o jogador de país
+  da União Europeia é de outro país, mas não é considerado estrangeiro naquele
+  país. Quem não conta como estrangeiro também **não tem o desconto de
+  estrangeiro** no preço (§9.4) e não entra em "Estrangeiros em campo"
+  (`RegraEstrangeiros`).
+- **Lista da UE (rev. 87):** Alemanha, Áustria, Bélgica, Bulgária, Chipre,
+  Croácia, Dinamarca, Eslováquia, Eslovênia, Espanha, Estônia, Finlândia,
+  França, Grécia, Hungria, Irlanda, Itália, Letônia, Lituânia, Luxemburgo,
+  Malta, Países Baixos, Polônia, Portugal, Romênia, Suécia e Tchéquia (27).
+  Fonte: european-union.europa.eu, "EU countries", consultada em 2026-10-30.
+- **Provisório (rev. 87), proposta do agente:** a **Inglaterra** segue a regra
+  dos clubes europeus, como o usuário descreveu, embora o Reino Unido tenha
+  saído da UE em 2020. Na Argentina não há equiparados. Nenhum país fora da UE
+  com acordo semelhante entra no padrão inicial.
 
-**Em aberto:** a lista padrão de países da UE e se outros casos entram no
-padrão inicial (por exemplo, países fora da UE com acordos semelhantes).
-Pesquisar e registrar com fonte ao montar o banco padrão.
+**Em aberto:** o **limite** de estrangeiros em campo ainda não existe no jogo;
+hoje o plantel só mostra a contagem. A regra configurável por país fica no
+código (`RegraEstrangeiros`) até haver o editor.
 
 **Definido:** **não existe bônus de nacionalidade** na força do time. O
 Elifoot 98 dava +3 por titular do país do clube
@@ -2591,6 +2631,7 @@ A marca de expulsão é bem pequena e fica junto ao nome do clube.
 
 **Definido (rev. 86):** o gol feito toca uma comemoração de torcida e o sofrido,
 uma vaia, ambos curtos. Origem dos sons em `docs/creditos-sons.md`.
+**Definido (rev. 87), pelo usuário:** os sons tocam com **metade do volume**.
 
 **Referência visual (rev. 14):** tela de jogos da rodada do Elifoot 98,
 enviada pelo usuário. Descrição registrada em `docs/referencia-tela-jogos.md`.
@@ -2692,7 +2733,9 @@ da mesma divisão seguem na mesma tela.
   com a sigla** do país (ex.: ARG) logo depois do nome, como na escolha do
   campeonato. Estrangeiro que não conta no limite tem a caixa tracejada e
   mais apagada. Jogador do país do clube fica sem caixa. Substitui a
-  bandeira da rev. 21 (não exige imagens dos 211 países).
+  bandeira da rev. 21 (não exige imagens dos 211 países). **Rev. 87:** vale
+  no plantel e na janela do clube; nos leilões, o texto diz "não conta como
+  estrangeiro".
 - Contratos, finanças, estádio, copas e competições continentais ganham
   telas próprias nas etapas em que forem implementados, também com modelo
   para aprovação antes.

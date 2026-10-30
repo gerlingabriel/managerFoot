@@ -46,6 +46,14 @@ class PrecoJogadorTest {
 	}
 
 	@Test
+	void equiparadoNaoTemDescontoDeEstrangeiro() {
+		Jogador portugues = new Jogador(1, "Teste", Posicao.ATACANTE, 17, Temperamento.NORMAL, "POR");
+		assertThat(preco.preco(portugues, "BRA")).isEqualTo(160_000_00L);
+		assertThat(preco.preco(portugues, "ITA")).isEqualTo(160_000_00L);
+		assertThat(preco.preco(portugues, "ARG")).isEqualTo(120_000_00L);
+	}
+
+	@Test
 	void asteriscoSaiVinteECincoPorCentoMaisCaroEOLeilaoComecaAbaixo() {
 		assertThat(preco.preco(jogador(17).comAsterisco(true), "BRA")).isEqualTo(200_000_00L);
 		assertThat(preco.lanceInicialLeilao(jogador(17).comAsterisco(true), "BRA")).isEqualTo(160_000_00L);

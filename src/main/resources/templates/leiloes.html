@@ -24,7 +24,7 @@
 <span th:if="${j.asterisco}" class="asterisco" title="jogador com asterisco">★</span>
 <span class="leilao-forca" th:text="${j.forca}">0</span>
 </span>
-<span class="suave" th:text="|${l.vendedor.nome} · ${#strings.capitalize(#strings.toLowerCase(j.temperamento.name()))}${l.estrangeiro != null ? ' · ' + l.estrangeiro : ''} · ${l.lanceMinimo == 0 ? 'sem lance mínimo' : 'lance inicial ' + v.moeda.formatar(v.moeda.centavos(l.minimoNaMoeda))}|">Clube · Normal · lance inicial</span>
+<span class="suave" th:text="|${l.vendedor.nome} · ${#strings.capitalize(#strings.toLowerCase(j.temperamento.name()))}${l.estrangeiro != null ? ' · ' + l.estrangeiro + (l.equiparado ? ' (não conta como estrangeiro)' : '') : ''} · ${l.lanceMinimo == 0 ? 'sem lance mínimo' : 'lance inicial ' + v.moeda.formatar(v.moeda.centavos(l.minimoNaMoeda))}|">Clube · Normal · lance inicial</span>
 </div>
 <label th:if="${l.impedimento == null}" class="leilao-lance">
 <span th:text="|Seu lance (${v.moeda.simbolo()})|">Seu lance (R$)</span>

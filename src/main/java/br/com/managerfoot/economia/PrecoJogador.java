@@ -1,6 +1,7 @@
 package br.com.managerfoot.economia;
 
 import br.com.managerfoot.dominio.Jogador;
+import br.com.managerfoot.dominio.RegraEstrangeiros;
 
 /**
  * Preço do jogador pela força (SPEC §9.4, rev. 40 a 43): a compra direta paga o preço; o leilão começa
@@ -21,7 +22,7 @@ public final class PrecoJogador {
 	}
 
 	/**
-	 * Preço da compra direta; o estrangeiro (de país diferente do da liga) sai com desconto e o
+	 * Preço da compra direta; quem conta como estrangeiro na liga (SPEC §8.4) sai com desconto e o
 	 * asterisco, com acréscimo.
 	 *
 	 * @param paisDaLiga código do país da liga em que o jogador está
@@ -33,7 +34,7 @@ public final class PrecoJogador {
 	private double semArredondar(Jogador jogador, String paisDaLiga) {
 		double salario = parametros.precoSemFaixa() ? caixa.salarioSemFaixa(jogador.forca()) : caixa.salario(jogador);
 		double preco = salario * parametros.rodadasDeSalarioNoPreco();
-		if (!jogador.nacionalidade().equals(paisDaLiga)) {
+		if (RegraEstrangeiros.contaComoEstrangeiro(jogador.nacionalidade(), paisDaLiga)) {
 			preco *= 1 - parametros.descontoEstrangeiro();
 		}
 		if (jogador.asterisco()) {

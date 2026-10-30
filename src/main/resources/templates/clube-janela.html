@@ -91,7 +91,7 @@
 <td class="jogador-celula">
 <span class="jogador-nome" th:text="${j.nome}">Nome</span>
 <span th:if="${j.asterisco}" class="asterisco" title="jogador com asterisco">★</span>
-<span th:if="${l.estrangeiro}" class="sigla-pais" th:text="${l.estrangeiro}" th:title="|estrangeiro (${l.estrangeiro})|">ARG</span>
+<span th:if="${l.estrangeiro}" class="sigla-pais" th:classappend="${l.equiparado} ? 'nao-conta'" th:text="${l.estrangeiro}" th:title="${l.equiparado} ? |${l.estrangeiro}: não conta como estrangeiro| : |estrangeiro (${l.estrangeiro})|">ARG</span>
 <span th:if="${l.aVenda()}" class="etiqueta-venda">à venda</span>
 </td>
 <td class="num forca" th:text="${j.forca}">0</td>

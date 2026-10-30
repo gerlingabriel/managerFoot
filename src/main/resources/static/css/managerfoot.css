@@ -809,6 +809,13 @@ a.clube-linha:hover { color: var(--texto); background: rgba(242, 201, 76, 0.1); 
 	letter-spacing: 0.04em;
 }
 
+.sigla-pais.nao-conta {
+	background: transparent;
+	border-style: dashed;
+	color: var(--texto-suave, inherit);
+	opacity: 0.75;
+}
+
 .suspenso {
 	padding: 1px 6px;
 	border-radius: 4px;

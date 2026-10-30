@@ -45,6 +45,8 @@ document.addEventListener('change', function (e) {
 	var anterior = null;
 	var somGolFeito = new Audio('/audio/gol-feito.wav');
 	var somGolSofrido = new Audio('/audio/gol-sofrido.wav');
+	somGolFeito.volume = 0.5;
+	somGolSofrido.volume = 0.5;
 
 	function tocar(som) {
 		som.currentTime = 0;

@@ -106,7 +106,7 @@ class PlantelController {
 		model.addAttribute("batedores", v.jogadores().stream().filter(l -> l.lugar() != Lugar.FORA).toList());
 		model.addAttribute("forcaMedia", titulares.isEmpty() ? "–" : String.format(Locale.forLanguageTag("pt-BR"), "%.1f",
 				titulares.stream().mapToInt(l -> l.jogador().forca()).average().orElse(0)));
-		model.addAttribute("estrangeirosEmCampo", titulares.stream().filter(l -> l.estrangeiro() != null).count());
+		model.addAttribute("estrangeirosEmCampo", titulares.stream().filter(LinhaJogador::contaComoEstrangeiro).count());
 		model.addAttribute("asteriscosEmCampo", titulares.stream().filter(l -> l.jogador().asterisco()).count());
 		model.addAttribute("limiteAsteriscos", ParametrosMotor.padrao().asterisco().limiteSemPenalidade());
 		model.addAttribute("substituicoes", RegrasPartida.padrao().substituicoes());

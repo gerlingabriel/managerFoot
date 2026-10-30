@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import br.com.managerfoot.dominio.Clube;
 import br.com.managerfoot.dominio.Jogador;
+import br.com.managerfoot.dominio.RegraEstrangeiros;
 import br.com.managerfoot.economia.Moeda;
 import br.com.managerfoot.economia.PrecoJogador;
 
@@ -128,8 +129,8 @@ public class CompraRepositorio {
 					: aoVivo ? "Compra depois da rodada"
 					: meu.size() >= Clube.MAXIMO_JOGADORES ? "Plantel cheio"
 					: saldo < valor ? "Caixa insuficiente" : null;
-			linhas.add(new JogadorNaVitrine(j, j.nacionalidade().equals(pais) ? null : j.nacionalidade(),
-					gols.getOrDefault(j.id(), 0), valor, impedimento));
+			linhas.add(new JogadorNaVitrine(j, RegraEstrangeiros.deOutroPais(j.nacionalidade(), pais) ? j.nacionalidade() : null,
+					RegraEstrangeiros.equiparado(j.nacionalidade(), pais), gols.getOrDefault(j.id(), 0), valor, impedimento));
 		}
 		return new Vitrine(clubeId == doUsuario, saldo, caixas.moeda(jogoId), linhas);
 	}
@@ -167,12 +168,13 @@ public class CompraRepositorio {
 
 	/**
 	 * @param estrangeiro sigla do país, se não é o da liga
+	 * @param equiparado é de outro país, mas não conta como estrangeiro na liga (SPEC §8.4)
 	 * @param preco preço da compra direta; nulo se o jogador não está à venda
 	 * @param impedimento por que o treinador não pode comprar ("Caixa insuficiente", "Plantel cheio",
 	 *        "Compra depois da rodada");
 	 *        nulo se pode ou se não está à venda
 	 */
-	public record JogadorNaVitrine(Jogador jogador, String estrangeiro, int gols, Long preco, String impedimento) {
+	public record JogadorNaVitrine(Jogador jogador, String estrangeiro, boolean equiparado, int gols, Long preco, String impedimento) {
 
 		public boolean aVenda() {
 			return preco != null;

@@ -85,7 +85,7 @@ class ContinentalNoJogoIT {
 				"URU", 6L, "BOL", 4L, "ECU", 4L, "PAR", 4L, "PER", 4L, "VEN", 4L));
 		assertThat(jdbc.sql("""
 				SELECT count(*) FROM jogo_jogador j JOIN jogo_clube c ON c.id = j.clube_id
-				WHERE c.jogo_id = :jogo AND c.pais_codigo = 'ARG' AND j.nacionalidade = 'ARG'""")
+				WHERE c.jogo_id = :jogo AND c.pais_codigo = 'ARG'""")
 			.param("jogo", jogo).query(Long.class).single()).isEqualTo(20 * 20L);
 		int maisFracoCopiado = jdbc.sql("SELECT min(forca) FROM jogo_clube WHERE jogo_id = :jogo AND pais_codigo = 'ARG'")
 			.param("jogo", jogo).query(Integer.class).single();

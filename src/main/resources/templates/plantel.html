@@ -135,7 +135,7 @@
 <td class="jogador-celula">
 <a class="jogador-nome" hx-boost="true" th:href="@{/jogos/{id}/plantel(id=${v.jogoId},ficha=${j.id})}" th:text="${j.nome}" th:attr="aria-label=|Ver ficha de ${j.nome}|">Nome</a>
 <span th:if="${j.asterisco}" class="asterisco" title="jogador com asterisco">★</span>
-<span th:if="${l.estrangeiro}" class="sigla-pais" th:text="${l.estrangeiro}" th:title="|estrangeiro (${l.estrangeiro})|">ARG</span>
+<span th:if="${l.estrangeiro}" class="sigla-pais" th:classappend="${l.equiparado} ? 'nao-conta'" th:text="${l.estrangeiro}" th:title="${l.equiparado} ? |${l.estrangeiro}: não conta como estrangeiro| : |estrangeiro (${l.estrangeiro})|">ARG</span>
 <span th:if="${l.suspenso}" class="suspenso">suspenso</span>
 <span th:if="${l.lesao > 0}" class="suspenso" th:text="|lesionado · ${l.lesao} ${l.lesao == 1 ? 'jogo' : 'jogos'}|">lesionado · 2 jogos</span>
 </td>
@@ -156,7 +156,7 @@
 </table>
 </div>
 </section>
-<p class="suave legenda"><span class="sigla-pais">ARG</span> estrangeiro. Jogador do país do clube fica sem sigla. A maleta marca quem tem contrato firmado nesta temporada.</p>
+<p class="suave legenda"><span><span class="sigla-pais">ARG</span> estrangeiro, mais barato no mercado. <span class="sigla-pais nao-conta">POR</span> de outro país, mas não conta como estrangeiro aqui. Jogador do país do clube fica sem sigla. A maleta marca quem tem contrato firmado nesta temporada.</span></p>
 </main>
 </div>
 <div th:if="${ficha != null}" hx-boost="true"><div th:replace="~{fragmentos :: ficha(${ficha}, @{/jogos/{id}/plantel(id=${v.jogoId})}, @{/jogos/{id}/mercado/vender(id=${v.jogoId})})}"></div></div>

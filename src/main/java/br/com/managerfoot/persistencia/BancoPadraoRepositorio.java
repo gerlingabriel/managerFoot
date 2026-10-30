@@ -27,9 +27,9 @@ public class BancoPadraoRepositorio {
 	public static final String NOME_MOLDE = "Banco padrão";
 	/**
 	 * Versão do gerador: muda quando o banco gerado muda (2 na rev. 60: 2 divisões e 20 jogadores; 3 na
-	 * rev. 73: países sem liga e vagas da continental).
+	 * rev. 73: países sem liga e vagas da continental; 4 na rev. 87: estrangeiros nos planteis e mais asteriscos).
 	 */
-	public static final int VERSAO = 3;
+	public static final int VERSAO = 4;
 
 	private final JdbcClient jdbc;
 	private final MoldeRepositorio moldes;

@@ -90,12 +90,13 @@ class GeradorEstrangeirosTest {
 	}
 
 	@Test
-	void planteisTem20JogadoresDoPaisComAMediaDosOnzeNaForcaDoClube() {
+	void planteisTem20JogadoresComEstrangeirosEAMediaDosOnzeNaForcaDoClube() {
 		EscalacaoMaquina maquina = new EscalacaoMaquina(ParametrosMotor.padrao());
 		for (EstrangeiroGerado pais : ESTRANGEIROS) {
 			for (ClubeGerado clube : pais.clubes()) {
-				assertThat(clube.jogadores()).hasSize(20)
-					.allSatisfy(j -> assertThat(j.nacionalidade()).isEqualTo(pais.pais().codigo()));
+				assertThat(clube.jogadores()).hasSize(20);
+				assertThat(clube.jogadores().stream().filter(j -> !j.nacionalidade().equals(pais.pais().codigo())).count())
+					.isBetween(2L, 9L);
 				assertThat(clube.jogadores()).extracting(Jogador::nome).doesNotHaveDuplicates();
 				double emCampo = GeradorBancoPadrao.mediaForca(maquina.escalar(clube.jogadores()).titulares());
 				assertThat(emCampo).as(clube.clube().nome()).isBetween(clube.clube().forca() - 0.5,
@@ -111,7 +112,8 @@ class GeradorEstrangeirosTest {
 			assertThat(pais.clubes()).extracting(ClubeGerado::treinador).doesNotHaveDuplicates()
 				.allMatch(t -> t != null && t.contains(" "));
 			Idioma idioma = pais.pais().idioma();
-			assertThat(pais.clubes().getFirst().jogadores()).extracting(Jogador::nome)
+			assertThat(pais.clubes().getFirst().jogadores()).filteredOn(j -> j.nacionalidade().equals(pais.pais().codigo()))
+				.extracting(Jogador::nome)
 				.allMatch(n -> idioma.nomes().contains(n) || idioma.sobrenomes().contains(n) || idioma.nomes().stream()
 					.anyMatch(nome -> n.startsWith(nome + " ") && idioma.sobrenomes().contains(n.substring(nome.length() + 1))));
 		}
