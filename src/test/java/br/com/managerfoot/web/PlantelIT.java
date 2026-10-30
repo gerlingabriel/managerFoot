@@ -93,6 +93,16 @@ class PlantelIT {
 		plantel = "/jogos/" + jogoId + "/plantel";
 	}
 
+	/** Com hx-boost no bloco, abas, rodada e leilões trocavam #plantel por nada e a tela ficava vazia. */
+	@Test
+	void soOQueContinuaNoPlantelUsaHxBoost() throws Exception {
+		mvc.perform(get(plantel).with(como(treinador)))
+			.andExpect(content().string(containsString("<div id=\"plantel\" class=\"pilha-larga\" hx-target")))
+			.andExpect(content().string(containsString("class=\"formacoes\" hx-boost=\"true\"")))
+			.andExpect(content().string(containsString("class=\"lugar\" role=\"group\" hx-boost=\"true\"")))
+			.andExpect(content().string(not(containsString("class=\"pilha-curta\" data-envio-unico hx-boost"))));
+	}
+
 	@Test
 	void mostraOClubeAEscalacaoDaMaquinaEOProximoJogo() throws Exception {
 		mvc.perform(get(plantel).with(como(treinador)))

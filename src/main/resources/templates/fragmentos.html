@@ -66,7 +66,7 @@
 <div><dt>Temperamento</dt><dd th:text="${#strings.capitalize(#strings.toLowerCase(f.jogador.temperamento.name()))}">Normal</dd></div>
 <div><dt>Amarelos na temporada</dt><dd th:text="${f.amarelos}">0</dd></div>
 </dl>
-<form th:if="${vender != null and f.doUsuario}" th:action="${vender}" method="post" class="ficha-venda">
+<form th:if="${vender != null and f.doUsuario}" th:action="${vender}" method="post" class="ficha-venda" hx-boost="false">
 <input type="hidden" name="jogador" th:value="${f.jogador.id}">
 <label class="leilao-lance">
 <span th:text="|Lance mínimo (${f.moeda.simbolo()})|">Lance mínimo (R$)</span>

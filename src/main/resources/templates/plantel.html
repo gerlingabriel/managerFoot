@@ -6,7 +6,8 @@
 <div class="pagina">
 <header th:replace="~{fragmentos :: topo}"></header>
 
-<div id="plantel" class="pilha-larga" hx-boost="true" hx-target="#plantel" hx-select="#plantel" hx-swap="outerHTML show:none">
+<!-- Só o que continua no plantel usa hx-boost: uma página sem #plantel trocaria o bloco por nada. -->
+<div id="plantel" class="pilha-larga" hx-target="#plantel" hx-select="#plantel" hx-swap="outerHTML show:none">
 
 <header class="clube-topo">
 <div class="clube-identidade">
@@ -51,7 +52,7 @@
 <aside class="plantel-lateral">
 <section aria-labelledby="t-tatica" class="painel painel-interno">
 <h2 id="t-tatica" class="titulo-secao pequeno">Tática</h2>
-<form th:action="@{/jogos/{id}/plantel/formacao(id=${v.jogoId})}" method="post" class="formacoes">
+<form th:action="@{/jogos/{id}/plantel/formacao(id=${v.jogoId})}" method="post" class="formacoes" hx-boost="true">
 <button th:each="f : ${formacoes}" type="submit" name="formacao" th:value="${f.name()}" class="formacao"
 	th:attr="aria-pressed=${f == v.escalacao.formacao}">
 <span class="formacao-rotulo" th:text="${f.rotulo()}">4-4-2</span>
@@ -66,7 +67,7 @@
 
 <section aria-labelledby="t-batedor" class="painel painel-interno">
 <h2 id="t-batedor" class="titulo-secao pequeno">Pênaltis</h2>
-<form th:action="@{/jogos/{id}/plantel/batedor(id=${v.jogoId})}" method="post" class="campo-form">
+<form th:action="@{/jogos/{id}/plantel/batedor(id=${v.jogoId})}" method="post" class="campo-form" hx-boost="true">
 <label for="batedor">Batedor (só você vê)</label>
 <select id="batedor" name="batedor" class="selecao" data-enviar-ao-mudar>
 <option value="" th:selected="${v.escalacao.batedor == null}">Automático — maior força em campo</option>
@@ -123,7 +124,7 @@
 <tr th:each="l : ${g.jogadores}" th:with="j=${l.jogador}">
 <td><span class="pos" th:classappend="|pos-${j.posicao}|" th:text="${j.posicao.name().substring(0, 1)}" th:title="${j.posicao.nome(1)}">G</span></td>
 <td class="jogador-celula">
-<a class="jogador-nome" th:href="@{/jogos/{id}/plantel(id=${v.jogoId},ficha=${j.id})}" th:text="${j.nome}" th:attr="aria-label=|Ver ficha de ${j.nome}|">Nome</a>
+<a class="jogador-nome" hx-boost="true" th:href="@{/jogos/{id}/plantel(id=${v.jogoId},ficha=${j.id})}" th:text="${j.nome}" th:attr="aria-label=|Ver ficha de ${j.nome}|">Nome</a>
 <span th:if="${j.asterisco}" class="asterisco" title="jogador com asterisco">★</span>
 <span th:if="${l.estrangeiro}" class="sigla-pais" th:text="${l.estrangeiro}" th:title="|estrangeiro (${l.estrangeiro})|">ARG</span>
 <span th:if="${l.suspenso}" class="suspenso">suspenso</span>
@@ -134,7 +135,7 @@
 <td class="num gols" th:text="${l.gols}">0</td>
 <td class="num" th:text="${l.amarelos}">0</td>
 <td>
-<form th:action="@{/jogos/{id}/plantel/jogador/{j}(id=${v.jogoId},j=${j.id})}" method="post" class="lugar" role="group"
+<form th:action="@{/jogos/{id}/plantel/jogador/{j}(id=${v.jogoId},j=${j.id})}" method="post" class="lugar" role="group" hx-boost="true"
 	th:attr="aria-label=|Lugar de ${j.nome}|">
 <button type="submit" name="lugar" value="TITULAR" title="Titular" aria-label="Titular" th:attr="aria-pressed=${l.lugar.name() == 'TITULAR'}" th:disabled="${l.suspenso or l.lesao > 0}">T</button>
 <button type="submit" name="lugar" value="BANCO" title="Banco" aria-label="Banco" th:attr="aria-pressed=${l.lugar.name() == 'BANCO'}" th:disabled="${l.suspenso or l.lesao > 0}">B</button>
@@ -149,7 +150,7 @@
 <p class="suave legenda"><span class="sigla-pais">ARG</span> estrangeiro. Jogador do país do clube fica sem sigla.</p>
 </main>
 </div>
-<th:block th:if="${ficha != null}"><div th:replace="~{fragmentos :: ficha(${ficha}, @{/jogos/{id}/plantel(id=${v.jogoId})}, @{/jogos/{id}/mercado/vender(id=${v.jogoId})})}"></div></th:block>
+<div th:if="${ficha != null}" hx-boost="true"><div th:replace="~{fragmentos :: ficha(${ficha}, @{/jogos/{id}/plantel(id=${v.jogoId})}, @{/jogos/{id}/mercado/vender(id=${v.jogoId})})}"></div></div>
 <!-- Convite para assumir outro clube (modelo 11a, rev. 62): depois da rodada, antes do plantel; a rodada espera. -->
 <div th:if="${convite != null}" class="janela-fundo" th:with="c=${convite}, h=${convite.hoje}, n=${convite.convite}">
 <form role="dialog" aria-modal="true" aria-labelledby="t-convite" class="janela convite"
