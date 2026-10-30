@@ -158,7 +158,8 @@ public class CaixaRepositorio {
 			jdbc.sql("""
 					UPDATE jogo_partida SET publico = :publico
 					WHERE temporada_id = :temporada AND rodada = :rodada AND mandante_id = :mandante
-					  AND visitante_id = :visitante AND confronto_id IS NOT NULL""")
+					  AND visitante_id = :visitante
+					  AND EXISTS (SELECT 1 FROM jogo_copa_confronto k WHERE k.id = confronto_id AND k.competicao = 'COPA')""")
 				.param("publico", pagantes)
 				.param("temporada", temporadaId)
 				.param("rodada", jogo.rodada())
@@ -288,7 +289,7 @@ public class CaixaRepositorio {
 		Map<Integer, Integer> publicosDaCopa = new HashMap<>();
 		jdbc.sql("""
 				SELECT rodada, publico FROM jogo_partida
-				WHERE temporada_id = :temporada AND publico IS NOT NULL AND confronto_id IS NOT NULL
+				WHERE temporada_id = :temporada AND publico IS NOT NULL AND EXISTS (SELECT 1 FROM jogo_copa_confronto k WHERE k.id = confronto_id AND k.competicao = 'COPA')
 				  AND (mandante_id = :clube OR (perna = 'JOGO_UNICO' AND visitante_id = :clube))""")
 			.param("temporada", situacao.temporadaId())
 			.param("clube", clube)
@@ -302,7 +303,7 @@ public class CaixaRepositorio {
 		Map<Integer, Integer> publicos = new HashMap<>();
 		jdbc.sql("""
 				SELECT rodada, publico FROM jogo_partida
-				WHERE temporada_id = :temporada AND mandante_id = :clube AND publico IS NOT NULL AND confronto_id IS NULL""")
+				WHERE temporada_id = :temporada AND mandante_id = :clube AND publico IS NOT NULL AND divisao_id IS NOT NULL""")
 			.param("temporada", situacao.temporadaId())
 			.param("clube", clube)
 			.query(rs -> {
@@ -540,7 +541,7 @@ public class CaixaRepositorio {
 		Map<Long, List<int[]>> porClube = new HashMap<>();
 		jdbc.sql("""
 				SELECT j.clube_id, j.forca, coalesce(j.forca_salario, j.forca) AS forca_salario
-				FROM jogo_jogador j JOIN jogo_clube c ON c.id = j.clube_id WHERE c.jogo_id = :jogo""")
+				FROM jogo_jogador j JOIN jogo_clube c ON c.id = j.clube_id WHERE c.jogo_id = :jogo AND c.pais_codigo IS NULL""")
 			.param("jogo", jogoId)
 			.query(rs -> {
 				porClube.computeIfAbsent(rs.getLong("clube_id"), k -> new ArrayList<>())
@@ -583,7 +584,8 @@ public class CaixaRepositorio {
 	 * caixas já abertos mantêm o estádio (rev. 57).
 	 */
 	private void abrirCaixas(long jogoId, Map<Long, List<Jogador>> planteis) {
-		jdbc.sql("SELECT id, forca FROM jogo_clube WHERE jogo_id = :jogo AND saldo IS NULL")
+		// o estrangeiro não tem caixa (V33)
+		jdbc.sql("SELECT id, forca FROM jogo_clube WHERE jogo_id = :jogo AND saldo IS NULL AND pais_codigo IS NULL")
 			.param("jogo", jogoId)
 			.query((rs, n) -> Map.entry(rs.getLong("id"), rs.getInt("forca")))
 			.list()
@@ -597,7 +599,7 @@ public class CaixaRepositorio {
 	private void gravarPublico(long temporadaId, int rodada, long mandanteId, int publico) {
 		jdbc.sql("""
 				UPDATE jogo_partida SET publico = :publico
-				WHERE temporada_id = :temporada AND rodada = :rodada AND mandante_id = :mandante AND confronto_id IS NULL""")
+				WHERE temporada_id = :temporada AND rodada = :rodada AND mandante_id = :mandante AND divisao_id IS NOT NULL""")
 			.param("publico", publico)
 			.param("temporada", temporadaId)
 			.param("rodada", rodada)

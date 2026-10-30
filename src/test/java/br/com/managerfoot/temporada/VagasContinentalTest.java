@@ -72,6 +72,14 @@ class VagasContinentalTest {
 	}
 
 	@Test
+	void doPaisComLigaNaoJogadaConcorremOsMaisFortesNoTamanhoDaPrimeiraDivisao() {
+		List<Clube> clubes = List.of(new Clube(1, "A", 30), new Clube(2, "B", 45), new Clube(3, "C", 38),
+				new Clube(4, "D", 45), new Clube(5, "E", 22));
+		assertThat(VagasContinental.elegiveisDoPaisNaoJogado(clubes, 3)).extracting(Clube::id).containsExactly(2L, 4L, 3L);
+		assertThat(VagasContinental.elegiveisDoPaisNaoJogado(clubes, 9)).hasSize(5);
+	}
+
+	@Test
 	void mesmaSementeMesmaEscolha() {
 		Map<Long, List<Jogador>> planteis = ContinentalTest.planteis(TABELA, c -> 30);
 		assertThat(VagasContinental.porForca(TABELA, planteis, 5, 3, new SplittableRandom(4)))

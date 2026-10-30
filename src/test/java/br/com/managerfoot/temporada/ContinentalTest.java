@@ -277,6 +277,18 @@ class ContinentalTest {
 	}
 
 	@Test
+	void quadroComOsSeisJogosDosGruposOMataMataEAFinalDepoisDaUltimaRodada() {
+		List<Continental.Etapa> quadro = Continental.quadro(38, PARAMETROS);
+		assertThat(quadro).extracting(Continental.Etapa::depoisDaRodada)
+			.containsExactly(2, 4, 7, 9, 14, 16, 19, 21, 22, 24, 25, 27, 38);
+		assertThat(quadro).extracting(Continental.Etapa::nome).startsWith("Grupos · 1º jogo")
+			.contains("Oitavas de final · ida", "Semifinal · volta").endsWith("Final");
+		assertThat(quadro.getLast().mataMata().perna()).isEqualTo(Copa.Perna.JOGO_UNICO);
+		assertThat(Continental.quadro(28, PARAMETROS)).hasSize(13);
+		assertThatIllegalArgumentException().isThrownBy(() -> Continental.quadro(27, PARAMETROS));
+	}
+
+	@Test
 	void parametrosRecusamQuadroQueSobrepoeFases() {
 		java.util.Map<FaseCopa, ParametrosCopa.Pernas> mataMata = new java.util.EnumMap<>(FaseCopa.class);
 		mataMata.put(FaseCopa.OITAVAS, new ParametrosCopa.Pernas(15, 17));

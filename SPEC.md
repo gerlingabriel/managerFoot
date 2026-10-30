@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 74 — 2026-10-29)
+-   **Status:** versão inicial para revisão (rev. 76 — 2026-10-29)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,8 @@
 
 ### Histórico de revisões
 
+-   **rev. 76 (2026-10-29):** grupos da continental sorteados e gravados no início da temporada, com as partidas no calendário (V34, ADR 0016); ainda não são jogados. Desligado por configuração até as telas da continental serem aprovadas.
+-   **rev. 75 (2026-10-29):** pelo usuário: de um país com liga que não é jogada (ex.: a Argentina, jogando no Brasil), concorrem às vagas só os mais fortes, no tamanho da 1ª divisão dele, sempre por força com sorteio (§8.3.6). O jogo copia na criação a competição da região e os clubes estrangeiros (V33, ADR 0016); jogos criados antes ficam sem continental.
 -   **rev. 74 (2026-10-29):** domínio da competição continental feito (grupos, oitavas, escolha dos clubes). Agente: detalhes da escolha por força com sorteio, da tabela dos grupos, da chave das oitavas e da edição com menos de 32 clubes marcados Provisório (§8.3.6).
 -   **rev. 73 (2026-10-29):** pelo usuário: provisórios da rev. 72 aprovados (vagas da América do Sul e da Europa, grupos, oitavas, quadro de rodadas, efeitos e prêmio); a força dos países estrangeiros varia por país (ex.: Argentina mais forte que Venezuela). Agente: níveis de força dos países gerados marcados Provisório, a conferir por simulação (§8.3.6).
 -   **rev. 72 (2026-10-29):** pelo usuário: competição continental só da região do país jogado, fase de grupos + mata-mata com 32 clubes e vagas padrão somando 32 (sem fase preliminar), estrangeiros gerados pelo banco padrão, vagas do país jogado pela liga anterior com o campeão da copa ocupando uma delas, sem vaga extra do campeão continental (§8.3.6). Agente: vagas padrão da América do Sul e da Europa (com fonte), grupos, oitavas e quadro de rodadas marcados Provisório.
@@ -1719,6 +1721,11 @@ aprovadas** (vagas, clubes gerados, grupos, oitavas, quadro e efeitos):
   Venezuela). Os países jogáveis do banco padrão (Brasil, Argentina,
   Inglaterra, Espanha, Itália, Portugal) já têm liga própria e entram com os
   clubes da 1ª divisão deles; só os outros são gerados.
+  **Definido (rev. 75), pelo usuário:** de um país com liga que não é jogada,
+  concorrem só os **mais fortes, no tamanho da 1ª divisão dele** (20 na
+  Argentina), por força com sorteio; de um país gerado, todos os clubes. O
+  jogo copia esses clubes na criação; jogos criados antes da rev. 75 ficam
+  sem continental.
   **Provisório (rev. 73), proposta do agente — níveis dos países gerados**,
   faixa de força dos clubes, a conferir por simulação quando a continental
   rodar:

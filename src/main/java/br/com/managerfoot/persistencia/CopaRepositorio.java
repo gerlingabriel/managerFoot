@@ -72,7 +72,8 @@ public class CopaRepositorio {
 		Map<Long, Placares> placares = new HashMap<>();
 		jdbc.sql("""
 				SELECT confronto_id, perna, gols_mandante, gols_visitante, prorrogacao, penaltis_mandante, penaltis_visitante
-				FROM jogo_partida WHERE temporada_id = :temporada AND confronto_id IS NOT NULL AND gols_mandante IS NOT NULL""")
+				FROM jogo_partida WHERE temporada_id = :temporada AND gols_mandante IS NOT NULL
+				  AND EXISTS (SELECT 1 FROM jogo_copa_confronto k WHERE k.id = confronto_id AND k.competicao = 'COPA')""")
 			.param("temporada", temporadaId)
 			.query(rs -> {
 				Integer penMandante = rs.getObject("penaltis_mandante", Integer.class);
@@ -88,7 +89,7 @@ public class CopaRepositorio {
 			});
 		List<ConfrontoCopa> confrontos = jdbc.sql("""
 				SELECT id, fase, ordem, mandante_id, visitante_id FROM jogo_copa_confronto
-				WHERE temporada_id = :temporada""")
+				WHERE temporada_id = :temporada AND competicao = 'COPA'""")
 			.param("temporada", temporadaId)
 			.query((rs, n) -> {
 				Placares p = placares.getOrDefault(rs.getLong("id"), new Placares());
@@ -185,7 +186,7 @@ public class CopaRepositorio {
 
 	/** A última rodada da liga na temporada, depois da qual se joga a final. */
 	private int ultimaRodada(long temporadaId) {
-		return jdbc.sql("SELECT coalesce(max(rodada), 0) FROM jogo_partida WHERE temporada_id = :temporada AND confronto_id IS NULL")
+		return jdbc.sql("SELECT coalesce(max(rodada), 0) FROM jogo_partida WHERE temporada_id = :temporada AND divisao_id IS NOT NULL")
 			.param("temporada", temporadaId)
 			.query(Integer.class)
 			.single();

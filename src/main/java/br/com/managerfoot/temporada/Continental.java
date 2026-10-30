@@ -26,6 +26,54 @@ public record Continental(List<GrupoContinental> grupos, Optional<Copa> mataMata
 	public record PartidaDeGrupo(GrupoContinental grupo, int numero, Jogo jogo) {
 	}
 
+	/**
+	 * Uma etapa do quadro: um jogo dos grupos ou uma perna do mata-mata, depois de uma rodada da liga.
+	 *
+	 * @param jogoDoGrupo de 1 a 6 na fase de grupos; 0 no mata-mata
+	 * @param mataMata nulo na fase de grupos
+	 */
+	public record Etapa(int depoisDaRodada, int jogoDoGrupo, Copa.Etapa mataMata) {
+
+		public Etapa {
+			if ((jogoDoGrupo > 0) == (mataMata != null) || jogoDoGrupo < 0) {
+				throw new IllegalArgumentException("a etapa é um jogo dos grupos ou uma perna do mata-mata");
+			}
+		}
+
+		public boolean grupos() {
+			return mataMata == null;
+		}
+
+		/** Nome para a tela: "Grupos · 3º jogo", "Oitavas de final · ida", "Final". */
+		public String nome() {
+			return grupos() ? "Grupos · " + jogoDoGrupo + "º jogo" : mataMata.nome();
+		}
+	}
+
+	/**
+	 * Etapas em ordem, dos grupos à final (rev. 72): a final é depois da última rodada da liga e da
+	 * final da copa.
+	 *
+	 * @throws IllegalArgumentException se a liga termina antes da volta da semifinal
+	 */
+	public static List<Etapa> quadro(int ultimaRodada, ParametrosContinental parametros) {
+		List<Etapa> etapas = new ArrayList<>();
+		for (int i = 0; i < parametros.rodadasDosGrupos().size(); i++) {
+			etapas.add(new Etapa(parametros.rodadasDosGrupos().get(i), i + 1, null));
+		}
+		for (FaseCopa fase = parametros.primeiraFase(); !fase.jogoUnico(); fase = fase.seguinte().orElseThrow()) {
+			ParametrosCopa.Pernas pernas = parametros.mataMata().get(fase);
+			etapas.add(new Etapa(pernas.ida(), 0, new Copa.Etapa(pernas.ida(), fase, Copa.Perna.IDA)));
+			etapas.add(new Etapa(pernas.volta(), 0, new Copa.Etapa(pernas.volta(), fase, Copa.Perna.VOLTA)));
+		}
+		if (etapas.getLast().depoisDaRodada() >= ultimaRodada) {
+			throw new IllegalArgumentException("a liga termina na rodada " + ultimaRodada
+					+ ", sem lugar para a competição continental até a final");
+		}
+		etapas.add(new Etapa(ultimaRodada, 0, new Copa.Etapa(ultimaRodada, FaseCopa.FINAL, Copa.Perna.JOGO_UNICO)));
+		return List.copyOf(etapas);
+	}
+
 	/** Limite de tentativas do sorteio sem dois clubes do mesmo país no grupo. */
 	private static final int TENTATIVAS_SEM_REPETIR_PAIS = 200_000;
 

@@ -144,7 +144,7 @@ public class ConsultasRepositorio {
 		jdbc.sql("""
 				SELECT p.rodada, p.mandante_id, p.gols_mandante, p.gols_visitante FROM jogo_partida p
 				JOIN jogo_temporada t ON t.id = p.temporada_id
-				WHERE t.jogo_id = :jogo AND t.numero = :numero AND p.gols_mandante IS NOT NULL AND p.confronto_id IS NULL
+				WHERE t.jogo_id = :jogo AND t.numero = :numero AND p.gols_mandante IS NOT NULL AND p.divisao_id IS NOT NULL
 				  AND (p.mandante_id = :clube OR p.visitante_id = :clube)""")
 			.param("jogo", jogoId)
 			.param("numero", temporada.numero())

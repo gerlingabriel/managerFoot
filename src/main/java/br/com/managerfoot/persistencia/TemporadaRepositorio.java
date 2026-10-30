@@ -11,6 +11,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Propagation;
@@ -34,13 +35,22 @@ public class TemporadaRepositorio {
 	private final JogoRepositorio jogos;
 	private final MercadoRepositorio mercado;
 	private final CopaRepositorio copas;
+	private final ContinentalRepositorio continentais;
+	private final boolean continentalAtiva;
 
+	/**
+	 * @param continentalAtiva sorteia a competição continental no início da temporada; desligada até
+	 *        as telas dela serem aprovadas (SPEC §8.3.6), para o jogo não parar numa etapa sem tela
+	 */
 	public TemporadaRepositorio(JdbcClient jdbc, JogoRepositorio jogos, MercadoRepositorio mercado,
-			CopaRepositorio copas) {
+			CopaRepositorio copas, ContinentalRepositorio continentais,
+			@Value("${managerfoot.continental.ativa:false}") boolean continentalAtiva) {
 		this.jdbc = jdbc;
 		this.jogos = jogos;
 		this.mercado = mercado;
 		this.copas = copas;
+		this.continentais = continentais;
+		this.continentalAtiva = continentalAtiva;
 	}
 
 	/**
@@ -99,6 +109,9 @@ public class TemporadaRepositorio {
 			inserirBonus(temporadaId, divisaoId, sorteios.bonus().bonusExtra(), true);
 		}
 		copas.criar(jogoId, temporadaId, semente);
+		if (continentalAtiva) {
+			continentais.criar(jogoId, temporadaId, temporada.numero(), semente);
+		}
 		mercado.reporAVenda(jogoId, MercadoRepositorio.semente(semente, 0));
 	}
 
@@ -129,7 +142,7 @@ public class TemporadaRepositorio {
 		Map<Integer, List<Jogo>> jogosPorPrioridade = new TreeMap<>();
 		jdbc.sql("""
 				SELECT divisao_id, rodada, mandante_id, visitante_id FROM jogo_partida
-				WHERE temporada_id = :temporada AND confronto_id IS NULL ORDER BY divisao_id, rodada, id""")
+				WHERE temporada_id = :temporada AND divisao_id IS NOT NULL ORDER BY divisao_id, rodada, id""")
 			.param("temporada", linha.id())
 			.query((rs, n) -> Map.entry(prioridades.get(rs.getLong("divisao_id")), new Jogo(rs.getInt("rodada"),
 					clubes.get(rs.getLong("mandante_id")), clubes.get(rs.getLong("visitante_id")))))

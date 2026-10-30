@@ -43,6 +43,17 @@ public final class VagasContinental {
 	}
 
 	/**
+	 * Os clubes de um país com liga que não é jogada e que concorrem às vagas (rev. 74): os mais fortes,
+	 * no tamanho da 1ª divisão dele; empatados, o de menor id.
+	 */
+	public static List<Clube> elegiveisDoPaisNaoJogado(List<Clube> clubes, int clubesDaPrimeiraDivisao) {
+		return clubes.stream()
+			.sorted(java.util.Comparator.comparingInt(Clube::forca).reversed().thenComparingLong(Clube::id))
+			.limit(clubesDaPrimeiraDivisao)
+			.toList();
+	}
+
+	/**
 	 * Por força com sorteio (§8.3.2 item 2): sorteio sem reposição em que cada clube pesa a força em
 	 * campo elevada a {@code expoente}, então os fortes entram mais, mas não sempre.
 	 */

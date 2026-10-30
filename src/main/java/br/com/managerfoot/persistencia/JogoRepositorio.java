@@ -27,6 +27,8 @@ import br.com.managerfoot.motor.ParametrosMotor;
 import br.com.managerfoot.temporada.ClubeInicial;
 import br.com.managerfoot.temporada.ConfiguracaoLiga;
 import br.com.managerfoot.temporada.Divisao;
+import br.com.managerfoot.temporada.FormatoDivisao;
+import br.com.managerfoot.temporada.VagasContinental;
 
 /**
  * Jogo em andamento (docs/decisions/0006): nasce de uma cópia da liga e dos planteis de um país do
@@ -159,7 +161,61 @@ public class JogoRepositorio {
 			TabelasLiga.MOLDE.carregarPlantel(jdbc, origens.get(i).id())
 				.forEach(j -> TabelasLiga.JOGO.inserirJogador(jdbc, destino, j));
 		}
+		copiarContinental(jogoId, pais);
 		return new Copia(jogoId, copia, clubesPorOrigem);
+	}
+
+	/**
+	 * Copia a competição continental da região do país jogado e os clubes que podem ocupar as vagas
+	 * dos outros países (SPEC §8.3.6, rev. 74): de um país com liga, os mais fortes no tamanho da 1ª
+	 * divisão; de um país sem liga, todos. Sem competição da região no molde, o jogo fica sem ela.
+	 */
+	private void copiarContinental(long jogoId, PaisMolde pais) {
+		Optional<MoldeRepositorio.ContinentalMolde> continental = moldes.continentais(pais.moldeId()).stream()
+			.filter(c -> c.vagas().containsKey(pais.codigo()))
+			.findFirst();
+		if (continental.isEmpty()) {
+			return;
+		}
+		jdbc.sql("INSERT INTO jogo_continental (jogo_id, regiao, nome) VALUES (:jogo, :regiao, :nome)")
+			.param("jogo", jogoId)
+			.param("regiao", continental.get().regiao())
+			.param("nome", continental.get().nome())
+			.update();
+		int ordem = 0;
+		for (Map.Entry<String, Integer> vaga : continental.get().vagas().entrySet()) {
+			jdbc.sql("""
+					INSERT INTO jogo_continental_vaga (jogo_id, pais_codigo, vagas, ordem)
+					VALUES (:jogo, :pais, :vagas, :ordem)""")
+				.param("jogo", jogoId)
+				.param("pais", vaga.getKey())
+				.param("vagas", vaga.getValue())
+				.param("ordem", ordem++)
+				.update();
+			if (!vaga.getKey().equals(pais.codigo())) {
+				copiarEstrangeiros(jogoId, pais.moldeId(), vaga.getKey());
+			}
+		}
+	}
+
+	private void copiarEstrangeiros(long jogoId, long moldeId, String codigo) {
+		Optional<Long> paisId = jdbc.sql("SELECT id FROM molde_pais WHERE molde_id = :molde AND codigo = :codigo")
+			.param("molde", moldeId)
+			.param("codigo", codigo)
+			.query(Long.class)
+			.optional();
+		if (paisId.isEmpty()) {
+			return; // país sem clubes: as vagas ficam vazias (§8.3.2 item 3)
+		}
+		List<Clube> clubes = moldes.carregarClubes(paisId.get());
+		List<FormatoDivisao> divisoes = moldes.carregarFormato(paisId.get()).divisoes();
+		List<Clube> elegiveis = divisoes.isEmpty() ? clubes
+				: VagasContinental.elegiveisDoPaisNaoJogado(clubes, divisoes.getFirst().quantidadeClubes());
+		for (Clube origem : elegiveis) {
+			Clube destino = TabelasLiga.JOGO.inserirEstrangeiro(jdbc, jogoId, codigo, origem);
+			TabelasLiga.MOLDE.carregarPlantel(jdbc, origem.id())
+				.forEach(j -> TabelasLiga.JOGO.inserirJogador(jdbc, destino.id(), j));
+		}
 	}
 
 	private PaisMolde lerPais(long paisMoldeId) {

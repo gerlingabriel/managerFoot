@@ -379,7 +379,7 @@ public class RodadaRepositorio {
 	}
 
 	private int totalDeRodadas(LinhaTemporada linha) {
-		return jdbc.sql("SELECT coalesce(max(rodada), 0) FROM jogo_partida WHERE temporada_id = :temporada AND confronto_id IS NULL")
+		return jdbc.sql("SELECT coalesce(max(rodada), 0) FROM jogo_partida WHERE temporada_id = :temporada AND divisao_id IS NOT NULL")
 			.param("temporada", linha.id())
 			.query(Integer.class)
 			.single();
@@ -396,12 +396,14 @@ public class RodadaRepositorio {
 				UPDATE jogo_partida SET gols_mandante = :gm, gols_visitante = :gv, semente = :semente,
 				       prorrogacao = :prorrogacao, penaltis_mandante = :pm, penaltis_visitante = :pv
 				WHERE temporada_id = :temporada AND rodada = :rodada AND mandante_id = :mandante
-				  AND visitante_id = :visitante AND gols_mandante IS NULL AND (confronto_id IS NOT NULL) = :copa
+				  AND visitante_id = :visitante AND gols_mandante IS NULL
+				  AND coalesce((SELECT k.competicao FROM jogo_copa_confronto k WHERE k.id = confronto_id),
+				               CASE WHEN divisao_id IS NOT NULL THEN 'LIGA' ELSE 'CONTINENTAL' END) = :competicao
 				RETURNING id""")
 			.param("prorrogacao", copa != null && copa.prorrogacao())
 			.param("pm", copa == null ? null : copa.penaltis().map(PlacarCopa.Penaltis::mandante).orElse(null))
 			.param("pv", copa == null ? null : copa.penaltis().map(PlacarCopa.Penaltis::visitante).orElse(null))
-			.param("copa", copa != null)
+			.param("competicao", (copa != null ? Competicao.COPA : Competicao.LIGA).name())
 			.param("gm", partida.resultado().golsCasa())
 			.param("gv", partida.resultado().golsFora())
 			.param("semente", partida.semente())

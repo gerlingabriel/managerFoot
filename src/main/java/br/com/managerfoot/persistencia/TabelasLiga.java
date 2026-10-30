@@ -26,7 +26,7 @@ import br.com.managerfoot.temporada.Divisao;
  * {@code pais_id}) e do jogo ({@code jogo_*}, donas por {@code jogo_id}), que têm as mesmas colunas.
  * O prefixo e a coluna dona são constantes dos repositórios, nunca entrada de usuário. Não abre
  * transação: quem chama abre. No molde os clubes não têm divisão (rev. 27): {@link #gravar} e
- * {@link #carregar} são só do jogo.
+ * {@link #carregar} são só do jogo. A liga do jogo não tem os clubes estrangeiros (V33).
  */
 final class TabelasLiga {
 
@@ -63,7 +63,7 @@ final class TabelasLiga {
 		exigirJogo();
 		List<LinhaClube> linhas = jdbc.sql("""
 				SELECT id, divisao_id, nome, forca, escudo_modelo, escudo_cor_1, escudo_cor_2
-				FROM jogo_clube WHERE jogo_id = :dono ORDER BY id""")
+				FROM jogo_clube WHERE jogo_id = :dono AND pais_codigo IS NULL ORDER BY id""")
 			.param("dono", donoId)
 			.query((rs, n) -> new LinhaClube(rs.getObject("divisao_id", Long.class), clube(rs)))
 			.list();
@@ -145,6 +145,17 @@ final class TabelasLiga {
 		long id = inserir(jdbc, """
 				INSERT INTO %s_clube (%s, divisao_id, nome, forca, escudo_modelo, escudo_cor_1, escudo_cor_2)
 				VALUES (:dono, :divisao, :nome, :forca, :modelo, :cor1, :cor2)""".formatted(prefixo, dono), p);
+		return new Clube(id, c.nome(), c.forca(), c.escudo());
+	}
+
+	/** Clube estrangeiro do jogo, sem divisão (SPEC §8.3.6). */
+	Clube inserirEstrangeiro(JdbcClient jdbc, long jogoId, String paisCodigo, Clube c) {
+		exigirJogo();
+		long id = inserir(jdbc, """
+				INSERT INTO jogo_clube (jogo_id, pais_codigo, nome, forca, escudo_modelo, escudo_cor_1, escudo_cor_2)
+				VALUES (:jogo, :pais, :nome, :forca, :modelo, :cor1, :cor2)""",
+				Map.of("jogo", jogoId, "pais", paisCodigo, "nome", c.nome(), "forca", c.forca(), "modelo",
+						c.escudo().modelo().name(), "cor1", c.escudo().corPrimaria(), "cor2", c.escudo().corSecundaria()));
 		return new Clube(id, c.nome(), c.forca(), c.escudo());
 	}
 
