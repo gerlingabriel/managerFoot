@@ -320,15 +320,19 @@ class PlantelIT {
 		// um pedido por rodada: o outro só pede depois da rodada
 		mvc.perform(get(plantel).with(como(treinador)))
 			.andExpect(content().string(not(containsString("Pedido de aumento"))));
-		// acabou de renovar: não vende nesta rodada
+		// renovou: não vai a leilão até a próxima temporada
 		mvc.perform(post("/jogos/" + jogoId + "/mercado/vender").param("jogador", String.valueOf(jogador)).param("minimo", "0")
 			.with(como(treinador)).with(csrf()))
-			.andExpect(flash().attribute("erro", containsString("acabou de renovar")));
+			.andExpect(flash().attribute("erro", containsString("só pode ir a leilão quando a próxima começar")));
 
 		jdbc.sql("DELETE FROM jogo_escalacao WHERE clube_id = :c").param("c", clube).update();
 		rodadas.avancar(jogoId, 1);
 		mvc.perform(get(plantel).with(como(treinador)))
 			.andExpect(content().string(containsString("Pedido de aumento")));
+		// a rodada passou e o contrato continua segurando o jogador
+		mvc.perform(post("/jogos/" + jogoId + "/mercado/vender").param("jogador", String.valueOf(jogador)).param("minimo", "0")
+			.with(como(treinador)).with(csrf()))
+			.andExpect(flash().attribute("erro", containsString("só pode ir a leilão quando a próxima começar")));
 	}
 
 	@Test

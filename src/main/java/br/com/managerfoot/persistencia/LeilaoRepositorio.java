@@ -221,20 +221,15 @@ public class LeilaoRepositorio {
 			throw new IllegalArgumentException(jogador.nome() + " não pode sair: o plantel ficaria abaixo do mínimo de "
 					+ jogador.posicao().nome(2) + ".");
 		}
-		boolean renovouAgora = jdbc.sql("""
-				SELECT coalesce(contrato_temporada = :numero AND aumento_temporada = :numero AND aumento_rodada = :processadas, false)
-				FROM jogo_jogador j JOIN jogo_temporada t ON t.id = :temporada WHERE j.id = :jogador""")
+		boolean comContrato = jdbc.sql("SELECT coalesce(contrato_temporada = :numero, false) FROM jogo_jogador WHERE id = :jogador")
 			.param("numero", t.numero())
-			.param("processadas", t.processadas())
-			.param("temporada", t.id())
 			.param("jogador", jogadorId)
 			.query(Boolean.class)
 			.optional()
 			.orElse(false);
-		if (renovouAgora) {
-			// aceitou o aumento: não pode ser vendido nesta rodada (SPEC §9.5, rev. 40)
-			throw new IllegalArgumentException(jogador.nome() + " acabou de renovar: só pode ser vendido depois da rodada "
-					+ rodada + ".");
+		if (comContrato) {
+			// contrato firmado (renovação ou compra) segura o jogador até a próxima temporada (SPEC §9.5, rev. 81)
+			throw new IllegalArgumentException(jogador.nome() + " tem contrato nesta temporada: só pode ir a leilão quando a próxima começar.");
 		}
 		if (jaFoiALeilao(t.id(), rodada, jogadorId)) {
 			throw new IllegalArgumentException(jogador.nome() + " já foi a leilão: só volta depois da rodada " + rodada + ".");

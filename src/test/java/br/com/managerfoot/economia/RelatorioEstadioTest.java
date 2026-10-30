@@ -54,6 +54,7 @@ class RelatorioEstadioTest {
 	private static final int TEMPORADAS = 6;
 	private static final Path SAIDA = Path.of("docs/simulacoes/estadio-publico-patrocinio.md");
 	private static final String[] TERCOS = { "Topo", "Meio", "Fundo" };
+	private static final String[] FAIXAS = { "4 mais fortes", "5º ao 10º", "11º em diante" };
 
 	private final CaixaDaRodada caixa = CaixaDaRodada.padrao();
 	private final ParametrosPublico parametros = ParametrosPublico.padrao();
@@ -130,6 +131,23 @@ class RelatorioEstadioTest {
 					.append(pct(d.melhor[t][2] / n)).append(" |\n");
 			}
 		});
+		md.append("\n## O que cada faixa de força alcança na temporada (para as metas do patrocínio)\n\n")
+			.append("Faixa pela força em campo no início da temporada, dentro da divisão. Vitórias só na liga.\n\n")
+			.append("| Divisão | Faixa | Vitórias: mediana | 80% ficam até | 90% ficam até | Campeão | Até 3º | Até 6º | Metade de cima |\n")
+			.append("|---|---|---|---|---|---|---|---|---|\n");
+		porDivisao.forEach((p, d) -> {
+			for (int f = 0; f < FAIXAS.length; f++) {
+				List<int[]> m = d.metas[f];
+				List<Integer> v = m.stream().map(x -> x[0]).sorted().toList();
+				double n = m.size();
+				md.append("| ").append(p).append("ª | ").append(FAIXAS[f]).append(" | ").append(v.get(v.size() / 2)).append(" | ")
+					.append(v.get((int) (v.size() * 0.8))).append(" | ").append(v.get((int) (v.size() * 0.9))).append(" | ")
+					.append(pct(m.stream().filter(x -> x[1] == 1).count() / n)).append(" | ")
+					.append(pct(m.stream().filter(x -> x[1] <= 3).count() / n)).append(" | ")
+					.append(pct(m.stream().filter(x -> x[1] <= 6).count() / n)).append(" | ")
+					.append(pct(m.stream().filter(x -> x[1] <= x[2] / 2).count() / n)).append(" |\n");
+			}
+		});
 		Files.createDirectories(SAIDA.getParent());
 		Files.writeString(SAIDA, md.toString());
 		System.out.println(md);
@@ -176,6 +194,14 @@ class RelatorioEstadioTest {
 					tabelaPatrocinio.put(c.id(), valor);
 					saldo.merge(c.id(), valor, Long::sum);
 					saldoInicio.put(c.id(), saldo.get(c.id()));
+				}
+			}
+			Map<Long, Integer> faixa = new HashMap<>();
+			for (Divisao d : liga.divisoes()) {
+				List<Clube> porForca = d.clubes().stream()
+					.sorted(Comparator.comparingDouble((Clube c) -> emCampo(planteis.get(c.id()))).reversed()).toList();
+				for (int i = 0; i < porForca.size(); i++) {
+					faixa.put(porForca.get(i).id(), i < 4 ? 0 : i < 10 ? 1 : 2);
 				}
 			}
 			// posição final da temporada passada, na divisão em que estava (vazia na 1ª temporada)
@@ -258,6 +284,7 @@ class RelatorioEstadioTest {
 					posicaoAnterior.put(clube.id(), new int[] { pos, d.clubes().size(), d.limiteForca() });
 					int terco = Math.min(2, (pos - 1) * 3 / d.clubes().size());
 					int vitorias = c.linhas().stream().filter(l -> l.clube().id() == clube.id()).findFirst().orElseThrow().vitorias();
+					acumulado.metas[faixa.get(clube.id())].add(new int[] { vitorias, pos, d.clubes().size() });
 					boolean subiu = propostas.subiu(d.prioridade(), pos, d.promovidos());
 					List<Proposta> lista = propostas.propostas(tabelaPatrocinio.get(clube.id()), 2 * (d.clubes().size() - 1));
 					acumulado.patrocinio(terco, lista, vitorias, subiu);
@@ -324,6 +351,8 @@ class RelatorioEstadioTest {
 	}
 
 	private static final class Divisoes {
+		@SuppressWarnings("unchecked")
+		final List<int[]>[] metas = new List[] { new ArrayList<>(), new ArrayList<>(), new ArrayList<>() };
 		final double[] ocupacao = new double[3];
 		final int[] jogos = new int[3];
 		double liderContraSegundo;
