@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 88 — 2026-10-30)
+-   **Status:** versão inicial para revisão (rev. 89 — 2026-10-31)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 89 (2026-10-31):** pelo usuário: aprovadas as propostas das rev. 87 e 88 (estrangeiros, asteriscos, Inglaterra como UE, países e níveis do Mundial, 8 clubes por região, prêmio igual ao da continental). Arquivo de save no servidor: baixar, enviar de volta e apagar (§3.5, ADR 0018); as telas aguardam os modelos 16a a 16d. Agente: arquivo alterado à mão é aceito se passar na validação, enviar sempre cria um jogo novo e a rodada ao vivo não baixa (Provisório). Simulações refeitas e nova `docs/simulacoes/mundial.md`.
 -   **rev. 88 (2026-10-30):** pelo usuário: formato do Mundial: uma semifinal é Europa × um clube sorteado entre Ásia, África e Oceania, a outra é América do Norte/Central × América do Sul; jogadas depois da final da continental, com o campeão dela; o agente cria clubes para as regiões sem clube, com a força que achar adequada (§8.3.4). Agente: países, níveis e demais detalhes (Provisório).
 -   **rev. 87 (2026-10-30):** pelo usuário: som dos gols pela metade (§10.2); todo clube tem jogadores estrangeiros, que ajudam o usuário a comprar por sair mais baratos, e mais jogadores com asterisco (§5.2, §5.3); nos clubes europeus, os cidadãos da União Europeia são de outro país, mas não contam como estrangeiros (§8.4). Agente: quantidades e origem dos estrangeiros, novo teto e chances de asterisco, Inglaterra equipara a União Europeia (Provisório). Banco padrão versão 4; jogos já criados não mudam.
 -   **rev. 86 (2026-10-30):** pelo usuário: clicar na tática completa os titulares que faltam com os mais fortes da posição; no empate, asterisco e depois sorte; botão para retirar todos os jogadores (§10.3); som de comemoração no gol feito e vaia no sofrido (§10.2). Agente: o que sobra na tática nova vai para o banco, o banco é completado junto e os escolhidos respeitam o limite de asteriscos (Provisório).
@@ -314,8 +315,22 @@ do editor.
 **Definido (rev. 20):** o arquivo de save é **JSON com número de versão do
 formato**, para permitir migração de saves antigos.
 
-**Em aberto:**
-- Se um save alterado manualmente é recusado ou aceito após validação.
+**Provisório (rev. 89), proposta do agente (`docs/decisions/0018`):**
+- **Save alterado à mão:** aceito se passar na validação. A validação confere o
+  formato, as colunas e os tipos, as referências dentro do próprio arquivo e as
+  restrições do banco, e abre o jogo depois de gravar. Não confere se os valores
+  foram mudados de propósito: dá para aumentar o próprio caixa editando o
+  arquivo. No jogo individual isso só afeta quem editou; em rede o estado oficial
+  fica no servidor.
+- **Enviar o arquivo sempre cria um jogo novo**, do usuário que enviou, com ids
+  novos. O jogo que já está no servidor não muda, e por isso um arquivo antigo
+  também serve para voltar a um ponto anterior do jogo.
+- **Rodada ao vivo:** não baixa com a rodada em andamento.
+- **Só o treinador** do jogo baixa e apaga; apagar pede confirmação e não dá para
+  desfazer.
+
+**Gravado no servidor (rev. 89):** `SaveRepositorio` e `SaveController`, sem
+migração. **Telas:** aguardam os modelos 16a a 16d.
 
 ### 3.3 Sala multiplayer
 
@@ -584,7 +599,7 @@ rankings de artilheiros e o histórico de cartões de cada jogador (§7.4).
 - **Substituído na rev. 87, pelo usuário:** **todo clube tem estrangeiros**,
   como nos elencos de hoje, e eles ajudam o usuário a comprar, porque saem
   mais baratos (§9.4).
-  **Provisório (rev. 87), proposta do agente:**
+  **Definido (rev. 89, proposta do agente da rev. 87 aprovada pelo usuário):**
   - **Quantos, dos 20:** de **2 a 5** nos clubes da América do Sul; de **5 a
     9** nos da Europa (`ParametrosBancoPadrao.estrangeirosNoPlantel`). Vale
     também para os clubes gerados só para a continental.
@@ -647,7 +662,7 @@ Violento 7% (`ParametrosBancoPadrao`).
 jogadores com asterisco, com mais chance nos clubes mais fortes.
 
 **Definido (rev. 87), pelo usuário:** mais jogadores com asterisco.
-**Provisório (rev. 87), proposta do agente:** de **0 a 5** por clube, com
+**Definido (rev. 89, proposta do agente da rev. 87 aprovada pelo usuário):** de **0 a 5** por clube, com
 chance de cada um de 15% no clube mais fraco a 60% no de força 50 (eram 10% a
 70% de 3). Em média: 3,0 no clube de força 50, 1,8 no de 35 e 0,75 no de 22. O
 limite de 3 em campo sem penalidade não muda: quem passa disso fica no banco.
@@ -1730,7 +1745,7 @@ para brincar:**
 A exigência acima de clube de "cada região" passa a valer assim: Europa, as
 duas Américas e pelo menos uma entre Ásia, África e Oceania.
 
-**Provisório (rev. 88), proposta do agente:**
+**Definido (rev. 89, proposta do agente da rev. 88 aprovada pelo usuário):**
 - **Sem continental simulada:** o representante das outras regiões sai por força
   com sorteio (§8.3.2 item 2). Entre Ásia, África e Oceania, sorteia-se primeiro
   a região, com chance igual, e depois o clube.
@@ -1903,7 +1918,7 @@ administrador, sem ficar fixo no código.
   França, Grécia, Hungria, Irlanda, Itália, Letônia, Lituânia, Luxemburgo,
   Malta, Países Baixos, Polônia, Portugal, Romênia, Suécia e Tchéquia (27).
   Fonte: european-union.europa.eu, "EU countries", consultada em 2026-10-30.
-- **Provisório (rev. 87), proposta do agente:** a **Inglaterra** segue a regra
+- **Definido (rev. 89, proposta do agente da rev. 87 aprovada pelo usuário):** a **Inglaterra** segue a regra
   dos clubes europeus, como o usuário descreveu, embora o Reino Unido tenha
   saído da UE em 2020. Na Argentina não há equiparados. Nenhum país fora da UE
   com acordo semelhante entra no padrão inicial.
@@ -3265,7 +3280,7 @@ começa depois que a anterior estiver testada.
 
 ### Etapa 6 — Competições avançadas e balanceamento
 - Copa nacional (§8.2), competições continentais e Mundial (§8.3).
-- Importação/exportação de dados e saves (§3.5).
+- Importação/exportação de dados e saves (§3.5). **Saves no servidor na rev. 89**, telas a aprovar; importação e exportação do editor ainda não existem.
 - Balanceamento por simulação de temporadas completas.
 - Avaliar SSE apenas se o polling for insuficiente. Reavaliar React apenas
   se a interface da partida exigir.

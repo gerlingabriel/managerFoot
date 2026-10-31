@@ -85,7 +85,7 @@ set -a && . ./.env && set +a
 |---|---|
 | `./mvnw test` | Testes unitários (`*Test.java`), rápidos, sem Docker |
 | `./mvnw verify` | Unitários + integração (`*IT.java`) com PostgreSQL real via Testcontainers |
-| `./mvnw test -Dgroups=simulacao -Dsurefire.excludedGroups=none` | Simulação em lote do motor; regenera [`docs/simulacoes/calibracao-motor.md`](docs/simulacoes/calibracao-motor.md) |
+| `./mvnw test -Dgroups=simulacao -Dsurefire.excludedGroups=none` | Simulações em lote; regenera os relatórios em [`docs/simulacoes/`](docs/simulacoes/) |
 
 ## Estrutura de pacotes
 
