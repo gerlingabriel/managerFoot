@@ -5,6 +5,8 @@
 <div class="campo campo-pagina">
 <div class="pagina">
 <header th:replace="~{fragmentos :: topo}"></header>
+<div th:if="${resultado}" role="status" class="aviso-resultado" th:text="${resultado}">Jogo carregado.</div>
+<div th:if="${erro}" role="alert" class="alerta" th:text="${erro}">erro</div>
 <main class="inicio">
 
 <section aria-labelledby="t-novo" class="cartao-novo">
@@ -28,12 +30,40 @@
 <span class="texto pequeno" th:text="${j.onde}">onde</span>
 <span class="suave" th:text="${j.quando}">quando</span>
 </div>
+<div class="acoes-jogo">
 <a th:href="@{/jogos/{id}/plantel(id=${j.jogoId})}" class="botao-contorno"
 	th:attr="aria-label=|Continuar ${j.clube.nome}|">Continuar</a>
+<a th:href="@{/jogos/{id}/arquivo(id=${j.jogoId})}" class="botao-discreto botao-link"
+	th:attr="aria-label=|Baixar o arquivo de ${j.clube.nome}|">Baixar arquivo</a>
+<a th:href="@{/(apagar=${j.jogoId})}" class="botao-discreto botao-link acao-apagar"
+	th:attr="aria-label=|Apagar ${j.clube.nome}|">Apagar</a>
 </div>
+</div>
+<form th:action="@{/jogos/arquivo}" method="post" enctype="multipart/form-data" data-envio-unico class="carregar-arquivo">
+<div class="linha-jogo-texto">
+<span class="nome-clube pequeno">Carregar de um arquivo</span>
+<span class="suave">O arquivo baixado vira mais um jogo nesta lista. O jogo que já está aqui não muda.</span>
+</div>
+<label class="botao-contorno escolher-arquivo">Escolher arquivo
+<input type="file" name="arquivo" accept=".json,application/json" required data-enviar-ao-mudar class="arquivo-oculto">
+</label>
+</form>
 </section>
 
 </main>
+</div>
+<div th:if="${apagando != null}" class="janela-fundo">
+<div role="dialog" aria-modal="true" aria-labelledby="t-apagar" class="janela janela-apagar">
+<h2 id="t-apagar" class="titulo-secao" th:text="|Apagar ${apagando.clube.nome}?|">Apagar?</h2>
+<p class="texto">O jogo sai do servidor e não dá para desfazer. Só será possível voltar a ele com o arquivo baixado.</p>
+<div class="acoes-jogo">
+<a th:href="@{/}" class="botao-discreto botao-link" autofocus>Cancelar</a>
+<a th:href="@{/jogos/{id}/arquivo(id=${apagando.jogoId})}" class="botao-contorno">Baixar arquivo</a>
+<form th:action="@{/jogos/{id}/apagar(id=${apagando.jogoId})}" method="post" data-envio-unico>
+<button type="submit" class="botao-perigo">Apagar jogo</button>
+</form>
+</div>
+</div>
 </div>
 </div>
 </body>

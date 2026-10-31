@@ -17,9 +17,9 @@ document.addEventListener('submit', function (e) {
 	form.querySelectorAll('button[type=submit]').forEach(function (b) { b.setAttribute('aria-disabled', 'true'); });
 });
 
-// Seleção que grava ao mudar (batedor de pênalti): envia o próprio formulário.
+// Campo que grava ao mudar (batedor de pênalti, arquivo do jogo): envia o próprio formulário.
 document.addEventListener('change', function (e) {
-	if (e.target.matches('select[data-enviar-ao-mudar]')) e.target.form.requestSubmit();
+	if (e.target.matches('[data-enviar-ao-mudar]')) e.target.form.requestSubmit();
 });
 
 // Janela do clube por cima da tela (modelo 14e): fechar volta à tela; depois de uma compra, recarrega

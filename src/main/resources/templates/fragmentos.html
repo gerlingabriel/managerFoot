@@ -23,6 +23,7 @@
 <header th:fragment="topo" class="topo">
 <a th:href="@{/}" class="topo-marca" th:with="ano=${@anos.doJogo(jogoId)}">managerFoot <span th:if="${ano != null}" class="topo-ano" th:text="${ano}">2026</span></a>
 <div class="topo-usuario">
+<a th:if="${jogoId != null}" th:href="@{/}">Jogos gravados</a>
 <span th:text="|${usuario.nome} · ${#strings.toLowerCase(usuario.papel)}|">Nome · papel</span>
 <form th:action="@{/sair}" method="post">
 <button type="submit" class="botao-discreto">Sair</button>

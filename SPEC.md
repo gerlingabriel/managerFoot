@@ -15,7 +15,7 @@
 
 ### Histórico de revisões
 
--   **rev. 89 (2026-10-31):** pelo usuário: aprovadas as propostas das rev. 87 e 88 (estrangeiros, asteriscos, Inglaterra como UE, países e níveis do Mundial, 8 clubes por região, prêmio igual ao da continental). Arquivo de save no servidor: baixar, enviar de volta e apagar (§3.5, ADR 0018); as telas aguardam os modelos 16a a 16d. Agente: arquivo alterado à mão é aceito se passar na validação, enviar sempre cria um jogo novo e a rodada ao vivo não baixa (Provisório). Simulações refeitas e nova `docs/simulacoes/mundial.md`.
+-   **rev. 89 (2026-10-31):** pelo usuário: aprovadas as propostas das rev. 87 e 88 (estrangeiros, asteriscos, Inglaterra como UE, países e níveis do Mundial, 8 clubes por região, prêmio igual ao da continental). Arquivo de save no servidor: baixar, enviar de volta e apagar (§3.5, ADR 0018); com as telas dos modelos 16a a 16d. Pelo usuário: o arquivo fica como cópia de segurança e o banco editável vem antes da rede, sem infringir direito autoral. Agente: arquivo alterado à mão é aceito se passar na validação, enviar sempre cria um jogo novo e a rodada ao vivo não baixa (Provisório). Simulações refeitas e nova `docs/simulacoes/mundial.md`.
 -   **rev. 88 (2026-10-30):** pelo usuário: formato do Mundial: uma semifinal é Europa × um clube sorteado entre Ásia, África e Oceania, a outra é América do Norte/Central × América do Sul; jogadas depois da final da continental, com o campeão dela; o agente cria clubes para as regiões sem clube, com a força que achar adequada (§8.3.4). Agente: países, níveis e demais detalhes (Provisório).
 -   **rev. 87 (2026-10-30):** pelo usuário: som dos gols pela metade (§10.2); todo clube tem jogadores estrangeiros, que ajudam o usuário a comprar por sair mais baratos, e mais jogadores com asterisco (§5.2, §5.3); nos clubes europeus, os cidadãos da União Europeia são de outro país, mas não contam como estrangeiros (§8.4). Agente: quantidades e origem dos estrangeiros, novo teto e chances de asterisco, Inglaterra equipara a União Europeia (Provisório). Banco padrão versão 4; jogos já criados não mudam.
 -   **rev. 86 (2026-10-30):** pelo usuário: clicar na tática completa os titulares que faltam com os mais fortes da posição; no empate, asterisco e depois sorte; botão para retirar todos os jogadores (§10.3); som de comemoração no gol feito e vaia no sofrido (§10.2). Agente: o que sobra na tática nova vai para o banco, o banco é completado junto e os escolhidos respeitam o limite de asteriscos (Provisório).
@@ -329,8 +329,27 @@ formato**, para permitir migração de saves antigos.
 - **Só o treinador** do jogo baixa e apaga; apagar pede confirmação e não dá para
   desfazer.
 
-**Gravado no servidor (rev. 89):** `SaveRepositorio` e `SaveController`, sem
-migração. **Telas:** aguardam os modelos 16a a 16d.
+**Gravado (rev. 89):** `SaveRepositorio` e `SaveController`, sem migração, com
+as telas dos modelos 16a a 16d: Baixar arquivo, Apagar com confirmação e Carregar
+de um arquivo no início, e o link "Jogos gravados" no topo das telas do jogo.
+
+**Definido (rev. 89), pelo usuário:** o arquivo do jogo salvo fica como **cópia de
+segurança**; não é a forma de editar nomes.
+
+**Definido (rev. 89), pelo usuário — banco editável, antes da rede (Etapa 5):**
+cada pessoa pode mudar os nomes de times e jogadores, e o jogo em rede não pode
+infringir direito autoral.
+
+**Provisório (rev. 89), proposta do agente, aguardando os modelos 17a a 17e:**
+- A pessoa baixa o banco padrão, edita no próprio computador e envia o arquivo ao
+  criar um jogo novo. O servidor valida, mostra todos os problemas, copia os dados
+  para aquele jogo e não guarda o arquivo.
+- O arquivo é JSON com versão de formato, organizado por país, clube e jogador.
+- Em rede, o arquivo é o do administrador e vale para toda a sala; depois do início
+  ninguém muda o banco. O jogo só traz e distribui nomes inventados, sem lista
+  pública nem troca de bancos pelo servidor; quem edita responde pelos nomes que usa.
+- Com arquivo, o clube inicial é sempre sorteado, até para o administrador.
+- O editor em tela fica para depois, sobre o mesmo arquivo.
 
 ### 3.3 Sala multiplayer
 
@@ -3280,7 +3299,7 @@ começa depois que a anterior estiver testada.
 
 ### Etapa 6 — Competições avançadas e balanceamento
 - Copa nacional (§8.2), competições continentais e Mundial (§8.3).
-- Importação/exportação de dados e saves (§3.5). **Saves no servidor na rev. 89**, telas a aprovar; importação e exportação do editor ainda não existem.
+- Importação/exportação de dados e saves (§3.5). **Saves concluídos na rev. 89.** A importação e a exportação do banco editável vêm antes da Etapa 5 (rev. 89, pelo usuário).
 - Balanceamento por simulação de temporadas completas.
 - Avaliar SSE apenas se o polling for insuficiente. Reavaliar React apenas
   se a interface da partida exigir.

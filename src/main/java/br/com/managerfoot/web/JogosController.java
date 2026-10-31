@@ -47,9 +47,12 @@ class JogosController {
 	}
 
 	@GetMapping("/")
-	String inicio(@AuthenticationPrincipal Usuario usuario, Model model) {
+	String inicio(@AuthenticationPrincipal Usuario usuario, @RequestParam(name = "apagar", required = false) Long apagar, Model model) {
 		model.addAttribute("usuario", usuario);
-		model.addAttribute("jogos", jogos.listar(usuario.id()).stream().map(JogosController::linha).toList());
+		List<Linha> linhas = jogos.listar(usuario.id()).stream().map(JogosController::linha).toList();
+		model.addAttribute("jogos", linhas);
+		// janela de confirmação do modelo 16b; id de jogo que não é do usuário não abre nada
+		model.addAttribute("apagando", linhas.stream().filter(l -> Long.valueOf(l.jogoId()).equals(apagar)).findFirst().orElse(null));
 		return "inicio";
 	}
 

@@ -2,11 +2,13 @@ package br.com.managerfoot.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
@@ -90,6 +92,28 @@ class SaveIT {
 			.andExpect(redirectedUrl("/"))
 			.andExpect(flash().attributeExists("resultado"));
 		assertThat(jogos.listar(treinador.id())).singleElement().satisfies(j -> assertThat(j.jogoId()).isNotEqualTo(jogo));
+	}
+
+	@Test
+	void inicioMostraAsAcoesEAConfirmacaoSoDoProprioJogo() throws Exception {
+		mvc.perform(get("/").with(como(treinador)))
+			.andExpect(content().string(containsString("/jogos/" + jogo + "/arquivo")))
+			.andExpect(content().string(containsString("Carregar de um arquivo")))
+			.andExpect(content().string(not(containsString("não dá para desfazer"))));
+		mvc.perform(get("/").param("apagar", String.valueOf(jogo)).with(como(treinador)))
+			.andExpect(content().string(containsString("não dá para desfazer")))
+			.andExpect(content().string(containsString("/jogos/" + jogo + "/apagar")));
+		mvc.perform(get("/").param("apagar", String.valueOf(jogo)).with(como(outro)))
+			.andExpect(status().isOk())
+			.andExpect(content().string(not(containsString("não dá para desfazer"))));
+	}
+
+	@Test
+	void topoDasTelasDoJogoLevaAosJogosGravados() throws Exception {
+		mvc.perform(get("/jogos/" + jogo + "/plantel").with(como(treinador)))
+			.andExpect(content().string(containsString("Jogos gravados")));
+		mvc.perform(get("/").with(como(treinador)))
+			.andExpect(content().string(not(containsString("Jogos gravados"))));
 	}
 
 	@Test

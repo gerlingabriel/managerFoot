@@ -1601,3 +1601,15 @@ a.financas-link:hover, a.financas-link:focus-visible { border-color: var(--desta
 .tabela-classificacao tr.vaga-continental td:first-child { box-shadow: inset 4px 0 0 var(--continental); }
 .marca-continental { width: 12px; height: 12px; border-radius: 3px; background: var(--continental); }
 .trofeu { flex: none; color: var(--destaque); }
+
+/* Jogo em arquivo (modelos 16a a 16d, SPEC §3.5). */
+.acoes-jogo { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; }
+.acao-apagar { color: var(--erro-texto); }
+.carregar-arquivo { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px; border-top: 1px solid var(--borda); }
+.nome-clube.pequeno { font-size: 18px; }
+.escolher-arquivo { position: relative; cursor: pointer; }
+.escolher-arquivo:focus-within { outline: 2px solid var(--destaque-claro); outline-offset: 2px; }
+.arquivo-oculto { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.janela-apagar { max-width: 520px; padding: 24px; display: flex; flex-direction: column; gap: 14px; }
+.botao-perigo { min-height: 44px; padding: 0 18px; border: 0; border-radius: 6px; background: var(--erro); color: #fff; font: 600 16px Barlow, system-ui, sans-serif; cursor: pointer; }
+.botao-perigo:hover { filter: brightness(1.1); }
