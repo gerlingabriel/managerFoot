@@ -8,11 +8,11 @@ Gerado por `RelatorioCicloMercadoTest` (ferramenta de desenvolvimento). As 6 lig
 
 | Cenário | 1ª topo | 1ª meio | 1ª fundo | 2ª topo | 2ª meio | 2ª fundo | Clubes negativos (2ª) | Plantel médio 1ª / 2ª | Leilões sem lance 1ª / 2ª | Vendas do rico no fundo | Mobilidade | Ligas travadas |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Antes (rev. 61): faixa pelo jogador (−10/−5/0/+5/+10) | 22,3 | 10,8 | 7,4 | 11,0 | 5,7 | 1,2 | 10% | 20,5 / 20,1 | 30% / 19% | 2,3 | 7% | 0 de 18 |
-| Pelo clube −10/−5/0/+10/+20, preço sem faixa | 19,2 | 9,1 | 7,4 | 11,0 | 5,3 | 1,2 | 6% | 20,6 / 20,1 | 29% / 20% | 2,2 | 8% | 0 de 18 |
-| Pelo clube −10/−5/0/+10/+20, preço sem faixa, plantel até 23 | 15,2 | 7,9 | 8,5 | 13,3 | 9,6 | 2,5 | 6% | 22,5 / 18,3 | 31% / 19% | 1,8 | 6% | 0 de 18 |
-| Pelo clube −20/−10/0/+10/+20, preço sem faixa, plantel até 23 | 14,6 | 8,0 | 8,2 | 14,8 | 11,1 | 3,0 | 6% | 22,4 / 18,4 | 33% / 19% | 1,7 | 6% | 0 de 18 |
-| Escolhido (rev. 66): pelo clube −30/−15/0/+10/+20, preço sem faixa, plantel até 23 | 14,7 | 8,7 | 8,9 | 15,1 | 12,0 | 4,0 | 4% | 22,0 / 18,6 | 35% / 22% | 1,5 | 7% | 0 de 18 |
+| Antes (rev. 61): faixa pelo jogador (−10/−5/0/+5/+10) | 21,6 | 11,2 | 7,6 | 11,2 | 5,8 | 1,1 | 9% | 20,5 / 20,3 | 29% / 19% | 2,3 | 5% | 0 de 18 |
+| Pelo clube −10/−5/0/+10/+20, preço sem faixa | 19,2 | 9,5 | 7,3 | 10,6 | 5,3 | 1,5 | 7% | 20,4 / 20,3 | 29% / 19% | 2,2 | 5% | 0 de 18 |
+| Pelo clube −10/−5/0/+10/+20, preço sem faixa, plantel até 23 | 14,9 | 7,6 | 8,3 | 14,1 | 9,3 | 2,4 | 7% | 22,6 / 18,2 | 32% / 20% | 1,7 | 6% | 0 de 18 |
+| Pelo clube −20/−10/0/+10/+20, preço sem faixa, plantel até 23 | 14,8 | 8,3 | 8,1 | 14,7 | 10,1 | 3,0 | 5% | 22,3 / 18,4 | 32% / 20% | 1,7 | 6% | 0 de 18 |
+| Escolhido (rev. 66): pelo clube −30/−15/0/+10/+20, preço sem faixa, plantel até 23 | 14,7 | 8,8 | 9,1 | 15,3 | 11,7 | 3,5 | 6% | 22,1 / 18,5 | 33% / 22% | 1,5 | 7% | 0 de 18 |
 
 *Ligas travadas*: liga × semente em que um clube ficou sem 7 disponíveis (vendas até o plantel mínimo de 14 mais suspensões); a simulação dessa liga para ali e as medidas contam só as temporadas jogadas.
 
@@ -25,24 +25,24 @@ As tabelas abaixo são do cenário "Escolhido (rev. 66): pelo clube −30/−15/
 | Riqueza | Topo | Meio | Fundo |
 |---|---|---|---|
 | Rico | 0,0 | 0,1 | 1,5 |
-| Médio | 0,0 | 0,0 | 1,0 |
-| Pobre | 0,2 | 0,4 | 3,3 |
+| Médio | 0,0 | 0,0 | 0,9 |
+| Pobre | 0,1 | 0,4 | 3,5 |
 
 ## Para onde vão os jogadores: divisão do vendedor × do comprador (% das vendas)
 
 | Vendedor \ comprador | 1ª | 2ª | 3ª |
 |---|---|---|---|
-| 1ª | 32% | 0% | 0% |
-| 2ª | 63% | 5% | 0% |
+| 1ª | 34% | 1% | 0% |
+| 2ª | 61% | 5% | 0% |
 | 3ª | 0% | 0% | 0% |
 
 ## Na mesma divisão: terço do vendedor × do comprador (% das vendas na mesma divisão)
 
 | Vendedor \ comprador | Topo | Meio | Fundo |
 |---|---|---|---|
-| Topo | 1% | 1% | 1% |
+| Topo | 0% | 0% | 0% |
 | Meio | 6% | 3% | 1% |
-| Fundo | 55% | 31% | 3% |
+| Fundo | 52% | 32% | 5% |
 
 ## Quem consegue comprar: clubes que dão lance por leilão aberto, por terço da tabela
 
@@ -50,8 +50,8 @@ As tabelas abaixo são do cenário "Escolhido (rev. 66): pelo clube −30/−15/
 
 | Divisão | Leilões | Sem lance | Topo | Meio | Fundo | Pago / preço | Força do vendido − força do comprador |
 |---|---|---|---|---|---|---|---|
-| 1ª | 534 | 35% | 22% | 33% | 36% | 95% | -7,6 |
-| 2ª | 933 | 22% | 62% | 52% | 27% | 94% | -18,2 |
+| 1ª | 571 | 33% | 22% | 32% | 36% | 95% | -7,3 |
+| 2ª | 938 | 22% | 63% | 52% | 26% | 94% | -18,0 |
 
 *Leilões*: pela divisão do vendedor. *Topo/Meio/Fundo*: pela divisão de quem dá o lance.
 
@@ -59,18 +59,18 @@ As tabelas abaixo são do cenário "Escolhido (rev. 66): pelo clube −30/−15/
 
 | Divisão | Temporada | Topo | Meio | Fundo | Clubes negativos | Jogadores trocados por clube |
 |---|---|---|---|---|---|---|
-| 1ª | 1 | 3,7 | 2,4 | 1,5 | 0% | 1,7 |
-| 1ª | 2 | 6,2 | 3,8 | 3,5 | 0% | 0,6 |
-| 1ª | 3 | 8,7 | 5,1 | 4,5 | 0% | 0,6 |
-| 1ª | 4 | 10,7 | 6,3 | 7,4 | 0% | 0,4 |
-| 1ª | 5 | 12,5 | 7,6 | 7,8 | 0% | 0,3 |
-| 1ª | 6 | 14,7 | 8,7 | 8,9 | 0% | 0,2 |
-| 2ª | 1 | 4,8 | 3,6 | 1,6 | 0% | 0,5 |
-| 2ª | 2 | 7,5 | 5,2 | 2,5 | 0% | 0,4 |
-| 2ª | 3 | 10,0 | 6,7 | 2,5 | 0% | 0,4 |
-| 2ª | 4 | 11,3 | 8,3 | 3,1 | 1% | 0,4 |
-| 2ª | 5 | 14,3 | 9,7 | 3,3 | 1% | 0,3 |
-| 2ª | 6 | 15,1 | 12,0 | 4,0 | 4% | 0,2 |
+| 1ª | 1 | 3,7 | 2,4 | 1,6 | 0% | 1,8 |
+| 1ª | 2 | 6,2 | 3,9 | 3,5 | 0% | 0,6 |
+| 1ª | 3 | 8,5 | 5,4 | 4,5 | 0% | 0,6 |
+| 1ª | 4 | 10,6 | 6,6 | 7,0 | 0% | 0,5 |
+| 1ª | 5 | 12,7 | 7,9 | 7,2 | 0% | 0,4 |
+| 1ª | 6 | 14,7 | 8,8 | 9,1 | 0% | 0,2 |
+| 2ª | 1 | 4,9 | 3,5 | 1,6 | 0% | 0,5 |
+| 2ª | 2 | 7,6 | 5,3 | 2,5 | 0% | 0,4 |
+| 2ª | 3 | 10,0 | 6,8 | 2,6 | 0% | 0,4 |
+| 2ª | 4 | 11,5 | 8,4 | 2,9 | 1% | 0,5 |
+| 2ª | 5 | 13,0 | 10,8 | 3,7 | 1% | 0,3 |
+| 2ª | 6 | 15,3 | 11,7 | 3,5 | 6% | 0,2 |
 
 ## Mobilidade
 
