@@ -399,6 +399,8 @@ a.botao-discreto { min-height: 48px; padding: 0 20px; }
 }
 
 .campeonato {
+	/* segura o rádio escondido (.oculto) dentro do cartão: sem isso ele escapa da faixa e a página rola de lado */
+	position: relative;
 	flex: 0 0 260px;
 	scroll-snap-align: start;
 	min-height: 96px;
@@ -1613,3 +1615,9 @@ a.financas-link:hover, a.financas-link:focus-visible { border-color: var(--desta
 .janela-apagar { max-width: 520px; padding: 24px; display: flex; flex-direction: column; gap: 14px; }
 .botao-perigo { min-height: 44px; padding: 0 18px; border: 0; border-radius: 6px; background: var(--erro); color: #fff; font: 600 16px Barlow, system-ui, sans-serif; cursor: pointer; }
 .botao-perigo:hover { filter: brightness(1.1); }
+
+/* Banco editável no novo jogo (modelos 17a a 17c, SPEC §3.5). */
+.opcoes-banco { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+.opcao-banco { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border: 1px solid var(--borda); border-radius: 10px; }
+.opcao-banco.marcada { border: 2px solid var(--destaque); }
+.lista-problemas { margin: 8px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }

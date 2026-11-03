@@ -30,3 +30,4 @@ consideradas, decisão e consequências.
 | [0016](0016-estrangeiros-no-jogo.md) | Clubes estrangeiros no jogo para a continental | Aceita |
 | [0017](0017-mundial-na-temporada.md) | Mundial de Clubes na temporada | Aceita |
 | [0018](0018-arquivo-de-save.md) | Arquivo de save em JSON | Aceita |
+| [0019](0019-banco-editavel.md) | Banco editável por arquivo | Aceita |

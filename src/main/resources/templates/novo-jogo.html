@@ -6,6 +6,39 @@
 <div class="pagina">
 <header th:replace="~{fragmentos :: topo}"></header>
 <h1 class="titulo-pagina">Novo jogo</h1>
+<div th:if="${resultado}" role="status" class="aviso-resultado" th:text="${resultado}">Arquivo aceito.</div>
+<div th:if="${problemas}" role="alert" class="alerta">
+<b>Este arquivo não pode ser usado. Corrija e envie de novo:</b>
+<ul class="lista-problemas"><li th:each="p : ${problemas}" th:text="${p}">problema</li></ul>
+</div>
+
+<section aria-labelledby="t-banco" class="painel painel-interno">
+<h2 id="t-banco" class="titulo-secao pequeno">1 · Banco do jogo</h2>
+<div class="opcoes-banco">
+<div class="opcao-banco" th:classappend="${bancoEnviado == null} ? 'marcada'">
+<div class="linha-jogo-texto">
+<span class="nome-clube pequeno">Banco padrão</span>
+<span class="suave">Clubes e jogadores com nomes inventados.</span>
+</div>
+<div class="acoes-jogo">
+<a th:href="@{/jogos/novo/banco}" class="botao-discreto botao-link">Baixar para editar</a>
+<form th:if="${bancoEnviado != null}" th:action="@{/jogos/novo/banco/padrao}" method="post">
+<button type="submit" class="botao-contorno">Usar este</button>
+</form>
+</div>
+</div>
+<form th:action="@{/jogos/novo/banco}" method="post" enctype="multipart/form-data" data-envio-unico
+	class="opcao-banco" th:classappend="${bancoEnviado != null} ? 'marcada'">
+<div class="linha-jogo-texto">
+<span class="nome-clube pequeno">Meu arquivo</span>
+<span class="suave" th:text="${bancoEnviado != null} ? |${bancoEnviado} · aceito| : 'Um banco baixado aqui e editado por você.'">texto</span>
+</div>
+<label class="botao-contorno escolher-arquivo"><span th:text="${bancoEnviado != null} ? 'Trocar arquivo' : 'Escolher arquivo'">Escolher arquivo</span>
+<input type="file" name="arquivo" accept=".json,application/json" required data-enviar-ao-mudar class="arquivo-oculto">
+</label>
+</form>
+</div>
+</section>
 
 <div th:if="${campeonatos.isEmpty()}" role="alert" class="alerta">
 Nenhum campeonato disponível. Carregue o banco padrão (veja o README).
@@ -16,7 +49,7 @@ Nenhum campeonato disponível. Carregue o banco padrão (veja o README).
 
 <section aria-labelledby="t-camp" class="painel painel-interno">
 <div class="painel-titulo">
-<h2 id="t-camp" class="titulo-secao pequeno">1 · Campeonato</h2>
+<h2 id="t-camp" class="titulo-secao pequeno">2 · Campeonato</h2>
 <div class="setas">
 <button type="button" class="seta" data-rolar="-1" aria-controls="faixa" aria-label="Campeonatos anteriores"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"></path></svg></button>
 <button type="button" class="seta" data-rolar="1" aria-controls="faixa" aria-label="Próximos campeonatos"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"></path></svg></button>
@@ -24,7 +57,7 @@ Nenhum campeonato disponível. Carregue o banco padrão (veja o README).
 </div>
 <div id="faixa" class="faixa" role="radiogroup" aria-labelledby="t-camp">
 <label th:each="c, i : ${campeonatos}" class="campeonato">
-<input type="radio" name="paisId" th:value="${c.paisId}" th:checked="${i.first}" class="oculto">
+<input type="radio" th:name="${bancoEnviado != null} ? 'paisCodigo' : 'paisId'" th:value="${c.valor}" th:checked="${i.first}" class="oculto">
 <span class="campeonato-pais">
 <span aria-hidden="true" class="sigla" th:text="${c.codigo}">BRA</span>
 <span class="nome-clube" th:text="${c.pais}">País</span>
@@ -36,7 +69,7 @@ Nenhum campeonato disponível. Carregue o banco padrão (veja o README).
 </section>
 
 <section th:if="${usuario.papel.name() == 'PARTICIPANTE'}" aria-labelledby="t-modo" class="painel painel-interno">
-<h2 id="t-modo" class="titulo-secao pequeno">2 · Seu clube</h2>
+<h2 id="t-modo" class="titulo-secao pequeno">3 · Seu clube</h2>
 <div class="destaque-sorteio">
 <div class="pilha-curta">
 <span class="nome-clube">Clube sorteado</span>
@@ -46,13 +79,13 @@ Nenhum campeonato disponível. Carregue o banco padrão (veja o README).
 </section>
 
 <section th:if="${usuario.papel.name() == 'ADMINISTRADOR'}" aria-labelledby="t-modo" class="painel painel-interno">
-<h2 id="t-modo" class="titulo-secao pequeno">2 · Como começar</h2>
+<h2 id="t-modo" class="titulo-secao pequeno">3 · Como começar</h2>
 <div class="opcoes">
 <button type="submit" class="opcao">
 <span class="opcao-titulo">Sortear clube e começar</span>
 <span class="texto" th:text="|Você recebe um dos ${candidatos} clubes mais fracos da última divisão.|">texto</span>
 </button>
-<button type="submit" class="opcao" th:formaction="@{/jogos/escolher}">
+<button th:if="${bancoEnviado == null}" type="submit" class="opcao" th:formaction="@{/jogos/escolher}">
 <span class="opcao-titulo">Escolher clube</span>
 <span class="texto">Abre o quadro de escolha com todos os clubes do país.</span>
 </button>

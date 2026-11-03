@@ -340,7 +340,7 @@ segurança**; não é a forma de editar nomes.
 cada pessoa pode mudar os nomes de times e jogadores, e o jogo em rede não pode
 infringir direito autoral.
 
-**Provisório (rev. 89), proposta do agente, aguardando os modelos 17a a 17e:**
+**Definido (rev. 89), pelo usuário (modelos 17a a 17e aprovados):**
 - A pessoa baixa o banco padrão, edita no próprio computador e envia o arquivo ao
   criar um jogo novo. O servidor valida, mostra todos os problemas, copia os dados
   para aquele jogo e não guarda o arquivo.
@@ -348,8 +348,21 @@ infringir direito autoral.
 - Em rede, o arquivo é o do administrador e vale para toda a sala; depois do início
   ninguém muda o banco. O jogo só traz e distribui nomes inventados, sem lista
   pública nem troca de bancos pelo servidor; quem edita responde pelos nomes que usa.
-- Com arquivo, o clube inicial é sempre sorteado, até para o administrador.
 - O editor em tela fica para depois, sobre o mesmo arquivo.
+
+**Provisório (rev. 89), proposta do agente:**
+- Com arquivo, o clube inicial é sempre sorteado, até para o administrador.
+- Cada clube do arquivo tem de 11 a 25 jogadores, com ao menos um goleiro. Os
+  nomes vão até 60 letras e os códigos de país são os do catálogo FIFA.
+- Um país pode virar campeonato com uma só divisão e sem rebaixamento. Sem
+  competição continental na região dele, o jogo fica sem continental e sem
+  Mundial.
+- O arquivo aceito fica só na sessão do navegador até o jogo ser criado.
+
+**Gravado (rev. 89, sem migração, `docs/decisions/0019`):** `BancoEditavel`
+(ler, conferir e escrever o arquivo), `BancoEditavelRepositorio` (baixar o banco
+padrão e criar o jogo por um molde temporário, apagado na mesma transação) e o
+passo "Banco do jogo" no novo jogo.
 
 ### 3.3 Sala multiplayer
 

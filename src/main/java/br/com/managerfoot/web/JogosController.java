@@ -3,6 +3,8 @@ package br.com.managerfoot.web;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -19,6 +21,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import br.com.managerfoot.contas.Usuario;
 import br.com.managerfoot.dominio.Clube;
+import br.com.managerfoot.persistencia.BancoEditavelRepositorio;
+import br.com.managerfoot.persistencia.BancoRecusadoException;
 import br.com.managerfoot.persistencia.JogosDoTreinadorRepositorio;
 import br.com.managerfoot.persistencia.JogosDoTreinadorRepositorio.JogoGravado;
 import br.com.managerfoot.persistencia.JogosDoTreinadorRepositorio.NovoJogo;
@@ -26,6 +30,8 @@ import br.com.managerfoot.persistencia.MoldeRepositorio;
 import br.com.managerfoot.persistencia.MoldeRepositorio.CampeonatoDisponivel;
 import br.com.managerfoot.temporada.FormatoDivisao;
 import br.com.managerfoot.temporada.FormatoLiga;
+import br.com.managerfoot.web.BancoEditavelController.BancoEnviado;
+import jakarta.servlet.http.HttpSession;
 
 /** Início, novo jogo por sorteio (o caminho da escolha está em {@link EscolhaClubeController}) e abertura de um jogo gravado (SPEC §3.2 e §10.5, rev. 28 e 29). */
 @Controller
@@ -36,13 +42,15 @@ class JogosController {
 	private final JogosDoTreinadorRepositorio jogos;
 	private final MoldeRepositorio moldes;
 	private final Campeonatos campeonatos;
+	private final BancoEditavelRepositorio bancos;
 	private final int candidatosClubeInicial;
 
-	JogosController(JogosDoTreinadorRepositorio jogos, MoldeRepositorio moldes, Campeonatos campeonatos,
+	JogosController(JogosDoTreinadorRepositorio jogos, MoldeRepositorio moldes, Campeonatos campeonatos, BancoEditavelRepositorio bancos,
 			@Value("${managerfoot.jogo.candidatos-clube-inicial}") int candidatosClubeInicial) {
 		this.jogos = jogos;
 		this.moldes = moldes;
 		this.campeonatos = campeonatos;
+		this.bancos = bancos;
 		this.candidatosClubeInicial = candidatosClubeInicial;
 	}
 
@@ -57,21 +65,49 @@ class JogosController {
 	}
 
 	@GetMapping("/jogos/novo")
-	String novo(@AuthenticationPrincipal Usuario usuario, Model model) {
+	String novo(@AuthenticationPrincipal Usuario usuario, HttpSession sessao, Model model) {
 		model.addAttribute("usuario", usuario);
-		model.addAttribute("campeonatos", campeonatos.disponiveis().stream().map(this::cartao).toList());
 		model.addAttribute("candidatos", candidatosClubeInicial);
+		Optional<BancoEnviado> enviado = bancoEnviado(sessao);
+		if (enviado.isPresent()) {
+			try {
+				model.addAttribute("campeonatos", bancos.ler(enviado.get().conteudo()).comLiga().stream()
+					.map(p -> new Cartao(p.codigo(), p.codigo(), p.nome(), p.liga().orElseThrow().nome(), detalhe(p.liga().orElseThrow())))
+					.toList());
+				model.addAttribute("bancoEnviado", enviado.get().nome());
+				return "novo-jogo";
+			}
+			catch (BancoRecusadoException e) {
+				// o arquivo só entra na sessão depois de aceito; recusado agora, volta ao banco padrão
+				sessao.removeAttribute(BancoEditavelController.SESSAO);
+			}
+		}
+		model.addAttribute("campeonatos", campeonatos.disponiveis().stream().map(this::cartao).toList());
 		return "novo-jogo";
 	}
 
 	@PostMapping("/jogos")
-	String criar(@AuthenticationPrincipal Usuario usuario, @RequestParam("paisId") long paisId, Model model,
+	String criar(@AuthenticationPrincipal Usuario usuario, @RequestParam(name = "paisId", required = false) Long paisId,
+			@RequestParam(name = "paisCodigo", required = false) String paisCodigo, HttpSession sessao, Model model,
 			RedirectAttributes redirect) {
-		if (campeonatos.buscar(paisId).isEmpty()) {
-			model.addAttribute("erro", "Escolha um dos campeonatos da lista.");
-			return novo(usuario, model);
+		Optional<BancoEnviado> enviado = bancoEnviado(sessao);
+		NovoJogo novo;
+		if (enviado.isPresent()) {
+			try {
+				novo = bancos.criarJogo(enviado.get().conteudo(), paisCodigo == null ? "" : paisCodigo, usuario.id());
+			}
+			catch (BancoRecusadoException | NoSuchElementException e) {
+				model.addAttribute("erro", "Escolha um dos campeonatos da lista.");
+				return novo(usuario, sessao, model);
+			}
+			sessao.removeAttribute(BancoEditavelController.SESSAO);
+		} else {
+			if (paisId == null || campeonatos.buscar(paisId).isEmpty()) {
+				model.addAttribute("erro", "Escolha um dos campeonatos da lista.");
+				return novo(usuario, sessao, model);
+			}
+			novo = jogos.criarComSorteio(paisId, usuario.id());
 		}
-		NovoJogo novo = jogos.criarComSorteio(paisId, usuario.id());
 		redirect.addFlashAttribute("sorteadoEntre",
 				novo.candidatos().stream().map(Clube::nome).collect(Collectors.joining(", ")));
 		return "redirect:/jogos/" + novo.jogoId();
@@ -86,8 +122,12 @@ class JogosController {
 		return "jogo";
 	}
 
+	private static Optional<BancoEnviado> bancoEnviado(HttpSession sessao) {
+		return sessao.getAttribute(BancoEditavelController.SESSAO) instanceof BancoEnviado b ? Optional.of(b) : Optional.empty();
+	}
+
 	private Cartao cartao(CampeonatoDisponivel c) {
-		return new Cartao(c.paisId(), c.codigoPais(), c.nomePais(), c.nomeLiga(), detalhe(moldes.carregarFormato(c.paisId())));
+		return new Cartao(String.valueOf(c.paisId()), c.codigoPais(), c.nomePais(), c.nomeLiga(), detalhe(moldes.carregarFormato(c.paisId())));
 	}
 
 	/** "3 divisões · 20, 20 e 20 clubes · 4 sobem e 4 descem" (a última parte só se for igual em todas). */
@@ -112,8 +152,12 @@ class JogosController {
 				"Jogado em " + QUANDO.format(j.ultimoAcesso().atZone(ZoneId.systemDefault())));
 	}
 
-	/** Campeonato como cartão da faixa com rolagem lateral. */
-	record Cartao(long paisId, String codigo, String pais, String liga, String detalhe) {
+	/**
+	 * Campeonato como cartão da faixa com rolagem lateral.
+	 *
+	 * @param valor o id do país no banco padrão, ou o código do país num arquivo enviado
+	 */
+	record Cartao(String valor, String codigo, String pais, String liga, String detalhe) {
 	}
 
 	/** Jogo como aparece na lista do início e no topo do jogo. */
