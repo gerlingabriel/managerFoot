@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragmentos :: cabeca(${e.copa != null ? e.copa : 'Rodada ' + e.rodada})}"></head>
+<head th:replace="~{fragmentos :: cabeca(${titulo})}"></head>
 <body>
 <div class="campo campo-pagina">
 <div class="pagina">
@@ -14,7 +14,7 @@
 <header class="clube-topo" th:with="atual=${e.divisoes[e.divisaoAtual]}">
 <div class="pilha-curta">
 <span class="rotulo" th:text="|Temporada ${e.temporada}|">Temporada 1</span>
-<h1 class="titulo-pagina" th:text="${e.copa != null ? e.copa : 'Rodada ' + e.rodada}">Rodada 1</h1>
+<h1 class="titulo-pagina" th:text="${titulo}">1º turno · 1ª rodada</h1>
 </div>
 <nav aria-label="Divisões da rodada, na ordem em que jogam" class="etapas">
 <span th:each="d : ${e.divisoes}" class="etapa" th:classappend="${d.situacao.name() == 'JOGANDO'} ? 'jogando' : (${d.situacao.name() == 'TERMINADA'} ? 'terminada')"

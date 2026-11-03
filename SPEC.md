@@ -2916,6 +2916,11 @@ da rodada, antes do plantel), **11b** aviso de demissão do usuário (troca ou
 continua) e **11c** faixa do clube no topo da janela do clube (força em
 campo, moral com a faixa e os últimos 5), para todos os clubes.
 
+**Definido (rev. 89), pelo usuário:** o título da rodada ao vivo mostra o turno e a
+rodada, como "1º turno · 3ª rodada". O 2º turno começa depois da metade das
+rodadas da temporada; nas etapas de copa, continental e Mundial o título continua
+sendo o nome da etapa.
+
 **Definido (rev. 29):**
 - **Início**, logo depois de entrar, com **só duas opções**: "Novo jogo" e
   "Voltar a um jogo gravado" (lista com clube, país, divisão, temporada,

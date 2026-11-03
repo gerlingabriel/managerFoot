@@ -22,6 +22,7 @@ import org.springframework.web.servlet.support.RequestContextUtils;
 
 import br.com.managerfoot.contas.Usuario;
 import br.com.managerfoot.persistencia.LeilaoRepositorio;
+import br.com.managerfoot.persistencia.RodadaRepositorio;
 import br.com.managerfoot.persistencia.LeilaoRepositorio.Etapa;
 import br.com.managerfoot.persistencia.DecisaoPendenteException;
 import br.com.managerfoot.persistencia.PlantelRepositorio;
@@ -45,11 +46,13 @@ class RodadaController {
 	private final PlantelRepositorio plantel;
 	private final LeilaoRepositorio leiloes;
 	private final TrocaRepositorio trocas;
+	private final RodadaRepositorio rodadas;
 	private final Clock relogio;
 
 	RodadaController(RodadaAoVivoRepositorio aoVivo, PlantelRepositorio plantel, LeilaoRepositorio leiloes,
-			TrocaRepositorio trocas, Clock relogio) {
+			TrocaRepositorio trocas, RodadaRepositorio rodadas, Clock relogio) {
 		this.aoVivo = aoVivo;
+		this.rodadas = rodadas;
 		this.plantel = plantel;
 		this.leiloes = leiloes;
 		this.trocas = trocas;
@@ -137,6 +140,8 @@ class RodadaController {
 		}
 		model.addAttribute("usuario", usuario);
 		model.addAttribute("e", estado.get());
+		model.addAttribute("titulo", estado.get().copa() != null ? estado.get().copa()
+				: titulo(estado.get().rodada(), rodadas.totalDeRodadas(jogoId)));
 		model.addAttribute("velocidades", Velocidade.values());
 		if (janela == null) {
 			// lesão no clube do usuário: a rodada parou e a janela do jogo abre sozinha (SPEC §7.5, rev. 69)
@@ -214,5 +219,11 @@ class RodadaController {
 		flash.put("resultado", texto);
 		flash.setTargetRequestPath(destino);
 		RequestContextUtils.getFlashMapManager(request).saveOutputFlashMap(flash, request, response);
+	}
+
+	/** "1º turno · 3ª rodada": a rodada da temporada e o turno dela; o returno começa depois da metade das rodadas. */
+	static String titulo(int rodada, int totalDeRodadas) {
+		int turno = rodada <= (totalDeRodadas + 1) / 2 ? 1 : 2;
+		return turno + "º turno · " + rodada + "ª rodada";
 	}
 }

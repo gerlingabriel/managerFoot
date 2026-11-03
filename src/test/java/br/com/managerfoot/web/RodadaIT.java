@@ -118,7 +118,7 @@ class RodadaIT {
 		agora(10);
 		mvc.perform(get(rodada).with(como(treinador)))
 			.andExpect(status().isOk())
-			.andExpect(content().string(containsString("Rodada 1")))
+			.andExpect(content().string(containsString("1º turno · 1ª rodada")))
 			.andExpect(content().string(containsString("20&#39;")))
 			.andExpect(content().string(containsString("do-usuario")))
 			.andExpect(content().string(containsString("Velocidade da partida")))
