@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
-import java.util.Random;
 import java.util.function.LongPredicate;
 import java.util.function.UnaryOperator;
 
@@ -177,18 +176,18 @@ public class PlantelRepositorio {
 	}
 
 	/**
-	 * Escolhe a tática e, se faltar titular nela, completa o time com os mais fortes (SPEC §10.3, rev. 86).
-	 *
-	 * @param semente desempate entre jogadores iguais
+	 * Escolhe a tática e, se faltar titular nela, completa o time e o banco com os melhores (SPEC §10.3, rev. 86
+	 * e 94).
 	 */
 	@Transactional
-	public void definirFormacao(long jogoId, long usuarioId, Formacao formacao, long semente) {
+	public void definirFormacao(long jogoId, long usuarioId, Formacao formacao) {
 		long clube = exigirClube(jogoId, usuarioId);
 		Map<Long, Situacao> situacoes = situacoes(clube);
 		List<Jogador> plantel = jogos.carregarPlanteis(jogoId).getOrDefault(clube, List.of());
 		alterar(jogoId, usuarioId, e -> e.com(formacao).completada(plantel,
 				id -> !situacoes.getOrDefault(id, Situacao.NENHUMA).disponivel(),
-				ParametrosMotor.padrao().asterisco().limiteSemPenalidade(), new Random(semente)), null, null);
+				ParametrosMotor.padrao().asterisco().limiteSemPenalidade(),
+				id -> situacoes.getOrDefault(id, Situacao.NENHUMA).gols()), null, null);
 	}
 
 	/** Tira todos os jogadores do time e do banco, para a tática escalar de novo (SPEC §10.3, rev. 86). */

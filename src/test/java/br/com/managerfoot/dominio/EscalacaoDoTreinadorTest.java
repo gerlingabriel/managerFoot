@@ -5,12 +5,12 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
 import java.util.function.LongPredicate;
+import java.util.function.LongToIntFunction;
+import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
 
@@ -21,6 +21,7 @@ class EscalacaoDoTreinadorTest {
 	private static final Escalacao DA_MAQUINA = new Escalacao(Formacao.F_4_4_2,
 			List.of(j(1), j(4), j(5), j(6), j(7), j(11), j(12), j(13), j(14), j(18), j(19)),
 			List.of(j(2), j(8), j(15), j(20)), j(18));
+	private static final LongToIntFunction SEM_GOLS = id -> 0;
 
 	@Test
 	void partindoDaMaquinaEhValidaEDevolveAMesmaEscalacao() {
@@ -155,7 +156,7 @@ class EscalacaoDoTreinadorTest {
 		List<Jogador> plantel = comForcas(Map.of(8L, 41, 9L, 42, 10L, 43, 4L, 44, 15L, 45, 16L, 46, 17L, 47, 14L, 48,
 				22L, 49, 23L, 50));
 
-		EscalacaoDoTreinador time = vazia(Formacao.F_4_4_2).completada(plantel, id -> false, 3, new Random(1));
+		EscalacaoDoTreinador time = vazia(Formacao.F_4_4_2).completada(plantel, id -> false, 3, SEM_GOLS);
 
 		assertThat(time.titulares()).hasSize(11).contains(4L, 8L, 9L, 10L, 14L, 15L, 16L, 17L, 22L, 23L);
 		assertThat(time.reservas()).hasSize(Escalacao.MAXIMO_RESERVAS)
@@ -168,22 +169,49 @@ class EscalacaoDoTreinadorTest {
 		EscalacaoDoTreinador antes = EscalacaoDoTreinador.de(DA_MAQUINA).com(4, Lugar.FORA);
 		List<Jogador> plantel = comForcas(Map.of(10L, 45));
 
-		EscalacaoDoTreinador time = antes.completada(plantel, id -> false, 3, new Random(1));
+		EscalacaoDoTreinador time = antes.completada(plantel, id -> false, 3, SEM_GOLS);
 
 		assertThat(time.titulares()).containsAll(antes.titulares()).contains(10L).hasSize(11);
-		assertThat(time.reservas()).containsAll(antes.reservas()).hasSize(Escalacao.MAXIMO_RESERVAS);
+		assertThat(time.reservas()).hasSize(Escalacao.MAXIMO_RESERVAS);
 	}
 
 	@Test
-	void trocarDeTaticaManteOsMaisFortesEOQueSobraVaiParaOBanco() {
+	void trocarDeTaticaManteOsMaisFortes() {
 		List<Jogador> plantel = comForcas(Map.of(5L, 10, 15L, 45));
 
 		EscalacaoDoTreinador time = EscalacaoDoTreinador.de(DA_MAQUINA).com(Formacao.F_3_5_2)
-			.completada(plantel, id -> false, 3, new Random(1));
+			.completada(plantel, id -> false, 3, SEM_GOLS);
 
 		assertThat(time.titulares()).doesNotContain(5L).contains(15L).hasSize(11);
-		assertThat(time.reservas()).contains(5L).doesNotContain(15L);
+		assertThat(time.reservas()).doesNotContain(15L);
 		assertThat(time.problemas(plantel, id -> false)).isEmpty();
+	}
+
+	@Test
+	void oBancoTemUmGoleiroSoEUmDeCadaPosicaoMesmoMaisFraco() {
+		// goleiros fortes e atacantes fracos: sem a regra, o banco levaria os goleiros e nenhum atacante
+		List<Jogador> plantel = comForcas(Map.ofEntries(Map.entry(2L, 50), Map.entry(3L, 49), Map.entry(20L, 5),
+				Map.entry(21L, 5), Map.entry(22L, 5), Map.entry(23L, 1)));
+
+		EscalacaoDoTreinador time = vazia(Formacao.F_4_4_2).completada(plantel, id -> false, 3, SEM_GOLS);
+
+		Map<Posicao, Long> noBanco = time.reservas().stream()
+			.collect(Collectors.groupingBy(id -> j(id).posicao(), Collectors.counting()));
+		assertThat(noBanco).containsEntry(Posicao.GOLEIRO, 1L).containsKeys(Posicao.DEFENSOR, Posicao.MEIO_CAMPISTA,
+				Posicao.ATACANTE);
+		assertThat(noBanco).containsEntry(Posicao.ATACANTE, 1L);
+		assertThat(time.reservas()).hasSize(Escalacao.MAXIMO_RESERVAS).contains(3L, 20L);
+	}
+
+	@Test
+	void semJogadorDaPosicaoOBancoFicaSemEleENaoLevaOutroGoleiro() {
+		LongPredicate semAtacanteSobrando = id -> id >= 20;
+
+		EscalacaoDoTreinador time = vazia(Formacao.F_4_4_2).completada(PLANTEL, semAtacanteSobrando, 3, SEM_GOLS);
+
+		assertThat(time.titulares()).contains(18L, 19L);
+		assertThat(time.reservas()).noneMatch(id -> id >= 18).filteredOn(id -> id <= 3).hasSize(1);
+		assertThat(time.reservas()).hasSize(Escalacao.MAXIMO_RESERVAS);
 	}
 
 	@Test
@@ -191,24 +219,22 @@ class EscalacaoDoTreinadorTest {
 		EscalacaoDoTreinador time = new EscalacaoDoTreinador(Formacao.F_4_4_2, EscalacaoDoTreinador.de(DA_MAQUINA).titulares(),
 				Set.of(), null);
 
-		assertThat(time.completada(PLANTEL, id -> false, 3, new Random(1))).isSameAs(time);
+		assertThat(time.completada(PLANTEL, id -> false, 3, SEM_GOLS)).isSameAs(time);
 	}
 
 	@Test
-	void noEmpateDeForcaOAsteriscoVemPrimeiroEDepoisASorte() {
+	void noEmpateDeForcaVemQuemFezMaisGolsEDepoisOrdemAlfabetica() {
 		List<Jogador> plantel = new ArrayList<>(PLANTEL);
-		plantel.set(2, new Jogador(3, "J3", Posicao.GOLEIRO, 20, Temperamento.NORMAL, true, "BRA"));
+		plantel.set(18, new Jogador(19, "Álvaro", Posicao.ATACANTE, 20, Temperamento.NORMAL, "BRA"));
+		plantel.set(19, new Jogador(20, "Bruno", Posicao.ATACANTE, 20, Temperamento.NORMAL, "BRA"));
+		plantel.set(20, new Jogador(21, "Zeca", Posicao.ATACANTE, 20, Temperamento.NORMAL, "BRA"));
+		LongToIntFunction gols = id -> id == 21 ? 4 : 0;
 
-		assertThat(vazia(Formacao.F_4_4_2).completada(plantel, id -> false, 3, new Random(1)).titulares()).contains(3L);
+		EscalacaoDoTreinador time = vazia(Formacao.F_4_4_2).completada(plantel, id -> id >= 22, 3, gols);
 
-		Set<Long> goleiros = new HashSet<>();
-		for (long semente = 0; semente < 50; semente++) {
-			Set<Long> titulares = vazia(Formacao.F_4_4_2).completada(PLANTEL, id -> false, 3, new Random(semente)).titulares();
-			goleiros.addAll(titulares.stream().filter(id -> id <= 3).toList());
-		}
-		assertThat(goleiros).containsExactlyInAnyOrder(1L, 2L, 3L);
-		assertThat(vazia(Formacao.F_4_4_2).completada(PLANTEL, id -> false, 3, new Random(7)))
-			.isEqualTo(vazia(Formacao.F_4_4_2).completada(PLANTEL, id -> false, 3, new Random(7)));
+		assertThat(time.titulares()).contains(21L, 19L).doesNotContain(20L);
+		assertThat(time.titulares()).contains(1L);
+		assertThat(time).isEqualTo(vazia(Formacao.F_4_4_2).completada(plantel, id -> id >= 22, 3, gols));
 	}
 
 	@Test
@@ -218,7 +244,7 @@ class EscalacaoDoTreinadorTest {
 			plantel.set((int) id - 1, new Jogador(id, "J" + id, Posicao.DEFENSOR, 30, Temperamento.NORMAL, true, "BRA"));
 		}
 
-		EscalacaoDoTreinador time = vazia(Formacao.F_4_4_2).completada(plantel, id -> false, 3, new Random(1));
+		EscalacaoDoTreinador time = vazia(Formacao.F_4_4_2).completada(plantel, id -> false, 3, SEM_GOLS);
 
 		assertThat(time.titulares().stream().filter(id -> id >= 4 && id <= 7)).hasSize(3);
 		assertThat(time.titulares()).hasSize(11);
@@ -228,7 +254,7 @@ class EscalacaoDoTreinadorTest {
 	void suspensoELesionadoNaoSaoEscolhidos() {
 		List<Jogador> plantel = comForcas(Map.of(22L, 50, 23L, 49));
 
-		EscalacaoDoTreinador time = vazia(Formacao.F_4_4_2).completada(plantel, id -> id == 22 || id == 23, 3, new Random(1));
+		EscalacaoDoTreinador time = vazia(Formacao.F_4_4_2).completada(plantel, id -> id == 22 || id == 23, 3, SEM_GOLS);
 
 		assertThat(time.titulares()).doesNotContain(22L, 23L).hasSize(11);
 		assertThat(time.reservas()).doesNotContain(22L, 23L);
@@ -238,7 +264,7 @@ class EscalacaoDoTreinadorTest {
 	void semGoleiroDisponivelEscalaUmDefensorAMaisParaOGol() {
 		LongPredicate semGoleiro = id -> id <= 3;
 
-		EscalacaoDoTreinador time = vazia(Formacao.F_4_4_2).completada(PLANTEL, semGoleiro, 3, new Random(1));
+		EscalacaoDoTreinador time = vazia(Formacao.F_4_4_2).completada(PLANTEL, semGoleiro, 3, SEM_GOLS);
 
 		assertThat(time.titulares()).hasSize(11);
 		assertThat(time.goleiroImprovisado(PLANTEL, semGoleiro)).isPresent();
@@ -249,7 +275,7 @@ class EscalacaoDoTreinadorTest {
 	void faltandoJogadorNaPosicaoAVagaFicaVazia() {
 		LongPredicate soDoisAtacantes = id -> id >= 20 && id <= 23;
 
-		EscalacaoDoTreinador time = vazia(Formacao.F_3_4_3).completada(PLANTEL, soDoisAtacantes, 3, new Random(1));
+		EscalacaoDoTreinador time = vazia(Formacao.F_3_4_3).completada(PLANTEL, soDoisAtacantes, 3, SEM_GOLS);
 
 		assertThat(time.titulares()).hasSize(10);
 		assertThat(time.problemas(PLANTEL, soDoisAtacantes)).isEmpty();

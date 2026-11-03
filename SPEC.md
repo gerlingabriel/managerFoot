@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 93 — 2026-11-03)
+-   **Status:** versão inicial para revisão (rev. 94 — 2026-11-03)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -14,6 +14,8 @@
     descreve intenção geral ainda não detalhada.
 
 ### Histórico de revisões
+
+-   **rev. 94 (2026-11-03):** pelo usuário: ao clicar na tática, o banco leva um goleiro só e pelo menos um defensor, um meio-campista e um atacante, se houver, mesmo mais fracos; titulares e reservas escolhidos por força, depois gols na temporada, depois ordem alfabética, no lugar de asterisco e sorte (§10.3). Agente: o banco é refeito por inteiro quando a tática completa o time (Provisório). As metas do patrocínio continuam como estão (não há meta de campeão).
 
 -   **rev. 93 (2026-11-03):** pelo usuário: campeão de qualquer competição começa a temporada seguinte com a moral em 30, se o treinador do título ainda dirige o clube na virada (§6.2); aviso da meta do patrocínio em Finanças (§9.6, modelo a aprovar).
 
@@ -2815,13 +2817,21 @@ da mesma divisão seguem na mesma tela.
 -   **Definido (rev. 86) — escalação pela tática:** ao clicar numa tática, se
     faltar titular, o jogo completa as vagas com os jogadores mais fortes de
     cada posição, do banco ou de fora; quem já está escalado fica. No empate de
-    força, primeiro quem tem asterisco e depois a sorte. Um botão junto à tática
-    retira todos os jogadores, para a tática escalar de novo.
-    - **Provisório (agente):** sem titular faltando, nada muda. Na troca de
-      tática, o mais fraco do setor que sobra vai para o banco; as vagas livres
-      do banco são preenchidas, com um goleiro primeiro; os escolhidos
-      automaticamente respeitam o limite de 3 asteriscos se houver outro na
-      posição; retirar todos também volta o batedor para o automático.
+    força, ~~primeiro quem tem asterisco e depois a sorte~~ (substituído na rev.
+    94). Um botão junto à tática retira todos os jogadores, para a tática
+    escalar de novo.
+    - **Definido (rev. 94), pelo usuário:** titulares e reservas escolhidos
+      pela tática seguem a ordem **força**, depois **gols na temporada**,
+      depois **ordem alfabética** do nome. O banco leva **um goleiro só** e
+      pelo menos **um defensor, um meio-campista e um atacante**, mesmo que
+      mais fracos; faltando jogador de uma posição, o banco fica sem ela. As
+      outras vagas do banco vão para os melhores jogadores de linha.
+    - **Provisório (agente):** sem titular faltando, nada muda. Quando a
+      tática completa o time, o banco é refeito por inteiro com a regra acima
+      (quem estava no banco ou saiu do time concorre como os outros); os
+      escolhidos automaticamente respeitam o limite de 3 asteriscos se houver
+      outro na posição; retirar todos também volta o batedor para o
+      automático.
 -   Durante o jogo, ao clicar em um clube, o usuário vê os lances e os 11
     em campo de cada time, sem os reservas. **Exceção (rev. 33):** no
     próprio clube aparece também o banco, para a substituição (§10.5).

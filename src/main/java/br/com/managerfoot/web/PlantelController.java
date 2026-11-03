@@ -197,7 +197,7 @@ class PlantelController {
 	@PostMapping("/jogos/{jogoId}/plantel/formacao")
 	String formacao(@AuthenticationPrincipal Usuario usuario, @PathVariable long jogoId,
 			@RequestParam("formacao") Formacao formacao, RedirectAttributes redirect) {
-		tentar(redirect, () -> plantel.definirFormacao(jogoId, usuario.id(), formacao, SEMENTES.nextLong()));
+		tentar(redirect, () -> plantel.definirFormacao(jogoId, usuario.id(), formacao));
 		return voltar(jogoId);
 	}
 
