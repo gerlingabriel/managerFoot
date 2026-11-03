@@ -161,12 +161,23 @@ class LeilaoRepositorioIT {
 	}
 
 	@Test
-	void treinadorVendeOJogadorPorLeilaoNaHoraSemFecharOsLeiloesDaRodada() {
+	void jogadorPostoALeilaoEsperaOOkDaTaticaESaiComOsLeiloesDaRodada() {
 		Jogador jogador = maisForteDoUsuario();
 
 		long leilaoId = leiloes.venderPorLeilao(jogo, usuario, jogador.id(), 0);
 
-		LeilaoNaTela venda = leiloes.venda(jogo, usuario, leilaoId).orElseThrow().leiloes().get(0);
+		// até o OK da tática ele fica no plantel, e não dá para pô-lo a leilão de novo
+		assertThat(leiloes.venda(jogo, usuario, leilaoId).orElseThrow().leiloes().get(0).situacao()).isEqualTo(Situacao.ABERTO);
+		assertThat(clubeDe(jogador.id())).isEqualTo(clubeDoUsuario);
+		assertThatThrownBy(() -> leiloes.venderPorLeilao(jogo, usuario, jogador.id(), 0))
+			.isInstanceOf(IllegalArgumentException.class).hasMessageContaining("já vai a leilão");
+
+		assertThat(leiloes.preparar(jogo, usuario, 1)).isEqualTo(Etapa.LANCES);
+		leiloes.darLances(jogo, usuario, 1, Map.of());
+
+		List<LeilaoNaTela> naTela = leiloes.visao(jogo, usuario).orElseThrow().leiloes();
+		assertThat(naTela).hasSize(2);
+		LeilaoNaTela venda = naTela.stream().filter(l -> l.id() == leilaoId).findFirst().orElseThrow();
 		assertThat(venda.situacao()).isEqualTo(Situacao.VENDIDO);
 		assertThat(venda.vendidoPorVoce()).isTrue();
 		assertThat(venda.lanceMinimo()).isZero();
@@ -178,11 +189,10 @@ class LeilaoRepositorioIT {
 		// a máquina dá um pouco abaixo do preço
 		assertThat(venda.valor()).isLessThan(PrecoJogador.padrao().preco(jogador, "BRA"));
 
-		// a venda não aparece entre os leilões da rodada nem impede que eles abram
-		assertThat(leiloes.preparar(jogo, usuario, 1)).isEqualTo(Etapa.LANCES);
-		assertThat(unico().vendedor().id()).isEqualTo(vendedor);
-		// outro jogo ou outro leilão: não é uma venda do treinador
-		assertThat(leiloes.venda(jogo, usuario, unico().id())).isEmpty();
+		// o leilão da máquina saiu junto; ele não é uma venda do treinador
+		LeilaoNaTela daMaquina = naTela.stream().filter(l -> l.id() != leilaoId).findFirst().orElseThrow();
+		assertThat(daMaquina.vendedor().id()).isEqualTo(vendedor);
+		assertThat(leiloes.venda(jogo, usuario, daMaquina.id())).isEmpty();
 	}
 
 	@Test
@@ -191,6 +201,8 @@ class LeilaoRepositorioIT {
 		long acima = PrecoJogador.padrao().preco(jogador, "BRA") / 100 * 2;
 
 		long leilaoId = leiloes.venderPorLeilao(jogo, usuario, jogador.id(), acima);
+		leiloes.preparar(jogo, usuario, 1);
+		leiloes.darLances(jogo, usuario, 1, Map.of());
 
 		LeilaoNaTela venda = leiloes.venda(jogo, usuario, leilaoId).orElseThrow().leiloes().get(0);
 		assertThat(venda.situacao()).isEqualTo(Situacao.SEM_LANCE);

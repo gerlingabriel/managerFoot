@@ -404,8 +404,9 @@ exemplo, configurando, pronto ou desconectado).
      lugar. Vale também para o jogo individual.
 6. **Cópia de segurança:** o jogo em rede não baixa arquivo (fica para depois).
 
-**Em aberto (rev. 90):** o que acontece se o próprio administrador cair; o
-mesmo item 4 vale para ele até decisão.
+**Definido (rev. 90), pelo usuário:** se o **administrador** cair, vale a mesma
+regra do item 4. O jogo é gravado a cada rodada, então todos ficam parados onde
+estão até todos estarem de volta e darem OK.
 
 ## 4. Estrutura de ligas e divisões
 
@@ -2441,6 +2442,11 @@ A máquina oferece um pouco abaixo do preço padrão (§9.4).
       lance mínimo, entre os que estão **sem contrato renovado**. Se todos
       estiverem renovados, ninguém é vendido; quando virar a temporada,
       logo no início e **antes de qualquer coisa**, um jogador é vendido.
+  - **Definido (rev. 90), pelo usuário — leilão do usuário depois do OK:** "Vender
+    por leilão" não resolve mais na hora. O jogador vai a leilão depois do OK da
+    tática, na mesma tela dos leilões da máquina, mesmo no jogo individual, e a
+    ficha avisa que ele "vai a leilão depois do OK da tática e pode receber
+    propostas". **Gravado (rev. 90).**
   - **Gravado (rev. 53, V21):** "Vender por leilão" na ficha do jogador
     aberta pelo plantel (não pelos artilheiros), com o campo do lance
     mínimo (0 = sem mínimo) e o preço de tabela como referência. O leilão é

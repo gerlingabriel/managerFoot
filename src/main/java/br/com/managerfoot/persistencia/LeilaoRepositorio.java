@@ -160,7 +160,7 @@ public class LeilaoRepositorio {
 		int rodada = t.processadas() + 1;
 		return visao(jogoId, clube, rodada, linhas("""
 				SELECT id, jogador_id, vendedor_id, lance_minimo, situacao, comprador_id, valor, empate
-				FROM jogo_leilao WHERE temporada_id = :temporada AND rodada = :rodada AND tipo = 'RODADA' ORDER BY id""",
+				FROM jogo_leilao WHERE temporada_id = :temporada AND rodada = :rodada ORDER BY id""",
 				Map.of("temporada", t.id(), "rodada", rodada)));
 	}
 
@@ -183,11 +183,12 @@ public class LeilaoRepositorio {
 
 	/**
 	 * Põe um jogador do clube do treinador em leilão (SPEC §9.4, rev. 53): o lance mínimo é o que ele
-	 * define, e o leilão é resolvido na hora, com os lances da máquina. Sem lance o jogador fica e só
-	 * volta a leilão depois da próxima rodada.
+	 * define. O leilão não é resolvido na hora (rev. 90): fica aberto e entra com os da máquina depois do
+	 * OK da tática ({@link #preparar}), onde os outros treinadores também podem dar lance. Sem lance o
+	 * jogador fica e só volta a leilão depois da próxima rodada.
 	 *
 	 * @param minimo lance mínimo, inteiro na moeda da liga (zero = sem lance mínimo)
-	 * @return o id do leilão, para mostrar o resultado
+	 * @return o id do leilão
 	 * @throws NoSuchElementException se o jogador não é do clube do treinador
 	 * @throws IllegalArgumentException se a venda não é possível agora (o motivo vai na mensagem)
 	 */
@@ -232,6 +233,9 @@ public class LeilaoRepositorio {
 			// contrato firmado (renovação ou compra) segura o jogador até a próxima temporada (SPEC §9.5, rev. 81)
 			throw new IllegalArgumentException(jogador.nome() + " tem contrato nesta temporada: só pode ir a leilão quando a próxima começar.");
 		}
+		if (vaiALeilao(t.id(), rodada, jogadorId)) {
+			throw new IllegalArgumentException(jogador.nome() + " já vai a leilão depois do OK da tática.");
+		}
 		if (jaFoiALeilao(t.id(), rodada, jogadorId)) {
 			throw new IllegalArgumentException(jogador.nome() + " já foi a leilão: só volta depois da rodada " + rodada + ".");
 		}
@@ -245,8 +249,6 @@ public class LeilaoRepositorio {
 			.param("minimo", lanceMinimo)
 			.query(Long.class)
 			.single();
-		resolver(jogoId, t, rodada, c, List.of(new LinhaLeilao(leilaoId, jogadorId, clube, lanceMinimo, Situacao.ABERTO,
-				null, null, false)), Map.of());
 		return leilaoId;
 	}
 
@@ -492,6 +494,18 @@ public class LeilaoRepositorio {
 			.single();
 	}
 
+	/** O jogador já está posto a leilão pelo treinador e espera o OK da tática. */
+	private boolean vaiALeilao(long temporadaId, int rodada, long jogadorId) {
+		return jdbc.sql("""
+				SELECT EXISTS (SELECT 1 FROM jogo_leilao
+				WHERE temporada_id = :temporada AND rodada = :rodada AND jogador_id = :jogador AND situacao = 'ABERTO')""")
+			.param("temporada", temporadaId)
+			.param("rodada", rodada)
+			.param("jogador", jogadorId)
+			.query(Boolean.class)
+			.single();
+	}
+
 	private boolean existemLeiloes(long temporadaId, int rodada) {
 		return jdbc.sql("SELECT EXISTS (SELECT 1 FROM jogo_leilao WHERE temporada_id = :temporada AND rodada = :rodada AND tipo = 'RODADA')")
 			.param("temporada", temporadaId)
@@ -503,7 +517,7 @@ public class LeilaoRepositorio {
 	private List<LinhaLeilao> abertos(long temporadaId, int rodada) {
 		return jdbc.sql("""
 				SELECT id, jogador_id, vendedor_id, lance_minimo FROM jogo_leilao
-				WHERE temporada_id = :temporada AND rodada = :rodada AND tipo = 'RODADA' AND situacao = 'ABERTO'
+				WHERE temporada_id = :temporada AND rodada = :rodada AND situacao = 'ABERTO'
 				ORDER BY id""")
 			.param("temporada", temporadaId)
 			.param("rodada", rodada)

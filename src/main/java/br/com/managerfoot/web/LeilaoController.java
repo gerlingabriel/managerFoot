@@ -62,7 +62,7 @@ class LeilaoController {
 
 	/**
 	 * "Vender por leilão" na ficha do jogador (SPEC §9.4, rev. 53): o lance mínimo é inteiro na moeda
-	 * da liga. O leilão é resolvido na hora; recusado, volta à ficha com o motivo.
+	 * da liga. O jogador vai a leilão depois do OK da tática (rev. 90); recusado, volta à ficha com o motivo.
 	 */
 	@PostMapping("/jogos/{jogoId}/mercado/vender")
 	String vender(@AuthenticationPrincipal Usuario usuario, @PathVariable long jogoId, @RequestParam long jogador,
@@ -77,7 +77,9 @@ class LeilaoController {
 			return ficha;
 		}
 		try {
-			return "redirect:/jogos/" + jogoId + "/leiloes/" + leiloes.venderPorLeilao(jogoId, usuario.id(), jogador, valor);
+			leiloes.venderPorLeilao(jogoId, usuario.id(), jogador, valor);
+			redirect.addFlashAttribute("resultado", "O jogador vai a leilão depois do OK da tática e pode receber propostas.");
+			return "redirect:/jogos/" + jogoId + "/plantel";
 		}
 		catch (IllegalArgumentException e) {
 			redirect.addFlashAttribute("erro", e.getMessage());

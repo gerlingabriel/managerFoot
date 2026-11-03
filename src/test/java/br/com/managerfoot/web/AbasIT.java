@@ -287,7 +287,7 @@ class AbasIT {
 	}
 
 	@Test
-	void vendaPorLeilaoPelaFichaMostraOResultadoNaTelaDosLeiloes() throws Exception {
+	void vendaPorLeilaoPelaFichaEsperaOOkDaTatica() throws Exception {
 		long clube = jogo.clubeDoTreinador(jogoId, treinador.id()).orElseThrow();
 		long atacante = jdbc.sql("SELECT id FROM jogo_jogador WHERE clube_id = :c AND posicao = 'ATACANTE' ORDER BY forca DESC LIMIT 1")
 			.param("c", clube).query(Long.class).single();
@@ -297,22 +297,18 @@ class AbasIT {
 			.andExpect(status().is3xxRedirection())
 			.andExpect(flash().attribute("erro", "Digite o lance mínimo só com números."));
 
-		// mínimo acima de qualquer lance da máquina: ninguém leva
-		String destino = mvc.perform(post(base + "/mercado/vender").param("jogador", String.valueOf(atacante)).param("minimo", "999.999.999")
+		mvc.perform(post(base + "/mercado/vender").param("jogador", String.valueOf(atacante)).param("minimo", "999.999.999")
 				.with(como(treinador)).with(csrf()))
-			.andExpect(status().is3xxRedirection())
-			.andReturn().getResponse().getRedirectedUrl();
-		assertThat(destino).startsWith(base + "/leiloes/");
-		mvc.perform(get(destino).with(como(treinador)))
-			.andExpect(content().string(containsString("Resultado do leilão")))
-			.andExpect(content().string(containsString("fica no seu plantel")))
-			.andExpect(content().string(containsString("Voltar ao plantel")))
-			.andExpect(content().string(not(containsString("Ir para a rodada"))));
+			.andExpect(redirectedUrl(base + "/plantel"))
+			.andExpect(flash().attribute("resultado", containsString("vai a leilão depois do OK da tática e pode receber propostas")));
+		mvc.perform(get(base + "/plantel").param("ficha", String.valueOf(atacante)).with(como(treinador)))
+			.andExpect(content().string(containsString("Vai a leilão depois do OK da tática")))
+			.andExpect(content().string(not(containsString("Vender por leilão"))));
 
 		// de novo antes da rodada: recusado, com o motivo
 		mvc.perform(post(base + "/mercado/vender").param("jogador", String.valueOf(atacante)).param("minimo", "0")
 				.with(como(treinador)).with(csrf()))
-			.andExpect(flash().attribute("erro", containsString("já foi a leilão")));
+			.andExpect(flash().attribute("erro", containsString("já vai a leilão")));
 	}
 
 	@Test

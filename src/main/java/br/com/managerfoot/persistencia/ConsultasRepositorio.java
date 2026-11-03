@@ -143,9 +143,14 @@ public class ConsultasRepositorio {
 				WHERE j.id = :jogador AND g.id = :jogo
 				  AND j.contrato_temporada = (SELECT max(t.numero) FROM jogo_temporada t WHERE t.jogo_id = :jogo)""")
 			.param("jogador", jogadorId).param("jogo", jogoId).query(Integer.class).optional().orElse(null);
+		// posto a leilão pelo treinador, esperando o OK da tática (SPEC §9.4, rev. 90)
+		boolean emLeilao = jdbc.sql("""
+				SELECT EXISTS (SELECT 1 FROM jogo_leilao l JOIN jogo_temporada t ON t.id = l.temporada_id
+				               WHERE t.jogo_id = :jogo AND l.jogador_id = :jogador AND l.situacao = 'ABERTO' AND l.tipo = 'VENDA')""")
+			.param("jogo", jogoId).param("jogador", jogadorId).query(Boolean.class).single();
 		return Optional.of(new Ficha(jogador, nomeClube, gols(jogoId, true).getOrDefault(jogadorId, 0),
 				gols(jogoId, false).getOrDefault(jogadorId, 0), amarelos, clube.get() == doUsuario, Moeda.doPais(pais),
-				PrecoJogador.padrao().preco(jogador, pais), nacionalidade, contratoAte));
+				PrecoJogador.padrao().preco(jogador, pais), nacionalidade, contratoAte, emLeilao));
 	}
 
 	/** Clube do jogo fora das divisões (modelo 14e, rev. 84); vazio se o clube não é deste jogo ou joga a liga. */
@@ -880,8 +885,9 @@ public class ConsultasRepositorio {
 	 * @param preco preço da compra direta pela tabela, em centavos de Real (referência para o lance mínimo)
 	 * @param nacionalidade nome do país do jogador
 	 * @param contratoAte ano até o fim do qual vale o contrato firmado; nulo se não há contrato nesta temporada
+	 * @param emLeilao posto a leilão pelo treinador, esperando o OK da tática
 	 */
 	public record Ficha(Jogador jogador, String clube, int golsTemporada, int golsCarreira, int amarelos,
-			boolean doUsuario, Moeda moeda, long preco, String nacionalidade, Integer contratoAte) {
+			boolean doUsuario, Moeda moeda, long preco, String nacionalidade, Integer contratoAte, boolean emLeilao) {
 	}
 }
