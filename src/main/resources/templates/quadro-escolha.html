@@ -8,13 +8,14 @@
 
 <div class="quadro-cabecalho">
 <div class="pilha-curta">
-<span class="rotulo" th:text="|Novo jogo · ${campeonato.nomePais} · ${campeonato.nomeLiga}|">Novo jogo</span>
+<span class="rotulo" th:text="${rotulo}">Novo jogo</span>
 <h1 class="titulo-pagina">Escolha seu clube</h1>
 </div>
-<a th:href="@{/jogos/novo}" class="botao-discreto botao-link">Voltar</a>
+<a th:href="@{${voltar}}" class="botao-discreto botao-link">Voltar</a>
 </div>
 
-<p class="texto">Clubes do país já distribuídos pela força, como ficarão no jogo. Empates de força foram sorteados. Clique num clube para ver o plantel.</p>
+<div th:if="${erro}" role="alert" class="alerta" th:text="${erro}">erro</div>
+<p class="texto" th:text="${explicacao} ?: 'Clubes do país já distribuídos pela força, como ficarão no jogo. Empates de força foram sorteados. Clique num clube para ver o plantel.'">texto</p>
 
 <div id="quadro" class="quadro">
 <main class="quadro-colunas">
@@ -25,16 +26,17 @@
 </div>
 <div class="coluna-clubes">
 <th:block th:each="c : ${col.clubes}">
-<span th:if="${col.fila}" class="clube-linha bloqueado" aria-disabled="true">
+<span th:if="${col.fila or col.ocupados.contains(c.id)}" class="clube-linha bloqueado" aria-disabled="true"
+	th:title="${col.fila} ? null : 'já tem treinador'">
 <span aria-hidden="true" th:style="${@escudos.estilo(c.escudo, 20, 24)}"></span>
 <span class="clube-nome" th:text="${c.nome}">Clube</span>
 <span class="clube-forca" th:text="${c.forca}">0</span>
 </span>
-<a th:unless="${col.fila}" class="clube-linha"
+<a th:unless="${col.fila or col.ocupados.contains(c.id)}" class="clube-linha"
 	th:classappend="${escolhido != null and escolhido.clube.id == c.id} ? 'marcado' : (${col.candidatos.contains(c.id)} ? 'sorteavel')"
-	th:href="@{/jogos/escolher(clube=${c.id})}" th:attr="aria-current=${escolhido != null and escolhido.clube.id == c.id} ? 'true' : null"
+	th:href="@{${quadroUrl}(clube=${c.id})}" th:attr="aria-current=${escolhido != null and escolhido.clube.id == c.id} ? 'true' : null"
 	hx-select="#quadro" hx-target="#quadro" hx-swap="outerHTML show:none" hx-push-url="true"
-	th:hx-get="@{/jogos/escolher(clube=${c.id})}">
+	th:hx-get="@{${quadroUrl}(clube=${c.id})}">
 <span aria-hidden="true" th:style="${@escudos.estilo(c.escudo, 20, 24)}"></span>
 <span class="clube-nome" th:text="${c.nome}">Clube</span>
 <span class="clube-forca" th:text="${c.forca}">0</span>
@@ -65,7 +67,7 @@
 </tr>
 </tbody>
 </table>
-<form th:action="@{/jogos/escolher/assumir}" method="post" data-envio-unico>
+<form th:action="@{${quadroUrl + '/assumir'}}" method="post" data-envio-unico>
 <input type="hidden" name="clube" th:value="${escolhido.clube.id}">
 <button type="submit" class="botao botao-largo" th:text="|Assumir ${escolhido.clube.nome}|">Assumir</button>
 </form>

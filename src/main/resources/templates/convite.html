@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: cabeca('Convite')}"></head>
+<body>
+<div class="campo campo-pagina">
+<div class="pagina">
+<th:block th:if="${usuario != null}"><header th:replace="~{fragmentos :: topo}"></header></th:block>
+<th:block th:if="${usuario == null}"><header th:replace="~{fragmentos :: marca}"></header></th:block>
+<div th:if="${erro}" role="alert" class="alerta" th:text="${erro}">erro</div>
+
+<!--/* Modelo 18d. Caso 2: ainda não entrou na conta; o formulário volta para cá (SegurancaConfig). */-->
+<section th:if="${usuario == null}" aria-labelledby="t-convite" class="cartao-convite convite-pagina">
+<span id="t-convite" class="rotulo destaque" th:text="|Convite de ${administrador}|">Convite de Gabriel</span>
+<p class="texto">Entre na sua conta para aceitar o convite. Depois de entrar, você volta para cá.</p>
+<div th:if="${param.erro != null}" role="alert" class="alerta">E-mail ou senha incorretos.</div>
+<form th:action="@{/entrar}" method="post" class="pilha-curta">
+<input type="hidden" name="convite" th:value="${token}">
+<div class="campo-form">
+<label for="l-email">E-mail</label>
+<input id="l-email" name="email" type="email" autocomplete="username" required>
+</div>
+<div class="campo-form">
+<label for="l-senha">Senha</label>
+<input id="l-senha" name="senha" type="password" autocomplete="current-password" required>
+</div>
+<button type="submit" class="botao botao-largo">Entrar</button>
+</form>
+<span class="suave centro" th:text="|Ainda não tem conta? Peça ao ${administrador} um link de cadastro.|">Ainda não tem conta?</span>
+</section>
+
+<!--/* Caso 1: link válido. */-->
+<section th:if="${usuario != null and valido != null}" aria-labelledby="t-convite" class="cartao-convite convite-pagina">
+<span class="rotulo destaque">Convite para jogo em rede</span>
+<h2 id="t-convite" class="titulo-secao" th:text="|${administrador} chamou você|">Gabriel chamou você</h2>
+<dl class="resumo">
+<div><dt>Campeonato</dt><dd th:text="|${valido.pais} · ${valido.divisoes} ${valido.divisoes == 1 ? 'divisão' : 'divisões'}|">Brasil · 2 divisões</dd></div>
+<div><dt>Como começa</dt><dd th:text="${valido.modo.name() == 'ESCOLHA'} ? 'Cada um escolhe o clube' : 'Clube sorteado ao entrar'">Cada um escolhe</dd></div>
+<div><dt>Na sala</dt><dd th:text="${#strings.listJoin(valido.naSala, ', ')}">Gabriel</dd></div>
+</dl>
+<form th:action="@{/convite/{t}/entrar(t=${token})}" method="post" data-envio-unico class="pilha-curta">
+<button type="submit" class="botao botao-largo" th:text="${valido.modo.name() == 'ESCOLHA'} ? 'Entrar e escolher clube' : 'Entrar e receber o clube sorteado'">Entrar</button>
+<span th:if="${valido.modo.name() == 'SORTEIO'}" class="suave centro"
+	th:text="|O clube sai entre os ${valido.grupoSorteio} mais fracos da última divisão, sem os que já têm treinador.|">entre os 7</span>
+</form>
+</section>
+
+<!--/* Caso 3: o convite não vale mais. */-->
+<section th:if="${usuario != null and motivo != null}" aria-labelledby="t-convite" class="cartao-convite convite-pagina">
+<span class="rotulo" th:text="|Convite de ${administrador}|">Convite de Gabriel</span>
+<h2 id="t-convite" class="titulo-secao">Este convite não vale mais</h2>
+<p class="texto" th:text="${motivo}">Motivo</p>
+<a th:href="@{/}" class="botao-contorno alinhar-inicio">Ir para os meus jogos</a>
+</section>
+</div>
+</div>
+</body>
+</html>

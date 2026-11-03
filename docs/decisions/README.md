@@ -31,3 +31,4 @@ consideradas, decisão e consequências.
 | [0017](0017-mundial-na-temporada.md) | Mundial de Clubes na temporada | Aceita |
 | [0018](0018-arquivo-de-save.md) | Arquivo de save em JSON | Aceita |
 | [0019](0019-banco-editavel.md) | Banco editável por arquivo | Aceita |
+| [0020](0020-sala-do-jogo-em-rede.md) | Sala do jogo em rede e convite por link | Aceita |

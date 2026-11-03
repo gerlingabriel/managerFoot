@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 91 — 2026-11-03)
+-   **Status:** versão inicial para revisão (rev. 92 — 2026-11-03)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -14,6 +14,8 @@
     descreve intenção geral ainda não detalhada.
 
 ### Histórico de revisões
+
+-   **rev. 92 (2026-11-03):** pelo usuário: aprovados os modelos 18a a 18f do jogo em rede e as 9 propostas deles (§3.3): passo "Quem joga" no novo jogo, sorteio ao entrar na sala, link novo cancela o anterior, só o administrador tira alguém da sala, tirar o OK, leilões também esperam o OK de todos, sem conexão = 30 s sem consulta, velocidade só do administrador, sem "Baixar arquivo" e "Apagar" só do administrador. Feita a parte 5a (sala, convite e entrada; ADR 0020).
 
 -   **rev. 91 (2026-11-03):** pelo usuário: sem jogo do clube do treinador na próxima etapa, ela segue com a escalação incompleta (§10.3); pênalti defendido aparece nos lances, do lado do goleiro e em destaque (§10.5). Agente: a etapa já travava no servidor com a escalação incompleta de quem não jogava, com a mensagem errada "já foi jogada"; corrigido.
 
@@ -265,7 +267,8 @@ adicionais e como os arquivos/configurações são compartilhados.
   administrador pode redefinir a senha de um participante.
 
 **Em aberto:**
-- Validade e uso do **convite para sessão em rede** (Etapa 5).
+- ~~Validade e uso do **convite para sessão em rede** (Etapa 5).~~ Definido na
+  §3.3 (rev. 90 e 92): link de 7 dias, só antes da 1ª rodada.
 - Recuperação de senha pelo próprio usuário (depende do serviço de e-mail).
 - Qual serviço de e-mail será usado. É uma dependência externa e precisa de
   credenciais fora do repositório.
@@ -409,6 +412,35 @@ exemplo, configurando, pronto ou desconectado).
 **Definido (rev. 90), pelo usuário:** se o **administrador** cair, vale a mesma
 regra do item 4. O jogo é gravado a cada rodada, então todos ficam parados onde
 estão até todos estarem de volta e darem OK.
+
+**Definido (rev. 92), pelo usuário — modelos 18a a 18f aprovados:**
+1. **Novo jogo:** o administrador escolhe **Só eu** ou **Em rede** ("Quem joga").
+   Em rede, o jogo vai para a sala em vez de começar; no modo escolha ele passa
+   antes pelo quadro de escolha.
+2. **Sorteio ao entrar:** no modo sorteio, cada um recebe o clube ao entrar na
+   sala; o grupo cresce um clube por quem já tem clube (4, 5, 6…), sem os clubes
+   ocupados (rev. 29).
+3. **Link:** gerar um link novo cancela o anterior. Não há limite de treinadores
+   na sala. O link vale 7 dias ou até a temporada começar.
+4. **Sala:** só o administrador tira alguém, antes de começar; o clube volta à
+   máquina. Depois de começar, ninguém sai nem entra. "Começar a temporada" só
+   acende com todos prontos (com clube e conectados).
+5. **OK:** quem já deu OK pode tirá-lo e mexer de novo enquanto falta alguém.
+6. **Leilões** (depois do OK da tática) também esperam o OK de todos, com a
+   mesma faixa "Aguardando".
+7. **Sem conexão** = o navegador ficou **30 s** sem consultar o servidor. O jogo
+   só espera; ninguém joga pelo ausente.
+8. **Rodada:** só o administrador muda a velocidade; os outros veem qual vale. Na
+   pausa da substituição, os 60 s aparecem para todos; ao fim, a janela de quem
+   substitui fecha e o que já foi trocado vale.
+9. **Início:** jogo em rede sem "Baixar arquivo"; só o administrador vê
+   "Apagar". Os outros não têm botão de sair por enquanto.
+
+**Gravado (rev. 92) — parte 5a (`docs/decisions/0020`):** itens 1 a 4, 7 (na
+sala) e 9. Patrocínio, salários e jogadores à venda são fixados quando a
+temporada começa, com todos nos clubes. Enquanto o jogo está na sala, nenhuma
+rodada começa; o plantel pode ser visto. Quem abre o link sem ter entrado na
+conta vê o formulário de entrar e volta ao convite.
 
 ## 4. Estrutura de ligas e divisões
 
@@ -3083,8 +3115,8 @@ liga principal (1) por último. Com uma única liga, basta a prioridade 1.
   administrador remove o participante, o clube passa à máquina ou a sessão
   fica parada indefinidamente.
 - Se o próprio administrador desconectar.
-- Como saber que um navegador "caiu" usando polling. Hipótese: sem
-  consulta por N segundos.
+- ~~Como saber que um navegador "caiu" usando polling.~~ Definido (rev. 92):
+  sem consulta por 30 s.
 
 ## 12. Regras de penalidades, lesões e eventos
 
@@ -3352,6 +3384,9 @@ começa depois que a anterior estiver testada.
 ### Etapa 5 — Multiplayer
 - **Definido (rev. 29):** só começa depois que o jogo individual estiver
   jogável e testado pelo usuário (mecânica e bugs).
+- **Partes (rev. 90):** 5a sala, convite e entrada (**concluída**, rev. 92); 5b
+  OK de todos na gestão e nos leilões; 5c rodada compartilhada com pausa de
+  60 s; 5d lances de amigos nos leilões.
 - Sala, convites por e-mail, confirmação de turno, polling e velocidade
   definida pelo administrador.
 - Desconexão (§11.4), privacidade e processamento único.

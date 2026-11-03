@@ -20,22 +20,36 @@
 <section aria-labelledby="t-gravados" class="painel lista-jogos">
 <div class="painel-cabecalho">
 <h2 id="t-gravados" class="titulo-secao">Voltar a um jogo gravado</h2>
-<span class="suave" th:text="${jogos.size() == 1} ? '1 jogo' : |${jogos.size()} jogos|">0 jogos</span>
+<span class="suave" th:with="total=${jogos.size() + salasSemClube.size()}" th:text="${total == 1} ? '1 jogo' : |${total} jogos|">0 jogos</span>
 </div>
-<p th:if="${jogos.isEmpty()}" class="linha-jogo texto">Você ainda não tem jogos. Comece um novo.</p>
+<p th:if="${jogos.isEmpty() and salasSemClube.isEmpty()}" class="linha-jogo texto">Você ainda não tem jogos. Comece um novo.</p>
+<!--/* Sala em que entrou e ainda não escolheu o clube (modo escolha). */-->
+<div th:each="s : ${salasSemClube}" class="linha-jogo">
+<span aria-hidden="true" class="escudo-vazio"></span>
+<div class="linha-jogo-texto">
+<span class="nome-clube">Sem clube <span class="selo-rede">Em rede</span></span>
+<span class="texto pequeno" th:text="|Sala de ${s.administrador} · ${s.pais} · você ainda não escolheu o clube|">Sala</span>
+<span class="suave" th:text="|${s.treinadores} ${s.treinadores == 1 ? 'treinador' : 'treinadores'} na sala|">na sala</span>
+</div>
+<div class="acoes-jogo">
+<a th:href="@{/jogos/{id}/sala(id=${s.jogoId})}" class="botao-contorno">Abrir a sala</a>
+</div>
+</div>
 <div th:each="j : ${jogos}" class="linha-jogo">
 <span aria-hidden="true" th:style="${@escudos.estilo(j.clube.escudo, 36, 44)}"></span>
 <div class="linha-jogo-texto">
-<span class="nome-clube" th:text="${j.clube.nome}">Clube</span>
+<span class="nome-clube"><span th:text="${j.clube.nome}">Clube</span><span th:if="${j.emRede}" class="selo-rede">Em rede</span></span>
 <span class="texto pequeno" th:text="${j.onde}">onde</span>
 <span class="suave" th:text="${j.quando}">quando</span>
 </div>
 <div class="acoes-jogo">
-<a th:href="@{/jogos/{id}/plantel(id=${j.jogoId})}" class="botao-contorno"
+<a th:if="${j.naSala}" th:href="@{/jogos/{id}/sala(id=${j.jogoId})}" class="botao-contorno"
+	th:with="rotulo=|Abrir a sala do ${j.clube.nome}|" th:attr="aria-label=${rotulo}">Abrir a sala</a>
+<a th:unless="${j.naSala}" th:href="@{/jogos/{id}/plantel(id=${j.jogoId})}" class="botao-contorno"
 	th:attr="aria-label=|Continuar ${j.clube.nome}|">Continuar</a>
-<a th:href="@{/jogos/{id}/arquivo(id=${j.jogoId})}" class="botao-discreto botao-link"
+<a th:unless="${j.emRede}" th:href="@{/jogos/{id}/arquivo(id=${j.jogoId})}" class="botao-discreto botao-link"
 	th:attr="aria-label=|Baixar o arquivo de ${j.clube.nome}|">Baixar arquivo</a>
-<a th:href="@{/(apagar=${j.jogoId})}" class="botao-discreto botao-link acao-apagar"
+<a th:if="${j.podeApagar}" th:href="@{/(apagar=${j.jogoId})}" class="botao-discreto botao-link acao-apagar"
 	th:attr="aria-label=|Apagar ${j.clube.nome}|">Apagar</a>
 </div>
 </div>
@@ -55,10 +69,11 @@
 <div th:if="${apagando != null}" class="janela-fundo">
 <div role="dialog" aria-modal="true" aria-labelledby="t-apagar" class="janela janela-apagar">
 <h2 id="t-apagar" class="titulo-secao" th:text="|Apagar ${apagando.clube.nome}?|">Apagar?</h2>
-<p class="texto">O jogo sai do servidor e não dá para desfazer. Só será possível voltar a ele com o arquivo baixado.</p>
+<p th:unless="${apagando.emRede}" class="texto">O jogo sai do servidor e não dá para desfazer. Só será possível voltar a ele com o arquivo baixado.</p>
+<p th:if="${apagando.emRede}" class="texto">O jogo em rede sai do servidor para todos os treinadores e não dá para desfazer.</p>
 <div class="acoes-jogo">
 <a th:href="@{/}" class="botao-discreto botao-link" autofocus>Cancelar</a>
-<a th:href="@{/jogos/{id}/arquivo(id=${apagando.jogoId})}" class="botao-contorno">Baixar arquivo</a>
+<a th:unless="${apagando.emRede}" th:href="@{/jogos/{id}/arquivo(id=${apagando.jogoId})}" class="botao-contorno">Baixar arquivo</a>
 <form th:action="@{/jogos/{id}/apagar(id=${apagando.jogoId})}" method="post" data-envio-unico>
 <button type="submit" class="botao-perigo">Apagar jogo</button>
 </form>

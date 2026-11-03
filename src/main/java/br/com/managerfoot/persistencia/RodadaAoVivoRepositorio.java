@@ -236,8 +236,16 @@ public class RodadaAoVivoRepositorio {
 			.update();
 	}
 
-	/** Patrocínio, convite e pedido de aumento esperam a resposta antes de qualquer jogo. */
+	/** Sala do jogo em rede, patrocínio, convite e pedido de aumento esperam antes de qualquer jogo. */
 	private void exigirSemDecisaoPendente(long jogoId) {
+		boolean naSala = jdbc.sql("SELECT EXISTS (SELECT 1 FROM jogo_rede WHERE jogo_id = :jogo AND comecou_em IS NULL)")
+			.param("jogo", jogoId)
+			.query(Boolean.class)
+			.single();
+		if (naSala) {
+			// jogo em rede: nada é jogado antes de o administrador começar a temporada (SPEC §3.3, rev. 92)
+			throw new DecisaoPendenteException("A temporada ainda não começou: aguarde o administrador na sala.");
+		}
 		boolean semPatrocinio = jdbc.sql("""
 				SELECT EXISTS (SELECT 1 FROM jogo_patrocinio p JOIN jogo_temporada t ON t.id = p.temporada_id
 				               JOIN jogo_clube c ON c.id = p.clube_id

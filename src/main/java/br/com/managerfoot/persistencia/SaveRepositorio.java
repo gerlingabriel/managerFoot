@@ -71,6 +71,12 @@ public class SaveRepositorio {
 		if (jogo.isEmpty()) {
 			return Optional.empty();
 		}
+		boolean emRede = jdbc.sql("SELECT EXISTS (SELECT 1 FROM jogo_rede WHERE jogo_id = :jogo)")
+			.param("jogo", jogoId).query(Boolean.class).single();
+		if (emRede) {
+			// cópia de segurança do jogo em rede fica para depois (SPEC §3.3, rev. 90)
+			throw new SaveRecusadoException("Jogo em rede não baixa arquivo.");
+		}
 		boolean aoVivo = jdbc.sql("SELECT EXISTS (SELECT 1 FROM jogo_rodada_ao_vivo WHERE jogo_id = :jogo)")
 			.param("jogo", jogoId).query(Boolean.class).single();
 		if (aoVivo) {
@@ -341,13 +347,16 @@ public class SaveRepositorio {
 	/**
 	 * Apaga o jogo do servidor, com tudo o que é dele. Não dá para desfazer.
 	 *
-	 * @return falso se o jogo não existe ou se o usuário não é treinador nele
+	 * @return falso se o jogo não existe, se o usuário não é treinador nele ou se o jogo é em rede e ele não é o
+	 *         administrador (SPEC §3.3, rev. 92)
 	 */
 	@Transactional
 	public boolean apagar(long jogoId, long usuarioId) {
 		Optional<Long> dele = jdbc.sql("""
 				SELECT j.id FROM jogo j JOIN jogo_treinador t ON t.jogo_id = j.id
-				WHERE j.id = :jogo AND t.usuario_id = :usuario FOR UPDATE OF j""")
+				WHERE j.id = :jogo AND t.usuario_id = :usuario
+				  AND (j.dono_id = :usuario OR NOT EXISTS (SELECT 1 FROM jogo_rede r WHERE r.jogo_id = j.id))
+				FOR UPDATE OF j""")
 			.param("jogo", jogoId)
 			.param("usuario", usuarioId)
 			.query(Long.class).optional();

@@ -78,16 +78,34 @@ Nenhum campeonato disponível. Carregue o banco padrão (veja o README).
 </div>
 </section>
 
+<section th:if="${usuario.papel.name() == 'ADMINISTRADOR'}" aria-labelledby="t-quem" class="painel painel-interno">
+<h2 id="t-quem" class="titulo-secao pequeno">3 · Quem joga</h2>
+<div class="opcoes-banco" role="radiogroup" aria-labelledby="t-quem">
+<label class="opcao-banco opcao-quem">
+<span class="linha-jogo-texto"><span class="nome-clube pequeno"><input type="radio" name="emRede" value="false" checked> Só eu</span>
+<span class="suave">Começa na hora, como hoje.</span></span>
+</label>
+<label class="opcao-banco opcao-quem">
+<span class="linha-jogo-texto"><span class="nome-clube pequeno"><input type="radio" name="emRede" value="true"> Em rede, com convidados</span>
+<span class="suave">Você pega o seu clube e o jogo fica na sala até você começar a temporada.</span></span>
+</label>
+</div>
+</section>
+
 <section th:if="${usuario.papel.name() == 'ADMINISTRADOR'}" aria-labelledby="t-modo" class="painel painel-interno">
-<h2 id="t-modo" class="titulo-secao pequeno">3 · Como começar</h2>
+<h2 id="t-modo" class="titulo-secao pequeno">4 · Como começar</h2>
 <div class="opcoes">
 <button type="submit" class="opcao">
-<span class="opcao-titulo">Sortear clube e começar</span>
-<span class="texto" th:text="|Você recebe um dos ${candidatos} clubes mais fracos da última divisão.|">texto</span>
+<span class="opcao-titulo so-eu">Sortear clube e começar</span>
+<span class="texto so-eu" th:text="|Você recebe um dos ${candidatos} clubes mais fracos da última divisão.|">texto</span>
+<span class="opcao-titulo em-rede">Sortear clubes e abrir a sala</span>
+<span class="texto em-rede" th:text="|Cada treinador recebe um dos clubes mais fracos da última divisão ao entrar. O grupo cresce um clube por treinador: você entre ${candidatos}, o próximo entre ${candidatos + 1}, e assim por diante.|">texto</span>
 </button>
 <button type="submit" class="opcao" th:formaction="@{/jogos/escolher}">
-<span class="opcao-titulo">Escolher clube</span>
-<span class="texto">Abre o quadro de escolha com todos os clubes do país.</span>
+<span class="opcao-titulo so-eu">Escolher clube</span>
+<span class="texto so-eu">Abre o quadro de escolha com todos os clubes do país.</span>
+<span class="opcao-titulo em-rede">Escolher clubes e abrir a sala</span>
+<span class="texto em-rede">Cada treinador escolhe qualquer clube de divisão. Clube com treinador fica bloqueado para os outros.</span>
 </button>
 </div>
 </section>

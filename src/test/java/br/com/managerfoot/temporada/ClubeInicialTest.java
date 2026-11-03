@@ -68,4 +68,24 @@ class ClubeInicialTest {
 		}
 		assertThat(sorteados).containsExactlyInAnyOrderElementsOf(ClubeInicial.candidatos(serieC, 4));
 	}
+
+	@Test
+	void emRedeOGrupoCresceUmPorClubeOcupadoESemOsOcupados() {
+		// forças 1 a 8: os 4 mais fracos são 1 a 4; com 2 ocupados o grupo vai a 6 e eles saem
+		Divisao serieC = divisao(8, 7, 6, 5, 4, 3, 2, 1);
+		assertThat(ids(ClubeInicial.candidatos(serieC, 4, Set.of()))).containsExactly(5L, 6L, 7L, 8L);
+		assertThat(ids(ClubeInicial.candidatos(serieC, 4, Set.of(8L, 7L)))).containsExactly(3L, 4L, 5L, 6L);
+	}
+
+	@Test
+	void emRedeOcupadoDeOutraDivisaoTambemAumentaOGrupo() {
+		Divisao serieC = divisao(8, 7, 6, 5, 4, 3, 2, 1);
+		assertThat(ids(ClubeInicial.candidatos(serieC, 4, Set.of(99L)))).containsExactly(4L, 5L, 6L, 7L, 8L);
+	}
+
+	@Test
+	void emRedeSemClubeLivreNaoHaCandidatos() {
+		Divisao serieC = divisao(5, 5);
+		assertThat(ClubeInicial.candidatos(serieC, 4, Set.of(1L, 2L))).isEmpty();
+	}
 }

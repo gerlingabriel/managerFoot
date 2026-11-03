@@ -1625,3 +1625,32 @@ a.financas-link:hover, a.financas-link:focus-visible { border-color: var(--desta
 .opcao-banco { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border: 1px solid var(--borda); border-radius: 10px; }
 .opcao-banco.marcada { border: 2px solid var(--destaque); }
 .lista-problemas { margin: 8px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
+
+/* Jogo em rede (modelos 18a a 18d, rev. 92). */
+.opcao-quem { cursor: pointer; }
+.opcao-quem:has(input:checked) { border: 2px solid var(--destaque); }
+.opcao-quem input { accent-color: var(--destaque); }
+/* passo 4 do novo jogo: os textos mudam com "Quem joga" */
+.em-rede { display: none; }
+.pilha-larga:has(input[name=emRede][value=true]:checked) .em-rede { display: inline; }
+.pilha-larga:has(input[name=emRede][value=true]:checked) .so-eu { display: none; }
+.selo-rede { margin-left: 8px; padding: 1px 8px; border-radius: 999px; background: var(--continental); color: #0B2233; font: 700 12px Barlow, sans-serif; letter-spacing: .06em; vertical-align: middle; text-transform: none; }
+.sala-corpo { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 900px) { .sala-corpo { grid-template-columns: 1fr; } }
+.sala-linha { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 20px; border-top: 1px solid rgba(31, 90, 58, .6); }
+.sala-linha:first-of-type { border-top: 0; }
+.sala-linha.sem-borda { padding: 0; border: 0; }
+.sala-linha .linha-jogo-texto { flex: 1 1 180px; }
+.sala-nome { font-weight: 600; font-size: 17px; }
+.escudo-vazio { width: 32px; height: 38px; flex: none; border-radius: 5px 5px 16px 16px; border: 1px dashed var(--texto-suave); box-sizing: border-box; }
+.estado { flex: none; padding: 2px 10px; border-radius: 999px; font: 600 13px Barlow, sans-serif; white-space: nowrap; justify-self: end; }
+.estado-pronto { background: #3FB37F; color: #062014; border: 1px solid #3FB37F; }
+.estado-mexendo { color: var(--destaque); border: 1px solid var(--destaque); }
+.estado-fora { color: var(--texto-suave); border: 1px dashed var(--texto-suave); }
+.link-linha { display: flex; gap: 8px; }
+.link-linha input { flex: 1; min-width: 0; min-height: 44px; padding: 0 12px; background: var(--campo); color: var(--texto); border: 1px solid var(--borda); border-radius: 8px; font: 500 14px Barlow, sans-serif; }
+.alinhar-inicio { align-self: flex-start; }
+.cartao-convite { display: flex; flex-direction: column; gap: 14px; padding: 20px; background: var(--cartao); border: 1px solid var(--borda); border-radius: 12px; }
+.convite-pagina { max-width: 520px; margin: 24px auto; }
+.sala-mini { display: grid; grid-template-columns: 1fr auto; gap: 8px 12px; align-items: center; font-size: 15px; }
+.aviso-sala { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--continental); background: rgba(142, 201, 240, 0.10); font-size: 15px; }

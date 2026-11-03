@@ -287,8 +287,12 @@ public class JogoRepositorio {
 			.orElseThrow(() -> new NoSuchElementException("usuário " + usuarioId + " não existe"));
 	}
 
-	/** Põe o treinador no clube, que começa com a escalação da máquina (SPEC §10.3, rev. 34). */
-	private void inserirTreinador(long jogoId, long usuarioId, long clubeId) {
+	/**
+	 * Põe o treinador no clube, que começa com a escalação da máquina (SPEC §10.3, rev. 34). Quem chama
+	 * confere que o clube está livre e numa divisão.
+	 */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void inserirTreinador(long jogoId, long usuarioId, long clubeId) {
 		jdbc.sql("INSERT INTO jogo_treinador (jogo_id, usuario_id, clube_id) VALUES (:jogo, :usuario, :clube)")
 			.param("jogo", jogoId)
 			.param("usuario", usuarioId)

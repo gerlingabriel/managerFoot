@@ -48,6 +48,10 @@
 
 <div th:if="${resultado}" role="status" class="aviso-resultado" th:text="${resultado}">Rodada 1: A 1 x 0 B</div>
 <div th:if="${erro}" role="alert" class="alerta" th:text="${erro}">erro</div>
+<div th:if="${naSala}" role="status" class="aviso-sala">
+<span>Jogo em rede: a temporada ainda não começou. A rodada espera o administrador começar na sala.</span>
+<a th:href="@{/jogos/{id}/sala(id=${v.jogoId})}" class="botao-contorno">Voltar à sala</a>
+</div>
 
 <nav th:replace="~{fragmentos :: abas(${v.jogoId}, 'plantel')}"></nav>
 

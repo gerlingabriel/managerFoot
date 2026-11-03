@@ -23,6 +23,7 @@ import org.springframework.web.servlet.support.RequestContextUtils;
 import br.com.managerfoot.contas.Usuario;
 import br.com.managerfoot.persistencia.LeilaoRepositorio;
 import br.com.managerfoot.persistencia.RodadaRepositorio;
+import br.com.managerfoot.persistencia.SalaRepositorio;
 import br.com.managerfoot.persistencia.LeilaoRepositorio.Etapa;
 import br.com.managerfoot.persistencia.DecisaoPendenteException;
 import br.com.managerfoot.persistencia.PlantelRepositorio;
@@ -47,11 +48,13 @@ class RodadaController {
 	private final LeilaoRepositorio leiloes;
 	private final TrocaRepositorio trocas;
 	private final RodadaRepositorio rodadas;
+	private final SalaRepositorio salas;
 	private final Clock relogio;
 
 	RodadaController(RodadaAoVivoRepositorio aoVivo, PlantelRepositorio plantel, LeilaoRepositorio leiloes,
-			TrocaRepositorio trocas, RodadaRepositorio rodadas, Clock relogio) {
+			TrocaRepositorio trocas, RodadaRepositorio rodadas, SalaRepositorio salas, Clock relogio) {
 		this.aoVivo = aoVivo;
+		this.salas = salas;
 		this.rodadas = rodadas;
 		this.plantel = plantel;
 		this.leiloes = leiloes;
@@ -71,6 +74,11 @@ class RodadaController {
 			@RequestParam(name = "continental", defaultValue = "false") boolean continental,
 			@RequestParam(name = "mundial", defaultValue = "false") boolean mundial, RedirectAttributes redirect) {
 		PlantelRepositorio.VisaoPlantel visao = plantel.visao(jogoId, usuario.id()).orElseThrow(NoSuchElementException::new);
+		if (salas.naSala(jogoId)) {
+			// antes dos leilões, que já abririam (SPEC §3.3, rev. 92)
+			redirect.addFlashAttribute("erro", "A temporada ainda não começou: aguarde o administrador na sala.");
+			return "redirect:/jogos/" + jogoId + "/plantel";
+		}
 		// clique repetido numa rodada já jogada: a escalação pode ter mudado depois (suspensão), mas o aviso é este
 		if (rodada < visao.rodada()) {
 			redirect.addFlashAttribute("erro", "A rodada " + rodada + " já foi jogada. Confira o plantel.");

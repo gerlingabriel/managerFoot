@@ -1,5 +1,6 @@
 package br.com.managerfoot.persistencia;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -94,13 +95,25 @@ public class BancoEditavelRepositorio {
 	 */
 	@Transactional
 	public NovoJogo criarJogo(byte[] arquivo, String codigoPais, long usuarioId) {
+		return criarJogo(arquivo, codigoPais, usuarioId, null);
+	}
+
+	/**
+	 * Como {@link #criarJogo(byte[], String, long)}, num jogo em rede no modo sorteio, que fica na sala
+	 * (SPEC §3.3, rev. 92).
+	 *
+	 * @param salaAbertaEm nulo no jogo individual
+	 */
+	@Transactional
+	public NovoJogo criarJogo(byte[] arquivo, String codigoPais, long usuarioId, Instant salaAbertaEm) {
 		BancoEditavel banco = ler(arquivo);
 		if (banco.pais(codigoPais).flatMap(Pais::liga).isEmpty()) {
 			throw new NoSuchElementException("o arquivo não tem liga do país " + codigoPais);
 		}
 		long molde = moldes.criarMolde(NOME_MOLDE_TEMPORARIO);
 		Gravado gravado = gravar(molde, banco, codigoPais);
-		NovoJogo novo = jogos.criarComSorteio(gravado.pais(), usuarioId);
+		NovoJogo novo = salaAbertaEm == null ? jogos.criarComSorteio(gravado.pais(), usuarioId)
+				: jogos.criarEmRedeComSorteio(gravado.pais(), usuarioId, salaAbertaEm);
 		apagarMolde(molde);
 		return novo;
 	}
@@ -116,6 +129,16 @@ public class BancoEditavelRepositorio {
 	 */
 	@Transactional
 	public long criarJogoComEscolha(byte[] arquivo, String codigoPais, long administradorId, long semente, int numero) {
+		return criarJogoComEscolha(arquivo, codigoPais, administradorId, semente, numero, null);
+	}
+
+	/**
+	 * Como {@link #criarJogoComEscolha(byte[], String, long, long, int)}; com {@code salaAbertaEm}, o jogo é em
+	 * rede no modo escolha e fica na sala (SPEC §3.3, rev. 92).
+	 */
+	@Transactional
+	public long criarJogoComEscolha(byte[] arquivo, String codigoPais, long administradorId, long semente, int numero,
+			Instant salaAbertaEm) {
 		BancoEditavel banco = ler(arquivo);
 		Pais pais = banco.pais(codigoPais).filter(p -> p.liga().isPresent())
 			.orElseThrow(() -> new NoSuchElementException("o arquivo não tem liga do país " + codigoPais));
@@ -124,7 +147,8 @@ public class BancoEditavelRepositorio {
 		}
 		long molde = moldes.criarMolde(NOME_MOLDE_TEMPORARIO);
 		Gravado gravado = gravar(molde, banco, codigoPais);
-		long jogo = jogos.criarComEscolha(gravado.pais(), administradorId, semente, gravado.clubes().get(numero - 1));
+		long jogo = salaAbertaEm == null ? jogos.criarComEscolha(gravado.pais(), administradorId, semente, gravado.clubes().get(numero - 1))
+				: jogos.criarEmRedeComEscolha(gravado.pais(), administradorId, semente, gravado.clubes().get(numero - 1), salaAbertaEm);
 		apagarMolde(molde);
 		return jogo;
 	}

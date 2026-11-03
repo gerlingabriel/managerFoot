@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: cabeca('Sala do jogo em rede')}"></head>
+<body>
+<div class="campo campo-pagina">
+<div class="pagina">
+<header th:replace="~{fragmentos :: topo}"></header>
+<div th:if="${resultado}" role="status" class="aviso-resultado" th:text="${resultado}">Link novo gerado.</div>
+<div th:if="${erro}" role="alert" class="alerta" th:text="${erro}">erro</div>
+
+<!--/* Modelo 18c (administrador) e 18d caso 4 (participante). A cada 3 s a lista volta do servidor, e a
+     consulta é o que mantém o treinador "conectado" (SPEC §3.3, rev. 92). */-->
+<div id="sala" class="pilha-larga" th:fragment="corpo" th:attr="hx-get=@{/jogos/{id}/sala(id=${jogoId})}"
+	hx-trigger="every 3s" hx-swap="outerHTML">
+
+<th:block th:if="${v.administrador}">
+<header class="clube-topo">
+<div class="pilha-curta">
+<span class="rotulo">Sala do jogo em rede</span>
+<h1 class="titulo-pagina" th:text="|${v.pais} · Temporada ${v.ano}|">Brasil · Temporada 2026</h1>
+<span class="suave" th:text="${modo}">Modo escolha · 2 divisões</span>
+</div>
+<div class="pilha-curta">
+<span class="rotulo">Na sala</span>
+<span class="proximo-jogo" th:text="${contagem}">4 treinadores · 3 conectados</span>
+</div>
+</header>
+
+<div class="sala-corpo">
+<section aria-labelledby="t-treinadores" class="painel">
+<div class="painel-cabecalho">
+<h2 id="t-treinadores" class="titulo-secao pequeno">Treinadores</h2>
+<span class="suave">a lista se atualiza sozinha</span>
+</div>
+<div th:each="l : ${linhas}" class="sala-linha">
+<span th:if="${l.clube != null}" aria-hidden="true" th:style="${@escudos.estilo(l.clube.escudo, 32, 38)}"></span>
+<span th:if="${l.clube == null}" aria-hidden="true" class="escudo-vazio"></span>
+<div class="linha-jogo-texto">
+<span class="sala-nome"><span th:text="${l.nome}">Nome</span> <span th:if="${!l.nota.isEmpty()}" class="suave" th:text="${l.nota}">(você)</span></span>
+<span class="suave" th:text="${l.detalhe}">clube</span>
+</div>
+<span class="estado" th:classappend="${l.classe}" th:text="${l.estado}">Pronto</span>
+<form th:if="${l.podeSerTirado}" th:action="@{/jogos/{id}/sala/tirar(id=${jogoId})}" method="post" data-envio-unico>
+<input type="hidden" name="usuario" th:value="${l.usuarioId}">
+<button type="submit" class="botao-discreto" th:with="rotulo=|Tirar ${l.nome} da sala|" th:attr="aria-label=${rotulo}">Tirar</button>
+</form>
+</div>
+</section>
+
+<aside class="pilha-larga">
+<section aria-labelledby="t-convite" class="painel painel-interno">
+<h2 id="t-convite" class="titulo-secao pequeno">Convite</h2>
+<p class="texto pequeno">Mande este link como quiser (WhatsApp, por exemplo). Serve para quem já tem conta de participante.</p>
+<div class="campo-form">
+<label for="link">Link do convite</label>
+<div class="link-linha">
+<input id="link" readonly th:value="${link}">
+<button type="button" class="botao-contorno" data-copiar="link">Copiar</button>
+</div>
+</div>
+<p class="suave" th:text="|Vale até ${valeAte}, ou até a temporada começar.|">Vale até</p>
+<form th:action="@{/jogos/{id}/sala/convite(id=${jogoId})}" method="post" data-envio-unico>
+<button type="submit" class="botao-discreto alinhar-inicio">Gerar link novo (o atual deixa de valer)</button>
+</form>
+</section>
+<form th:action="@{/jogos/{id}/sala/comecar(id=${jogoId})}" method="post" data-envio-unico class="pilha-curta">
+<button type="submit" class="botao botao-largo" th:disabled="${!podeComecar}">Começar a temporada</button>
+<span th:if="${!podeComecar}" class="suave centro" th:text="|Falta: ${falta}.|">Falta</span>
+<span class="suave centro">Depois de começar, ninguém mais entra.</span>
+</form>
+</aside>
+</div>
+</th:block>
+
+<section th:unless="${v.administrador}" aria-labelledby="t-sala" class="cartao-convite convite-pagina">
+<span id="t-sala" class="rotulo destaque" th:text="|Sala de ${v.sala.administrador} · ${v.pais}|">Sala de Gabriel · Brasil</span>
+<div class="sala-linha sem-borda">
+<span th:if="${eu.clube != null}" aria-hidden="true" th:style="${@escudos.estilo(eu.clube.escudo, 40, 48)}"></span>
+<span th:if="${eu.clube == null}" aria-hidden="true" class="escudo-vazio"></span>
+<div class="linha-jogo-texto">
+<span class="nome-clube" th:text="${eu.clube != null} ? ${eu.clube.nome} : 'Sem clube'">Clube</span>
+<span class="suave" th:text="${eu.clube != null} ? |seu clube · ${#strings.substringAfter(eu.detalhe, ' · ')}| : 'você ainda não escolheu o clube'">seu clube</span>
+</div>
+</div>
+<p class="texto" th:text="|Aguardando ${v.sala.administrador} começar a temporada.|">Aguardando</p>
+<div class="sala-mini">
+<th:block th:each="l : ${linhas}" th:if="${l.usuarioId != eu.usuarioId}">
+<span th:text="|${l.nome} · ${l.clube != null ? l.clube.nome : 'sem clube'}|">Gabriel · União do Vale</span>
+<span class="estado" th:classappend="${l.classe}" th:text="${l.estadoCurto}">Pronto</span>
+</th:block>
+</div>
+<a th:if="${eu.clube != null}" th:href="@{/jogos/{id}/plantel(id=${jogoId})}" class="botao-discreto botao-link alinhar-inicio"
+	th:text="|Ver o plantel do ${eu.clube.nome}|">Ver o plantel</a>
+<a th:if="${eu.clube == null}" th:href="@{/jogos/{id}/sala/escolher(id=${jogoId})}" class="botao botao-link botao-largo">Escolher clube</a>
+</section>
+</div>
+</div>
+</div>
+</body>
+</html>

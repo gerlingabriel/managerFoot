@@ -1,5 +1,6 @@
 package br.com.managerfoot.web;
 
+import java.time.Clock;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import br.com.managerfoot.contas.Papel;
 import br.com.managerfoot.contas.Usuario;
 import br.com.managerfoot.dominio.Clube;
 import br.com.managerfoot.persistencia.BancoEditavelRepositorio;
@@ -26,6 +28,7 @@ import br.com.managerfoot.persistencia.BancoRecusadoException;
 import br.com.managerfoot.persistencia.JogosDoTreinadorRepositorio;
 import br.com.managerfoot.persistencia.JogosDoTreinadorRepositorio.JogoGravado;
 import br.com.managerfoot.persistencia.JogosDoTreinadorRepositorio.NovoJogo;
+import br.com.managerfoot.persistencia.JogosDoTreinadorRepositorio.Rede;
 import br.com.managerfoot.persistencia.MoldeRepositorio;
 import br.com.managerfoot.persistencia.MoldeRepositorio.CampeonatoDisponivel;
 import br.com.managerfoot.temporada.FormatoDivisao;
@@ -43,10 +46,12 @@ class JogosController {
 	private final MoldeRepositorio moldes;
 	private final Campeonatos campeonatos;
 	private final BancoEditavelRepositorio bancos;
+	private final Clock relogio;
 	private final int candidatosClubeInicial;
 
 	JogosController(JogosDoTreinadorRepositorio jogos, MoldeRepositorio moldes, Campeonatos campeonatos, BancoEditavelRepositorio bancos,
-			@Value("${managerfoot.jogo.candidatos-clube-inicial}") int candidatosClubeInicial) {
+			Clock relogio, @Value("${managerfoot.jogo.candidatos-clube-inicial}") int candidatosClubeInicial) {
+		this.relogio = relogio;
 		this.jogos = jogos;
 		this.moldes = moldes;
 		this.campeonatos = campeonatos;
@@ -59,8 +64,9 @@ class JogosController {
 		model.addAttribute("usuario", usuario);
 		List<Linha> linhas = jogos.listar(usuario.id()).stream().map(JogosController::linha).toList();
 		model.addAttribute("jogos", linhas);
+		model.addAttribute("salasSemClube", jogos.salasSemClube(usuario.id()));
 		// janela de confirmação do modelo 16b; id de jogo que não é do usuário não abre nada
-		model.addAttribute("apagando", linhas.stream().filter(l -> Long.valueOf(l.jogoId()).equals(apagar)).findFirst().orElse(null));
+		model.addAttribute("apagando", linhas.stream().filter(l -> l.podeApagar() && Long.valueOf(l.jogoId()).equals(apagar)).findFirst().orElse(null));
 		return "inicio";
 	}
 
@@ -88,13 +94,17 @@ class JogosController {
 
 	@PostMapping("/jogos")
 	String criar(@AuthenticationPrincipal Usuario usuario, @RequestParam(name = "paisId", required = false) Long paisId,
-			@RequestParam(name = "paisCodigo", required = false) String paisCodigo, HttpSession sessao, Model model,
+			@RequestParam(name = "paisCodigo", required = false) String paisCodigo,
+			@RequestParam(name = "emRede", defaultValue = "false") boolean emRede, HttpSession sessao, Model model,
 			RedirectAttributes redirect) {
+		// só o administrador cria jogo em rede (SPEC §3.1); o repositório confere de novo
+		boolean rede = emRede && usuario.papel() == Papel.ADMINISTRADOR;
 		Optional<BancoEnviado> enviado = bancoEnviado(sessao);
 		NovoJogo novo;
 		if (enviado.isPresent()) {
 			try {
-				novo = bancos.criarJogo(enviado.get().conteudo(), paisCodigo == null ? "" : paisCodigo, usuario.id());
+				novo = bancos.criarJogo(enviado.get().conteudo(), paisCodigo == null ? "" : paisCodigo, usuario.id(),
+						rede ? relogio.instant() : null);
 			}
 			catch (BancoRecusadoException | NoSuchElementException e) {
 				model.addAttribute("erro", "Escolha um dos campeonatos da lista.");
@@ -106,7 +116,11 @@ class JogosController {
 				model.addAttribute("erro", "Escolha um dos campeonatos da lista.");
 				return novo(usuario, sessao, model);
 			}
-			novo = jogos.criarComSorteio(paisId, usuario.id());
+			novo = rede ? jogos.criarEmRedeComSorteio(paisId, usuario.id(), relogio.instant())
+					: jogos.criarComSorteio(paisId, usuario.id());
+		}
+		if (rede) {
+			return "redirect:/jogos/" + novo.jogoId() + "/sala";
 		}
 		redirect.addFlashAttribute("sorteadoEntre",
 				novo.candidatos().stream().map(Clube::nome).collect(Collectors.joining(", ")));
@@ -147,9 +161,20 @@ class JogosController {
 
 	private static Linha linha(JogoGravado j) {
 		String divisao = j.divisao() == null ? "Fila de espera" : j.divisao();
-		return new Linha(j.jogoId(), j.clube(), divisao,
-				j.pais() + " · " + divisao + " · temporada " + j.ano() + ", rodada " + j.rodada(),
-				"Jogado em " + QUANDO.format(j.ultimoAcesso().atZone(ZoneId.systemDefault())));
+		String onde = j.pais() + " · " + divisao + " · temporada " + j.ano() + ", rodada " + j.rodada();
+		String quando = "Jogado em " + QUANDO.format(j.ultimoAcesso().atZone(ZoneId.systemDefault()));
+		if (j.rede().isEmpty()) {
+			return new Linha(j.jogoId(), j.clube(), divisao, onde, quando, false, false, true);
+		}
+		Rede r = j.rede().get();
+		// modelo 18a: o selo, de quem é o jogo e o que ele espera
+		if (r.naSala()) {
+			return new Linha(j.jogoId(), j.clube(), divisao, "Sala de " + r.administrador() + " · " + j.pais()
+					+ " · aguardando o início da temporada", r.treinadores() + (r.treinadores() == 1 ? " treinador" : " treinadores")
+					+ " na sala", true, true, r.souAdministrador());
+		}
+		return new Linha(j.jogoId(), j.clube(), divisao, "Jogo de " + r.administrador() + " · " + onde, quando, true, false,
+				r.souAdministrador());
 	}
 
 	/**
@@ -160,7 +185,13 @@ class JogosController {
 	record Cartao(String valor, String codigo, String pais, String liga, String detalhe) {
 	}
 
-	/** Jogo como aparece na lista do início e no topo do jogo. */
-	record Linha(long jogoId, Clube clube, String divisao, String onde, String quando) {
+	/**
+	 * Jogo como aparece na lista do início e no topo do jogo.
+	 *
+	 * @param naSala jogo em rede que ainda não começou: o botão abre a sala
+	 * @param podeApagar no jogo em rede, só o administrador apaga (SPEC §3.3, rev. 92)
+	 */
+	record Linha(long jogoId, Clube clube, String divisao, String onde, String quando, boolean emRede, boolean naSala,
+			boolean podeApagar) {
 	}
 }

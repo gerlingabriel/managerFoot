@@ -2,6 +2,7 @@ package br.com.managerfoot.web;
 
 import java.io.Serializable;
 import java.security.SecureRandom;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -52,11 +53,13 @@ class EscolhaClubeController {
 	private final JogosDoTreinadorRepositorio jogos;
 	private final MoldeRepositorio moldes;
 	private final BancoEditavelRepositorio bancos;
+	private final Clock relogio;
 	private final int candidatosClubeInicial;
 
 	EscolhaClubeController(Campeonatos campeonatos, JogoRepositorio jogo, JogosDoTreinadorRepositorio jogos,
-			MoldeRepositorio moldes, BancoEditavelRepositorio bancos,
+			MoldeRepositorio moldes, BancoEditavelRepositorio bancos, Clock relogio,
 			@Value("${managerfoot.jogo.candidatos-clube-inicial}") int candidatosClubeInicial) {
+		this.relogio = relogio;
 		this.bancos = bancos;
 		this.campeonatos = campeonatos;
 		this.jogo = jogo;
@@ -68,20 +71,21 @@ class EscolhaClubeController {
 	/** Sorteia a distribuição do campeonato e abre o quadro. */
 	@PostMapping("/jogos/escolher")
 	String abrirQuadro(@RequestParam(name = "paisId", required = false) Long paisId,
-			@RequestParam(name = "paisCodigo", required = false) String paisCodigo, HttpSession sessao) {
+			@RequestParam(name = "paisCodigo", required = false) String paisCodigo,
+			@RequestParam(name = "emRede", defaultValue = "false") boolean emRede, HttpSession sessao) {
 		Optional<BancoEnviado> enviado = bancoEnviado(sessao);
 		if (enviado.isPresent()) {
 			// com o arquivo enviado, o campeonato vem do arquivo (SPEC §3.5, rev. 90)
 			if (paisCodigo == null || paisDoArquivo(enviado.get(), paisCodigo).isEmpty()) {
 				return "redirect:/jogos/novo";
 			}
-			sessao.setAttribute(SESSAO, new Quadro(-1, paisCodigo, SEMENTES.nextLong()));
+			sessao.setAttribute(SESSAO, new Quadro(-1, paisCodigo, SEMENTES.nextLong(), emRede));
 			return "redirect:/jogos/escolher";
 		}
 		if (paisId == null || campeonatos.buscar(paisId).isEmpty()) {
 			return "redirect:/jogos/novo";
 		}
-		sessao.setAttribute(SESSAO, new Quadro(paisId, null, SEMENTES.nextLong()));
+		sessao.setAttribute(SESSAO, new Quadro(paisId, null, SEMENTES.nextLong(), emRede));
 		return "redirect:/jogos/escolher";
 	}
 
@@ -101,7 +105,9 @@ class EscolhaClubeController {
 			.map(Clube::id)
 			.collect(Collectors.toSet());
 		model.addAttribute("usuario", usuario);
-		model.addAttribute("campeonato", campeonato.get());
+		model.addAttribute("rotulo", "Novo jogo · " + campeonato.get().nomePais() + " · " + campeonato.get().nomeLiga());
+		model.addAttribute("quadroUrl", "/jogos/escolher");
+		model.addAttribute("voltar", "/jogos/novo");
 		model.addAttribute("colunas", colunas(liga, candidatos));
 		escolhivel(liga, clubeId).ifPresent(c -> model.addAttribute("escolhido", escolhido(liga, c)));
 		return "quadro-escolha";
@@ -122,12 +128,16 @@ class EscolhaClubeController {
 				return "redirect:/jogos/novo";
 			}
 			jogoId = bancos.criarJogoComEscolha(enviado.get().conteudo(), quadro.get().paisCodigo(), usuario.id(),
-					quadro.get().semente(), Math.toIntExact(clubeId));
+					quadro.get().semente(), Math.toIntExact(clubeId), quadro.get().emRede() ? relogio.instant() : null);
 			sessao.removeAttribute(BancoEditavelController.SESSAO);
+		} else if (quadro.get().emRede()) {
+			jogoId = jogos.criarEmRedeComEscolha(quadro.get().paisId(), usuario.id(), quadro.get().semente(), clubeId,
+					relogio.instant());
 		} else {
 			jogoId = jogos.criarComEscolha(quadro.get().paisId(), usuario.id(), quadro.get().semente(), clubeId);
 		}
-		return "redirect:/jogos/" + jogoId;
+		// em rede, o administrador cai na sala (modelo 18b)
+		return "redirect:/jogos/" + jogoId + (quadro.get().emRede() ? "/sala" : "");
 	}
 
 	/** O quadro de um campeonato do arquivo enviado: os clubes são numerados na ordem do arquivo. */
@@ -142,8 +152,9 @@ class EscolhaClubeController {
 			.map(Clube::id)
 			.collect(Collectors.toSet());
 		model.addAttribute("usuario", usuario);
-		model.addAttribute("campeonato", new CampeonatoDisponivel(-1, pais.get().codigo(), pais.get().nome(),
-				pais.get().liga().orElseThrow().nome()));
+		model.addAttribute("rotulo", "Novo jogo · " + pais.get().nome() + " · " + pais.get().liga().orElseThrow().nome());
+		model.addAttribute("quadroUrl", "/jogos/escolher");
+		model.addAttribute("voltar", "/jogos/novo");
 		model.addAttribute("colunas", colunas(liga, candidatos));
 		escolhivel(liga, clubeId).ifPresent(c -> model.addAttribute("escolhido",
 				escolhido(liga, c, pais.get().clubes().get(Math.toIntExact(c.id()) - 1).jogadores())));
@@ -168,7 +179,7 @@ class EscolhaClubeController {
 	}
 
 	/** O clube, se ele está numa divisão do quadro: a fila não pode ser escolhida. */
-	private static Optional<Clube> escolhivel(ConfiguracaoLiga liga, Long clubeId) {
+	static Optional<Clube> escolhivel(ConfiguracaoLiga liga, Long clubeId) {
 		if (clubeId == null) {
 			return Optional.empty();
 		}
@@ -179,7 +190,7 @@ class EscolhaClubeController {
 		return escolhido(liga, clube, moldes.carregarPlantel(clube.id()));
 	}
 
-	private static Escolhido escolhido(ConfiguracaoLiga liga, Clube clube, List<Jogador> jogadores) {
+	static Escolhido escolhido(ConfiguracaoLiga liga, Clube clube, List<Jogador> jogadores) {
 		String divisao = liga.divisoes().stream().filter(d -> d.clubes().contains(clube)).findFirst()
 			.map(Divisao::nome).orElseThrow();
 		List<Jogador> plantel = jogadores.stream()
@@ -190,17 +201,22 @@ class EscolhaClubeController {
 
 	/** Divisões pela prioridade e a fila no fim; clubes do mais forte ao mais fraco. */
 	private static List<Coluna> colunas(ConfiguracaoLiga liga, Set<Long> candidatos) {
+		return colunas(liga, candidatos, Set.of());
+	}
+
+	/** Como {@link #colunas(ConfiguracaoLiga, Set)}, com os clubes que já têm treinador bloqueados (jogo em rede). */
+	static List<Coluna> colunas(ConfiguracaoLiga liga, Set<Long> candidatos, Set<Long> ocupados) {
 		Comparator<Clube> pelaForca = Comparator.comparingInt(Clube::forca).reversed().thenComparing(Clube::nome);
 		List<Coluna> colunas = new ArrayList<>();
 		for (int i = 0; i < liga.divisoes().size(); i++) {
 			Divisao d = liga.divisoes().get(i);
 			boolean ultima = i == liga.divisoes().size() - 1;
 			colunas.add(new Coluna(d.nome(), d.clubes().size() + " clubes" + (ultima ? " · mais fracos ▾" : ""), false,
-					d.clubes().stream().sorted(pelaForca).toList(), ultima ? candidatos : Set.of()));
+					d.clubes().stream().sorted(pelaForca).toList(), ultima ? candidatos : Set.of(), ocupados));
 		}
 		if (!liga.filaDeEspera().isEmpty()) {
 			colunas.add(new Coluna("Fila de espera", "não podem ser escolhidos", true,
-					liga.filaDeEspera().stream().sorted(pelaForca).toList(), Set.of()));
+					liga.filaDeEspera().stream().sorted(pelaForca).toList(), Set.of(), Set.of()));
 		}
 		return colunas;
 	}
@@ -209,12 +225,16 @@ class EscolhaClubeController {
 	 * Campeonato e semente do quadro aberto na sessão.
 	 *
 	 * @param paisCodigo o país do arquivo enviado; nulo no banco padrão, que usa {@code paisId}
+	 * @param emRede o jogo será em rede, no modo escolha
 	 */
-	record Quadro(long paisId, String paisCodigo, long semente) implements Serializable {
+	record Quadro(long paisId, String paisCodigo, long semente, boolean emRede) implements Serializable {
 	}
 
-	/** Divisão (ou a fila) no quadro; {@code candidatos} são os do sorteio, destacados de leve. */
-	record Coluna(String titulo, String nota, boolean fila, List<Clube> clubes, Set<Long> candidatos) {
+	/**
+	 * Divisão (ou a fila) no quadro; {@code candidatos} são os do sorteio, destacados de leve, e {@code ocupados}
+	 * os que já têm treinador usuário, que não podem ser escolhidos.
+	 */
+	record Coluna(String titulo, String nota, boolean fila, List<Clube> clubes, Set<Long> candidatos, Set<Long> ocupados) {
 	}
 
 	record Escolhido(Clube clube, String resumo, List<Jogador> plantel) {

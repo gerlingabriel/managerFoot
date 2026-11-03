@@ -2,6 +2,7 @@ package br.com.managerfoot.temporada;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 import java.util.random.RandomGenerator;
 
 import br.com.managerfoot.dominio.Clube;
@@ -32,6 +33,16 @@ public final class ClubeInicial {
 		List<Integer> forcas = clubes.stream().map(Clube::forca).sorted().toList();
 		int corte = forcas.get(Math.min(quantidade, forcas.size()) - 1);
 		return clubes.stream().filter(c -> c.forca() <= corte).sorted(Comparator.comparingLong(Clube::id)).toList();
+	}
+
+	/**
+	 * Candidatos do sorteio num jogo em rede (SPEC §3.2, rev. 29): o grupo cresce um clube por clube
+	 * que já tem usuário, e esses clubes saem do sorteio. Vazio se todos os do grupo têm usuário.
+	 *
+	 * @param ocupados ids dos clubes que já têm usuário, de qualquer divisão
+	 */
+	public static List<Clube> candidatos(Divisao ultima, int quantidade, Set<Long> ocupados) {
+		return candidatos(ultima, quantidade + ocupados.size()).stream().filter(c -> !ocupados.contains(c.id())).toList();
 	}
 
 	public static Clube sortear(Divisao ultima, int quantidade, RandomGenerator aleatorio) {

@@ -76,3 +76,23 @@ document.addEventListener('change', function (e) {
 	document.addEventListener('DOMContentLoaded', conferir);
 	document.addEventListener('htmx:afterSettle', conferir);
 })();
+
+// Botão "Copiar" do link do convite (modelo 18c): copia o texto do campo indicado e avisa no próprio botão.
+document.addEventListener('click', function (e) {
+	var botao = e.target.closest('[data-copiar]');
+	if (!botao) return;
+	var campo = document.getElementById(botao.dataset.copiar);
+	if (!campo) return;
+	var avisar = function () {
+		botao.textContent = 'Copiado';
+		setTimeout(function () { botao.textContent = 'Copiar'; }, 2000);
+	};
+	if (navigator.clipboard && window.isSecureContext) {
+		navigator.clipboard.writeText(campo.value).then(avisar);
+	} else {
+		// fora de HTTPS o navegador não libera a área de transferência: seleciona para o Ctrl+C
+		campo.select();
+		document.execCommand('copy');
+		avisar();
+	}
+});

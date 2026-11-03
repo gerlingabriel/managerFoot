@@ -40,6 +40,7 @@ import br.com.managerfoot.persistencia.PlantelRepositorio;
 import br.com.managerfoot.persistencia.PlantelRepositorio.LinhaJogador;
 import br.com.managerfoot.persistencia.PlantelRepositorio.VisaoPlantel;
 import br.com.managerfoot.persistencia.RodadaAoVivoRepositorio;
+import br.com.managerfoot.persistencia.SalaRepositorio;
 import br.com.managerfoot.persistencia.TrocaRepositorio;
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -62,10 +63,12 @@ class PlantelController {
 	private final PatrocinioRepositorio patrocinios;
 	private final AumentoRepositorio aumentos;
 	private final TrocaRepositorio trocas;
+	private final SalaRepositorio salas;
 
 	PlantelController(PlantelRepositorio plantel, JogosDoTreinadorRepositorio jogos, RodadaAoVivoRepositorio aoVivo,
 			ConsultasRepositorio consultas, FimDeTemporadaRepositorio fimDeTemporada, JogoRepositorio jogo,
-			PatrocinioRepositorio patrocinios, AumentoRepositorio aumentos, TrocaRepositorio trocas) {
+			PatrocinioRepositorio patrocinios, AumentoRepositorio aumentos, TrocaRepositorio trocas, SalaRepositorio salas) {
+		this.salas = salas;
 		this.plantel = plantel;
 		this.jogos = jogos;
 		this.aoVivo = aoVivo;
@@ -90,6 +93,7 @@ class PlantelController {
 		model.addAttribute("usuario", usuario);
 		model.addAttribute("jogoId", jogoId);
 		model.addAttribute("v", v);
+		model.addAttribute("naSala", salas.naSala(jogoId));
 		patrocinios.patrocinador(jogoId, usuario.id()).ifPresent(p -> model.addAttribute("patrocinador", p));
 		model.addAttribute("formacoes", Formacao.values());
 		List<LinhaJogador> banco = grupo(v, Lugar.BANCO);
