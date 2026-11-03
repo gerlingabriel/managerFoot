@@ -53,6 +53,11 @@ public class RodadaAoVivoRepositorio {
 			TipoEvento.SEGUNDO_AMARELO, TipoEvento.CARTAO_VERMELHO, TipoEvento.LESAO);
 	private static final Set<TipoEvento> EXPULSOES = Set.of(TipoEvento.SEGUNDO_AMARELO, TipoEvento.CARTAO_VERMELHO);
 
+	/** O que aparece entre os lances: gol, cartão, lesão e pênalti defendido. */
+	private static boolean lance(EventoPartida evento) {
+		return LANCES.contains(evento.tipo()) || evento.penaltiDefendido();
+	}
+
 	private final JdbcClient jdbc;
 	private final JogoRepositorio jogos;
 	private final RodadaRepositorio rodadas;
@@ -457,7 +462,7 @@ public class RodadaAoVivoRepositorio {
 					amarelados, jogo.lesionadoAguardandoTroca(lado).orElse(null)));
 		}
 		return Optional.of(new JanelaJogo(p.jogo().mandante().id(), minuto, linha.get().andandoDesde() == null,
-				placar(rodada, p, minuto, clube, caixas.publicos(jogoId, List.of(p)), gruposDosMandantes(jogoId, linha.get())), eventos.stream().filter(e -> LANCES.contains(e.tipo())).toList(), doUsuario,
+				placar(rodada, p, minuto, clube, caixas.publicos(jogoId, List.of(p)), gruposDosMandantes(jogoId, linha.get())), eventos.stream().filter(RodadaAoVivoRepositorio::lance).toList(), doUsuario,
 				times.get(0), times.get(1)));
 	}
 
@@ -578,7 +583,7 @@ public class RodadaAoVivoRepositorio {
 		Optional<DisputaPenaltis> penaltis = partida.terminada() ? partida.resultado().penaltis() : Optional.<DisputaPenaltis>empty();
 		int golsCasa = (int) eventos.stream().filter(e -> e.tipo() == TipoEvento.GOL && e.lado() == Lado.CASA).count();
 		int golsFora = (int) eventos.stream().filter(e -> e.tipo() == TipoEvento.GOL && e.lado() == Lado.FORA).count();
-		EventoPartida ultimo = eventos.stream().filter(e -> LANCES.contains(e.tipo())).reduce((a, b) -> b).orElse(null);
+		EventoPartida ultimo = eventos.stream().filter(RodadaAoVivoRepositorio::lance).reduce((a, b) -> b).orElse(null);
 		// etapa da copa (modelo 12b, rev. 71): a ida na volta e, no fim da partida decisiva, quem passa
 		Optional<JogoDecisivo> decisivo = p.condicoes().decisivo();
 		Optional<JogoDecisivo> volta = decisivo.filter(d -> !d.campoNeutro());
@@ -730,7 +735,7 @@ public class RodadaAoVivoRepositorio {
 	 * Um jogo no quadro da rodada.
 	 *
 	 * @param publico pagantes, o mesmo que o avanço grava (modelo 1a)
-	 * @param ultimoLance gol, amarelo ou vermelho mais recente; nulo se não houve (SPEC rev. 33)
+	 * @param ultimoLance gol, cartão, lesão ou pênalti defendido mais recente; nulo se não houve (SPEC rev. 33)
 	 * @param prorrogacao a partida da copa foi para a prorrogação
 	 * @param penaltisCasa gols do mandante na disputa de pênaltis, depois do fim; nulo sem disputa
 	 * @param primeiroJogo a ida de um confronto da copa

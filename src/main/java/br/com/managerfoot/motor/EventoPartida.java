@@ -8,16 +8,32 @@ import br.com.managerfoot.dominio.Jogador;
  * @param penalti a finalização foi uma cobrança de pênalti
  * @param substituido em uma {@link TipoEvento#SUBSTITUICAO}, quem saiu; nos demais eventos, nulo
  * @param lesao em uma {@link TipoEvento#LESAO}, a gravidade sorteada; nos demais eventos, nula
+ * @param goleiro no pênalti defendido, o goleiro adversário que defendeu; nos demais eventos, nulo
  */
 public record EventoPartida(int minuto, Lado lado, TipoEvento tipo, Jogador jogador, boolean penalti,
-		Jogador substituido, Lesao lesao) {
+		Jogador substituido, Lesao lesao, Jogador goleiro) {
 
 	public EventoPartida(int minuto, Lado lado, TipoEvento tipo, Jogador jogador) {
-		this(minuto, lado, tipo, jogador, false, null, null);
+		this(minuto, lado, tipo, jogador, false, null, null, null);
 	}
 
 	public EventoPartida(int minuto, Lado lado, TipoEvento tipo, Jogador jogador, boolean penalti) {
-		this(minuto, lado, tipo, jogador, penalti, null, null);
+		this(minuto, lado, tipo, jogador, penalti, null, null, null);
+	}
+
+	public EventoPartida(int minuto, Lado lado, TipoEvento tipo, Jogador jogador, boolean penalti,
+			Jogador substituido, Lesao lesao) {
+		this(minuto, lado, tipo, jogador, penalti, substituido, lesao, null);
+	}
+
+	/** O goleiro de {@code lado.adversario()} defendeu o pênalti cobrado por {@code batedor}. */
+	static EventoPartida penaltiDefendido(int minuto, Lado lado, Jogador batedor, Jogador goleiro) {
+		return new EventoPartida(minuto, lado, TipoEvento.DEFESA, batedor, true, null, null, goleiro);
+	}
+
+	/** Pênalti que o goleiro adversário defendeu: aparece entre os lances da partida. */
+	public boolean penaltiDefendido() {
+		return penalti && tipo == TipoEvento.DEFESA;
 	}
 
 	static EventoPartida substituicao(int minuto, Lado lado, Jogador entrou, Jogador saiu) {

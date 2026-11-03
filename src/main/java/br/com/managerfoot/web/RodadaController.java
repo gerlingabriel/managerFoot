@@ -81,7 +81,7 @@ class RodadaController {
 			redirect.addFlashAttribute("erro", "Antes da rodada " + rodada + ", jogue " + (visao.mundial() ? "o Mundial." : visao.continental() ? "a continental." : "a copa."));
 			return "redirect:/jogos/" + jogoId + "/plantel";
 		}
-		if (!visao.problemas().isEmpty()) {
+		if (visao.escalacaoPendente()) {
 			redirect.addFlashAttribute("erro", "Complete a escalação antes de jogar a rodada.");
 			return "redirect:/jogos/" + jogoId + "/plantel";
 		}

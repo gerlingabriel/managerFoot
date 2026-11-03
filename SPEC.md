@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 90 — 2026-11-03)
+-   **Status:** versão inicial para revisão (rev. 91 — 2026-11-03)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -14,6 +14,8 @@
     descreve intenção geral ainda não detalhada.
 
 ### Histórico de revisões
+
+-   **rev. 91 (2026-11-03):** pelo usuário: sem jogo do clube do treinador na próxima etapa, ela segue com a escalação incompleta (§10.3); pênalti defendido aparece nos lances, do lado do goleiro e em destaque (§10.5). Agente: a etapa já travava no servidor com a escalação incompleta de quem não jogava, com a mensagem errada "já foi jogada"; corrigido.
 
 -   **rev. 90 (2026-11-03):** pelo usuário: decisões do jogo em rede (§3.3): convite por link, entrada só antes da 1ª rodada, pausa de até 60 s na substituição, a gestão só avança com o OK de todos, lances de amigos nos leilões de usuários e todos os leilões depois do OK da tática; o administrador escolhe qualquer clube também com o banco do arquivo (§3.5); guia do jogador fora do git (`docs/guia-do-jogador.md`).
 -   **rev. 89 (2026-10-31):** pelo usuário: aprovadas as propostas das rev. 87 e 88 (estrangeiros, asteriscos, Inglaterra como UE, países e níveis do Mundial, 8 clubes por região, prêmio igual ao da continental). Arquivo de save no servidor: baixar, enviar de volta e apagar (§3.5, ADR 0018); com as telas dos modelos 16a a 16d. Pelo usuário: o arquivo fica como cópia de segurança e o banco editável vem antes da rede, sem infringir direito autoral. Agente: arquivo alterado à mão é aceito se passar na validação, enviar sempre cria um jogo novo e a rodada ao vivo não baixa (Provisório). Simulações refeitas e nova `docs/simulacoes/mundial.md`.
@@ -2827,6 +2829,9 @@ da mesma divisão seguem na mesma tela.
     máquina para o clube do treinador, e ele muda o que quiser.
   - A escalação fica gravada mesmo incompleta, e a tela diz o que falta (ex.: "faltam 1 defensor"); a rodada só sai com a
     escalação válida.
+  - **Definido (rev. 91), pelo usuário:** se o clube do treinador **não joga** a
+    próxima etapa (folga, fora da copa, da continental ou do Mundial), ela segue
+    mesmo com a escalação incompleta. A exigência volta quando o clube joga.
   - Depois de uma rodada, quem ficou **suspenso sai sozinho** para fora do
     banco, marcado como suspenso, e deixa de ser o batedor. O treinador
     completa o time.
@@ -2902,6 +2907,11 @@ usuário:
   - **Lances** em ordem: minuto e ícone (gol, amarelo, vermelho e, quando
     houver, lesão) no **centro**; o nome do jogador do lado do clube dele
     (mandante à esquerda, visitante à direita). Pênalti como "(pên.)".
+  - **Definido (rev. 91), pelo usuário:** o **pênalti defendido** entra nos
+    lances, do lado do goleiro, em destaque: "Goleiro defende pênalti de
+    Batedor", com a bola num anel verde e a linha em verde. No quadro, o último
+    lance mostra "Goleiro defende pênalti 41'". Pênalti na trave ou para fora
+    não entra. Se o goleiro tiver sido expulso, vale quem está no gol.
   - **Próprio clube:** abaixo dos lances, os 11 em campo e o banco; o
     usuário marca quem sai e quem entra, vê a formação resultante e clica
     em **Substituir**. Mostra as substituições usadas (ex.: 1 de 5) e as

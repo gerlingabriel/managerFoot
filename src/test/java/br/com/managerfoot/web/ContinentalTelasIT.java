@@ -9,6 +9,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -227,6 +228,29 @@ class ContinentalTelasIT {
 		agora(6);
 		mvc.perform(get(rodada).with(como(treinador))).andExpect(redirectedUrl(plantel));
 		assertThat(List.of(rodadas.proximo(jogoId))).containsExactly(new RodadaRepositorio.Proximo.Liga(3));
+	}
+
+	/** Sem jogo do clube do usuário, a escalação incompleta não segura a etapa dos outros. */
+	@Test
+	void semJogoDoUsuarioSegueComEscalacaoIncompleta() throws Exception {
+		jogarAteAContinental();
+		mvc.perform(post(plantel + "/retirar-todos").with(como(treinador)).with(csrf())).andExpect(redirectedUrl(plantel));
+
+		String tela = mvc.perform(get(plantel).with(como(treinador))).andReturn().getResponse().getContentAsString();
+		assertThat(tela).contains("Seu clube não joga: dá para seguir com a escalação incompleta.")
+			.doesNotContain("Complete a escalação para jogar.");
+		assertThat(tela).containsPattern("<button type=\"submit\" class=\"botao botao-largo\"\\s+aria-describedby=\"jogar-ajuda\"");
+		mvc.perform(post(rodada).param("rodada", "3").param("etapa", "0").param("continental", "true")
+			.with(como(treinador)).with(csrf())).andExpect(redirectedUrl(rodada));
+		agora(6);
+		mvc.perform(get(rodada).with(como(treinador))).andExpect(redirectedUrl(plantel));
+		assertThat(List.of(rodadas.proximo(jogoId))).containsExactly(new RodadaRepositorio.Proximo.Liga(3));
+
+		// na rodada da liga o clube joga: aí a escalação volta a ser exigida
+		mvc.perform(get(plantel).with(como(treinador)))
+			.andExpect(content().string(containsString("Complete a escalação para jogar.")));
+		mvc.perform(post(rodada).param("rodada", "3").with(como(treinador)).with(csrf()))
+			.andExpect(flash().attribute("erro", "Complete a escalação antes de jogar a rodada."));
 	}
 
 	@Test

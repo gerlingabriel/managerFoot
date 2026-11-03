@@ -13,6 +13,8 @@ import org.junit.jupiter.api.Test;
 
 import br.com.managerfoot.dominio.Escalacao;
 import br.com.managerfoot.dominio.Formacao;
+import br.com.managerfoot.dominio.Jogador;
+import br.com.managerfoot.dominio.Posicao;
 
 class MotorPartidaTest {
 
@@ -71,6 +73,29 @@ class MotorPartidaTest {
 				assertThat(time.titulares()).contains(e.jogador());
 			});
 			assertThat(eventos).isSortedAccordingTo((a, b) -> Integer.compare(a.minuto(), b.minuto()));
+		});
+	}
+
+	@Test
+	void penaltiDefendidoGuardaOGoleiroAdversario() {
+		Jogador goleiroCasa = casa.titulares().stream().filter(j -> j.posicao() == Posicao.GOLEIRO).findFirst().orElseThrow();
+		Jogador goleiroFora = fora.titulares().stream().filter(j -> j.posicao() == Posicao.GOLEIRO).findFirst().orElseThrow();
+		List<EventoPartida> eventos = LongStream.range(0, 2000).boxed()
+			.flatMap(s -> motor.simular(casa, fora, s).eventos().stream()).toList();
+
+		List<EventoPartida> defendidos = eventos.stream().filter(EventoPartida::penaltiDefendido).toList();
+		// quem está no gol do adversário: o goleiro ou, depois da expulsão dele, um jogador improvisado
+		assertThat(defendidos).isNotEmpty().allSatisfy(e -> {
+			assertThat(e.tipo()).isEqualTo(TipoEvento.DEFESA);
+			assertThat((e.lado() == Lado.CASA ? fora : casa).titulares()).contains(e.goleiro());
+		});
+		assertThat(defendidos).anySatisfy(e -> assertThat(e.goleiro()).isEqualTo(goleiroFora))
+			.anySatisfy(e -> assertThat(e.goleiro()).isEqualTo(goleiroCasa));
+		assertThat(eventos).filteredOn(e -> !e.penaltiDefendido()).allSatisfy(e -> assertThat(e.goleiro()).isNull());
+		// defesa fora do pênalti continua sem goleiro e fora dos lances
+		assertThat(eventos).anySatisfy(e -> {
+			assertThat(e.tipo()).isEqualTo(TipoEvento.DEFESA);
+			assertThat(e.penaltiDefendido()).isFalse();
 		});
 	}
 

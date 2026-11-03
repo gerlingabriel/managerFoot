@@ -332,7 +332,9 @@ public final class Partida {
 				tipo = TipoEvento.FORA;
 			}
 		}
-		eventos.add(new EventoPartida(minuto, lado, tipo, finalizador, penalti));
+		eventos.add(penalti && tipo == TipoEvento.DEFESA
+				? EventoPartida.penaltiDefendido(minuto, lado, finalizador, time(lado.adversario()).goleiro())
+				: new EventoPartida(minuto, lado, tipo, finalizador, penalti));
 	}
 
 	/**

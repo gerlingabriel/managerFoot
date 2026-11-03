@@ -37,14 +37,13 @@
 
 <section aria-label="Lances da partida" class="janela-lances">
 <p th:if="${janela.lances.isEmpty()}" class="suave centro">Nenhum lance até agora.</p>
-<div th:each="l : ${janela.lances}" class="janela-lance" th:with="casa=${l.lado.name() == 'CASA'}, tipo=${l.tipo.name()}">
-<span class="lance-casa" th:text="${casa} ? |${l.jogador.nome}${l.penalti ? ' (pên.)' : ''}| : ''">Nome</span>
+<div th:each="l : ${janela.lances}" class="janela-lance" th:classappend="${l.penaltiDefendido()} ? 'defendido'" th:with="casa=${@lances.daCasa(l)}">
+<span class="lance-casa" th:text="${casa} ? ${@lances.nome(l)} : ''">Nome</span>
 <span class="lance-meio">
 <span class="lance-minuto" th:text="|${l.minuto}'|">0'</span>
-<span class="lance" th:classappend="${@lances.icone(l)}" role="img"
-	th:attr="aria-label=|${tipo == 'GOL' ? 'Gol' : (tipo == 'CARTAO_AMARELO' ? 'Cartão amarelo' : (tipo == 'LESAO' ? 'Lesão' : 'Expulsão'))} de ${l.jogador.nome}|"></span>
+<span class="lance" th:classappend="${@lances.icone(l)}" role="img" th:with="rotulo=${@lances.descricao(l)}" th:aria-label="${rotulo}"></span>
 </span>
-<span class="lance-fora" th:text="${casa} ? '' : |${l.jogador.nome}${l.penalti ? ' (pên.)' : ''}|">Nome</span>
+<span class="lance-fora" th:text="${casa} ? '' : ${@lances.nome(l)}">Nome</span>
 </div>
 </section>
 

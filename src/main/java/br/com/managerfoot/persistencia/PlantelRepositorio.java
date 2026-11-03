@@ -319,5 +319,10 @@ public class PlantelRepositorio {
 			Integer indiceCopa, String detalheCopa, boolean finalCopa, boolean continental, boolean mundial, Boolean emCasa,
 			Clube adversario, String paisAdversario, EscalacaoDoTreinador escalacao, List<LinhaJogador> jogadores, List<String> problemas,
 			String goleiroImprovisado, long saldo, Moeda moeda) {
+
+		/** Só o clube que joga a próxima etapa precisa da escalação completa para seguir. */
+		public boolean escalacaoPendente() {
+			return adversario != null && !problemas.isEmpty();
+		}
 	}
 }

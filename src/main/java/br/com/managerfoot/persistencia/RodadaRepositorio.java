@@ -303,7 +303,7 @@ public class RodadaRepositorio {
 		List<ProcessamentoRodada.PartidaDaEtapa> jogosDaEtapa = partidasDaEtapa(continental, etapa);
 		Map<Long, List<Jogador>> planteis = comEstrangeiros(doPais, jogosDaEtapa);
 		RodadaAoVivo aoVivo = processamento.prepararContinental(temporada, indice, jogosDaEtapa, planteis, antes,
-				escalacoesDosTreinadores(jogoId, "a continental", doPais, antes), substituicoes);
+				escalacoesDosTreinadores(jogoId, "a continental", doPais, antes, jogosDe(jogosDaEtapa)), substituicoes);
 		ProcessamentoRodada.Resultado resultado = aoVivo.finalizar(moralAntes);
 
 		Copa mataMata = continental.mataMata().orElse(null);
@@ -378,7 +378,7 @@ public class RodadaRepositorio {
 		List<ProcessamentoRodada.PartidaDaEtapa> jogosDaEtapa = partidasDaEtapa(
 				continentais.carregar(jogoId, linha.id()).orElseThrow(), etapa);
 		return processamento.prepararContinental(temporadas.carregarAtual(jogoId), indice, jogosDaEtapa,
-				comEstrangeiros(doPais, jogosDaEtapa), antes, escalacoesDosTreinadores(jogoId, "a continental", doPais, antes),
+				comEstrangeiros(doPais, jogosDaEtapa), antes, escalacoesDosTreinadores(jogoId, "a continental", doPais, antes, jogosDe(jogosDaEtapa)),
 				substituicoes);
 	}
 
@@ -404,7 +404,7 @@ public class RodadaRepositorio {
 		List<ProcessamentoRodada.PartidaDaEtapa> jogosDaEtapa = partidasDoMundial(confrontos, rodada);
 		Map<Long, List<Jogador>> planteis = comEstrangeiros(doPais, jogosDaEtapa);
 		RodadaAoVivo aoVivo = processamento.prepararMundial(temporada, indice, jogosDaEtapa, planteis, antes,
-				escalacoesDosTreinadores(jogoId, "o Mundial", doPais, antes), substituicoes);
+				escalacoesDosTreinadores(jogoId, "o Mundial", doPais, antes, jogosDe(jogosDaEtapa)), substituicoes);
 		ProcessamentoRodada.Resultado resultado = aoVivo.finalizar(moralAntes);
 		for (int i = 0; i < confrontos.size(); i++) {
 			ProcessamentoRodada.PartidaJogada jogada = resultado.partidas().get(i);
@@ -457,7 +457,7 @@ public class RodadaRepositorio {
 		List<ProcessamentoRodada.PartidaDaEtapa> jogosDaEtapa = partidasDoMundial(
 				mundiais.carregar(jogoId, linha.id()).orElseThrow().confrontos(fase), mundiais.rodada(linha.id(), indice));
 		return processamento.prepararMundial(temporadas.carregarAtual(jogoId), indice, jogosDaEtapa, comEstrangeiros(doPais, jogosDaEtapa),
-				antes, escalacoesDosTreinadores(jogoId, "o Mundial", doPais, antes), substituicoes);
+				antes, escalacoesDosTreinadores(jogoId, "o Mundial", doPais, antes, jogosDe(jogosDaEtapa)), substituicoes);
 	}
 
 	/** Os jogos da etapa do Mundial, para o plantel mostrar o próximo. */
@@ -575,7 +575,8 @@ public class RodadaRepositorio {
 	private RodadaAoVivo preparar(Temporada temporada, int rodada, long jogoId, Map<Long, List<Jogador>> planteis, Disciplina antes,
 			List<RodadaAoVivo.Substituicao> substituicoes) {
 		return processamento.preparar(temporada, rodada, planteis, antes,
-				escalacoesDosTreinadores(jogoId, "a rodada " + rodada, planteis, antes), substituicoes);
+				escalacoesDosTreinadores(jogoId, "a rodada " + rodada, planteis, antes,
+						temporada.divisoes().stream().flatMap(d -> d.calendario().jogos().stream()).filter(j -> j.rodada() == rodada).toList()), substituicoes);
 	}
 
 	/**
@@ -598,14 +599,30 @@ public class RodadaRepositorio {
 	private RodadaAoVivo prepararCopa(Temporada temporada, int indice, List<Copa.PartidaCopa> jogosDaEtapa, long jogoId,
 			Map<Long, List<Jogador>> planteis, Disciplina antes, List<RodadaAoVivo.Substituicao> substituicoes) {
 		return processamento.prepararCopa(temporada, indice, jogosDaEtapa, planteis, antes,
-				escalacoesDosTreinadores(jogoId, "a copa", planteis, antes), substituicoes);
+				escalacoesDosTreinadores(jogoId, "a copa", planteis, antes,
+						jogosDaEtapa.stream().map(Copa.PartidaCopa::jogo).toList()), substituicoes);
 	}
 
-	/** A escalação gravada de cada treinador, sem suspensos e lesionados. */
+	private static List<Jogo> jogosDe(List<ProcessamentoRodada.PartidaDaEtapa> partidas) {
+		return partidas.stream().map(ProcessamentoRodada.PartidaDaEtapa::jogo).toList();
+	}
+
+	/**
+	 * A escalação gravada de cada treinador que joga a etapa, sem suspensos e lesionados. Quem não joga
+	 * fica de fora: a escalação dele, mesmo incompleta, não impede a etapa dos outros.
+	 */
 	private Map<Long, Escalacao> escalacoesDosTreinadores(long jogoId, String oQue, Map<Long, List<Jogador>> planteis,
-			Disciplina antes) {
+			Disciplina antes, List<Jogo> jogosDaEtapa) {
+		Set<Long> jogam = new HashSet<>();
+		jogosDaEtapa.forEach(j -> {
+			jogam.add(j.mandante().id());
+			jogam.add(j.visitante().id());
+		});
 		Map<Long, Escalacao> doTreinador = new HashMap<>();
 		escalacoes.carregarDoJogo(jogoId).forEach((clubeId, escalacao) -> {
+			if (!jogam.contains(clubeId)) {
+				return;
+			}
 			try {
 				doTreinador.put(clubeId, escalacao.escalacao(planteis.getOrDefault(clubeId, List.of()), antes::suspenso,
 						antes::lesionado, ParametrosMotor.padrao().penalti().fatorGoleiroImprovisado()));

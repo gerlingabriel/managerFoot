@@ -106,10 +106,10 @@
 <input th:if="${v.indiceCopa != null}" type="hidden" name="etapa" th:value="${v.indiceCopa}">
 <input th:if="${v.continental}" type="hidden" name="continental" value="true">
 <input th:if="${v.mundial}" type="hidden" name="mundial" value="true">
-<button type="submit" class="botao botao-largo" th:disabled="${!v.problemas.isEmpty()}"
+<button type="submit" class="botao botao-largo" th:disabled="${v.escalacaoPendente()}"
 	aria-describedby="jogar-ajuda" th:text="${v.mundial} ? (${v.finalCopa} ? 'Confirmar e jogar a final do Mundial' : 'Confirmar e jogar o Mundial') : (${v.continental} ? (${v.finalCopa} ? 'Confirmar e jogar a final da continental' : 'Confirmar e jogar a continental') : (${v.finalCopa} ? 'Confirmar e jogar a final' : (${v.etapaCopa != null} ? 'Confirmar e jogar a copa' : 'Confirmar e jogar rodada')))">Confirmar e jogar rodada</button>
 <span id="jogar-ajuda" class="suave centro"
-	th:text="${!v.problemas.isEmpty()} ? 'Complete a escalação para jogar.' : (${v.etapaCopa != null} ? |${v.etapaCopa}.| : |Rodada ${v.rodada}.|)">ajuda</span>
+	th:text="${v.escalacaoPendente()} ? 'Complete a escalação para jogar.' : (${!v.problemas.isEmpty()} ? 'Seu clube não joga: dá para seguir com a escalação incompleta.' : (${v.etapaCopa != null} ? |${v.etapaCopa}.| : |Rodada ${v.rodada}.|))">ajuda</span>
 </form>
 </aside>
 

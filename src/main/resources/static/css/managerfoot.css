@@ -946,6 +946,10 @@ a.clube-linha:hover { color: var(--texto); background: rgba(242, 201, 76, 0.1); 
 .lance.gol { width: 14px; height: 14px; border-radius: 50%; background: var(--texto); box-shadow: inset 0 0 0 3px #1A1A12, 0 0 0 1px var(--texto); }
 .lance.amarelo { width: 10px; height: 14px; border-radius: 2px; background: var(--destaque); }
 .lance.vermelho { width: 10px; height: 14px; border-radius: 2px; background: var(--erro); }
+/* Pênalti defendido: a bola com um anel verde, e a linha da janela em destaque. */
+.lance.defesa { width: 14px; height: 14px; border-radius: 50%; background: var(--texto); box-shadow: inset 0 0 0 3px #1A1A12, 0 0 0 3px #3FB37F; }
+.janela-lance.defendido { margin: 2px -8px; padding: 2px 8px; border-radius: 6px; background: rgba(63, 179, 127, 0.16); color: #9FE3C2; }
+.janela-lance.defendido .lance-casa, .janela-lance.defendido .lance-fora { white-space: normal; }
 /* Time com um a menos: bem pequeno, junto ao nome. */
 .expulsao { width: 7px; height: 10px; border-radius: 1px; background: var(--erro); }
 /* Lesão (SPEC §7.5): cruz na cor de erro. */
