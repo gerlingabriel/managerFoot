@@ -85,7 +85,7 @@ Nenhum campeonato disponível. Carregue o banco padrão (veja o README).
 <span class="opcao-titulo">Sortear clube e começar</span>
 <span class="texto" th:text="|Você recebe um dos ${candidatos} clubes mais fracos da última divisão.|">texto</span>
 </button>
-<button th:if="${bancoEnviado == null}" type="submit" class="opcao" th:formaction="@{/jogos/escolher}">
+<button type="submit" class="opcao" th:formaction="@{/jogos/escolher}">
 <span class="opcao-titulo">Escolher clube</span>
 <span class="texto">Abre o quadro de escolha com todos os clubes do país.</span>
 </button>

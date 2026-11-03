@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 89 — 2026-10-31)
+-   **Status:** versão inicial para revisão (rev. 90 — 2026-11-03)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 90 (2026-11-03):** pelo usuário: decisões do jogo em rede (§3.3): convite por link, entrada só antes da 1ª rodada, pausa de até 60 s na substituição, a gestão só avança com o OK de todos, lances de amigos nos leilões de usuários e todos os leilões depois do OK da tática; o administrador escolhe qualquer clube também com o banco do arquivo (§3.5); guia do jogador fora do git (`docs/guia-do-jogador.md`).
 -   **rev. 89 (2026-10-31):** pelo usuário: aprovadas as propostas das rev. 87 e 88 (estrangeiros, asteriscos, Inglaterra como UE, países e níveis do Mundial, 8 clubes por região, prêmio igual ao da continental). Arquivo de save no servidor: baixar, enviar de volta e apagar (§3.5, ADR 0018); com as telas dos modelos 16a a 16d. Pelo usuário: o arquivo fica como cópia de segurança e o banco editável vem antes da rede, sem infringir direito autoral. Agente: arquivo alterado à mão é aceito se passar na validação, enviar sempre cria um jogo novo e a rodada ao vivo não baixa (Provisório). Simulações refeitas e nova `docs/simulacoes/mundial.md`.
 -   **rev. 88 (2026-10-30):** pelo usuário: formato do Mundial: uma semifinal é Europa × um clube sorteado entre Ásia, África e Oceania, a outra é América do Norte/Central × América do Sul; jogadas depois da final da continental, com o campeão dela; o agente cria clubes para as regiões sem clube, com a força que achar adequada (§8.3.4). Agente: países, níveis e demais detalhes (Provisório).
 -   **rev. 87 (2026-10-30):** pelo usuário: som dos gols pela metade (§10.2); todo clube tem jogadores estrangeiros, que ajudam o usuário a comprar por sair mais baratos, e mais jogadores com asterisco (§5.2, §5.3); nos clubes europeus, os cidadãos da União Europeia são de outro país, mas não contam como estrangeiros (§8.4). Agente: quantidades e origem dos estrangeiros, novo teto e chances de asterisco, Inglaterra equipara a União Europeia (Provisório). Banco padrão versão 4; jogos já criados não mudam.
@@ -350,8 +351,11 @@ infringir direito autoral.
   pública nem troca de bancos pelo servidor; quem edita responde pelos nomes que usa.
 - O editor em tela fica para depois, sobre o mesmo arquivo.
 
+**Definido (rev. 90), pelo usuário:** com o banco do arquivo, o administrador
+também escolhe qualquer clube (quadro de escolha montado do arquivo, na ordem dos
+clubes do arquivo; o jogo criado usa a mesma semente).
+
 **Provisório (rev. 89), proposta do agente:**
-- Com arquivo, o clube inicial é sempre sorteado, até para o administrador.
 - Cada clube do arquivo tem de 11 a 25 jogadores, com ao menos um goleiro. Os
   nomes vão até 60 letras e os códigos de país são os do catálogo FIFA.
 - Um país pode virar campeonato com uma só divisão e sem rebaixamento. Sem
@@ -379,8 +383,29 @@ exemplo, configurando, pronto ou desconectado).
   clube (modo escolha), com os clubes já ocupados bloqueados.
 - O administrador inicia a temporada quando todos estiverem prontos.
 
-**Em aberto (Etapa 5):** entrar num jogo em rede depois da rodada 1.
-**Proposta:** não permitir na primeira versão.
+~~**Em aberto (Etapa 5):** entrar num jogo em rede depois da rodada 1.~~
+**Definido (rev. 90), pelo usuário — jogo em rede:**
+1. **Convite por link:** o administrador gera na sala um link de convite e o
+   envia como quiser (por exemplo, WhatsApp). Vale **7 dias** e serve para quem
+   já tem conta de participante. O convite por e-mail fica para quando houver
+   serviço de e-mail. O participante continua podendo jogar sozinho (§3.2).
+2. **Entrada só antes da 1ª rodada.** No jogo com convite, cada um faz só a
+   primeira etapa: escolhe um clube (modo escolha) ou recebe o sorteado (modo
+   sorteio).
+3. **Substituição no minuto a minuto pausa para todos**, com aviso de quem está
+   substituindo e limite de **60 segundos**. Ver o clube de outro não pausa.
+4. **Gestão:** se faltar alguém dar OK, o jogo **não segue**. Não há máquina
+   jogando pelo ausente.
+5. **Mercado entre amigos:** os outros usuários dão lance no leilão de um
+   usuário, com lances secretos, como os da máquina.
+   - **Todos os leilões depois do OK da tática:** pôr um jogador à venda não
+     abre mais o leilão na hora; ele entra na mesma tela dos leilões da
+     máquina, depois do OK da tática e antes da rodada, com os lances no mesmo
+     lugar. Vale também para o jogo individual.
+6. **Cópia de segurança:** o jogo em rede não baixa arquivo (fica para depois).
+
+**Em aberto (rev. 90):** o que acontece se o próprio administrador cair; o
+mesmo item 4 vale para ele até decisão.
 
 ## 4. Estrutura de ligas e divisões
 

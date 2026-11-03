@@ -88,6 +88,19 @@ public record BancoEditavel(List<Pais> paises, List<Continental> continentais) {
 		return paises.stream().filter(p -> p.codigo().equals(codigo)).findFirst();
 	}
 
+	/**
+	 * Os clubes do país numerados de 1 em diante, na ordem do arquivo. É a ordem em que eles são gravados no molde, e
+	 * por isso a distribuição pela mesma semente dá o mesmo quadro aqui e no jogo criado.
+	 */
+	public static List<Clube> clubesNumerados(Pais pais) {
+		List<Clube> clubes = new ArrayList<>();
+		for (int i = 0; i < pais.clubes().size(); i++) {
+			Clube c = pais.clubes().get(i).clube();
+			clubes.add(new Clube(i + 1, c.nome(), c.forca(), c.escudo()));
+		}
+		return clubes;
+	}
+
 	/** O arquivo, em texto organizado para editar à mão. */
 	public byte[] paraArquivo() {
 		Map<String, Object> raiz = new LinkedHashMap<>();

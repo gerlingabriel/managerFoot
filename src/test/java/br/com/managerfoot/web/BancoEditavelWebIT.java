@@ -92,6 +92,31 @@ class BancoEditavelWebIT {
 	}
 
 	@Test
+	void administradorEscolheQualquerClubeDoArquivo() throws Exception {
+		Usuario admin = contas.criarAdministrador("adm" + System.nanoTime() + "@exemplo.com", "Admin", "senha-do-admin");
+		String banco = mvc.perform(get("/jogos/novo/banco").with(como(admin))).andReturn().getResponse()
+			.getContentAsString(StandardCharsets.UTF_8);
+		String nome = new tools.jackson.databind.json.JsonMapper().readTree(banco).path("paises").get(0).path("clubes").get(0)
+			.path("nome").asString();
+		String editado = banco.replace("\"" + nome + "\"", "\"Clube da Turma\"");
+		MockHttpSession sessao = new MockHttpSession();
+		mvc.perform(multipart("/jogos/novo/banco").file(arquivo(editado)).session(sessao).with(como(admin)).with(csrf()));
+		mvc.perform(get("/jogos/novo").session(sessao).with(como(admin)))
+			.andExpect(content().string(containsString("Escolher clube")));
+
+		mvc.perform(post("/jogos/escolher").session(sessao).param("paisCodigo", "BRA").with(como(admin)).with(csrf()))
+			.andExpect(redirectedUrl("/jogos/escolher"));
+		mvc.perform(get("/jogos/escolher").session(sessao).param("clube", "1").with(como(admin)))
+			.andExpect(content().string(containsString("Clube da Turma")))
+			.andExpect(content().string(containsString("Assumir Clube da Turma")));
+		mvc.perform(post("/jogos/escolher/assumir").session(sessao).param("clube", "1").with(como(admin)).with(csrf()))
+			.andExpect(redirectedUrlPattern("/jogos/*"));
+
+		assertThat(jogos.listar(admin.id())).singleElement().satisfies(j -> assertThat(j.clube().nome()).isEqualTo("Clube da Turma"));
+		assertThat(sessao.getAttribute(BancoEditavelController.SESSAO)).isNull();
+	}
+
+	@Test
 	void arquivoComErroMostraOsProblemasEContinuaNoPadrao() throws Exception {
 		MockHttpSession sessao = new MockHttpSession();
 		mvc.perform(multipart("/jogos/novo/banco").file(arquivo("{\"aplicacao\":\"managerFoot\",\"tipo\":\"banco\",\"formato\":1,\"paises\":[]}"))

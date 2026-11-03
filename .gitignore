@@ -35,3 +35,4 @@ build/
 ### Ambiente local (credenciais) ###
 .env
 .playwright-mcp/
+docs/guia-do-jogador.md

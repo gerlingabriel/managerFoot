@@ -99,16 +99,49 @@ public class BancoEditavelRepositorio {
 			throw new NoSuchElementException("o arquivo não tem liga do país " + codigoPais);
 		}
 		long molde = moldes.criarMolde(NOME_MOLDE_TEMPORARIO);
-		long paisMolde = gravar(molde, banco, codigoPais);
-		NovoJogo novo = jogos.criarComSorteio(paisMolde, usuarioId);
-		// o molde só serve à cópia; o jogo fica com molde_id nulo, como os jogos de um banco padrão substituído
-		jdbc.sql("DELETE FROM molde WHERE id = :molde").param("molde", molde).update();
+		Gravado gravado = gravar(molde, banco, codigoPais);
+		NovoJogo novo = jogos.criarComSorteio(gravado.pais(), usuarioId);
+		apagarMolde(molde);
 		return novo;
 	}
 
-	/** Grava o banco no molde e devolve o id do país jogado. */
-	private long gravar(long molde, BancoEditavel banco, String codigoPais) {
+	/**
+	 * Cria o jogo com o clube escolhido pelo administrador no quadro de {@link BancoEditavel#clubesNumerados}, com a
+	 * mesma semente do quadro.
+	 *
+	 * @param numero o número do clube no quadro
+	 * @return o id do jogo
+	 * @throws BancoRecusadoException se o arquivo não passa na validação
+	 * @throws NoSuchElementException se o arquivo não tem liga desse país ou esse clube
+	 */
+	@Transactional
+	public long criarJogoComEscolha(byte[] arquivo, String codigoPais, long administradorId, long semente, int numero) {
+		BancoEditavel banco = ler(arquivo);
+		Pais pais = banco.pais(codigoPais).filter(p -> p.liga().isPresent())
+			.orElseThrow(() -> new NoSuchElementException("o arquivo não tem liga do país " + codigoPais));
+		if (numero < 1 || numero > pais.clubes().size()) {
+			throw new NoSuchElementException("o arquivo não tem o clube " + numero + " de " + codigoPais);
+		}
+		long molde = moldes.criarMolde(NOME_MOLDE_TEMPORARIO);
+		Gravado gravado = gravar(molde, banco, codigoPais);
+		long jogo = jogos.criarComEscolha(gravado.pais(), administradorId, semente, gravado.clubes().get(numero - 1));
+		apagarMolde(molde);
+		return jogo;
+	}
+
+	/** O molde só serve à cópia; o jogo fica com molde_id nulo, como os jogos de um banco padrão substituído. */
+	private void apagarMolde(long molde) {
+		jdbc.sql("DELETE FROM molde WHERE id = :molde").param("molde", molde).update();
+	}
+
+	/** O país jogado no molde e os ids dos clubes dele, na ordem do arquivo. */
+	private record Gravado(long pais, List<Long> clubes) {
+	}
+
+	/** Grava o banco no molde. */
+	private Gravado gravar(long molde, BancoEditavel banco, String codigoPais) {
 		long jogado = -1;
+		List<Long> clubesDoJogado = new ArrayList<>();
 		for (Pais pais : banco.paises()) {
 			long id = moldes.criarPais(molde, pais.codigo(), pais.nome());
 			if (pais.regiao() != null) {
@@ -124,6 +157,9 @@ public class BancoEditavelRepositorio {
 			for (ClubeEditavel clube : pais.clubes()) {
 				Clube gravado = moldes.adicionarClube(id, clube.clube(), clube.treinador());
 				moldes.adicionarJogadores(gravado.id(), clube.jogadores());
+				if (pais.codigo().equals(codigoPais)) {
+					clubesDoJogado.add(gravado.id());
+				}
 			}
 			if (pais.codigo().equals(codigoPais)) {
 				jogado = id;
@@ -133,6 +169,6 @@ public class BancoEditavelRepositorio {
 			long id = moldes.criarContinental(molde, continental.regiao().name(), continental.nome());
 			continental.vagas().forEach((codigo, vagas) -> moldes.adicionarVagas(id, codigo, vagas));
 		}
-		return jogado;
+		return new Gravado(jogado, clubesDoJogado);
 	}
 }
