@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 92 — 2026-11-03)
+-   **Status:** versão inicial para revisão (rev. 93 — 2026-11-03)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -14,6 +14,8 @@
     descreve intenção geral ainda não detalhada.
 
 ### Histórico de revisões
+
+-   **rev. 93 (2026-11-03):** pelo usuário: campeão de qualquer competição começa a temporada seguinte com a moral em 30, se o treinador do título ainda dirige o clube na virada (§6.2); aviso da meta do patrocínio em Finanças (§9.6, modelo a aprovar).
 
 -   **rev. 92 (2026-11-03):** pelo usuário: aprovados os modelos 18a a 18f do jogo em rede e as 9 propostas deles (§3.3): passo "Quem joga" no novo jogo, sorteio ao entrar na sala, link novo cancela o anterior, só o administrador tira alguém da sala, tirar o OK, leilões também esperam o OK de todos, sem conexão = 30 s sem consulta, velocidade só do administrador, sem "Baixar arquivo" e "Apagar" só do administrador. Feita a parte 5a (sala, convite e entrada; ADR 0020).
 
@@ -1121,6 +1123,13 @@ mais fortes, em caso de vitória, empate"):
   (fundo da 1ª 0,03 a 0,06 por temporada).
 - Jogos salvos: a moral gravada não muda; o novo cálculo vale a partir da
   próxima rodada.
+
+**Definido (rev. 93), pelo usuário — moral cheia para o campeão:** o clube
+campeão de qualquer competição da temporada (liga de qualquer divisão, copa,
+continental ou Mundial) começa a temporada seguinte com a moral em **30**, não
+importa a faixa em que estava. Vale só se o treinador do título ainda dirige o
+clube na virada: quem foi demitido antes não leva a moral, e quem chegou depois
+não a recebe. Vale para usuários e para a máquina (agente: a regra não distingue).
 
 **Definido (rev. 15): correção leve.** O usuário pediu para melhorar, mas
 não muito, porque o Elifoot 98 é sobre assumir times e ser demitido.

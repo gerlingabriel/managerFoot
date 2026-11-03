@@ -18,6 +18,7 @@ import br.com.managerfoot.dominio.Clube;
 import br.com.managerfoot.dominio.Escalacao;
 import br.com.managerfoot.dominio.EscalacaoDoTreinador;
 import br.com.managerfoot.dominio.Jogador;
+import br.com.managerfoot.dominio.ParametrosMoral;
 import br.com.managerfoot.motor.EscalacaoMaquina;
 import br.com.managerfoot.motor.ParametrosMotor;
 import br.com.managerfoot.persistencia.LeilaoRepositorio.VendaPorCaixa;
@@ -31,7 +32,7 @@ import br.com.managerfoot.temporada.TransicaoTemporada;
 /**
  * Fim de temporada (SPEC §4.1, §8.1; Etapa 3c.4): promoção, rebaixamento e fila de espera pela
  * classificação final, amarelos zerados (suspensões continuam, §7.4) e início da temporada
- * seguinte. Moral e força dos jogadores não mudam aqui.
+ * seguinte. A força dos jogadores não muda aqui; a moral só muda para os campeões (rev. 93).
  */
 @Repository
 public class FimDeTemporadaRepositorio {
@@ -124,6 +125,7 @@ public class FimDeTemporadaRepositorio {
 			.update();
 
 		Map<Long, Clube> demitidos = demitirDaFila(jogoId, transicao.proxima(), new SplittableRandom(semente ^ MISTURA_FILA));
+		moralCheiaParaOsCampeoes(jogoId, numero);
 		// o clube novo do demitido grava os salários; o antigo passa a readequar como a máquina (rev. 58)
 		aumentos.fixarSalarios(jogoId);
 
@@ -133,6 +135,39 @@ public class FimDeTemporadaRepositorio {
 		List<VendaPorCaixa> vendas = leiloes.venderNoInicioDaTemporada(jogoId);
 		caixas.pagarPatrocinio(jogoId, finais);
 		return new NovaTemporada(transicao, nova, demitidos, vendas);
+	}
+
+	/**
+	 * Campeão de qualquer competição da temporada (liga de cada divisão, copa, continental e Mundial) começa a
+	 * seguinte com a moral cheia (SPEC §6.2, rev. 93), se o treinador do título ainda dirige o clube: quem foi
+	 * demitido antes da virada não leva a moral, e o clube não a dá a quem chegou depois. Roda depois das
+	 * demissões da fila.
+	 */
+	private void moralCheiaParaOsCampeoes(long jogoId, int temporada) {
+		jdbc.sql("""
+				UPDATE jogo_clube c SET moral = :maximo
+				WHERE c.jogo_id = :jogo AND EXISTS (
+				    SELECT 1 FROM (
+				        SELECT clube_id, usuario_id, treinador_maquina_id FROM jogo_campeao WHERE jogo_id = :jogo AND temporada = :temporada
+				        UNION ALL
+				        SELECT clube_id, usuario_id, treinador_maquina_id FROM jogo_campeao_copa WHERE jogo_id = :jogo AND temporada = :temporada
+				        UNION ALL
+				        SELECT clube_id, usuario_id, treinador_maquina_id FROM jogo_campeao_continental WHERE jogo_id = :jogo AND temporada = :temporada
+				        UNION ALL
+				        SELECT clube_id, usuario_id, treinador_maquina_id FROM jogo_campeao_mundial WHERE jogo_id = :jogo AND temporada = :temporada
+				    ) x
+				    WHERE x.clube_id = c.id
+				      AND CASE WHEN x.usuario_id IS NOT NULL
+				               THEN EXISTS (SELECT 1 FROM jogo_treinador t WHERE t.clube_id = c.id AND t.usuario_id = x.usuario_id)
+				               ELSE NOT EXISTS (SELECT 1 FROM jogo_treinador t WHERE t.clube_id = c.id)
+				                    AND (x.treinador_maquina_id IS NULL
+				                         OR EXISTS (SELECT 1 FROM jogo_treinador_maquina m
+				                                    WHERE m.id = x.treinador_maquina_id AND m.clube_id = c.id))
+				          END)""")
+			.param("maximo", ParametrosMoral.padrao().maximo())
+			.param("jogo", jogoId)
+			.param("temporada", temporada)
+			.update();
 	}
 
 	/**

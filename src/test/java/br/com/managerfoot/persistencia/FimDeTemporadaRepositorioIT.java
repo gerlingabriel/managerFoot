@@ -101,6 +101,52 @@ class FimDeTemporadaRepositorioIT {
 	}
 
 	@Test
+	void campeaoComOTreinadorDoTituloComecaATemporadaComMoralCheia() {
+		for (int rodada = 1; rodada <= 30; rodada++) {
+			RodadasDeTeste.semDecisoesDoTreinador(jdbc, jogo);
+			RodadasDeTeste.jogarRodada(rodadas, jogo, rodada);
+		}
+		List<Long> lideres = rodadas.classificacao(jogo).values().stream().map(c -> c.linhas().getFirst().clube().id()).toList();
+		long doUsuario = jdbc.sql("SELECT clube_id FROM jogo_treinador WHERE jogo_id = ?").param(jogo).query(Long.class).single();
+		long usuario = jdbc.sql("SELECT usuario_id FROM jogo_treinador WHERE jogo_id = ?").param(jogo).query(Long.class).single();
+		List<Long> outros = jdbc.sql("SELECT id FROM jogo_clube WHERE jogo_id = ? AND divisao_id IS NOT NULL ORDER BY id").param(jogo)
+			.query(Long.class).list().stream().filter(id -> !lideres.contains(id) && id != doUsuario).toList();
+		long trocouDeTreinador = outros.get(0);
+		long semTitulo = outros.get(1);
+		// copa do usuário (ainda no clube) e continental de um clube cujo treinador do título já saiu
+		jdbc.sql("DELETE FROM jogo_campeao_copa WHERE jogo_id = ?").param(jogo).update();
+		jdbc.sql("DELETE FROM jogo_campeao_continental WHERE jogo_id = ?").param(jogo).update();
+		jdbc.sql("DELETE FROM jogo_campeao_mundial WHERE jogo_id = ?").param(jogo).update();
+		copa(doUsuario, outros.get(2), usuario, null);
+		long treinadorQueSaiu = jdbc.sql("SELECT id FROM jogo_treinador_maquina WHERE clube_id = ?").param(outros.get(3))
+			.query(Long.class).single();
+		jdbc.sql("""
+				INSERT INTO jogo_campeao_continental (jogo_id, temporada, ano, clube_id, clube_nome, vice_id, vice_nome, treinador_maquina_id)
+				SELECT ?, 1, 2026, c.id, c.nome, v.id, v.nome, ? FROM jogo_clube c, jogo_clube v WHERE c.id = ? AND v.id = ?""")
+			.param(jogo).param(treinadorQueSaiu).param(trocouDeTreinador).param(semTitulo).update();
+		jdbc.sql("UPDATE jogo_clube SET moral = 3 WHERE jogo_id = ?").param(jogo).update();
+
+		RodadasDeTeste.semDecisoesDoTreinador(jdbc, jogo);
+		fim.avancarTemporada(jogo, 1, SEMENTE_NOVA);
+
+		assertThat(lideres).allSatisfy(id -> assertThat(moral(id)).isEqualTo(30));
+		assertThat(moral(doUsuario)).isEqualTo(30);
+		assertThat(moral(trocouDeTreinador)).isEqualTo(3);
+		assertThat(moral(semTitulo)).isEqualTo(3);
+	}
+
+	private void copa(long campeao, long vice, Long usuario, Long maquina) {
+		jdbc.sql("""
+				INSERT INTO jogo_campeao_copa (jogo_id, temporada, ano, clube_id, clube_nome, vice_id, vice_nome, usuario_id, treinador_maquina_id)
+				SELECT ?, 1, 2026, c.id, c.nome, v.id, v.nome, ?, ? FROM jogo_clube c, jogo_clube v WHERE c.id = ? AND v.id = ?""")
+			.param(jogo).param(usuario).param(maquina).param(campeao).param(vice).update();
+	}
+
+	private int moral(long clube) {
+		return jdbc.sql("SELECT moral FROM jogo_clube WHERE id = ?").param(clube).query(Integer.class).single();
+	}
+
+	@Test
 	void fimDaTemporadaPromoveRebaixaZeraAmarelosEIniciaASeguinte() {
 		for (int rodada = 1; rodada <= 30; rodada++) {
 			RodadasDeTeste.semDecisoesDoTreinador(jdbc, jogo);
