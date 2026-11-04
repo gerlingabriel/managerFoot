@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 96 — 2026-11-03)
+-   **Status:** versão inicial para revisão (rev. 97 — 2026-11-04)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -14,6 +14,8 @@
     descreve intenção geral ainda não detalhada.
 
 ### Histórico de revisões
+
+-   **rev. 97 (2026-11-04):** pelo usuário: modelos 20a a 20c aprovados, e o lugar da meta deixado ao agente. Meta do patrocínio no topo do plantel e em Finanças, com porcentagem; a meta de campeão é paga assim que o título fica garantido (§9.6). Aba "Comprar" com os jogadores à venda e filtros (§10.3). "Convidar pessoas" no Início do administrador, com o link de cadastro (§3.4). Agente: as metas de vitórias e de "entre os N primeiros" também pagam quando ficam garantidas (Provisório).
 
 -   **rev. 96 (2026-11-03):** do teste do usuário em rede: na rodada ao vivo vale a velocidade do administrador para todos, e só ele a muda (§3.3 item 8; antes cada um tinha a sua e o relógio comum andava na de quem consultava); a faixa "Aguardando" consulta a cada 1 s. Modelos 20a a 20c (meta do patrocínio no plantel e em Finanças, paga quando garantida; comprar jogadores com filtros; convite de cadastro na tela do administrador) aguardando aprovação.
 
@@ -273,6 +275,12 @@ adicionais e como os arquivos/configurações são compartilhados.
   guardada só como hash.
 - Por enquanto não há recuperação de senha pelo próprio usuário: o
   administrador pode redefinir a senha de um participante.
+
+**Definido (rev. 97), pelo usuário — modelo 20c:** o administrador gera o link
+de cadastro no Início, no bloco "Convidar pessoas", além do comando no terminal.
+O link aparece só na hora (o servidor guarda o hash). O bloco mostra quantos
+links esperam cadastro e quem já é participante, e avisa quando `URL_BASE` é um
+endereço que só abre no próprio computador.
 
 **Em aberto:**
 - ~~Validade e uso do **convite para sessão em rede** (Etapa 5).~~ Definido na
@@ -2740,6 +2748,18 @@ na temporada anterior.
   jogos da liga. **Provisório:** em ligas de outro tamanho, as faixas e as
   vitórias seguem a mesma proporção. Contratos por vitória e por acesso já
   assinados seguem valendo até o fim da temporada deles.
+- **Definido (rev. 97), pelo usuário — modelo 20a:** a meta de **campeão da
+  liga** é paga assim que o título fica garantido, sem esperar o fim do ano; se
+  não ficar garantido antes, vale a classificação depois da última rodada. A
+  meta aparece no topo do plantel, ao lado do patrocinador ("9 de 14 vitórias ·
+  64%", "Campeão da liga · hoje 2º, 3 pontos atrás"), e numa faixa em Finanças.
+  - **Provisório (agente):** as metas de vitórias (ao chegar ao número) e de
+    "entre os N primeiros" (quando não há mais N clubes que possam alcançar o
+    clube em pontos) também pagam quando ficam garantidas. Empate possível em
+    pontos não garante.
+  - **Gravado (rev. 97, V43):** `jogo_patrocinio.meta_paga_rodada`; a meta é
+    conferida depois de cada rodada da liga (`PatrocinioRepositorio.pagarMetasGarantidas`)
+    e o fim da temporada só paga a que ainda não foi paga.
 - **Definido (rev. 57), pelo usuário:** a máquina fica sempre com a
   proposta **fixa** ("mais simples").
 - **Gravado (rev. 57, V25):** no início da temporada o clube do usuário
@@ -2836,6 +2856,13 @@ da mesma divisão seguem na mesma tela.
 
 -   A tela de elenco deve preservar a leitura simples do Elifoot 98, com
     modernizações.
+-   **Definido (rev. 97), pelo usuário — modelo 20b, aba "Comprar":** lista os
+    jogadores à venda dos clubes da máquina (das divisões e de fora), para a
+    compra pelo preço, com filtros de posição, força de/até, preço de/até,
+    asterisco, "só quem cabe no meu caixa" e ordem (força, preço ou gols). Os
+    filtros ficam guardados na sessão, por jogo. **Diferença do modelo:** o
+    jogador que outro treinador pôs em leilão não aparece aqui; ele está na tela
+    dos leilões.
 -   **Definido (rev. 86) — escalação pela tática:** ao clicar numa tática, se
     faltar titular, o jogo completa as vagas com os jogadores mais fortes de
     cada posição, do banco ou de fora; quem já está escalado fica. No empate de

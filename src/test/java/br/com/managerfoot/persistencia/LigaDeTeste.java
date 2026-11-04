@@ -29,7 +29,7 @@ public final class LigaDeTeste {
 	 * Cria no molde uma liga com Série A de 16, Série B de 15 (número ímpar: há folga) e fila de 2,
 	 * todos com o elenco padrão de 23, e devolve o id do jogo criado dela, com dono participante.
 	 */
-	static long criarJogo(MoldeRepositorio moldes, JogoRepositorio jogos, ContasRepositorio contas) {
+	public static long criarJogo(MoldeRepositorio moldes, JogoRepositorio jogos, ContasRepositorio contas) {
 		return jogos.criarJogoComClubeSorteado(criarPais(moldes), participante(contas).id(), 1);
 	}
 

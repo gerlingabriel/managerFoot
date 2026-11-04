@@ -28,7 +28,7 @@ class MercadoController {
 
 	@PostMapping("/jogos/{jogoId}/mercado/comprar")
 	String comprar(@AuthenticationPrincipal Usuario usuario, @PathVariable long jogoId, @RequestParam long jogador,
-			@RequestParam long clube, RedirectAttributes redirect) {
+			@RequestParam long clube, @RequestParam(required = false) String voltar, RedirectAttributes redirect) {
 		try {
 			compras.comprar(jogoId, usuario.id(), jogador);
 			redirect.addFlashAttribute("resultado", "Jogador comprado. Ele está no seu plantel, fora do banco.");
@@ -38,6 +38,10 @@ class MercadoController {
 		}
 		catch (NoSuchElementException e) {
 			redirect.addFlashAttribute("erro", "Este jogador não está mais à venda.");
+		}
+		if ("comprar".equals(voltar)) {
+			// pela aba "Comprar" (modelo 20b): volta à lista, com os filtros guardados
+			return "redirect:/jogos/" + jogoId + "/comprar";
 		}
 		return "redirect:/jogos/" + jogoId + "/clube/" + clube + "?aba=plantel";
 	}

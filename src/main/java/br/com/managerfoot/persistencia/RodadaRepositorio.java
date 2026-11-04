@@ -199,6 +199,8 @@ public class RodadaRepositorio {
 		escalacoes.retirarSuspensos(jogoId);
 		caixas.lancarRodada(jogoId, linha.id(), temporada, rodada, resultado.partidas(), planteis);
 		patrocinios.pagarVitorias(linha.id(), rodada, resultado.partidas());
+		// a meta do patrocínio paga assim que fica garantida (rev. 97)
+		patrocinios.pagarMetasGarantidas(temporada, linha.id(), rodada);
 		evoluir(jogoId, new SplittableRandom(temporada.semente() * 41 + rodada), aoVivo, resultado, planteis);
 		estadios.avancarObras(jogoId, linha.id(), rodada, planteis);
 		mercado.reporAVenda(jogoId, MercadoRepositorio.semente(temporada.semente(), rodada));

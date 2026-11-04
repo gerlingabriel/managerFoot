@@ -3,6 +3,7 @@ package br.com.managerfoot.persistencia;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -67,6 +68,36 @@ public class ContasRepositorio {
 			.param("segundos", validadeLink.toSeconds())
 			.update();
 		return token;
+	}
+
+	/**
+	 * Para o bloco "Convidar pessoas" do administrador (modelo 20c): links dele ainda sem uso e no prazo,
+	 * e os participantes cadastrados.
+	 *
+	 * @throws AcessoNegadoException se quem pede não é administrador
+	 */
+	@Transactional(readOnly = true)
+	public ConvitesDeCadastro convites(long administradorId) {
+		exigirAdministrador(administradorId);
+		int esperando = jdbc.sql("""
+				SELECT count(*) FROM link_cadastro
+				WHERE criado_por = :admin AND usado_por IS NULL AND expira_em > now()""")
+			.param("admin", administradorId)
+			.query(Integer.class)
+			.single();
+		List<String> participantes = jdbc.sql("SELECT nome FROM usuario WHERE papel = 'PARTICIPANTE' ORDER BY lower(nome), id")
+			.query(String.class)
+			.list();
+		return new ConvitesDeCadastro(esperando, participantes);
+	}
+
+	/** Links de cadastro esperando uso e quem já tem conta de participante. */
+	public record ConvitesDeCadastro(int esperando, List<String> participantes) {
+	}
+
+	/** O prazo de um link gerado agora. */
+	public Duration validadeLink() {
+		return validadeLink;
 	}
 
 	/**

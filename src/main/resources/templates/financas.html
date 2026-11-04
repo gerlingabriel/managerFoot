@@ -51,6 +51,14 @@
 <span class="suave" th:text="|bilheteria ${f.moeda.formatar(f.continentalBilheteria())} · prêmio e bônus ${f.moeda.formatar(f.continentalPremios())} · custos ${f.moeda.formatar(-f.continentalCustos())}|">continental</span>
 </div>
 </div>
+<!-- Meta do patrocínio (modelos 19 e 20a): só quando o patrocínio assinado tem meta. -->
+<section th:if="${meta != null}" class="meta-patrocinio" th:classappend="${meta.classe}" aria-label="Meta do patrocínio">
+<span class="rotulo" th:text="|${meta.classe == 'cumprida' ? 'Meta cumprida' : 'Meta do patrocínio'} · ${meta.patrocinador}|">Meta do patrocínio</span>
+<span class="meta-texto"><span th:text="${meta.pede}">Vencer 14 jogos na liga</span>: mais <b th:text="${meta.bonus}">R$ 44.000</b>.</span>
+<div class="meta-barra" role="img" th:attr="aria-label=|${meta.percentual}% da meta|"><span th:style="|width: ${meta.percentual}%|"></span></div>
+<span class="meta-situacao" th:text="${meta.situacao}">Hoje: 9 vitórias em 20 jogos.</span>
+<div class="meta-valor"><span class="financas-numero" th:text="${meta.classe == 'perdida'} ? ${f.moeda.formatar(0)} : |+ ${meta.bonus}|">+ R$ 44.000</span><span class="suave" th:text="${meta.nota}">se cumprir a meta</span></div>
+</section>
 
 <section aria-labelledby="t-extrato" class="painel grupo">
 <div class="painel-titulo painel-cabecalho">

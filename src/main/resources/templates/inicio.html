@@ -64,6 +64,30 @@
 </form>
 </section>
 
+<!--/* Convite para criar conta, só para o administrador (modelo 20c, SPEC §3.4). */-->
+<section th:if="${convites != null}" aria-labelledby="t-convidar" class="painel painel-interno convidar">
+<h2 id="t-convidar" class="titulo-secao pequeno">Convidar pessoas</h2>
+<p class="texto pequeno">Gere um link para cada pessoa e mande como quiser (WhatsApp, por exemplo). Depois de criar a conta, ela entra no seu jogo em rede pelo link da sala.</p>
+<p th:if="${urlSoNesteComputador}" role="alert" class="alerta">Este endereço só abre neste computador. Configure URL_BASE com o endereço da sua rede (por exemplo, http://192.168.0.10:8080) para o link servir a outra pessoa.</p>
+<form th:action="@{/convites/cadastro}" method="post" data-envio-unico class="alinhar-inicio">
+<button type="submit" class="botao">Gerar link de cadastro</button>
+</form>
+<div th:if="${linkCadastro}" class="link-gerado" role="status">
+<span class="rotulo" th:text="|Link gerado · vale até ${linkCadastroVale}, para uma pessoa|">Link gerado</span>
+<div class="link-linha">
+<input id="link-cadastro" readonly th:value="${linkCadastro}" aria-label="Link de cadastro">
+<button type="button" class="botao-contorno" data-copiar="link-cadastro">Copiar</button>
+</div>
+<span class="suave pequeno">Este link só aparece agora. Se perder, gere outro.</span>
+</div>
+<div class="sala-mini">
+<span><strong th:text="${convites.esperando == 1} ? '1 link esperando cadastro' : |${convites.esperando} links esperando cadastro|">0 links</strong></span>
+<span class="suave" th:text="|cada link vale ${diasLink} dias|">cada link vale 7 dias</span>
+<span><strong>Participantes</strong> <span class="suave" th:text="${convites.participantes.isEmpty()} ? '· ninguém ainda' : |· ${#strings.listJoin(convites.participantes, ', ')}|">· Marcos</span></span>
+<span></span>
+</div>
+</section>
+
 </main>
 </div>
 <div th:if="${apagando != null}" class="janela-fundo">

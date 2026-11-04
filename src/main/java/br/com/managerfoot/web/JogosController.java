@@ -21,9 +21,11 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import br.com.managerfoot.contas.Papel;
+import br.com.managerfoot.contas.Papel;
 import br.com.managerfoot.contas.Usuario;
 import br.com.managerfoot.dominio.Clube;
 import br.com.managerfoot.persistencia.BancoEditavelRepositorio;
+import br.com.managerfoot.persistencia.ContasRepositorio;
 import br.com.managerfoot.persistencia.BancoRecusadoException;
 import br.com.managerfoot.persistencia.JogosDoTreinadorRepositorio;
 import br.com.managerfoot.persistencia.JogosDoTreinadorRepositorio.JogoGravado;
@@ -48,9 +50,14 @@ class JogosController {
 	private final BancoEditavelRepositorio bancos;
 	private final Clock relogio;
 	private final int candidatosClubeInicial;
+	private final ContasRepositorio contas;
+	private final boolean urlSoNesteComputador;
 
 	JogosController(JogosDoTreinadorRepositorio jogos, MoldeRepositorio moldes, Campeonatos campeonatos, BancoEditavelRepositorio bancos,
-			Clock relogio, @Value("${managerfoot.jogo.candidatos-clube-inicial}") int candidatosClubeInicial) {
+			Clock relogio, @Value("${managerfoot.jogo.candidatos-clube-inicial}") int candidatosClubeInicial,
+			ContasRepositorio contas, @Value("${managerfoot.url-base}") String urlBase) {
+		this.contas = contas;
+		this.urlSoNesteComputador = ConvitesController.soNesteComputador(urlBase);
 		this.relogio = relogio;
 		this.jogos = jogos;
 		this.moldes = moldes;
@@ -65,6 +72,12 @@ class JogosController {
 		List<Linha> linhas = jogos.listar(usuario.id()).stream().map(JogosController::linha).toList();
 		model.addAttribute("jogos", linhas);
 		model.addAttribute("salasSemClube", jogos.salasSemClube(usuario.id()));
+		if (usuario.papel() == Papel.ADMINISTRADOR) {
+			// "Convidar pessoas" (modelo 20c)
+			model.addAttribute("convites", contas.convites(usuario.id()));
+			model.addAttribute("urlSoNesteComputador", urlSoNesteComputador);
+			model.addAttribute("diasLink", contas.validadeLink().toDays());
+		}
 		// janela de confirmação do modelo 16b; id de jogo que não é do usuário não abre nada
 		model.addAttribute("apagando", linhas.stream().filter(l -> l.podeApagar() && Long.valueOf(l.jogoId()).equals(apagar)).findFirst().orElse(null));
 		return "inicio";

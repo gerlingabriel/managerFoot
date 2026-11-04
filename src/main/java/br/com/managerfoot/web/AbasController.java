@@ -17,6 +17,7 @@ import br.com.managerfoot.persistencia.CaixaRepositorio;
 import br.com.managerfoot.persistencia.ClubeNaFilaException;
 import br.com.managerfoot.persistencia.ConsultasContinentalRepositorio;
 import br.com.managerfoot.persistencia.MundialRepositorio;
+import br.com.managerfoot.persistencia.PatrocinioRepositorio;
 import br.com.managerfoot.persistencia.ConsultasRepositorio;
 import br.com.managerfoot.persistencia.EstadioRepositorio;
 import br.com.managerfoot.temporada.FaseCopa;
@@ -37,10 +38,13 @@ class AbasController {
 	private final EstadioRepositorio estadios;
 	private final ConsultasContinentalRepositorio continentais;
 	private final MundialRepositorio mundiais;
+	private final PatrocinioRepositorio patrocinios;
 
 	AbasController(ConsultasRepositorio consultas, CaixaRepositorio caixas,
-			EstadioRepositorio estadios, ConsultasContinentalRepositorio continentais, MundialRepositorio mundiais) {
+			EstadioRepositorio estadios, ConsultasContinentalRepositorio continentais, MundialRepositorio mundiais,
+			PatrocinioRepositorio patrocinios) {
 		this.mundiais = mundiais;
+		this.patrocinios = patrocinios;
 		this.consultas = consultas;
 		this.caixas = caixas;
 		this.estadios = estadios;
@@ -89,6 +93,8 @@ class AbasController {
 		model.addAttribute("usuario", usuario);
 		model.addAttribute("jogoId", jogoId);
 		model.addAttribute("f", caixas.financas(jogoId, usuario.id()));
+		// faixa da meta do patrocínio (modelo 20a)
+		patrocinios.meta(jogoId, usuario.id()).ifPresent(m -> model.addAttribute("meta", TextosMeta.de(m)));
 		if (estadio) {
 			model.addAttribute("estadio", estadios.janela(jogoId, usuario.id()));
 		}

@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: cabeca('Comprar')}"></head>
+<body>
+<div class="campo campo-pagina">
+<div class="pagina">
+<header th:replace="~{fragmentos :: topo}"></header>
+<nav th:replace="~{fragmentos :: abas(${jogoId}, 'comprar')}"></nav>
+<div th:if="${resultado}" role="status" class="aviso-resultado" th:text="${resultado}">Jogador comprado.</div>
+<div th:if="${erro}" role="alert" class="alerta" th:text="${erro}">erro</div>
+
+<!-- Comprar jogadores (modelo 20b): os à venda da liga, pelo preço, com filtros guardados na sessão. -->
+<form th:action="@{/jogos/{id}/comprar(id=${jogoId})}" method="get" class="filtros" aria-label="Filtros">
+<input type="hidden" name="filtrar" value="1">
+<fieldset class="filtro">
+<legend>Posição</legend>
+<div class="chips">
+<label th:each="p : ${posicoes}" class="chip"><input type="checkbox" name="pos" th:value="${p.name()}" th:checked="${f.marcada(p)}"
+	th:attr="aria-label=${#strings.capitalize(p.nome(2))}"><span th:text="${p.name().substring(0, 1)}">G</span></label>
+</div>
+</fieldset>
+<div class="filtro"><span>Força</span>
+<div class="faixa-num"><input name="forcaDe" inputmode="numeric" autocomplete="off" th:value="${f.forcaDe}" aria-label="Força de" placeholder="de">
+até <input name="forcaAte" inputmode="numeric" autocomplete="off" th:value="${f.forcaAte}" aria-label="Força até" placeholder="até"></div>
+</div>
+<div class="filtro"><span th:text="|Preço (${l.moeda.simbolo()})|">Preço (R$)</span>
+<div class="faixa-num"><input name="precoDe" inputmode="numeric" autocomplete="off" th:value="${f.precoDe == null ? '' : #numbers.formatInteger(f.precoDe, 1, 'POINT')}" aria-label="Preço de" placeholder="de">
+até <input name="precoAte" inputmode="numeric" autocomplete="off" th:value="${f.precoAte == null ? '' : #numbers.formatInteger(f.precoAte, 1, 'POINT')}" aria-label="Preço até" placeholder="até"></div>
+</div>
+<label class="filtro"><span>Asterisco</span>
+<select name="asterisco" class="selecao">
+<option th:each="a : ${asteriscos}" th:value="${a.name()}" th:selected="${a == f.asterisco}"
+	th:text="${a.name() == 'TODOS' ? 'Todos' : (a.name() == 'COM' ? 'Só com ★' : 'Sem ★')}">Todos</option>
+</select></label>
+<label class="filtro"><span>Ordenar</span>
+<select name="ordem" class="selecao">
+<option th:each="o : ${ordens}" th:value="${o.name()}" th:selected="${o == f.ordem}"
+	th:text="${o.name() == 'FORCA' ? 'Força, maior primeiro' : (o.name() == 'PRECO' ? 'Preço, menor primeiro' : 'Gols, mais primeiro')}">Força</option>
+</select></label>
+<label class="filtro filtro-marcar"><input type="checkbox" name="cabe" value="1" th:checked="${f.soQuemCabe}"> Só quem cabe no meu caixa</label>
+<div class="filtro-acoes">
+<button type="submit" class="botao">Filtrar</button>
+<a th:href="@{/jogos/{id}/comprar(id=${jogoId},filtrar=1,cabe=1)}" class="botao-discreto botao-link">Limpar</a>
+</div>
+</form>
+
+<div class="contagem">
+<span class="suave"><span th:text="${l.jogadores.size() == 1} ? '1 jogador' : |${l.jogadores.size()} jogadores|">14 jogadores</span>
+<span th:text="|de ${l.aVenda} à venda|">de 30 à venda</span> · seu caixa:
+<strong class="caixa-valor" th:classappend="${l.saldo < 0} ? 'negativo'" th:text="${l.moeda.formatar(l.saldo)}">R$ 0</strong></span>
+<span class="suave">Comprado: contrato até o fim da temporada, entra fora do banco.</span>
+</div>
+
+<section class="painel grupo" aria-label="Jogadores à venda">
+<p th:if="${l.jogadores.isEmpty()}" class="texto linha-jogo">Nenhum jogador à venda com estes filtros.</p>
+<div th:unless="${l.jogadores.isEmpty()}" class="tabela-rolagem">
+<table class="tabela-vitrine tabela-compra">
+<thead><tr>
+<th scope="col">Pos</th><th scope="col">Jogador</th><th scope="col">Clube</th><th scope="col" class="num">Força</th>
+<th scope="col" class="num" title="Gols na temporada">Gols</th><th scope="col">Temperamento</th>
+<th scope="col" class="num">Preço</th><th scope="col"><span class="oculto">Comprar</span></th>
+</tr></thead>
+<tbody>
+<tr th:each="x : ${l.jogadores}" th:with="j=${x.jogador}">
+<td><span class="pos" th:classappend="|pos-${j.posicao}|" th:text="${j.posicao.name().substring(0, 1)}" th:title="${j.posicao.nome(1)}">G</span></td>
+<td class="jogador-celula">
+<span class="jogador-nome" th:text="${j.nome}">Nome</span>
+<span th:if="${j.asterisco}" class="asterisco" title="jogador com asterisco">★</span>
+<span th:if="${x.estrangeiro}" class="sigla-pais" th:classappend="${x.equiparado} ? 'nao-conta'" th:text="${x.estrangeiro}">ARG</span>
+</td>
+<td><a th:replace="~{fragmentos :: clube(${x.clubeId}, ${x.clube}, '')}">Clube</a> <span class="suave" th:text="|· ${x.onde}|">· 1ª Divisão</span></td>
+<td class="num forca" th:text="${j.forca}">0</td>
+<td class="num gols" th:classappend="${x.gols == 0} ? 'vazio'" th:text="${x.gols == 0} ? '—' : ${x.gols}">0</td>
+<td class="temperamento" th:text="${#strings.capitalize(#strings.toLowerCase(j.temperamento.name()))}">Normal</td>
+<td class="num preco" th:text="${l.moeda.formatar(x.preco)}">R$ 0</td>
+<td class="acao">
+<form th:if="${x.impedimento == null}" th:action="@{/jogos/{id}/mercado/comprar(id=${jogoId})}" method="post" data-envio-unico>
+<input type="hidden" name="jogador" th:value="${j.id}">
+<input type="hidden" name="clube" th:value="${x.clubeId}">
+<input type="hidden" name="voltar" value="comprar">
+<button type="submit" class="botao-comprar" th:attr="aria-label=|Comprar ${j.nome} por ${l.moeda.formatar(x.preco)}|">Comprar</button>
+</form>
+<span th:if="${x.impedimento != null}" class="sem-compra" th:text="${x.impedimento}">Caixa insuficiente</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<p class="suave legenda">Os filtros ficam guardados enquanto você está no jogo. Os leilões continuam na tela própria, antes da rodada.</p>
+</div>
+</div>
+</body>
+</html>

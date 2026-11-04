@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import br.com.managerfoot.dominio.Clube;
+import br.com.managerfoot.economia.MetaPatrocinio;
 import br.com.managerfoot.economia.Moeda;
 import br.com.managerfoot.economia.PropostasPatrocinio;
 import br.com.managerfoot.economia.PropostasPatrocinio.Proposta;
@@ -33,12 +34,17 @@ public class PatrocinioRepositorio {
 	private final JdbcClient jdbc;
 	private final JogoRepositorio jogos;
 	private final CaixaRepositorio caixas;
+	private final ClassificacaoRepositorio classificacoes;
+	private final TemporadaRepositorio temporadas;
 	private final PropostasPatrocinio propostas = PropostasPatrocinio.padrao();
 
-	public PatrocinioRepositorio(JdbcClient jdbc, JogoRepositorio jogos, CaixaRepositorio caixas) {
+	public PatrocinioRepositorio(JdbcClient jdbc, JogoRepositorio jogos, CaixaRepositorio caixas,
+			ClassificacaoRepositorio classificacoes, TemporadaRepositorio temporadas) {
 		this.jdbc = jdbc;
 		this.jogos = jogos;
 		this.caixas = caixas;
+		this.classificacoes = classificacoes;
+		this.temporadas = temporadas;
 	}
 
 	/**
@@ -178,9 +184,10 @@ public class PatrocinioRepositorio {
 	}
 
 	private void pagarMetas(Temporada t, Map<Integer, Classificacao> finais) {
+		// a meta já paga quando ficou garantida (rev. 97) não paga de novo
 		jdbc.sql("""
 				SELECT clube_id, tabela, escolha, meta_vitorias, meta_posicao FROM jogo_patrocinio
-				WHERE temporada_id = :temporada AND escolha IN ('META_VITORIAS', 'META_POSICAO')""")
+				WHERE temporada_id = :temporada AND escolha IN ('META_VITORIAS', 'META_POSICAO') AND meta_paga_rodada IS NULL""")
 			.param("temporada", t.id())
 			.query((rs, n) -> new ContratoComMeta(rs.getLong("clube_id"), rs.getLong("tabela"), Tipo.valueOf(rs.getString("escolha")),
 					rs.getInt("meta_vitorias"), rs.getInt("meta_posicao")))
@@ -199,6 +206,103 @@ public class PatrocinioRepositorio {
 	}
 
 	private record ContratoComMeta(long clube, long tabela, Tipo tipo, int vitorias, int posicao) {
+	}
+
+	/**
+	 * Depois de cada rodada da liga (SPEC §9.6, rev. 97; modelo 20a): paga na hora a meta que ficou
+	 * garantida e marca a rodada, para não pagar de novo no fim da temporada.
+	 *
+	 * @param temporadaId a linha de {@code jogo_temporada} de {@code temporada}
+	 */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void pagarMetasGarantidas(br.com.managerfoot.temporada.Temporada temporada, long temporadaId, int rodada) {
+		List<ContratoAberto> abertos = contratosComMeta(temporadaId, "AND p.meta_paga_rodada IS NULL AND c.divisao_id IS NOT NULL");
+		if (abertos.isEmpty()) {
+			return;
+		}
+		Map<Integer, Classificacao> atuais = classificacoes.calcular(temporada, temporadaId, Integer.MAX_VALUE);
+		for (ContratoAberto c : abertos) {
+			Classificacao classificacao = atuais.get(c.prioridade());
+			if (classificacao == null || classificacao.linhas().stream().noneMatch(l -> l.clube().id() == c.clube().id())) {
+				continue;
+			}
+			if (c.meta().situacao(classificacao, c.clube().id(), c.jogos()).estado() == MetaPatrocinio.Estado.GARANTIDA) {
+				caixas.lancarPatrocinio(temporadaId, rodada, c.clube().id(), c.meta().bonus());
+				jdbc.sql("UPDATE jogo_patrocinio SET meta_paga_rodada = :rodada WHERE id = :id")
+					.param("rodada", rodada)
+					.param("id", c.id())
+					.update();
+			}
+		}
+	}
+
+	/**
+	 * A meta do patrocínio do usuário, para o topo do plantel e Finanças (modelo 20a). Vazio se o
+	 * patrocínio não tem meta (ou ainda não foi escolhido) ou se o clube não está numa divisão.
+	 *
+	 * @throws NoSuchElementException se o usuário não treina clube no jogo
+	 */
+	@Transactional(readOnly = true)
+	public Optional<MetaNaTela> meta(long jogoId, long usuarioId) {
+		long clube = clubeDoUsuario(jogoId, usuarioId);
+		Optional<ContratoAberto> contrato = jdbc.sql("SELECT id FROM jogo_temporada WHERE jogo_id = :jogo ORDER BY numero DESC LIMIT 1")
+			.param("jogo", jogoId)
+			.query(Long.class)
+			.optional()
+			.flatMap(t -> contratosComMeta(t, "AND p.clube_id = " + clube + " AND c.divisao_id IS NOT NULL").stream().findFirst());
+		if (contrato.isEmpty()) {
+			return Optional.empty();
+		}
+		ContratoAberto c = contrato.get();
+		br.com.managerfoot.temporada.Temporada temporada = temporadas.carregarAtual(jogoId);
+		Classificacao classificacao = classificacoes.calcular(temporada, c.temporadaId(), Integer.MAX_VALUE).get(c.prioridade());
+		if (classificacao == null || classificacao.linhas().stream().noneMatch(l -> l.clube().id() == c.clube().id())) {
+			return Optional.empty();
+		}
+		MetaPatrocinio.Situacao situacao = c.meta().situacao(classificacao, c.clube().id(), c.jogos());
+		if (c.pagaNaRodada() != null) {
+			// já paga: fica garantida mesmo que a classificação mude depois
+			situacao = new MetaPatrocinio.Situacao(MetaPatrocinio.Estado.GARANTIDA, 100, situacao.vitorias(), situacao.jogos(),
+					situacao.restantes(), situacao.posicao(), situacao.pontosAtras());
+		}
+		return Optional.of(new MetaNaTela(propostas.patrocinadores(c.id()).get(c.meta().tipo().lugar()), c.meta(), situacao,
+				c.pagaNaRodada(), Moeda.doPais(c.pais())));
+	}
+
+	/**
+	 * A meta na tela.
+	 *
+	 * @param pagaNaRodada rodada em que o bônus entrou no caixa; nula se ainda não entrou
+	 */
+	public record MetaNaTela(String patrocinador, MetaPatrocinio meta, MetaPatrocinio.Situacao situacao, Integer pagaNaRodada,
+			Moeda moeda) {
+	}
+
+	private List<ContratoAberto> contratosComMeta(long temporadaId, String condicao) {
+		return jdbc.sql("""
+				SELECT p.id AS contrato_id, p.tabela, p.jogos, p.escolha, p.meta_vitorias, p.meta_posicao, p.meta_paga_rodada,
+				       d.prioridade, j.pais_codigo, c.id, c.nome, c.forca, c.escudo_modelo, c.escudo_cor_1, c.escudo_cor_2
+				FROM jogo_patrocinio p
+				JOIN jogo_clube c ON c.id = p.clube_id
+				JOIN jogo_divisao d ON d.id = c.divisao_id
+				JOIN jogo_temporada t ON t.id = p.temporada_id
+				JOIN jogo j ON j.id = t.jogo_id
+				WHERE p.temporada_id = :temporada AND p.escolha IN ('META_VITORIAS', 'META_POSICAO') """ + condicao)
+			.param("temporada", temporadaId)
+			.query((rs, n) -> {
+				Tipo tipo = Tipo.valueOf(rs.getString("escolha"));
+				long bonus = propostas.propostasComMeta(rs.getLong("tabela")).stream().filter(x -> x.tipo() == tipo).findFirst()
+					.orElseThrow().bonus();
+				MetaPatrocinio meta = new MetaPatrocinio(tipo, tipo == Tipo.META_VITORIAS ? rs.getInt("meta_vitorias") : rs.getInt("meta_posicao"),
+						bonus);
+				return new ContratoAberto(rs.getLong("contrato_id"), temporadaId, meta, rs.getInt("jogos"), rs.getInt("prioridade"),
+						TabelasLiga.clube(rs), (Integer) rs.getObject("meta_paga_rodada"), rs.getString("pais_codigo"));
+			})
+			.list();
+	}
+
+	private record ContratoAberto(long id, long temporadaId, MetaPatrocinio meta, int jogos, int prioridade, Clube clube,
+			Integer pagaNaRodada, String pais) {
 	}
 
 	private Map<Long, Proposta> contratos(long temporadaId, Tipo tipo) {

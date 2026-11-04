@@ -1659,3 +1659,42 @@ a.financas-link:hover, a.financas-link:focus-visible { border-color: var(--desta
 .turno-clube { display: block; font-size: 13px; }
 .ok-dado { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--continental); background: rgba(142, 201, 240, 0.10); }
 .leiloes .turno { margin-bottom: 16px; }
+/* "Convidar pessoas" do administrador (modelo 20c) */
+.convidar { display: flex; flex-direction: column; gap: 12px; }
+.link-gerado { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border: 1px solid #3FB37F; border-radius: 10px; background: rgba(63, 179, 127, .08); }
+.link-gerado .rotulo { color: #3FB37F; }
+/* aba "Comprar" (modelo 20b) */
+.filtros { display: flex; flex-wrap: wrap; gap: 14px 20px; align-items: flex-end; padding: 16px 18px; background: var(--cartao); border: 1px solid var(--borda); border-radius: 12px; }
+.filtro { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; border: 0; font-size: 14px; color: var(--texto-suave); }
+.filtro legend { padding: 0; margin-bottom: 6px; }
+.filtro-marcar { flex-direction: row; align-items: center; gap: 8px; min-height: 44px; color: var(--texto); }
+.filtro-acoes { display: flex; gap: 8px; align-items: center; }
+.chips { display: flex; gap: 6px; }
+.chip { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--borda); background: var(--campo); color: var(--texto); font: 600 15px Barlow, sans-serif; cursor: pointer; }
+.chip input { position: absolute; opacity: 0; pointer-events: none; }
+.chip:has(input:checked) { background: var(--destaque); color: #1A1A0A; border-color: var(--destaque); }
+.chip:has(input:focus-visible) { outline: 2px solid var(--destaque); outline-offset: 2px; }
+.faixa-num { display: flex; align-items: center; gap: 6px; color: var(--texto); }
+.faixa-num input { width: 104px; min-height: 44px; padding: 0 10px; background: var(--campo); color: var(--texto); border: 1px solid var(--borda); border-radius: 8px; font: 500 15px Barlow, sans-serif; }
+.contagem { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+/* meta do patrocínio (modelos 19 e 20a) */
+.clube-meta { color: var(--texto); text-decoration: none; }
+.clube-meta:hover span:last-child { text-decoration: underline; }
+.clube-meta.cumprida span:last-child { color: #3FB37F; }
+.clube-meta.perdida span:last-child { color: var(--texto-suave); }
+.meta-patrocinio { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 20px; align-items: center; padding: 14px 18px; background: var(--cartao); border: 1px solid var(--destaque); border-radius: 12px; }
+.meta-patrocinio .rotulo { color: var(--destaque); }
+.meta-texto { font-size: 17px; color: var(--texto); }
+.meta-texto b { color: var(--destaque); }
+.meta-situacao { grid-column: 1; font-size: 15px; color: var(--texto-suave); }
+.meta-barra { grid-column: 1; height: 8px; border-radius: 4px; background: var(--borda); overflow: hidden; }
+.meta-barra span { display: block; height: 100%; background: var(--destaque); }
+.meta-valor { grid-column: 2; grid-row: 1 / span 4; text-align: right; display: flex; flex-direction: column; gap: 2px; }
+.meta-valor .financas-numero { color: var(--destaque); }
+.meta-patrocinio.cumprida { border-color: #3FB37F; }
+.meta-patrocinio.cumprida .rotulo, .meta-patrocinio.cumprida .meta-valor .financas-numero { color: #3FB37F; }
+.meta-patrocinio.cumprida .meta-barra span { background: #3FB37F; }
+.meta-patrocinio.perdida { border-color: var(--borda); border-style: dashed; }
+.meta-patrocinio.perdida .rotulo, .meta-patrocinio.perdida .meta-valor .financas-numero { color: var(--texto-suave); }
+.inicio .convidar { flex: 1 1 100%; }
+.convidar form .botao { align-self: flex-start; padding: 0 28px; }

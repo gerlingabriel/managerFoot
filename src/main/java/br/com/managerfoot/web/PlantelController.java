@@ -113,6 +113,8 @@ class PlantelController {
 		model.addAttribute("v", v);
 		model.addAttribute("naSala", salas.naSala(jogoId));
 		patrocinios.patrocinador(jogoId, usuario.id()).ifPresent(p -> model.addAttribute("patrocinador", p));
+		// a meta do patrocínio, ao lado do patrocinador (modelo 20a)
+		patrocinios.meta(jogoId, usuario.id()).ifPresent(m -> model.addAttribute("meta", TextosMeta.de(m)));
 		model.addAttribute("formacoes", Formacao.values());
 		List<LinhaJogador> banco = grupo(v, Lugar.BANCO);
 		List<LinhaJogador> fora = grupo(v, Lugar.FORA);

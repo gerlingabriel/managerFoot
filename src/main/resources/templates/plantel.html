@@ -20,6 +20,11 @@
 <span class="rotulo">Patrocinador</span>
 <span th:text="${patrocinador}">Banco Serra Azul</span>
 </div>
+<a th:if="${meta != null}" th:href="@{/jogos/{id}/financas(id=${v.jogoId})}" class="clube-patrocinador clube-meta"
+	th:classappend="${meta.classe}" th:attr="aria-label=|Meta do patrocínio: ${meta.curto}. Ver em Finanças|">
+<span class="rotulo">Meta</span>
+<span th:text="${meta.curto}">9 de 14 vitórias · 64%</span>
+</a>
 </div>
 <div class="clube-indicadores">
 <div class="moral" th:with="faixa=${v.faixaMoral.name() == 'VERDE' ? 'verde' : (v.faixaMoral.name() == 'AMARELO' ? 'amarela' : 'vermelha')}">
