@@ -217,6 +217,16 @@ public class PlantelRepositorio {
 			.query(Boolean.class).single()) {
 			throw new IllegalArgumentException("A rodada está em andamento: as trocas agora são pela substituição.");
 		}
+		if (jdbc.sql("""
+				SELECT EXISTS (SELECT 1 FROM jogo_rede_participante
+				               WHERE jogo_id = :jogo AND usuario_id = :usuario AND ok_momento IS NOT NULL)""")
+			.param("jogo", jogoId)
+			.param("usuario", usuarioId)
+			.query(Boolean.class)
+			.single()) {
+			// jogo em rede: com o OK dado, tática e escalação ficam travadas (modelo 18e)
+			throw new IllegalArgumentException("Você já deu OK. Para mexer, clique em \"Tirar meu OK e mexer\".");
+		}
 		List<Jogador> plantel = jogos.carregarPlanteis(jogoId).getOrDefault(clube, List.of());
 		if (jogadorId != null) {
 			Jogador jogador = plantel.stream().filter(j -> j.id() == jogadorId).findFirst()

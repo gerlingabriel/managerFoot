@@ -1654,3 +1654,8 @@ a.financas-link:hover, a.financas-link:focus-visible { border-color: var(--desta
 .convite-pagina { max-width: 520px; margin: 24px auto; }
 .sala-mini { display: grid; grid-template-columns: 1fr auto; gap: 8px 12px; align-items: center; font-size: 15px; }
 .aviso-sala { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--continental); background: rgba(142, 201, 240, 0.10); font-size: 15px; }
+/* faixa "Aguardando" do jogo em rede (modelo 18e) */
+.turno .sala-mini { padding: 4px 0; }
+.turno-clube { display: block; font-size: 13px; }
+.ok-dado { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--continental); background: rgba(142, 201, 240, 0.10); }
+.leiloes .turno { margin-bottom: 16px; }

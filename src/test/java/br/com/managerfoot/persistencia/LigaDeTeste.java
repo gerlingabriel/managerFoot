@@ -17,7 +17,7 @@ import br.com.managerfoot.temporada.ConfiguracaoLiga;
 import br.com.managerfoot.temporada.Divisao;
 
 /** Molde jogável para testes de integração: liga com planteis completos e um jogo criado dele. */
-final class LigaDeTeste {
+public final class LigaDeTeste {
 
 	static final String SENHA = "senha-forte-1";
 	private static final AtomicInteger SEQUENCIA = new AtomicInteger();
@@ -44,7 +44,7 @@ final class LigaDeTeste {
 	}
 
 	/** Cria no molde o país da liga de {@link #criarJogo}, com os planteis, e devolve o id dele. */
-	static long criarPais(MoldeRepositorio moldes) {
+	public static long criarPais(MoldeRepositorio moldes) {
 		long pais = moldes.criarPais(moldes.criarMolde("Padrão"), "BRA", "Brasil");
 		ConfiguracaoLiga liga = gravarNoMolde(moldes, pais, new ConfiguracaoLiga("Nacional",
 				List.of(new Divisao("Série A", 1, 50, 0, 2, clubes("A", 16, 35)),
@@ -73,12 +73,12 @@ final class LigaDeTeste {
 				liga.filaDeEspera().stream().map(c -> moldes.adicionarClube(pais, c, "Treinador " + c.nome())).toList());
 	}
 
-	static Usuario administrador(ContasRepositorio contas) {
+	public static Usuario administrador(ContasRepositorio contas) {
 		return contas.criarAdministrador(email("admin"), "Admin", SENHA);
 	}
 
 	/** Participante cadastrado por um link de um administrador novo. */
-	static Usuario participante(ContasRepositorio contas) {
+	public static Usuario participante(ContasRepositorio contas) {
 		String token = contas.gerarLinkCadastro(administrador(contas).id());
 		return contas.cadastrar(token, email("participante"), "Participante", SENHA);
 	}

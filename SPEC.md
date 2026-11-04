@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 94 — 2026-11-03)
+-   **Status:** versão inicial para revisão (rev. 95 — 2026-11-03)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -14,6 +14,8 @@
     descreve intenção geral ainda não detalhada.
 
 ### Histórico de revisões
+
+-   **rev. 95 (2026-11-03):** parte 5b gravada (§3.3, `docs/decisions/0021`): no jogo em rede, a tática, os lances, o resultado dos leilões, as etapas de copa e o fim da temporada esperam o OK de todos; quem deu OK pode tirá-lo; lances secretos resolvidos de uma vez, também no leilão de outro treinador. Agente: o resultado dos leilões também pede o OK de todos; antes do OK só valem as decisões do próprio treinador (Provisório).
 
 -   **rev. 94 (2026-11-03):** pelo usuário: ao clicar na tática, o banco leva um goleiro só e pelo menos um defensor, um meio-campista e um atacante, se houver, mesmo mais fracos; titulares e reservas escolhidos por força, depois gols na temporada, depois ordem alfabética, no lugar de asterisco e sorte (§10.3). Agente: o banco é refeito por inteiro quando a tática completa o time (Provisório). As metas do patrocínio continuam como estão (não há meta de campeão).
 
@@ -445,6 +447,19 @@ sala) e 9. Patrocínio, salários e jogadores à venda são fixados quando a
 temporada começa, com todos nos clubes. Enquanto o jogo está na sala, nenhuma
 rodada começa; o plantel pode ser visto. Quem abre o link sem ter entrado na
 conta vê o formulário de entrar e volta ao convite.
+
+**Gravado (rev. 95) — parte 5b (`docs/decisions/0021`):** itens 4 a 6 e 7 fora
+da sala. "Confirmar e jogar" é o OK do treinador: a tática fica travada e a faixa
+"Aguardando" (modelo 18e) mostra quem já deu OK, quem está montando o time e quem
+está sem conexão. Quem dá o último OK faz o jogo seguir para todos. Vale para a
+rodada, as etapas de copa, continental e Mundial e o fim da temporada. Os lances
+são secretos e guardados até todos darem os seus; quem não pode dar lance em
+nenhum leilão já conta como OK. Os lances no leilão de outro treinador (parte 5d)
+já entram aqui.
+- **Provisório (agente):** o resultado dos leilões também espera o OK de todos
+  ("Ir para a rodada"), para ninguém perder o começo da rodada. Antes do OK, cada
+  um só precisa resolver as próprias decisões (patrocínio, convite e pedido de
+  aumento).
 
 ## 4. Estrutura de ligas e divisões
 
@@ -3404,8 +3419,9 @@ começa depois que a anterior estiver testada.
 - **Definido (rev. 29):** só começa depois que o jogo individual estiver
   jogável e testado pelo usuário (mecânica e bugs).
 - **Partes (rev. 90):** 5a sala, convite e entrada (**concluída**, rev. 92); 5b
-  OK de todos na gestão e nos leilões; 5c rodada compartilhada com pausa de
-  60 s; 5d lances de amigos nos leilões.
+  OK de todos na gestão e nos leilões (**concluída**, rev. 95); 5c rodada
+  compartilhada com pausa de 60 s; 5d lances de amigos nos leilões (os lances já
+  funcionam desde a 5b; falta conferir a tela com o usuário).
 - Sala, convites por e-mail, confirmação de turno, polling e velocidade
   definida pelo administrador.
 - Desconexão (§11.4), privacidade e processamento único.

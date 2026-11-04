@@ -2,10 +2,12 @@ package br.com.managerfoot.web;
 
 import java.io.IOException;
 import java.security.SecureRandom;
+import java.time.Clock;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -26,6 +28,8 @@ import br.com.managerfoot.dominio.Lugar;
 import br.com.managerfoot.dominio.Posicao;
 import br.com.managerfoot.economia.PropostasPatrocinio;
 import br.com.managerfoot.motor.ParametrosMotor;
+import br.com.managerfoot.multiplayer.Turno;
+import br.com.managerfoot.multiplayer.Turno.Passo;
 import br.com.managerfoot.motor.RegrasPartida;
 import br.com.managerfoot.persistencia.AumentoRepositorio;
 import br.com.managerfoot.persistencia.ClubeNaFilaException;
@@ -42,6 +46,7 @@ import br.com.managerfoot.persistencia.PlantelRepositorio.VisaoPlantel;
 import br.com.managerfoot.persistencia.RodadaAoVivoRepositorio;
 import br.com.managerfoot.persistencia.SalaRepositorio;
 import br.com.managerfoot.persistencia.TrocaRepositorio;
+import br.com.managerfoot.persistencia.TurnoRepositorio;
 import jakarta.servlet.http.HttpServletResponse;
 
 /**
@@ -64,11 +69,18 @@ class PlantelController {
 	private final AumentoRepositorio aumentos;
 	private final TrocaRepositorio trocas;
 	private final SalaRepositorio salas;
+	private final TurnoRepositorio turnos;
+	private final FaixaDoTurno faixa;
+	private final Clock relogio;
 
 	PlantelController(PlantelRepositorio plantel, JogosDoTreinadorRepositorio jogos, RodadaAoVivoRepositorio aoVivo,
 			ConsultasRepositorio consultas, FimDeTemporadaRepositorio fimDeTemporada, JogoRepositorio jogo,
-			PatrocinioRepositorio patrocinios, AumentoRepositorio aumentos, TrocaRepositorio trocas, SalaRepositorio salas) {
+			PatrocinioRepositorio patrocinios, AumentoRepositorio aumentos, TrocaRepositorio trocas, SalaRepositorio salas,
+			TurnoRepositorio turnos, FaixaDoTurno faixa, Clock relogio) {
 		this.salas = salas;
+		this.turnos = turnos;
+		this.faixa = faixa;
+		this.relogio = relogio;
 		this.plantel = plantel;
 		this.jogos = jogos;
 		this.aoVivo = aoVivo;
@@ -89,6 +101,12 @@ class PlantelController {
 			return "redirect:/jogos/" + jogoId + "/rodada";
 		}
 		VisaoPlantel v = plantel.visao(jogoId, usuario.id()).orElseThrow(NoSuchElementException::new);
+		// jogo em rede: com os leilões abertos ou resolvidos, o lugar de todos é a tela dos leilões (modelo 18e)
+		Optional<Turno> turno = faixa.preencher(model, jogoId, usuario, "plantel", rotuloDoOk(v));
+		if (turno.isPresent() && turno.get().passo() != Passo.PLANTEL) {
+			return "redirect:/jogos/" + jogoId + "/leiloes";
+		}
+		model.addAttribute("travado", turno.map(t -> t.deuOk(usuario.id())).orElse(false));
 		List<LinhaJogador> titulares = grupo(v, Lugar.TITULAR);
 		model.addAttribute("usuario", usuario);
 		model.addAttribute("jogoId", jogoId);
@@ -222,6 +240,27 @@ class PlantelController {
 	String encerrarTemporada(@AuthenticationPrincipal Usuario usuario, @PathVariable long jogoId,
 			@RequestParam("temporada") int temporada, RedirectAttributes redirect) {
 		long clube = jogo.clubeDoTreinador(jogoId, usuario.id()).orElseThrow(NoSuchElementException::new);
+		if (turnos.emRede(jogoId)) {
+			// jogo em rede: a temporada seguinte começa com o OK de todos (SPEC §3.3 item 4)
+			VisaoPlantel v = plantel.visao(jogoId, usuario.id()).orElseThrow(NoSuchElementException::new);
+			if (!v.temporadaEncerrada() || v.temporada() != temporada) {
+				// página antiga: o OK não pode valer para outro momento
+				return voltar(jogoId);
+			}
+			try {
+				if (turnos.darOk(jogoId, usuario.id(), Passo.PLANTEL, SEMENTES.nextLong(), relogio.instant())
+						== TurnoRepositorio.Desfecho.TEMPORADA) {
+					redirect.addFlashAttribute("resultado", "Começou a temporada " + jogo.ano(jogoId, temporada + 1) + ".");
+				}
+			}
+			catch (DecisaoPendenteException e) {
+				redirect.addFlashAttribute("erro", e.getMessage());
+			}
+			catch (IllegalStateException e) {
+				// outro treinador já fez o jogo seguir: o plantel mostra onde ele está
+			}
+			return voltar(jogoId);
+		}
 		try {
 			NovaTemporada nova = fimDeTemporada.avancarTemporada(jogoId, temporada, SEMENTES.nextLong());
 			Clube novoClube = nova.demitidos().get(usuario.id());
@@ -261,6 +300,11 @@ class PlantelController {
 	@ExceptionHandler(NoSuchElementException.class)
 	void naoEncontrado(HttpServletResponse response) throws IOException {
 		response.sendError(HttpStatus.NOT_FOUND.value());
+	}
+
+	/** O que o OK do plantel confirma, na faixa do jogo em rede: "rodada 6", a etapa da copa ou o fim da temporada. */
+	static String rotuloDoOk(VisaoPlantel v) {
+		return v.temporadaEncerrada() ? "fim da temporada" : v.etapaCopa() != null ? v.etapaCopa() : "rodada " + v.rodada();
 	}
 
 	/** Titulares, banco ou fora, por posição e da maior força para a menor, como no modelo. */

@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Faixa "Aguardando" do jogo em rede (modelo 18e): consulta a cada 3 s; quando o jogo segue, a tela muda. -->
+<section th:fragment="painel" id="turno" class="painel painel-interno turno" aria-labelledby="t-turno"
+	th:attr="hx-get=@{/jogos/{id}/turno(id=${painel.jogoId},momento=${painel.momento},tela=${painel.tela},rotulo=${painel.rotulo})}"
+	hx-trigger="every 3s" hx-target="this" hx-select="#turno" hx-swap="outerHTML">
+<div class="painel-cabecalho">
+<h2 id="t-turno" class="titulo-secao pequeno">Treinadores</h2>
+<span class="suave" th:text="${painel.contagem}">2 de 4 com OK</span>
+</div>
+<div class="sala-mini">
+<th:block th:each="l : ${painel.linhas}">
+<span><strong th:text="${l.nome}">Nome</strong> <span th:if="${!l.nota.isEmpty()}" class="suave" th:text="${l.nota}">(você)</span>
+<span class="suave turno-clube" th:text="${l.clube}">Clube</span></span>
+<span class="estado" th:classappend="${l.classe}" th:text="${l.estado}">OK</span>
+</th:block>
+</div>
+<div th:if="${painel.deuOk}" role="status" class="ok-dado">
+<span class="rotulo" th:text="|OK dado · ${painel.rotulo}|">OK dado · rodada 6</span>
+<span class="texto"><span th:text="|Aguardando ${painel.faltam}.|">Aguardando Lúcia.</span> <span th:text="${painel.segue}">A rodada começa quando todos derem OK.</span></span>
+<form th:action="@{/jogos/{id}/ok/tirar(id=${painel.jogoId})}" method="post" hx-boost="false" data-envio-unico>
+<button type="submit" class="botao-contorno" th:text="${painel.tirar}">Tirar meu OK e mexer</button>
+</form>
+</div>
+</section>
+</body>
+</html>

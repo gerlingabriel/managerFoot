@@ -61,14 +61,14 @@
 <section aria-labelledby="t-tatica" class="painel painel-interno">
 <h2 id="t-tatica" class="titulo-secao pequeno">Tática</h2>
 <form th:action="@{/jogos/{id}/plantel/formacao(id=${v.jogoId})}" method="post" class="formacoes" hx-boost="true">
-<button th:each="f : ${formacoes}" type="submit" name="formacao" th:value="${f.name()}" class="formacao"
+<button th:each="f : ${formacoes}" type="submit" name="formacao" th:value="${f.name()}" class="formacao" th:disabled="${travado}"
 	th:attr="aria-pressed=${f == v.escalacao.formacao}">
 <span class="formacao-rotulo" th:text="${f.rotulo()}">4-4-2</span>
 <span class="formacao-estilo" th:text="${f.estilo().name() == 'NORMAL' ? 'Normal' : (f.estilo().name() == 'OFENSIVO' ? 'Ofensiva' : 'Defensiva')}">Normal</span>
 </button>
 </form>
 <form th:action="@{/jogos/{id}/plantel/retirar-todos(id=${v.jogoId})}" method="post" hx-boost="true">
-<button type="submit" class="botao-discreto retirar-todos">Retirar todos os jogadores</button>
+<button type="submit" class="botao-discreto retirar-todos" th:disabled="${travado}">Retirar todos os jogadores</button>
 </form>
 <p class="suave pequeno">Clique numa tática para completar o time com os mais fortes.</p>
 <p th:if="${v.problemas.isEmpty()}" class="valida" th:text="${valida}">Escalação válida</p>
@@ -81,7 +81,7 @@
 <h2 id="t-batedor" class="titulo-secao pequeno">Pênaltis</h2>
 <form th:action="@{/jogos/{id}/plantel/batedor(id=${v.jogoId})}" method="post" class="campo-form" hx-boost="true">
 <label for="batedor">Batedor (só você vê)</label>
-<select id="batedor" name="batedor" class="selecao" data-enviar-ao-mudar>
+<select id="batedor" name="batedor" class="selecao" data-enviar-ao-mudar th:disabled="${travado}">
 <option value="" th:selected="${v.escalacao.batedor == null}">Automático — maior força em campo</option>
 <option th:each="l : ${batedores}" th:value="${l.jogador.id}" th:selected="${v.escalacao.batedor == l.jogador.id}"
 	th:text="|${l.jogador.nome} (${l.jogador.posicao.name().substring(0, 1)} · ${l.jogador.forca}${l.jogador.asterisco ? ' ★' : ''})|">Jogador</option>
@@ -100,12 +100,13 @@
 </dl>
 </section>
 
-<form th:if="${v.temporadaEncerrada}" th:action="@{/jogos/{id}/temporada(id=${v.jogoId})}" method="post" class="pilha-curta" data-envio-unico>
+<th:block th:if="${painel != null}"><section th:replace="~{turno :: painel}"></section></th:block>
+<form th:if="${v.temporadaEncerrada and !travado}" th:action="@{/jogos/{id}/temporada(id=${v.jogoId})}" method="post" class="pilha-curta" data-envio-unico>
 <input type="hidden" name="temporada" th:value="${v.temporada}">
 <span class="texto" th:text="|Temporada ${v.ano} encerrada: seu clube terminou em ${v.posicao}º.|">Temporada encerrada</span>
 <button type="submit" class="botao botao-largo">OK, começar a próxima</button>
 </form>
-<form th:unless="${v.temporadaEncerrada}" th:action="@{/jogos/{id}/rodada(id=${v.jogoId})}" method="post" class="pilha-curta" data-envio-unico>
+<form th:if="${!v.temporadaEncerrada and !travado}" th:action="@{/jogos/{id}/rodada(id=${v.jogoId})}" method="post" class="pilha-curta" data-envio-unico>
 <input type="hidden" name="rodada" th:value="${v.rodada}">
 <input th:if="${v.indiceCopa != null}" type="hidden" name="etapa" th:value="${v.indiceCopa}">
 <input th:if="${v.continental}" type="hidden" name="continental" value="true">
@@ -151,9 +152,9 @@
 <td>
 <form th:action="@{/jogos/{id}/plantel/jogador/{j}(id=${v.jogoId},j=${j.id})}" method="post" class="lugar" role="group" hx-boost="true"
 	th:attr="aria-label=|Lugar de ${j.nome}|">
-<button type="submit" name="lugar" value="TITULAR" title="Titular" aria-label="Titular" th:attr="aria-pressed=${l.lugar.name() == 'TITULAR'}" th:disabled="${l.suspenso or l.lesao > 0}">T</button>
-<button type="submit" name="lugar" value="BANCO" title="Banco" aria-label="Banco" th:attr="aria-pressed=${l.lugar.name() == 'BANCO'}" th:disabled="${l.suspenso or l.lesao > 0}">B</button>
-<button type="submit" name="lugar" value="FORA" title="Fora do banco" aria-label="Fora do banco" th:attr="aria-pressed=${l.lugar.name() == 'FORA'}">–</button>
+<button type="submit" name="lugar" value="TITULAR" title="Titular" aria-label="Titular" th:attr="aria-pressed=${l.lugar.name() == 'TITULAR'}" th:disabled="${travado or l.suspenso or l.lesao > 0}">T</button>
+<button type="submit" name="lugar" value="BANCO" title="Banco" aria-label="Banco" th:attr="aria-pressed=${l.lugar.name() == 'BANCO'}" th:disabled="${travado or l.suspenso or l.lesao > 0}">B</button>
+<button type="submit" name="lugar" value="FORA" title="Fora do banco" aria-label="Fora do banco" th:attr="aria-pressed=${l.lugar.name() == 'FORA'}" th:disabled="${travado}">–</button>
 </form>
 </td>
 </tr>

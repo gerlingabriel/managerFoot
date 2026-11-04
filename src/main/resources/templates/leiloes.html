@@ -14,6 +14,7 @@
 <span class="suave">Seu caixa: <strong class="caixa-valor" th:classappend="${v.saldo < 0} ? 'negativo'" th:text="${v.moeda.formatar(v.saldo)}">R$ 0</strong> · cada um dá um preço; leva o maior</span>
 </div>
 <div th:if="${erro}" role="alert" class="alerta leiloes-aviso" th:text="${erro}">erro</div>
+<th:block th:if="${painel != null}"><section th:replace="~{turno :: painel}"></section></th:block>
 <form th:action="@{/jogos/{id}/leiloes(id=${jogoId})}" method="post">
 <input type="hidden" name="rodada" th:value="${v.rodada}">
 <div th:each="l : ${v.leiloes}" th:with="j=${l.jogador}" class="leilao-linha">
@@ -28,18 +29,19 @@
 </div>
 <label th:if="${l.impedimento == null}" class="leilao-lance">
 <span th:text="|Seu lance (${v.moeda.simbolo()})|">Seu lance (R$)</span>
-<input type="text" inputmode="numeric" autocomplete="off" th:name="|lance-${l.id}|"
+<input type="text" inputmode="numeric" autocomplete="off" th:name="|lance-${l.id}|" th:disabled="${travado}"
+	th:value="${l.seuLance != null} ? ${#numbers.formatInteger(v.moeda.unidadesAcima(l.seuLance), 1, 'POINT')} : ''"
 	th:placeholder="${#numbers.formatInteger(l.minimoNaMoeda > 0 ? l.minimoNaMoeda : 1, 1, 'POINT')}"
 	th:attr="aria-label=|Seu lance por ${j.nome}|">
 </label>
 <span th:if="${l.impedimento != null}" class="leilao-sem-lance" th:text="|${l.impedimento}: sem lance|">Caixa insuficiente: sem lance</span>
 </div>
-<div class="leiloes-acoes">
+<div th:unless="${travado}" class="leiloes-acoes">
 <button type="submit" name="nenhum" value="sim" class="botao-contorno">Não quero nenhum</button>
 <button type="submit" class="botao">Confirmar lances</button>
 </div>
 </form>
-<p class="suave leiloes-nota">Deixe em branco o leilão em que não quer dar lance. Lance mínimo é o lance inicial (preço com 20% de desconto). Depois do seu OK, a máquina dá os lances dela. Se todos os leilões estiverem acima do seu caixa, esta etapa é pulada e você vê só o resultado.</p>
+<p class="suave leiloes-nota">Deixe em branco o leilão em que não quer dar lance. Lance mínimo é o lance inicial (preço com 20% de desconto). Depois do seu OK, a máquina dá os lances dela<th:block th:if="${emRede}">, com os dos outros treinadores; os lances são secretos até o resultado</th:block>. Se todos os leilões estiverem acima do seu caixa, esta etapa é pulada e você vê só o resultado.</p>
 </section>
 
 <section th:unless="${v.aguardandoLances}" aria-labelledby="t-resultado" class="leiloes">
@@ -63,7 +65,8 @@
 <div th:if="${venda}" class="leiloes-acoes">
 <a th:href="@{/jogos/{id}/plantel(id=${jogoId})}" class="botao">Voltar ao plantel</a>
 </div>
-<form th:unless="${venda}" th:action="@{/jogos/{id}/rodada(id=${jogoId})}" method="post" class="leiloes-acoes">
+<th:block th:if="${painel != null}"><section th:replace="~{turno :: painel}"></section></th:block>
+<form th:unless="${venda or travado}" th:action="@{/jogos/{id}/rodada(id=${jogoId})}" method="post" class="leiloes-acoes">
 <input type="hidden" name="rodada" th:value="${v.rodada}">
 <button type="submit" class="botao">Ir para a rodada</button>
 </form>

@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Optional;
 
 import org.springframework.http.HttpStatus;
@@ -21,6 +22,11 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.support.RequestContextUtils;
 
 import br.com.managerfoot.contas.Usuario;
+import br.com.managerfoot.multiplayer.Turno;
+import br.com.managerfoot.multiplayer.Turno.Passo;
+import br.com.managerfoot.persistencia.AumentoRepositorio;
+import br.com.managerfoot.persistencia.PatrocinioRepositorio;
+import br.com.managerfoot.persistencia.TurnoRepositorio;
 import br.com.managerfoot.persistencia.LeilaoRepositorio;
 import br.com.managerfoot.persistencia.RodadaRepositorio;
 import br.com.managerfoot.persistencia.SalaRepositorio;
@@ -49,11 +55,18 @@ class RodadaController {
 	private final TrocaRepositorio trocas;
 	private final RodadaRepositorio rodadas;
 	private final SalaRepositorio salas;
+	private final TurnoRepositorio turnos;
+	private final PatrocinioRepositorio patrocinios;
+	private final AumentoRepositorio aumentos;
 	private final Clock relogio;
 
 	RodadaController(RodadaAoVivoRepositorio aoVivo, PlantelRepositorio plantel, LeilaoRepositorio leiloes,
-			TrocaRepositorio trocas, RodadaRepositorio rodadas, SalaRepositorio salas, Clock relogio) {
+			TrocaRepositorio trocas, RodadaRepositorio rodadas, SalaRepositorio salas, TurnoRepositorio turnos,
+			PatrocinioRepositorio patrocinios, AumentoRepositorio aumentos, Clock relogio) {
 		this.aoVivo = aoVivo;
+		this.turnos = turnos;
+		this.patrocinios = patrocinios;
+		this.aumentos = aumentos;
 		this.salas = salas;
 		this.rodadas = rodadas;
 		this.plantel = plantel;
@@ -93,6 +106,9 @@ class RodadaController {
 			redirect.addFlashAttribute("erro", "Complete a escalação antes de jogar a rodada.");
 			return "redirect:/jogos/" + jogoId + "/plantel";
 		}
+		if (turnos.emRede(jogoId)) {
+			return okEmRede(usuario, jogoId, visao, etapa, continental, mundial, redirect);
+		}
 		if (trocas.algumConvitePendente(jogoId)) {
 			// o convite (modelo 11a) vem antes dos leilões e da rodada
 			redirect.addFlashAttribute("erro", "Responda ao convite para assumir outro clube antes de jogar a rodada.");
@@ -124,6 +140,52 @@ class RodadaController {
 			return "redirect:/jogos/" + jogoId + "/plantel";
 		}
 		return "redirect:/jogos/" + jogoId + "/rodada";
+	}
+
+	/**
+	 * Jogo em rede (SPEC §3.3 itens 4 a 6, rev. 92): "Confirmar e jogar" e "Ir para a rodada" são o OK do
+	 * treinador. Quem dá o último OK faz o jogo seguir para todos; os outros vão junto pela faixa.
+	 */
+	private String okEmRede(Usuario usuario, long jogoId, PlantelRepositorio.VisaoPlantel visao, Integer etapa,
+			boolean continental, boolean mundial, RedirectAttributes redirect) {
+		String plantelUrl = "redirect:/jogos/" + jogoId + "/plantel";
+		if (!Objects.equals(etapa, visao.indiceCopa()) || continental != visao.continental() || mundial != visao.mundial()) {
+			// página antiga: o OK não pode valer para outra etapa
+			return plantelUrl;
+		}
+		// as decisões do próprio treinador antes do OK; as dos outros esperam o OK deles
+		if (trocas.convitePendente(jogoId, usuario.id()).isPresent()) {
+			redirect.addFlashAttribute("erro", "Responda ao convite para assumir outro clube antes de dar OK.");
+			return plantelUrl;
+		}
+		if (patrocinios.pendente(jogoId, usuario.id()).isPresent()) {
+			redirect.addFlashAttribute("erro", "Escolha o patrocínio da temporada antes de dar OK.");
+			return plantelUrl;
+		}
+		if (aumentos.pendente(jogoId, usuario.id()).isPresent()) {
+			redirect.addFlashAttribute("erro", "Responda ao pedido de aumento antes de dar OK.");
+			return plantelUrl;
+		}
+		Passo passo = turnos.turno(jogoId).map(Turno::passo).orElse(Passo.PLANTEL);
+		if (passo == Passo.LANCES) {
+			return "redirect:/jogos/" + jogoId + "/leiloes";
+		}
+		try {
+			return switch (turnos.darOk(jogoId, usuario.id(), passo, 0, relogio.instant())) {
+				case AGUARDANDO -> passo == Passo.RESULTADO ? "redirect:/jogos/" + jogoId + "/leiloes" : plantelUrl;
+				case LANCES, RESULTADO -> "redirect:/jogos/" + jogoId + "/leiloes";
+				case AO_VIVO -> "redirect:/jogos/" + jogoId + "/rodada";
+				case TEMPORADA -> plantelUrl;
+			};
+		}
+		catch (DecisaoPendenteException e) {
+			redirect.addFlashAttribute("erro", e.getMessage());
+			return plantelUrl;
+		}
+		catch (IllegalStateException e) {
+			// outro treinador já fez o jogo seguir: o plantel leva aonde ele está
+			return plantelUrl;
+		}
 	}
 
 	/** O quadro; com HTMX (a cada segundo) a página troca só o quadro. */

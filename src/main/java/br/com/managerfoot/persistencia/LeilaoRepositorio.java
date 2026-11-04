@@ -121,6 +121,116 @@ public class LeilaoRepositorio {
 		}
 		caixas.abrirCaixas(jogoId);
 		Contexto c = contexto(jogoId);
+		resolver(jogoId, t, rodada, c, abertos, validar(clube, abertos, c, lances));
+	}
+
+	/**
+	 * Jogo em rede (SPEC §3.3 item 6, rev. 92): abre os leilões da rodada para todos os treinadores,
+	 * como {@link #preparar}, sem resolver se algum deles pode dar lance. Repetir não abre outros.
+	 *
+	 * @return {@link Etapa#LANCES} se algum treinador pode dar lance; {@link Etapa#RESULTADO} se ninguém
+	 *         pode e os leilões já foram resolvidos; {@link Etapa#RODADA} sem leilão
+	 */
+	@Transactional
+	public Etapa abrirEmRede(long jogoId, int rodada) {
+		jogos.travar(jogoId);
+		LinhaTemporada t = temporadaAtual(jogoId);
+		if (aoVivo(jogoId) || rodada != t.processadas() + 1 || rodada > rodadas.totalDeRodadas(jogoId)) {
+			throw new IllegalStateException("a rodada " + rodada + " não é a próxima do jogo " + jogoId);
+		}
+		caixas.abrirCaixas(jogoId);
+		Contexto c = contexto(jogoId);
+		if (!existemLeiloes(t.id(), rodada)) {
+			List<Oferta> ofertas = new ArrayList<>(leiloes.abrir(c.daMaquina(), c.pais()));
+			ofertas.addAll(porCaixaNegativo(jogoId, t, rodada, c));
+			inserir(t, rodada, ofertas);
+		}
+		List<LinhaLeilao> abertos = abertos(t.id(), rodada);
+		if (abertos.isEmpty()) {
+			return Etapa.RODADA;
+		}
+		if (c.humanos().stream().anyMatch(h -> abertos.stream().anyMatch(l -> impedimento(l, h, c.moeda()) == null))) {
+			return Etapa.LANCES;
+		}
+		resolver(jogoId, t, rodada, c, abertos, Map.of());
+		return Etapa.RESULTADO;
+	}
+
+	/** Se o treinador pode dar lance em algum leilão aberto antes da rodada. */
+	@Transactional(readOnly = true)
+	public boolean podeDarLance(long jogoId, long usuarioId, int rodada) {
+		long clube = clubeDoUsuario(jogoId, usuarioId);
+		LinhaTemporada t = temporadaAtual(jogoId);
+		List<LinhaLeilao> abertos = abertos(t.id(), rodada);
+		if (abertos.isEmpty()) {
+			return false;
+		}
+		Contexto c = contexto(jogoId);
+		ClubeNoMercado meu = c.humanos().stream().filter(h -> h.clube().id() == clube).findFirst().orElseThrow();
+		return abertos.stream().anyMatch(l -> impedimento(l, meu, c.moeda()) == null);
+	}
+
+	/**
+	 * Jogo em rede: guarda os lances secretos do treinador (vazio = nenhum), no lugar dos que ele deu
+	 * antes. Os leilões só são resolvidos com os lances de todos ({@link #resolverEmRede}).
+	 *
+	 * @throws IllegalArgumentException se um lance não vale; nada é gravado
+	 * @throws IllegalStateException se não há leilão aberto antes desta rodada
+	 */
+	@Transactional
+	public void guardarLances(long jogoId, long usuarioId, int rodada, Map<Long, Long> lances) {
+		long clube = clubeDoUsuario(jogoId, usuarioId);
+		jogos.travar(jogoId);
+		LinhaTemporada t = temporadaAtual(jogoId);
+		List<LinhaLeilao> abertos = rodada == t.processadas() + 1 && !aoVivo(jogoId) ? abertos(t.id(), rodada) : List.of();
+		if (abertos.isEmpty()) {
+			throw new IllegalStateException("não há leilão aberto antes da rodada " + rodada);
+		}
+		caixas.abrirCaixas(jogoId);
+		Map<Long, List<Lance>> validos = validar(clube, abertos, contexto(jogoId), lances);
+		jdbc.sql("DELETE FROM jogo_rede_lance WHERE clube_id = :clube AND leilao_id IN (:leiloes)")
+			.param("clube", clube)
+			.param("leiloes", abertos.stream().map(LinhaLeilao::id).toList())
+			.update();
+		for (LinhaLeilao l : abertos) {
+			for (Lance lance : validos.getOrDefault(l.jogadorId(), List.of())) {
+				jdbc.sql("INSERT INTO jogo_rede_lance (leilao_id, clube_id, valor) VALUES (:leilao, :clube, :valor)")
+					.param("leilao", l.id())
+					.param("clube", lance.clubeId())
+					.param("valor", lance.valor())
+					.update();
+			}
+		}
+	}
+
+	/**
+	 * Jogo em rede: resolve os leilões abertos antes da rodada com os lances guardados de todos os
+	 * treinadores. Sem leilão aberto (pedido repetido), não faz nada.
+	 */
+	@Transactional
+	public void resolverEmRede(long jogoId, int rodada) {
+		jogos.travar(jogoId);
+		LinhaTemporada t = temporadaAtual(jogoId);
+		List<LinhaLeilao> abertos = abertos(t.id(), rodada);
+		if (abertos.isEmpty()) {
+			return;
+		}
+		Map<Long, Long> jogadorPorLeilao = new HashMap<>();
+		abertos.forEach(l -> jogadorPorLeilao.put(l.id(), l.jogadorId()));
+		Map<Long, List<Lance>> porJogador = new HashMap<>();
+		jdbc.sql("SELECT leilao_id, clube_id, valor FROM jogo_rede_lance WHERE leilao_id IN (:leiloes) ORDER BY clube_id")
+			.param("leiloes", jogadorPorLeilao.keySet())
+			.query(rs -> {
+				porJogador.computeIfAbsent(jogadorPorLeilao.get(rs.getLong("leilao_id")), k -> new ArrayList<>())
+					.add(new Lance(rs.getLong("clube_id"), rs.getLong("valor")));
+			});
+		jdbc.sql("DELETE FROM jogo_rede_lance WHERE leilao_id IN (:leiloes)").param("leiloes", jogadorPorLeilao.keySet()).update();
+		caixas.abrirCaixas(jogoId);
+		resolver(jogoId, t, rodada, contexto(jogoId), abertos, porJogador);
+	}
+
+	/** Os lances do clube que valem, por id do jogador; o primeiro que não vale recusa todos. */
+	private Map<Long, List<Lance>> validar(long clube, List<LinhaLeilao> abertos, Contexto c, Map<Long, Long> lances) {
 		ClubeNoMercado meu = c.humanos().stream().filter(h -> h.clube().id() == clube).findFirst().orElseThrow();
 		Map<Long, List<Lance>> porJogador = new HashMap<>();
 		for (var e : lances.entrySet()) {
@@ -146,7 +256,7 @@ public class LeilaoRepositorio {
 			}
 			porJogador.put(leilao.jogadorId(), List.of(new Lance(clube, valor)));
 		}
-		resolver(jogoId, t, rodada, c, abertos, porJogador);
+		return porJogador;
 	}
 
 	/**
@@ -331,7 +441,11 @@ public class LeilaoRepositorio {
 		Contexto c = contexto(jogoId);
 		ClubeNoMercado meu = c.humanos().stream().filter(h -> h.clube().id() == clube).findFirst().orElseThrow();
 		Map<Long, Long> meusLances = new HashMap<>();
-		jdbc.sql("SELECT leilao_id, valor FROM jogo_leilao_lance WHERE leilao_id IN (:leiloes) AND clube_id = :clube")
+		// os lances guardados no jogo em rede, enquanto esperam os dos outros treinadores
+		jdbc.sql("""
+				SELECT leilao_id, valor FROM jogo_leilao_lance WHERE leilao_id IN (:leiloes) AND clube_id = :clube
+				UNION ALL
+				SELECT leilao_id, valor FROM jogo_rede_lance WHERE leilao_id IN (:leiloes) AND clube_id = :clube""")
 			.param("leiloes", linhas.stream().map(LinhaLeilao::id).toList())
 			.param("clube", clube)
 			.query(rs -> {

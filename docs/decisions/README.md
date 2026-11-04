@@ -32,3 +32,4 @@ consideradas, decisão e consequências.
 | [0018](0018-arquivo-de-save.md) | Arquivo de save em JSON | Aceita |
 | [0019](0019-banco-editavel.md) | Banco editável por arquivo | Aceita |
 | [0020](0020-sala-do-jogo-em-rede.md) | Sala do jogo em rede e convite por link | Aceita |
+| [0021](0021-ok-de-todos-no-jogo-em-rede.md) | OK de todos no jogo em rede | Aceita |
