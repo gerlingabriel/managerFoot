@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 95 — 2026-11-03)
+-   **Status:** versão inicial para revisão (rev. 96 — 2026-11-03)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -14,6 +14,8 @@
     descreve intenção geral ainda não detalhada.
 
 ### Histórico de revisões
+
+-   **rev. 96 (2026-11-03):** do teste do usuário em rede: na rodada ao vivo vale a velocidade do administrador para todos, e só ele a muda (§3.3 item 8; antes cada um tinha a sua e o relógio comum andava na de quem consultava); a faixa "Aguardando" consulta a cada 1 s. Modelos 20a a 20c (meta do patrocínio no plantel e em Finanças, paga quando garantida; comprar jogadores com filtros; convite de cadastro na tela do administrador) aguardando aprovação.
 
 -   **rev. 95 (2026-11-03):** parte 5b gravada (§3.3, `docs/decisions/0021`): no jogo em rede, a tática, os lances, o resultado dos leilões, as etapas de copa e o fim da temporada esperam o OK de todos; quem deu OK pode tirá-lo; lances secretos resolvidos de uma vez, também no leilão de outro treinador. Agente: o resultado dos leilões também pede o OK de todos; antes do OK só valem as decisões do próprio treinador (Provisório).
 
@@ -460,6 +462,11 @@ já entram aqui.
   ("Ir para a rodada"), para ninguém perder o começo da rodada. Antes do OK, cada
   um só precisa resolver as próprias decisões (patrocínio, convite e pedido de
   aumento).
+
+**Gravado (rev. 96) — parte do item 8:** na rodada ao vivo do jogo em rede, o
+relógio anda na velocidade do administrador para todos. Os outros veem
+"Velocidade: normal (Gabriel escolhe)" no lugar dos botões, e o servidor recusa a
+troca pedida por eles. A pausa de 60 s fica para a parte 5c.
 
 ## 4. Estrutura de ligas e divisões
 

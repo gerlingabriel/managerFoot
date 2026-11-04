@@ -265,7 +265,12 @@ class RodadaController {
 	@PostMapping("/jogos/{jogoId}/rodada/velocidade")
 	String velocidade(@AuthenticationPrincipal Usuario usuario, @PathVariable long jogoId,
 			@RequestParam("velocidade") Velocidade velocidade) {
-		aoVivo.mudarVelocidade(jogoId, usuario.id(), velocidade, relogio.instant());
+		try {
+			aoVivo.mudarVelocidade(jogoId, usuario.id(), velocidade, relogio.instant());
+		}
+		catch (IllegalArgumentException e) {
+			// jogo em rede: a tela de quem não é o administrador não oferece o botão
+		}
 		return "redirect:/jogos/" + jogoId + "/rodada";
 	}
 

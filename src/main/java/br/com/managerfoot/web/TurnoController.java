@@ -16,7 +16,7 @@ import br.com.managerfoot.persistencia.TurnoRepositorio;
 import jakarta.servlet.http.HttpServletResponse;
 
 /**
- * Faixa "Aguardando" do jogo em rede ({@link FaixaDoTurno}): consulta a cada 3 s, o que também marca o
+ * Faixa "Aguardando" do jogo em rede ({@link FaixaDoTurno}): consulta a cada 1 s, o que também marca o
  * treinador como conectado; quando o jogo segue, a tela vai para o plantel, que leva aonde o jogo está.
  */
 @Controller
@@ -30,7 +30,7 @@ class TurnoController {
 		this.faixa = faixa;
 	}
 
-	/** A faixa, a cada 3 s. Se o jogo seguiu, a tela inteira vai para o plantel, que leva aonde o jogo está. */
+	/** A faixa, a cada 1 s. Se o jogo seguiu, a tela inteira vai para o plantel, que leva aonde o jogo está. */
 	@GetMapping("/jogos/{jogoId}/turno")
 	String faixa(@AuthenticationPrincipal Usuario usuario, @PathVariable long jogoId, @RequestParam String momento,
 			@RequestParam String tela, @RequestParam(defaultValue = "") String rotulo, Model model,

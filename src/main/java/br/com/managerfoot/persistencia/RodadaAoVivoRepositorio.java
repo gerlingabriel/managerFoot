@@ -362,6 +362,10 @@ public class RodadaAoVivoRepositorio {
 	@Transactional
 	public void mudarVelocidade(long jogoId, long usuarioId, Velocidade nova, Instant agora) {
 		exigirClube(jogoId, usuarioId);
+		if (quemEscolheAVelocidade(jogoId, usuarioId).isPresent()) {
+			// jogo em rede: só o administrador muda a velocidade, que vale para todos (modelo 18f)
+			throw new IllegalArgumentException("Só o administrador muda a velocidade da rodada.");
+		}
 		Optional<Linha> linha = linha(jogoId);
 		if (linha.isPresent() && linha.get().andandoDesde() != null) {
 			RodadaAoVivo rodada = preparar(jogoId, linha.get(), substituicoes(jogoId));
@@ -569,7 +573,7 @@ public class RodadaAoVivoRepositorio {
 		return new EstadoRodada(jogoId, temporada, linha.rodada(), copa, divisoes, atual, minuto, relogio.minutos(),
 				linha.andandoDesde() == null, terminada, velocidade, relogio.comUsuario().get(atual), placares, doUsuario,
 				doUsuario != null && doUsuario.mandante().id() == clube, som,
-				janelaLesao);
+				janelaLesao, quemEscolheAVelocidade(jogoId, usuarioId).orElse(null));
 	}
 
 	/** Nome do grupo de cada mandante, numa etapa dos grupos da continental; vazio nos outros casos. */
@@ -678,12 +682,32 @@ public class RodadaAoVivoRepositorio {
 			.list();
 	}
 
+	/**
+	 * A velocidade que vale para o relógio. No jogo em rede, o relógio é um só e a velocidade é a do
+	 * administrador para todos (SPEC §3.3 item 8, rev. 92; modelo 18f).
+	 */
 	private Velocidade velocidade(long jogoId, long usuarioId) {
-		return jdbc.sql("SELECT velocidade FROM jogo_treinador WHERE jogo_id = :jogo AND usuario_id = :usuario")
+		return jdbc.sql("""
+				SELECT t.velocidade FROM jogo_treinador t JOIN jogo j ON j.id = t.jogo_id
+				WHERE t.jogo_id = :jogo
+				  AND t.usuario_id = CASE WHEN EXISTS (SELECT 1 FROM jogo_rede r WHERE r.jogo_id = :jogo)
+				                          AND EXISTS (SELECT 1 FROM jogo_treinador d WHERE d.jogo_id = :jogo AND d.usuario_id = j.dono_id)
+				                          THEN j.dono_id ELSE :usuario END""")
 			.param("jogo", jogoId)
 			.param("usuario", usuarioId)
 			.query((rs, n) -> Velocidade.valueOf(rs.getString("velocidade")))
 			.single();
+	}
+
+	/** No jogo em rede, o nome do administrador para quem não é ele; vazio se quem vê escolhe a velocidade. */
+	private Optional<String> quemEscolheAVelocidade(long jogoId, long usuarioId) {
+		return jdbc.sql("""
+				SELECT u.nome FROM jogo_rede r JOIN jogo j ON j.id = r.jogo_id JOIN usuario u ON u.id = j.dono_id
+				WHERE r.jogo_id = :jogo AND j.dono_id <> :usuario""")
+			.param("jogo", jogoId)
+			.param("usuario", usuarioId)
+			.query(String.class)
+			.optional();
 	}
 
 	private long exigirClube(long jogoId, long usuarioId) {
@@ -785,7 +809,8 @@ public class RodadaAoVivoRepositorio {
 	 */
 	public record EstadoRodada(long jogoId, int temporada, int rodada, String copa, List<DivisaoNaRodada> divisoes,
 			int divisaoAtual, int minuto, int minutos, boolean pausada, boolean terminada, Velocidade velocidade, boolean comUsuario,
-			List<PlacarAoVivo> partidas, PlacarAoVivo jogoDoUsuario, boolean usuarioEmCasa, boolean somGols, Long janelaLesao) {
+			List<PlacarAoVivo> partidas, PlacarAoVivo jogoDoUsuario, boolean usuarioEmCasa, boolean somGols, Long janelaLesao,
+			String velocidadeDe) {
 
 		/** É uma etapa da continental (modelo 13c, rev. 79). */
 		public boolean continental() {

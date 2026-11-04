@@ -22,6 +22,7 @@ import br.com.managerfoot.economia.PropostasPatrocinio;
 import br.com.managerfoot.multiplayer.Turno;
 import br.com.managerfoot.multiplayer.Turno.Passo;
 import br.com.managerfoot.persistencia.TurnoRepositorio.Desfecho;
+import br.com.managerfoot.temporada.Velocidade;
 
 /** Migração V42 e {@link TurnoRepositorio}: o OK de todos no jogo em rede (SPEC §3.3 itens 4 a 6, rev. 92). */
 @Import(TestcontainersConfiguration.class)
@@ -106,9 +107,31 @@ class TurnoRepositorioIT {
 
 	@Test
 	void comOOkDeTodosARodadaComecaDepoisDosLeiloes() {
+		assertThat(ateAoVivo()).isEqualTo(Desfecho.AO_VIVO);
+		assertThat(aoVivo.emAndamento(jogo)).isTrue();
+		assertThat(turnos.turno(jogo)).as("sem faixa com a rodada ao vivo").isEmpty();
+		assertThatIllegalStateException().isThrownBy(() -> turnos.darOk(jogo, marcos.id(), Passo.PLANTEL, 0, AGORA));
+	}
+
+	@Test
+	void naRodadaAVelocidadeEhADoAdministradorParaTodos() {
+		ateAoVivo();
+		aoVivo.mudarVelocidade(jogo, admin.id(), Velocidade.RAPIDA, AGORA);
+
+		var deMarcos = aoVivo.estado(jogo, marcos.id(), AGORA.plusSeconds(1)).orElseThrow();
+		assertThat(deMarcos.velocidade()).isEqualTo(Velocidade.RAPIDA);
+		assertThat(deMarcos.velocidadeDe()).isEqualTo(admin.nome());
+		assertThat(aoVivo.estado(jogo, admin.id(), AGORA.plusSeconds(1)).orElseThrow().velocidadeDe()).isNull();
+		assertThat(aoVivo.estado(jogo, admin.id(), AGORA.plusSeconds(2)).orElseThrow().minuto())
+			.as("o mesmo relógio para os dois").isEqualTo(aoVivo.estado(jogo, marcos.id(), AGORA.plusSeconds(2)).orElseThrow().minuto());
+		assertThatIllegalArgumentException().isThrownBy(() -> aoVivo.mudarVelocidade(jogo, marcos.id(), Velocidade.LENTA, AGORA))
+			.withMessageContaining("administrador");
+	}
+
+	/** Todos dão OK em tudo até a rodada 1 começar ao vivo. */
+	private Desfecho ateAoVivo() {
 		turnos.darOk(jogo, admin.id(), Passo.PLANTEL, 0, AGORA);
 		Desfecho desfecho = turnos.darOk(jogo, marcos.id(), Passo.PLANTEL, 0, AGORA);
-
 		assertThat(turnos.okDado(jogo, admin.id())).as("os OK são apagados quando o jogo segue").isFalse();
 		if (desfecho == Desfecho.LANCES) {
 			for (Usuario u : new Usuario[] { admin, marcos }) {
@@ -122,10 +145,7 @@ class TurnoRepositorioIT {
 			turnos.darOk(jogo, admin.id(), Passo.RESULTADO, 0, AGORA);
 			desfecho = turnos.darOk(jogo, marcos.id(), Passo.RESULTADO, 0, AGORA);
 		}
-		assertThat(desfecho).isEqualTo(Desfecho.AO_VIVO);
-		assertThat(aoVivo.emAndamento(jogo)).isTrue();
-		assertThat(turnos.turno(jogo)).as("sem faixa com a rodada ao vivo").isEmpty();
-		assertThatIllegalStateException().isThrownBy(() -> turnos.darOk(jogo, marcos.id(), Passo.PLANTEL, 0, AGORA));
+		return desfecho;
 	}
 
 	@Test

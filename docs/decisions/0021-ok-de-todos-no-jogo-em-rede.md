@@ -37,7 +37,7 @@
   aumento). As dos outros esperam o OK deles.
 - Leilões: quem não pode dar lance em nenhum já entra com o OK dos lances. Se ninguém pode, os leilões
   saem resolvidos. Os lances de todos entram de uma vez no mesmo sorteio de empates do jogo individual.
-- A faixa "Aguardando" consulta a cada 3 s e marca a presença. Quando o momento muda, a tela vai para o
+- A faixa "Aguardando" consulta a cada 1 s (era 3 s; rev. 96, para quem espera seguir junto) e marca a presença. Quando o momento muda, a tela vai para o
   plantel, que leva aos leilões ou à rodada.
 
 ## Consequências

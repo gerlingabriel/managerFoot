@@ -30,7 +30,9 @@
 </header>
 
 <div class="controles-rodada">
-<form th:if="${e.comUsuario}" th:action="@{/jogos/{id}/rodada/velocidade(id=${e.jogoId})}" method="post"
+<span th:if="${e.comUsuario and e.velocidadeDe != null}" class="suave velocidade-de"
+	th:text="|Velocidade: ${e.velocidade.name() == 'LENTA' ? 'lenta' : (e.velocidade.name() == 'NORMAL' ? 'normal' : 'rápida')} (${e.velocidadeDe} escolhe)|">Velocidade: normal (Gabriel escolhe)</span>
+<form th:if="${e.comUsuario and e.velocidadeDe == null}" th:action="@{/jogos/{id}/rodada/velocidade(id=${e.jogoId})}" method="post"
 	class="velocidades" role="group" aria-label="Velocidade da partida"
 	hx-boost="true" hx-target="#quadro" hx-select="#quadro" hx-swap="outerHTML">
 <button th:each="v : ${velocidades}" type="submit" name="velocidade" th:value="${v.name()}" class="velocidade"
