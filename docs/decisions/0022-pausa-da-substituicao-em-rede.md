@@ -33,8 +33,9 @@
 - O quadro dos outros segue consultando a cada 1 s e mostra quem parou e os segundos. A janela de quem
   substitui não consulta o quadro (apagaria a escolha de quem sai e entra). Só a contagem consulta
   `/rodada/pausa`, que manda voltar ao quadro quando o jogo anda.
-- **Provisório:** a lesão num clube de treinador também para todos por 60 s, com a janela aberta para o
-  treinador dele. Com o jogo parado por um, os outros podem substituir no próprio jogo, dentro do mesmo
+- **Definido pelo usuário (rev. 101):** a lesão num clube de treinador também para todos por 60 s, com a
+  janela aberta para o treinador dele; no fim do tempo a janela fecha e, sem troca, a máquina troca.
+- **Provisório:** com o jogo parado por um, os outros podem substituir no próprio jogo, dentro do mesmo
   tempo. Não há limite de pausas.
 
 ## Consequências

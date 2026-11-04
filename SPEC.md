@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 100 — 2026-11-04)
+-   **Status:** versão inicial para revisão (rev. 101 — 2026-11-04)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -14,6 +14,8 @@
     descreve intenção geral ainda não detalhada.
 
 ### Histórico de revisões
+
+-   **rev. 101 (2026-11-04):** pelo usuário: no jogo em rede, qualquer parada, seja para substituir ou por lesão, para o jogo de todos por até 60 s; depois a janela de quem devia agir fecha e o jogo continua para todos (§3.3; era Provisório na rev. 100). Sem lesão trocada a tempo, a troca é automática, como no jogo individual.
 
 -   **rev. 100 (2026-11-04):** parte 5c (§3.3 itens 3 e 8; modelo 18f; ADR 0022): no jogo em rede, clicar no próprio clube para o jogo de todos por até 60 s; ver o clube de outro não para; só quem parou continua; no fim do tempo o jogo volta sozinho, a janela de quem substitui fecha e as trocas feitas valem. Agente (Provisório): a lesão num clube de treinador também para o jogo de todos por 60 s; com o jogo parado por um, os outros também podem substituir no próprio jogo, dentro do mesmo tempo; quem parou pode parar de novo depois que o jogo volta.
 
@@ -489,9 +491,11 @@ janela, sem parar. Os outros veem "Jogo parado para todos: Lúcia (Real Guará) 
 fazendo substituição. 42 s" e o quadro segue atualizando. Na janela de quem parou
 aparece "Substituição · clube" com a contagem. Só quem parou continua; no fim do
 tempo o jogo volta sozinho de onde parou, a janela fecha e as trocas feitas valem.
-- **Provisório (agente):** a lesão num clube de treinador também para o jogo de
-  todos por 60 s e abre a janela só para o treinador dele (no jogo individual
-  segue como na rev. 69).
+- **Definido (rev. 101), pelo usuário:** qualquer parada, seja para substituir ou
+  por lesão num clube de treinador, para o jogo de todos por até 60 s. A janela abre
+  só para o treinador que deve agir; ao fim do tempo ela fecha e o jogo continua para
+  todos. Sem a troca do lesionado, a máquina troca (como na rev. 69, que segue valendo
+  no jogo individual, sem limite de tempo).
 - **Provisório (agente):** com o jogo parado por um treinador, os outros também
   podem substituir no próprio jogo, dentro do mesmo tempo, sem estendê-lo.
 - **Provisório (agente):** não há limite de pausas: quem parou pode parar de novo
