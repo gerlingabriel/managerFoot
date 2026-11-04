@@ -13,9 +13,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
-import java.util.OptionalDouble;
 import java.util.Set;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
@@ -67,10 +67,13 @@ public class RodadaAoVivoRepositorio {
 	private final CopaRepositorio copas;
 	private final ContinentalRepositorio continentais;
 	private final int minutos = ParametrosMotor.padrao().minutos();
+	private final Duration pausaEmRede;
 
 	public RodadaAoVivoRepositorio(JdbcClient jdbc, JogoRepositorio jogos, RodadaRepositorio rodadas,
 			CaixaRepositorio caixas, AumentoRepositorio aumentos, TrocaRepositorio trocas, CopaRepositorio copas,
-			ContinentalRepositorio continentais) {
+			ContinentalRepositorio continentais,
+			@Value("${managerfoot.rede.pausa-da-substituicao}") Duration pausaEmRede) {
+		this.pausaEmRede = pausaEmRede;
 		this.jdbc = jdbc;
 		this.jogos = jogos;
 		this.rodadas = rodadas;
@@ -277,29 +280,39 @@ public class RodadaAoVivoRepositorio {
 		long clube = exigirClube(jogoId, usuarioId);
 		// serializa os pedidos do quadro: no fim, só um grava a rodada e os outros a veem gravada
 		jogos.travar(jogoId);
-		Optional<Linha> linha = linha(jogoId);
-		if (linha.isEmpty()) {
+		Optional<Linha> gravada = linha(jogoId);
+		if (gravada.isEmpty()) {
 			return Optional.empty();
+		}
+		Linha atual = gravada.get().noInstante(agora);
+		if (atual != gravada.get()) {
+			// os 60 s da substituição acabaram: o relógio volta a andar de onde parou (SPEC §3.3 item 8)
+			gravarRelogio(jogoId, atual.progresso(), atual.andandoDesde());
 		}
 		Velocidade velocidade = velocidade(jogoId, usuarioId);
 		List<RodadaAoVivo.Substituicao> substituicoes = substituicoes(jogoId);
-		RodadaAoVivo rodada = preparar(jogoId, linha.get(), substituicoes);
+		RodadaAoVivo rodada = preparar(jogoId, atual, substituicoes);
 		Map<Integer, List<PartidaDaRodada>> porDivisao = porDivisao(rodada);
 		RelogioRodada relogio = relogio(rodada, porDivisao);
-		Linha atual = linha.get();
 		double progresso = progresso(atual, relogio, velocidade, agora);
 		if (atual.andandoDesde() != null) {
-			OptionalDouble lesao = lesaoDoUsuario(rodada, porDivisao, relogio, clube, atual.lesaoAte(), progresso);
+			Optional<Lesao> lesao = lesaoDeTreinador(rodada, porDivisao, relogio, atual.lesaoAte(), progresso);
 			if (lesao.isPresent()) {
-				// lesão no clube do usuário: o relógio para no minuto dela e a janela abre (SPEC §7.5, rev. 69)
-				progresso = lesao.getAsDouble();
+				// lesão num clube de treinador: o relógio para no minuto dela e a janela abre (SPEC §7.5, rev. 69);
+				// no jogo em rede, para todos por até 60 s, como a substituição (§3.3 item 3)
+				progresso = lesao.get().progresso();
 				gravarRelogio(jogoId, progresso, null);
 				jdbc.sql("UPDATE jogo_rodada_ao_vivo SET lesao_ate = :ate WHERE jogo_id = :jogo")
 					.param("ate", progresso)
 					.param("jogo", jogoId)
 					.update();
+				Long pausadaPor = emRede(jogoId) ? treinadorDoClube(jogoId, lesao.get().clube()).orElse(null) : null;
+				Instant pausaAte = pausadaPor == null ? null : agora.plus(pausaEmRede);
+				if (pausadaPor != null) {
+					marcarPausa(jogoId, pausadaPor, pausaAte);
+				}
 				atual = new Linha(atual.rodada(), atual.etapaCopa(), atual.etapaContinental(), atual.etapaMundial(), atual.temporadaId(), progresso,
-						null, progresso);
+						null, progresso, pausadaPor, pausaAte);
 			}
 		}
 		boolean terminada = relogio.terminado(progresso);
@@ -307,55 +320,139 @@ public class RodadaAoVivoRepositorio {
 			finalizar(jogoId, atual, substituicoes);
 		}
 		return Optional.of(montar(jogoId, usuarioId, clube, atual, rodada, porDivisao, relogio, progresso, terminada,
-				velocidade));
+				velocidade, agora));
+	}
+
+	/** Lesão que para a rodada: em que ponto do relógio e de qual clube. */
+	private record Lesao(double progresso, long clube) {
 	}
 
 	/**
-	 * Progresso da primeira lesão do clube do usuário entre a última que já pausou e o progresso dado;
-	 * lesão no último minuto não pausa (não há mais substituição).
+	 * A primeira lesão de um clube com treinador entre a última que já pausou e o progresso dado (no jogo
+	 * individual, só o clube do usuário); lesão no último minuto não pausa (não há mais substituição).
 	 */
-	private OptionalDouble lesaoDoUsuario(RodadaAoVivo rodada, Map<Integer, List<PartidaDaRodada>> porDivisao,
-			RelogioRodada relogio, long clube, double lesaoAte, double progresso) {
+	private static Optional<Lesao> lesaoDeTreinador(RodadaAoVivo rodada, Map<Integer, List<PartidaDaRodada>> porDivisao,
+			RelogioRodada relogio, double lesaoAte, double progresso) {
 		List<Integer> prioridades = new ArrayList<>(porDivisao.keySet());
+		Lesao primeira = null;
 		for (PartidaDaRodada p : rodada.partidas()) {
-			Lado lado = p.jogo().mandante().id() == clube ? Lado.CASA : p.jogo().visitante().id() == clube ? Lado.FORA : null;
-			if (lado == null) {
+			if (p.ladosDoUsuario().isEmpty()) {
 				continue;
 			}
 			double inicio = prioridades.indexOf(p.prioridade()) * (double) relogio.minutos();
 			Partida inteira = rodada.noMinuto(p, Integer.MAX_VALUE);
-			return inteira.resultado().eventos().stream()
-				.filter(e -> e.tipo() == TipoEvento.LESAO && e.lado() == lado && e.minuto() < inteira.minutoFinal())
-				.mapToDouble(e -> inicio + e.minuto())
-				.filter(g -> g > lesaoAte && g <= progresso)
-				.min();
+			for (EventoPartida e : inteira.resultado().eventos()) {
+				double g = inicio + e.minuto();
+				if (e.tipo() == TipoEvento.LESAO && p.ladosDoUsuario().contains(e.lado()) && e.minuto() < inteira.minutoFinal()
+						&& g > lesaoAte && g <= progresso && (primeira == null || g < primeira.progresso())) {
+					primeira = new Lesao(g, p.clube(e.lado()).id());
+				}
+			}
 		}
-		return OptionalDouble.empty();
+		return Optional.ofNullable(primeira);
 	}
 
-	/** Pausa o relógio, só durante a divisão do usuário (rev. 30). */
+	/**
+	 * Clicar num clube pausa o relógio, só durante a divisão com treinador (rev. 30). No jogo em rede
+	 * (SPEC §3.3 itens 3 e 8, rev. 90 e 92), só o clique no próprio clube, com a partida dele em andamento,
+	 * para o jogo, e para todos por até 60 s; ver o clube de outro não para.
+	 *
+	 * @param mandanteId mandante do jogo clicado
+	 */
 	@Transactional
-	public void pausar(long jogoId, long usuarioId, Instant agora) {
-		exigirClube(jogoId, usuarioId);
-		Linha linha = linha(jogoId).orElseThrow(() -> new IllegalStateException("não há rodada em andamento"));
+	public void pausar(long jogoId, long usuarioId, long mandanteId, Instant agora) {
+		long clube = exigirClube(jogoId, usuarioId);
+		jogos.travar(jogoId);
+		Linha linha = linha(jogoId, agora).orElseThrow(() -> new IllegalStateException("não há rodada em andamento"));
 		if (linha.andandoDesde() == null) {
 			return;
 		}
 		RodadaAoVivo rodada = preparar(jogoId, linha, substituicoes(jogoId));
-		RelogioRodada relogio = relogio(rodada, porDivisao(rodada));
+		Map<Integer, List<PartidaDaRodada>> porDivisao = porDivisao(rodada);
+		RelogioRodada relogio = relogio(rodada, porDivisao);
 		double progresso = progresso(linha, relogio, velocidade(jogoId, usuarioId), agora);
-		if (!relogio.terminado(progresso) && relogio.comUsuario().get(relogio.divisao(progresso))) {
+		if (relogio.terminado(progresso) || !relogio.comUsuario().get(relogio.divisao(progresso))) {
+			return;
+		}
+		if (!emRede(jogoId)) {
 			gravarRelogio(jogoId, progresso, null);
+			return;
+		}
+		int prioridade = new ArrayList<>(porDivisao.keySet()).get(relogio.divisao(progresso));
+		int minuto = relogio.minuto(progresso);
+		boolean propriaEmAndamento = porDivisao.get(prioridade).stream()
+			.filter(p -> p.jogo().mandante().id() == mandanteId)
+			.anyMatch(p -> (p.jogo().mandante().id() == clube || p.jogo().visitante().id() == clube)
+					&& !rodada.noMinuto(p, minuto).terminada());
+		if (propriaEmAndamento) {
+			gravarRelogio(jogoId, progresso, null);
+			marcarPausa(jogoId, usuarioId, agora.plus(pausaEmRede));
 		}
 	}
 
+	/**
+	 * "Continuar" ou fechar a janela: o relógio volta a andar. No jogo em rede, só quem parou o jogo faz
+	 * isso; para os outros, fechar a janela não muda o relógio.
+	 */
 	@Transactional
 	public void continuar(long jogoId, long usuarioId, Instant agora) {
 		exigirClube(jogoId, usuarioId);
-		jdbc.sql("UPDATE jogo_rodada_ao_vivo SET andando_desde = :agora WHERE jogo_id = :jogo AND andando_desde IS NULL")
-			.param("agora", OffsetDateTime.ofInstant(agora, ZoneOffset.UTC))
+		jogos.travar(jogoId);
+		Optional<Linha> linha = linha(jogoId, agora);
+		if (linha.isEmpty() || linha.get().andandoDesde() != null
+				|| (linha.get().pausadaPor() != null && linha.get().pausadaPor() != usuarioId)) {
+			return;
+		}
+		gravarRelogio(jogoId, linha.get().progresso(), agora);
+	}
+
+	/**
+	 * A pausa da substituição no jogo em rede (modelo 18f), para a contagem dos segundos; vazia se o
+	 * relógio está andando ou se o jogo não é em rede.
+	 */
+	@Transactional(readOnly = true)
+	public Optional<PausaEmRede> pausaEmRede(long jogoId, long usuarioId, Instant agora) {
+		exigirClube(jogoId, usuarioId);
+		return linha(jogoId, agora).flatMap(l -> pausa(jogoId, usuarioId, l, agora));
+	}
+
+	private Optional<PausaEmRede> pausa(long jogoId, long usuarioId, Linha linha, Instant agora) {
+		if (linha.pausadaPor() == null || linha.andandoDesde() != null) {
+			return Optional.empty();
+		}
+		long segundos = Math.max(0, (Duration.between(agora, linha.pausaAte()).toMillis() + 999) / 1000);
+		return jdbc.sql("""
+				SELECT u.nome AS treinador, c.nome AS clube FROM jogo_treinador t JOIN usuario u ON u.id = t.usuario_id
+				JOIN jogo_clube c ON c.id = t.clube_id WHERE t.jogo_id = :jogo AND t.usuario_id = :usuario""")
+			.param("jogo", jogoId)
+			.param("usuario", linha.pausadaPor())
+			.query((rs, n) -> new PausaEmRede(rs.getString("treinador"), rs.getString("clube"),
+					linha.pausadaPor() == usuarioId, segundos))
+			.optional();
+	}
+
+	private void marcarPausa(long jogoId, long usuarioId, Instant ate) {
+		jdbc.sql("UPDATE jogo_rodada_ao_vivo SET pausada_por = :usuario, pausa_ate = :ate WHERE jogo_id = :jogo")
+			.param("usuario", usuarioId)
+			.param("ate", OffsetDateTime.ofInstant(ate, ZoneOffset.UTC))
 			.param("jogo", jogoId)
 			.update();
+	}
+
+	private Optional<Long> treinadorDoClube(long jogoId, long clubeId) {
+		return jdbc.sql("SELECT usuario_id FROM jogo_treinador WHERE jogo_id = :jogo AND clube_id = :clube")
+			.param("jogo", jogoId)
+			.param("clube", clubeId)
+			.query(Long.class)
+			.optional();
+	}
+
+	/** Jogo em rede com a temporada já começada. */
+	private boolean emRede(long jogoId) {
+		return jdbc.sql("SELECT EXISTS (SELECT 1 FROM jogo_rede WHERE jogo_id = :jogo AND comecou_em IS NOT NULL)")
+			.param("jogo", jogoId)
+			.query(Boolean.class)
+			.single();
 	}
 
 	/** Troca a velocidade, guardando o progresso até agora; vale também para as próximas rodadas. */
@@ -366,7 +463,7 @@ public class RodadaAoVivoRepositorio {
 			// jogo em rede: só o administrador muda a velocidade, que vale para todos (modelo 18f)
 			throw new IllegalArgumentException("Só o administrador muda a velocidade da rodada.");
 		}
-		Optional<Linha> linha = linha(jogoId);
+		Optional<Linha> linha = linha(jogoId, agora);
 		if (linha.isPresent() && linha.get().andandoDesde() != null) {
 			RodadaAoVivo rodada = preparar(jogoId, linha.get(), substituicoes(jogoId));
 			RelogioRodada relogio = relogio(rodada, porDivisao(rodada));
@@ -388,9 +485,11 @@ public class RodadaAoVivoRepositorio {
 	public void substituir(long jogoId, long usuarioId, long saiId, long entraId, Instant agora) {
 		long clube = exigirClube(jogoId, usuarioId);
 		jogos.travar(jogoId);
-		Linha linha = linha(jogoId).orElseThrow(() -> new IllegalArgumentException("Não há rodada em andamento."));
+		Linha linha = linha(jogoId, agora).orElseThrow(() -> new IllegalArgumentException("Não há rodada em andamento."));
 		if (linha.andandoDesde() != null) {
-			throw new IllegalArgumentException("Pause a partida para substituir.");
+			throw new IllegalArgumentException(emRede(jogoId)
+					? "O jogo voltou a andar. Clique no seu clube para substituir de novo."
+					: "Pause a partida para substituir.");
 		}
 		RodadaAoVivo rodada = preparar(jogoId, linha, substituicoes(jogoId));
 		Map<Integer, List<PartidaDaRodada>> porDivisao = porDivisao(rodada);
@@ -439,7 +538,7 @@ public class RodadaAoVivoRepositorio {
 	@Transactional(readOnly = true)
 	public Optional<JanelaJogo> janela(long jogoId, long usuarioId, long mandanteId, Instant agora) {
 		long clube = exigirClube(jogoId, usuarioId);
-		Optional<Linha> linha = linha(jogoId);
+		Optional<Linha> linha = linha(jogoId, agora);
 		if (linha.isEmpty()) {
 			return Optional.empty();
 		}
@@ -521,7 +620,7 @@ public class RodadaAoVivoRepositorio {
 
 	private EstadoRodada montar(long jogoId, long usuarioId, long clube, Linha linha, RodadaAoVivo rodada,
 			Map<Integer, List<PartidaDaRodada>> porDivisao, RelogioRodada relogio, double progresso, boolean terminada,
-			Velocidade velocidade) {
+			Velocidade velocidade, Instant agora) {
 		List<Integer> prioridades = new ArrayList<>(porDivisao.keySet());
 		int atual = relogio.divisao(progresso);
 		int minuto = relogio.minuto(progresso);
@@ -555,9 +654,11 @@ public class RodadaAoVivoRepositorio {
 			.toList();
 		// o jogo do usuário no minuto em que ele está: o final, se a divisão dele já terminou
 		PlacarAoVivo doUsuario = null;
+		boolean doUsuarioJogando = false;
 		for (int i = 0; i < prioridades.size(); i++) {
 			for (PartidaDaRodada p : porDivisao.get(prioridades.get(i))) {
 				if (p.jogo().mandante().id() == clube || p.jogo().visitante().id() == clube) {
+					doUsuarioJogando = i == atual;
 					doUsuario = placar(rodada, p, terminada || i < atual ? Integer.MAX_VALUE : i == atual ? minuto : 0, clube, publicos,
 							grupos);
 				}
@@ -569,11 +670,14 @@ public class RodadaAoVivoRepositorio {
 		// pelo usuário: demitido no fim da rodada, ele já está em outro clube e "clube" é o da rodada
 		boolean som = jdbc.sql("SELECT som_gols FROM jogo_treinador WHERE jogo_id = :jogo AND usuario_id = :usuario")
 			.param("jogo", jogoId).param("usuario", usuarioId).query(Boolean.class).single();
-		Long janelaLesao = !terminada && linha.pausadaNaLesao() && doUsuario != null ? doUsuario.mandante().id() : null;
+		Optional<PausaEmRede> pausa = terminada ? Optional.empty() : pausa(jogoId, usuarioId, linha, agora);
+		// a janela abre sozinha na lesão do jogo individual e, em rede, para quem parou o jogo (modelo 18f)
+		boolean abre = pausa.isPresent() ? pausa.get().minha() : linha.pausadaNaLesao();
+		Long janelaQueAbre = !terminada && abre && doUsuarioJogando ? doUsuario.mandante().id() : null;
 		return new EstadoRodada(jogoId, temporada, linha.rodada(), copa, divisoes, atual, minuto, relogio.minutos(),
 				linha.andandoDesde() == null, terminada, velocidade, relogio.comUsuario().get(atual), placares, doUsuario,
 				doUsuario != null && doUsuario.mandante().id() == clube, som,
-				janelaLesao, quemEscolheAVelocidade(jogoId, usuarioId).orElse(null));
+				janelaQueAbre, quemEscolheAVelocidade(jogoId, usuarioId).orElse(null), emRede(jogoId), pausa.orElse(null));
 	}
 
 	/** Nome do grupo de cada mandante, numa etapa dos grupos da continental; vazio nos outros casos. */
@@ -650,7 +754,10 @@ public class RodadaAoVivoRepositorio {
 	}
 
 	private void gravarRelogio(long jogoId, double progresso, Instant andandoDesde) {
-		jdbc.sql("UPDATE jogo_rodada_ao_vivo SET progresso = :progresso, andando_desde = :desde WHERE jogo_id = :jogo")
+		// parar ou voltar a andar apaga a pausa em rede; quem para pela substituição a marca depois
+		jdbc.sql("""
+				UPDATE jogo_rodada_ao_vivo SET progresso = :progresso, andando_desde = :desde, pausada_por = NULL, pausa_ate = NULL
+				WHERE jogo_id = :jogo""")
 			.param("progresso", progresso)
 			.param("desde", andandoDesde == null ? null : OffsetDateTime.ofInstant(andandoDesde, ZoneOffset.UTC))
 			.param("jogo", jogoId)
@@ -659,17 +766,25 @@ public class RodadaAoVivoRepositorio {
 
 	private Optional<Linha> linha(long jogoId) {
 		return jdbc.sql("""
-				SELECT rodada, etapa_copa, etapa_continental, etapa_mundial, temporada_id, progresso, andando_desde, lesao_ate
+				SELECT rodada, etapa_copa, etapa_continental, etapa_mundial, temporada_id, progresso, andando_desde, lesao_ate,
+				       pausada_por, pausa_ate
 				FROM jogo_rodada_ao_vivo
 				WHERE jogo_id = :jogo""")
 			.param("jogo", jogoId)
 			.query((rs, n) -> {
 				OffsetDateTime desde = rs.getObject("andando_desde", OffsetDateTime.class);
+				OffsetDateTime ate = rs.getObject("pausa_ate", OffsetDateTime.class);
 				return new Linha(rs.getInt("rodada"), rs.getObject("etapa_copa", Integer.class),
 						rs.getObject("etapa_continental", Integer.class), rs.getObject("etapa_mundial", Integer.class), rs.getLong("temporada_id"),
-						rs.getDouble("progresso"), desde == null ? null : desde.toInstant(), rs.getDouble("lesao_ate"));
+						rs.getDouble("progresso"), desde == null ? null : desde.toInstant(), rs.getDouble("lesao_ate"),
+						rs.getObject("pausada_por", Long.class), ate == null ? null : ate.toInstant());
 			})
 			.optional();
+	}
+
+	/** A linha como está no instante: com os 60 s da pausa em rede acabados, o relógio já anda. */
+	private Optional<Linha> linha(long jogoId, Instant agora) {
+		return linha(jogoId).map(l -> l.noInstante(agora));
 	}
 
 	private List<RodadaAoVivo.Substituicao> substituicoes(long jogoId) {
@@ -720,14 +835,33 @@ public class RodadaAoVivoRepositorio {
 	 * @param etapaContinental índice da etapa da continental no quadro; nulo fora dela
 	 * @param etapaMundial índice da etapa do Mundial; nulo fora dela
 	 * @param lesaoAte progresso da última lesão do usuário que já pausou a rodada
+	 * @param pausadaPor no jogo em rede, quem parou o jogo para substituir; nulo nos outros casos
+	 * @param pausaAte até quando o jogo em rede fica parado; nulo sem {@code pausadaPor}
 	 */
 	private record Linha(int rodada, Integer etapaCopa, Integer etapaContinental, Integer etapaMundial, long temporadaId, double progresso, Instant andandoDesde,
-			double lesaoAte) {
-
+			double lesaoAte, Long pausadaPor, Instant pausaAte) {
 		/** Parada na lesão, esperando a troca do usuário. */
 		boolean pausadaNaLesao() {
 			return andandoDesde == null && lesaoAte > 0 && progresso == lesaoAte;
 		}
+
+		/** Esta linha ou, se a pausa em rede já acabou, a mesma andando desde o fim da pausa. */
+		Linha noInstante(Instant agora) {
+			if (andandoDesde != null || pausaAte == null || agora.isBefore(pausaAte)) {
+				return this;
+			}
+			return new Linha(rodada, etapaCopa, etapaContinental, etapaMundial, temporadaId, progresso, pausaAte, lesaoAte, null,
+					null);
+		}
+	}
+
+	/**
+	 * O jogo em rede parado pela substituição de um treinador (modelo 18f).
+	 *
+	 * @param minha quem vê é quem parou
+	 * @param segundos o que falta para o jogo voltar sozinho
+	 */
+	public record PausaEmRede(String treinador, String clube, boolean minha, long segundos) {
 	}
 
 	/**
@@ -802,15 +936,17 @@ public class RodadaAoVivoRepositorio {
 	 * @param minutos duração do relógio de cada divisão: 90, ou 120 na etapa da copa com prorrogação
 	 * @param divisaoAtual índice em {@code divisoes} da divisão em jogo
 	 * @param comUsuario se a divisão em jogo tem clube do usuário (só ela tem velocidade e pausa)
-	 * @param janelaLesao mandante do jogo do usuário quando a rodada parou numa lesão dele (a janela abre
-	 *        sozinha); nulo nos outros casos
+	 * @param janelaQueAbre mandante do jogo do usuário quando a janela dele abre sozinha: a rodada parou
+	 *        numa lesão dele ou, em rede, ele parou o jogo para substituir; nulo nos outros casos
 	 * @param jogoDoUsuario o jogo do clube do usuário até onde ele já foi jogado; nulo na folga
 	 * @param somGols se a tela toca o som dos gols (SPEC §10.4)
+	 * @param emRede jogo em rede: só o próprio clube para o jogo, e para todos (§3.3 item 3)
+	 * @param pausa no jogo em rede parado pela substituição, quem parou e o tempo que falta; nulo nos outros casos
 	 */
 	public record EstadoRodada(long jogoId, int temporada, int rodada, String copa, List<DivisaoNaRodada> divisoes,
 			int divisaoAtual, int minuto, int minutos, boolean pausada, boolean terminada, Velocidade velocidade, boolean comUsuario,
-			List<PlacarAoVivo> partidas, PlacarAoVivo jogoDoUsuario, boolean usuarioEmCasa, boolean somGols, Long janelaLesao,
-			String velocidadeDe) {
+			List<PlacarAoVivo> partidas, PlacarAoVivo jogoDoUsuario, boolean usuarioEmCasa, boolean somGols, Long janelaQueAbre,
+			String velocidadeDe, boolean emRede, PausaEmRede pausa) {
 
 		/** É uma etapa da continental (modelo 13c, rev. 79). */
 		public boolean continental() {

@@ -127,7 +127,9 @@ class PlantelController {
 				+ f.quantidade(Posicao.MEIO_CAMPISTA) + " M · " + f.quantidade(Posicao.ATACANTE) + " A"
 				+ (titulares.size() < Formacao.TITULARES ? " · com " + titulares.size() + " em campo" : "")
 				+ (v.goleiroImprovisado() == null ? "" : " · " + v.goleiroImprovisado() + " no gol"));
-		model.addAttribute("batedores", v.jogadores().stream().filter(l -> l.lugar() != Lugar.FORA).toList());
+		// titulares e banco; o escolhido continua na lista mesmo fora do banco (rev. 99)
+		model.addAttribute("batedores", v.jogadores().stream()
+			.filter(l -> l.lugar() != Lugar.FORA || Long.valueOf(l.jogador().id()).equals(v.escalacao().batedor())).toList());
 		model.addAttribute("forcaMedia", titulares.isEmpty() ? "–" : String.format(Locale.forLanguageTag("pt-BR"), "%.1f",
 				titulares.stream().mapToInt(l -> l.jogador().forca()).average().orElse(0)));
 		model.addAttribute("estrangeirosEmCampo", titulares.stream().filter(LinhaJogador::contaComoEstrangeiro).count());

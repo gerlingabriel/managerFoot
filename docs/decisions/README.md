@@ -33,3 +33,4 @@ consideradas, decisão e consequências.
 | [0019](0019-banco-editavel.md) | Banco editável por arquivo | Aceita |
 | [0020](0020-sala-do-jogo-em-rede.md) | Sala do jogo em rede e convite por link | Aceita |
 | [0021](0021-ok-de-todos-no-jogo-em-rede.md) | OK de todos no jogo em rede | Aceita |
+| [0022](0022-pausa-da-substituicao-em-rede.md) | Pausa de 60 s da substituição no jogo em rede | Aceita |

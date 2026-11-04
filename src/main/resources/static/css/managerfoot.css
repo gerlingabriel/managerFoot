@@ -988,6 +988,30 @@ a.clube-linha:hover { color: var(--texto); background: rgba(242, 201, 76, 0.1); 
 
 .aviso-pausa .botao { min-height: 44px; padding: 0 22px; }
 
+/* Jogo em rede parado pela substituição (modelo 18f) */
+.pausa-contagem {
+	font: 700 20px 'Barlow Condensed', sans-serif;
+	color: var(--destaque);
+	font-variant-numeric: tabular-nums;
+}
+
+.janela-pausa {
+	margin: 12px 16px 0;
+	padding: 10px 14px;
+	border: 1px solid var(--destaque);
+	border-radius: 10px;
+	background: rgba(242, 201, 76, 0.08);
+}
+
+.janela-pausa-topo {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 12px;
+}
+
+.janela-pausa p { margin: 4px 0 0; }
+
 .clube-clicavel { display: contents; }
 
 .clube-clicavel button {

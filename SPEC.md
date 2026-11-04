@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 97 — 2026-11-04)
+-   **Status:** versão inicial para revisão (rev. 100 — 2026-11-04)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -14,6 +14,12 @@
     descreve intenção geral ainda não detalhada.
 
 ### Histórico de revisões
+
+-   **rev. 100 (2026-11-04):** parte 5c (§3.3 itens 3 e 8; modelo 18f; ADR 0022): no jogo em rede, clicar no próprio clube para o jogo de todos por até 60 s; ver o clube de outro não para; só quem parou continua; no fim do tempo o jogo volta sozinho, a janela de quem substitui fecha e as trocas feitas valem. Agente (Provisório): a lesão num clube de treinador também para o jogo de todos por 60 s; com o jogo parado por um, os outros também podem substituir no próprio jogo, dentro do mesmo tempo; quem parou pode parar de novo depois que o jogo volta.
+
+-   **rev. 99 (2026-11-04):** pelo usuário: vale para vermelho direto e segundo amarelo; quem tem um a mais também ganha mais lances por minuto, para o vermelho pesar de verdade (§7.4); o batedor de pênalti escolhido fica escolhido no banco, fora ou suspenso, e só sai quando é vendido (§10.3). Agente: lances extras = 2 vezes a chance normal, pela simulação `docs/simulacoes/expulsao.md`, escolhido pelo usuário entre 0,5, 1 e 2, com as metas de goleada (até ~4%) e das zebras de 10 e 20 pontos (até 21% e 12%) afrouxadas (§7.6).
+
+-   **rev. 98 (2026-11-04):** pelo usuário: expulsão também dá ao adversário 50% a mais da chance de ficar com a jogada (50/50 vira 75/25, 60/40 vira 90/10), com teto de 99/1 (§7.4). Agente: vale para vermelho direto e segundo amarelo, e cada expulso a mais multiplica de novo (Provisório). Ainda sem simulação em lote.
 
 -   **rev. 97 (2026-11-04):** pelo usuário: modelos 20a a 20c aprovados, e o lugar da meta deixado ao agente. Meta do patrocínio no topo do plantel e em Finanças, com porcentagem; a meta de campeão é paga assim que o título fica garantido (§9.6). Aba "Comprar" com os jogadores à venda e filtros (§10.3). "Convidar pessoas" no Início do administrador, com o link de cadastro (§3.4). Agente: as metas de vitórias e de "entre os N primeiros" também pagam quando ficam garantidas (Provisório).
 
@@ -475,6 +481,21 @@ já entram aqui.
 relógio anda na velocidade do administrador para todos. Os outros veem
 "Velocidade: normal (Gabriel escolhe)" no lugar dos botões, e o servidor recusa a
 troca pedida por eles. A pausa de 60 s fica para a parte 5c.
+
+**Gravado (rev. 100) — parte 5c (`docs/decisions/0022`):** itens 3 e 8. Clicar no
+próprio clube, com a partida dele em andamento, para o relógio de todos por até
+**60 s** (`managerfoot.rede.pausa-da-substituicao`); ver o clube de outro só abre a
+janela, sem parar. Os outros veem "Jogo parado para todos: Lúcia (Real Guará) está
+fazendo substituição. 42 s" e o quadro segue atualizando. Na janela de quem parou
+aparece "Substituição · clube" com a contagem. Só quem parou continua; no fim do
+tempo o jogo volta sozinho de onde parou, a janela fecha e as trocas feitas valem.
+- **Provisório (agente):** a lesão num clube de treinador também para o jogo de
+  todos por 60 s e abre a janela só para o treinador dele (no jogo individual
+  segue como na rev. 69).
+- **Provisório (agente):** com o jogo parado por um treinador, os outros também
+  podem substituir no próprio jogo, dentro do mesmo tempo, sem estendê-lo.
+- **Provisório (agente):** não há limite de pausas: quem parou pode parar de novo
+  depois que o jogo volta.
 
 ## 4. Estrutura de ligas e divisões
 
@@ -1361,6 +1382,26 @@ com pesos 1/2/4/7/10 (`docs/referencia-elifoot98.md` §4).
 jogo em 70%** dos casos, **2 jogos em 25%** e **3 jogos em 5%**.
 Configuráveis e validados por simulação.
 
+**Definido (rev. 98), pelo usuário — expulsão e domínio:** além do buraco no
+setor, o time com um expulso a mais dá ao adversário **50% a mais** da chance de
+ficar com a jogada no meio: 50/50 vira 75/25, 60/40 vira 90/10. Se passar de
+100%, fica **99/1**. Vale até o fim da partida.
+- **Definido (rev. 99), pelo usuário:** vale para vermelho direto e segundo
+  amarelo. Além disso, quem tem um a mais **ganha mais lances por minuto**: na vida
+  real o time com vermelho quase sempre perde, só em casos raros não.
+  - **Definido (rev. 99), pelo usuário, pela simulação `docs/simulacoes/expulsao.md`:** além do
+    sorteio normal de lance do minuto, quem tem um a mais tem um lance extra só
+    dele, com **2 vezes** a chance normal de lance da partida (cada expulso a mais
+    soma de novo). Com times iguais, quem tem o expulso perde 76%, empata 13% e
+    vence 11%; com o vermelho no 1º tempo, não perde em 6%. A média de gols de todas
+    as partidas sobe de 2,19 para 2,45 (meta 1,75 a 2,5). Com 3 vezes, perderia 80%,
+    mas a média passaria de 2,5.
+- **Provisório (agente):** quem sai lesionado sem substituto não conta. Conta a
+  diferença de expulsos: um de cada lado se anula, e cada expulso a mais multiplica
+  de novo por 1,5. A chance de cada lance virar gol não muda.
+  Parâmetros em `ParametrosDisciplina` (`bonusDominioPorExpulsao` 0,5,
+  `dominioMaximo` 0,99, `chancesExtrasPorExpulsao` 2).
+
 ### 7.4.1 Substituições
 
 **Definido:** o número de substituições é configurável **por competição**
@@ -1495,6 +1536,13 @@ cerca de **1%**.
 **Definido (rev. 9):** o piso de 1% de zebra vale para diferenças de força
 média de **até 35 pontos**. Diferenças maiores não têm meta. O caso 1 × 50
 ficou em cerca de 0,1%, mas não é exigido.
+
+**Definido (rev. 99), pelo usuário — vermelho forte:** com os lances extras da
+expulsão (§7.4), aceitam-se **goleadas (5 ou mais gols de um time) em até cerca de
+4%** das partidas de times equilibrados (eram menos de 2%), a zebra de 10 pontos
+**até 21%** (era até 20%) e a de 20 pontos **até 12%** (era até 10%): o forte que
+leva vermelho também sofre. Medido (10 mil partidas): goleadas 4,0%, zebras 20,0% /
+11,2% / 2,9%, gols por partida 2,46.
 
 **Resultado da calibração (Etapa 1d):** ver
 `docs/simulacoes/calibracao-motor.md`. Todas as metas desta seção foram
@@ -2879,8 +2927,13 @@ da mesma divisão seguem na mesma tela.
       tática completa o time, o banco é refeito por inteiro com a regra acima
       (quem estava no banco ou saiu do time concorre como os outros); os
       escolhidos automaticamente respeitam o limite de 3 asteriscos se houver
-      outro na posição; retirar todos também volta o batedor para o
-      automático.
+      outro na posição. ~~Retirar todos também volta o batedor para o
+      automático.~~ (substituído na rev. 99)
+-   **Definido (rev. 99), pelo usuário — batedor de pênalti:** o batedor escolhido
+    fica escolhido mesmo no banco, fora do banco ou suspenso, e também quando a
+    tática completa o time ou o treinador retira todos. Só sai quando o jogador é
+    vendido. Na partida, vale se ele estiver em campo (inclusive depois de entrar
+    numa substituição); senão, a regra automática.
 -   Durante o jogo, ao clicar em um clube, o usuário vê os lances e os 11
     em campo de cada time, sem os reservas. **Exceção (rev. 33):** no
     próprio clube aparece também o banco, para a substituição (§10.5).
@@ -3454,7 +3507,7 @@ começa depois que a anterior estiver testada.
   jogável e testado pelo usuário (mecânica e bugs).
 - **Partes (rev. 90):** 5a sala, convite e entrada (**concluída**, rev. 92); 5b
   OK de todos na gestão e nos leilões (**concluída**, rev. 95); 5c rodada
-  compartilhada com pausa de 60 s; 5d lances de amigos nos leilões (os lances já
+  compartilhada com pausa de 60 s (**concluída**, rev. 100); 5d lances de amigos nos leilões (os lances já
   funcionam desde a 5b; falta conferir a tela com o usuário).
 - Sala, convites por e-mail, confirmação de turno, polling e velocidade
   definida pelo administrador.

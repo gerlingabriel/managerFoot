@@ -35,13 +35,15 @@ class CalibracaoMotorTest {
 		assertThat(e.porPartida(e.amarelos)).isBetween(1.8, 2.2);
 		assertThat(e.porPartida(e.expulsoes)).isBetween(0.1, 0.22);
 		assertThat(e.porPartida(e.penaltis)).isBetween(0.25, 0.35);
-		assertThat(e.pctGoleadas()).isLessThan(2.0);
+		// até ~4% com o vermelho forte (SPEC §7.6, rev. 99)
+		assertThat(e.pctGoleadas()).isLessThan(4.5);
 	}
 
 	@Test
 	void zebrasFicamNasFaixasDefinidas() {
-		assertThat(medir(20, 30).pctCasa()).isBetween(15.0, 20.0);
-		assertThat(medir(20, 40).pctCasa()).isBetween(5.0, 10.5);
+		// até 21% e 12% com o vermelho forte (SPEC §7.6, rev. 99)
+		assertThat(medir(20, 30).pctCasa()).isBetween(15.0, 21.0);
+		assertThat(medir(20, 40).pctCasa()).isBetween(5.0, 12.5);
 		assertThat(medir(10, 45).pctCasa()).isBetween(1.0, 3.5);
 	}
 

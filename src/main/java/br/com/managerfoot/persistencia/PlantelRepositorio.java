@@ -197,17 +197,17 @@ public class PlantelRepositorio {
 	}
 
 	/**
+	 * O batedor de pênalti escolhido (SPEC §10.3, rev. 99): qualquer jogador do clube. A escolha fica
+	 * mesmo com ele no banco, fora ou suspenso; só sai quando ele é vendido. Na partida vale se ele
+	 * estiver em campo.
+	 *
 	 * @param jogadorId nulo é o automático
-	 * @throws IllegalArgumentException se o batedor não está entre os titulares ou no banco
+	 * @throws IllegalArgumentException se o jogador não é do clube
 	 */
 	@Transactional
 	public void definirBatedor(long jogoId, long usuarioId, Long jogadorId) {
-		alterar(jogoId, usuarioId, e -> {
-			if (jogadorId != null && e.lugarDe(jogadorId) == Lugar.FORA) {
-				throw new IllegalArgumentException("O batedor precisa estar entre os titulares ou no banco.");
-			}
-			return e.comBatedor(jogadorId);
-		}, null, null);
+		// FORA: só confere que é do clube, sem recusar suspenso ou lesionado
+		alterar(jogoId, usuarioId, e -> e.comBatedor(jogadorId), jogadorId, Lugar.FORA);
 	}
 
 	private void alterar(long jogoId, long usuarioId, UnaryOperator<EscalacaoDoTreinador> mudanca, Long jogadorId,

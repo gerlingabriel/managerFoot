@@ -124,7 +124,7 @@ class EscalacaoRepositorioIT {
 	}
 
 	@Test
-	void suspensoSaiDaEscalacaoEDoPenalti() {
+	void suspensoSaiDaEscalacaoMasContinuaBatedor() {
 		EscalacaoDoTreinador escalacao = escalacoes.carregar(clube).orElseThrow();
 		long titular = escalacao.titulares().iterator().next();
 		long reserva = escalacao.reservas().iterator().next();
@@ -135,8 +135,8 @@ class EscalacaoRepositorioIT {
 		transacao.executeWithoutResult(s -> escalacoes.retirarSuspensos(jogo));
 
 		EscalacaoDoTreinador depois = escalacoes.carregar(clube).orElseThrow();
-		assertThat(depois).isEqualTo(escalacao.sem(Set.of(titular, reserva)));
-		assertThat(depois.batedor()).isNull();
+		assertThat(depois).isEqualTo(escalacao.comBatedor(titular).sem(Set.of(titular, reserva)));
+		assertThat(depois.batedor()).as("só a venda tira o batedor (rev. 99)").isEqualTo(titular);
 		assertThat(depois.titulares()).hasSize(10);
 	}
 }

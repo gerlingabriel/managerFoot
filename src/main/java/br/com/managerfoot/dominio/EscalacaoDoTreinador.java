@@ -52,7 +52,7 @@ public record EscalacaoDoTreinador(Formacao formacao, Set<Long> titulares, Set<L
 
 	/**
 	 * O jogador movido para o lugar (SPEC §10.3, rev. 34). A escalação resultante pode ficar
-	 * incompleta; quem vai para fora deixa de ser o batedor.
+	 * incompleta. O batedor continua escolhido mesmo fora do banco (rev. 99).
 	 */
 	public EscalacaoDoTreinador com(long jogadorId, Lugar lugar) {
 		Set<Long> novosTitulares = menos(titulares, Set.of(jogadorId));
@@ -62,8 +62,7 @@ public record EscalacaoDoTreinador(Formacao formacao, Set<Long> titulares, Set<L
 			case BANCO -> novasReservas.add(jogadorId);
 			case FORA -> { }
 		}
-		Long novoBatedor = lugar == Lugar.FORA && Objects.equals(batedor, jogadorId) ? null : batedor;
-		return new EscalacaoDoTreinador(formacao, novosTitulares, novasReservas, novoBatedor);
+		return new EscalacaoDoTreinador(formacao, novosTitulares, novasReservas, batedor);
 	}
 
 	public EscalacaoDoTreinador com(Formacao novaFormacao) {
@@ -75,15 +74,14 @@ public record EscalacaoDoTreinador(Formacao formacao, Set<Long> titulares, Set<L
 		return new EscalacaoDoTreinador(formacao, titulares, reservas, novoBatedor);
 	}
 
-	/** A mesma escalação sem esses jogadores, que passam para fora do banco (e deixam de bater pênalti). */
+	/** A mesma escalação sem esses jogadores, que passam para fora do banco; o batedor continua escolhido. */
 	public EscalacaoDoTreinador sem(Set<Long> jogadores) {
-		return new EscalacaoDoTreinador(formacao, menos(titulares, jogadores), menos(reservas, jogadores),
-				batedor != null && jogadores.contains(batedor) ? null : batedor);
+		return new EscalacaoDoTreinador(formacao, menos(titulares, jogadores), menos(reservas, jogadores), batedor);
 	}
 
-	/** Todos os jogadores fora do banco e o batedor no automático; a formação fica (SPEC §10.3, rev. 86). */
+	/** Todos os jogadores fora do banco; a formação e o batedor ficam (SPEC §10.3, rev. 86 e 99). */
 	public EscalacaoDoTreinador vazia() {
-		return new EscalacaoDoTreinador(formacao, Set.of(), Set.of(), null);
+		return new EscalacaoDoTreinador(formacao, Set.of(), Set.of(), batedor);
 	}
 
 	/**
@@ -150,9 +148,7 @@ public record EscalacaoDoTreinador(Formacao formacao, Set<Long> titulares, Set<L
 		restantes.stream().filter(j -> j.posicao() != Posicao.GOLEIRO).map(Jogador::id)
 			.filter(id -> !novoBanco.contains(id)).limit(Escalacao.MAXIMO_RESERVAS - novoBanco.size())
 			.forEach(novoBanco::add);
-		Long novoBatedor = batedor != null && (novosTitulares.contains(batedor) || novoBanco.contains(batedor)) ? batedor
-				: null;
-		return new EscalacaoDoTreinador(formacao, novosTitulares, novoBanco, novoBatedor);
+		return new EscalacaoDoTreinador(formacao, novosTitulares, novoBanco, batedor);
 	}
 
 	/** Troca os asteriscos escolhidos automaticamente além do limite, perdendo o mínimo de força. */
@@ -210,9 +206,6 @@ public record EscalacaoDoTreinador(Formacao formacao, Set<Long> titulares, Set<L
 			} else if (lesionado.test(id)) {
 				problemas.add(jogador.nome() + " está lesionado");
 			}
-		}
-		if (batedor != null && !titulares.contains(batedor) && !reservas.contains(batedor)) {
-			problemas.add("o batedor de pênalti precisa estar entre os titulares ou no banco");
 		}
 		if (problemas.isEmpty()) {
 			Optional<Jogador> improvisado = goleiroImprovisado(plantel, indisponivel);

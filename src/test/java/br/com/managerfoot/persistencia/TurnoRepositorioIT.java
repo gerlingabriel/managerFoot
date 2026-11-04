@@ -18,9 +18,12 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import br.com.managerfoot.TestcontainersConfiguration;
 import br.com.managerfoot.contas.Usuario;
 import br.com.managerfoot.dominio.Lugar;
+import br.com.managerfoot.dominio.Posicao;
 import br.com.managerfoot.economia.PropostasPatrocinio;
+import br.com.managerfoot.motor.Lado;
 import br.com.managerfoot.multiplayer.Turno;
 import br.com.managerfoot.multiplayer.Turno.Passo;
+import br.com.managerfoot.persistencia.RodadaAoVivoRepositorio.EstadoRodada;
 import br.com.managerfoot.persistencia.TurnoRepositorio.Desfecho;
 import br.com.managerfoot.temporada.Velocidade;
 
@@ -126,6 +129,67 @@ class TurnoRepositorioIT {
 			.as("o mesmo relógio para os dois").isEqualTo(aoVivo.estado(jogo, marcos.id(), AGORA.plusSeconds(2)).orElseThrow().minuto());
 		assertThatIllegalArgumentException().isThrownBy(() -> aoVivo.mudarVelocidade(jogo, marcos.id(), Velocidade.LENTA, AGORA))
 			.withMessageContaining("administrador");
+	}
+
+	@Test
+	void aSubstituicaoParaOJogoDeTodosPorAte60s() {
+		ateAoVivo();
+		// sem lesão que pare o jogo neste teste: só a substituição
+		jdbc.sql("UPDATE jogo_rodada_ao_vivo SET lesao_ate = 1e9 WHERE jogo_id = :jogo").param("jogo", jogo).update();
+		Instant t = comAPartidaEmAndamento(admin);
+		EstadoRodada antes = aoVivo.estado(jogo, admin.id(), t).orElseThrow();
+		long meu = antes.jogoDoUsuario().mandante().id();
+		long outro = antes.partidas().stream().filter(p -> !p.doUsuario()).findFirst().orElseThrow().mandante().id();
+
+		aoVivo.pausar(jogo, admin.id(), outro, t);
+		assertThat(aoVivo.estado(jogo, admin.id(), t).orElseThrow().pausada()).as("ver o clube de outro não para").isFalse();
+
+		aoVivo.pausar(jogo, admin.id(), meu, t);
+		EstadoRodada deMarcos = aoVivo.estado(jogo, marcos.id(), t.plusSeconds(20)).orElseThrow();
+		assertThat(deMarcos.pausada()).as("parado para todos").isTrue();
+		assertThat(deMarcos.minuto()).isEqualTo(antes.minuto());
+		assertThat(deMarcos.pausa().treinador()).isEqualTo(admin.nome());
+		assertThat(deMarcos.pausa().minha()).isFalse();
+		assertThat(deMarcos.pausa().segundos()).isEqualTo(40);
+		assertThat(deMarcos.janelaQueAbre()).isNull();
+		EstadoRodada doAdmin = aoVivo.estado(jogo, admin.id(), t.plusSeconds(20)).orElseThrow();
+		assertThat(doAdmin.pausa().minha()).isTrue();
+		assertThat(doAdmin.janelaQueAbre()).as("a janela de quem parou abre sozinha").isEqualTo(meu);
+
+		aoVivo.continuar(jogo, marcos.id(), t.plusSeconds(21));
+		assertThat(aoVivo.estado(jogo, marcos.id(), t.plusSeconds(22)).orElseThrow().pausada()).as("só quem parou continua")
+			.isTrue();
+
+		var janela = aoVivo.janela(jogo, admin.id(), meu, t.plusSeconds(25)).orElseThrow();
+		var time = janela.doUsuario() == Lado.CASA ? janela.casa() : janela.fora();
+		long sai = time.emCampo().stream().filter(j -> j.posicao() != Posicao.GOLEIRO).findFirst().orElseThrow().id();
+		long entra = time.banco().stream().filter(j -> j.posicao() != Posicao.GOLEIRO).findFirst().orElseThrow().id();
+		aoVivo.substituir(jogo, admin.id(), sai, entra, t.plusSeconds(25));
+		assertThat(aoVivo.pausaEmRede(jogo, admin.id(), t.plusSeconds(59))).isPresent();
+
+		EstadoRodada depois = aoVivo.estado(jogo, marcos.id(), t.plusSeconds(60)).orElseThrow();
+		assertThat(depois.pausada()).as("os 60 s acabaram: o jogo volta sozinho").isFalse();
+		assertThat(depois.pausa()).isNull();
+		assertThat(depois.minuto()).isEqualTo(antes.minuto());
+		assertThat(aoVivo.pausaEmRede(jogo, admin.id(), t.plusSeconds(61))).isEmpty();
+		assertThat(aoVivo.estado(jogo, admin.id(), t.plusSeconds(62)).orElseThrow().minuto()).isGreaterThan(antes.minuto());
+		assertThatIllegalArgumentException().isThrownBy(() -> aoVivo.substituir(jogo, admin.id(), entra, sai, t.plusSeconds(62)))
+			.withMessageContaining("voltou a andar");
+		var trocas = aoVivo.janela(jogo, admin.id(), meu, t.plusSeconds(62)).orElseThrow();
+		assertThat((trocas.doUsuario() == Lado.CASA ? trocas.casa() : trocas.fora()).substituicoesFeitas())
+			.as("a troca feita na pausa vale").isEqualTo(1);
+	}
+
+	/** Um instante com a partida do treinador em andamento, no começo do jogo. */
+	private Instant comAPartidaEmAndamento(Usuario treinador) {
+		for (int s = 1; s < 600; s += 2) {
+			Instant t = AGORA.plusSeconds(s);
+			EstadoRodada e = aoVivo.estado(jogo, treinador.id(), t).orElseThrow();
+			if (e.comUsuario() && e.partidas().stream().anyMatch(p -> p.doUsuario()) && e.minuto() >= 5 && e.minuto() < 60) {
+				return t;
+			}
+		}
+		throw new AssertionError("a partida do treinador não começou");
 	}
 
 	/** Todos dão OK em tudo até a rodada 1 começar ao vivo. */

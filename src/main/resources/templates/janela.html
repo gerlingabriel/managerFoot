@@ -49,6 +49,17 @@
 
 <div th:if="${erro}" role="alert" class="alerta janela-erro" th:text="${#strings.capitalize(erro)}">erro</div>
 
+<!-- Jogo em rede parado (modelo 18f): a contagem é consultada a cada segundo; no fim, a janela fecha. O hx-select
+	próprio evita herdar o "#quadro", que apagaria a contagem. -->
+<div th:if="${meu != null and e.pausa != null}" role="status" class="janela-pausa" th:with="jogoId=${e.jogoId}, pausa=${e.pausa}">
+<div class="janela-pausa-topo">
+<strong th:text="|Substituição · ${meu.clube.nome}|">Substituição · Real Guará</strong>
+<span th:fragment="contagem" id="pausa-contagem" class="pausa-contagem" th:attr="hx-get=@{/jogos/{id}/rodada/pausa(id=${jogoId})}"
+	hx-trigger="every 1s" hx-select="#pausa-contagem" hx-swap="outerHTML" th:text="|${pausa.segundos} s|">42 s</span>
+</div>
+<p class="suave pequeno" th:text="${e.pausa.minha} ? 'Os outros treinadores esperam por você. Quando o tempo acabar, a janela fecha sozinha e o jogo volta; as trocas já feitas valem.' : |O jogo está parado por ${e.pausa.treinador}. Quando o tempo acabar, a janela fecha e o jogo volta; as trocas já feitas valem.|">Os outros treinadores esperam por você.</p>
+</div>
+
 <!-- Próprio clube (1d): em campo e banco para a substituição. -->
 <section th:if="${meu != null}" aria-labelledby="t-subs" class="janela-subs">
 <div class="janela-subs-topo">

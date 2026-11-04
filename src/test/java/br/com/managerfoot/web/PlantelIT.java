@@ -149,8 +149,12 @@ class PlantelIT {
 		long deFora = jdbc.sql("SELECT id FROM jogo_jogador WHERE clube_id = :c AND id NOT IN (:ids)")
 			.param("c", clube).param("ids", depois.titulares().stream().toList()).query(Long.class).list().stream()
 			.filter(id -> !depois.reservas().contains(id)).findFirst().orElseThrow();
-		pedir(post(plantel + "/batedor").param("batedor", String.valueOf(deFora)))
-			.andExpect(flash().attribute("erro", "O batedor precisa estar entre os titulares ou no banco."));
+		// fora do banco também pode ser o batedor e continua escolhido (rev. 99)
+		pedir(post(plantel + "/batedor").param("batedor", String.valueOf(deFora)));
+		assertThat(escalacoes.carregar(clube).orElseThrow().batedor()).isEqualTo(deFora);
+		pedir(post(plantel + "/jogador/" + deFora).param("lugar", "BANCO"));
+		pedir(post(plantel + "/jogador/" + deFora).param("lugar", "FORA"));
+		assertThat(escalacoes.carregar(clube).orElseThrow().batedor()).isEqualTo(deFora);
 	}
 
 	@Test

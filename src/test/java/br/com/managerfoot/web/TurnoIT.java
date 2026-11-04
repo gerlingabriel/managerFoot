@@ -13,8 +13,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.Map;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,18 +26,23 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import br.com.managerfoot.TestcontainersConfiguration;
 import br.com.managerfoot.contas.Usuario;
 import br.com.managerfoot.economia.PropostasPatrocinio;
+import br.com.managerfoot.multiplayer.Turno.Passo;
 import br.com.managerfoot.persistencia.ContasRepositorio;
 import br.com.managerfoot.persistencia.JogosDoTreinadorRepositorio;
 import br.com.managerfoot.persistencia.LigaDeTeste;
 import br.com.managerfoot.persistencia.MoldeRepositorio;
 import br.com.managerfoot.persistencia.PatrocinioRepositorio;
+import br.com.managerfoot.persistencia.RodadaAoVivoRepositorio;
 import br.com.managerfoot.persistencia.SalaRepositorio;
+import br.com.managerfoot.persistencia.TurnoRepositorio;
+import br.com.managerfoot.persistencia.TurnoRepositorio.Desfecho;
 
 /** OK de todos no jogo em rede pelas telas (SPEC §3.3 itens 4 e 5, rev. 92; modelo 18e). */
 @Import(TestcontainersConfiguration.class)
@@ -60,6 +69,18 @@ class TurnoIT {
 
 	@Autowired
 	PatrocinioRepositorio patrocinios;
+
+	@Autowired
+	TurnoRepositorio turnos;
+
+	@Autowired
+	RodadaAoVivoRepositorio aoVivo;
+
+	@Autowired
+	JdbcClient jdbc;
+
+	@Autowired
+	Clock relogio;
 
 	Usuario admin;
 	Usuario marcos;
@@ -121,6 +142,57 @@ class TurnoIT {
 		mvc.perform(get("/jogos/" + jogo + "/turno").param("momento", "t1/r1/tatica").param("tela", "plantel")
 			.with(como(admin)).header("HX-Request", "true"))
 			.andExpect(header().string("HX-Redirect", "/jogos/" + jogo + "/plantel"));
+	}
+
+	@Test
+	void aSubstituicaoDeUmParaOJogoDeTodosComAContagem() throws Exception {
+		patrocinios.assinar(jogo, admin.id(), PropostasPatrocinio.Tipo.FIXA);
+		patrocinios.assinar(jogo, marcos.id(), PropostasPatrocinio.Tipo.FIXA);
+		Instant agora = relogio.instant();
+		turnos.darOk(jogo, admin.id(), Passo.PLANTEL, 0, agora);
+		Desfecho desfecho = turnos.darOk(jogo, marcos.id(), Passo.PLANTEL, 0, agora);
+		for (Usuario u : new Usuario[] { admin, marcos }) {
+			if (desfecho == Desfecho.LANCES && !turnos.okDado(jogo, u.id())) {
+				desfecho = turnos.darLances(jogo, u.id(), 1, Map.of(), agora);
+			}
+		}
+		for (Usuario u : new Usuario[] { admin, marcos }) {
+			if (desfecho == Desfecho.RESULTADO) {
+				desfecho = turnos.darOk(jogo, u.id(), Passo.RESULTADO, 0, agora);
+			}
+		}
+		// o relógio parado pelo administrador no minuto 20 da divisão dele, com 60 s pela frente
+		for (int divisao = 0; divisao < 10; divisao++) {
+			jdbc.sql("""
+					UPDATE jogo_rodada_ao_vivo SET progresso = :p, andando_desde = NULL, lesao_ate = 1e9, pausada_por = :admin,
+					       pausa_ate = :ate WHERE jogo_id = :jogo""")
+				.param("p", divisao * 90 + 20.0).param("admin", admin.id())
+				.param("ate", OffsetDateTime.ofInstant(relogio.instant().plusSeconds(60), ZoneOffset.UTC)).param("jogo", jogo)
+				.update();
+			if (aoVivo.estado(jogo, admin.id(), relogio.instant()).orElseThrow().janelaQueAbre() != null) {
+				break;
+			}
+		}
+
+		mvc.perform(get("/jogos/" + jogo + "/rodada").with(como(marcos)))
+			.andExpect(status().isOk())
+			.andExpect(content().string(containsString("Jogo parado para todos: " + admin.nome())))
+			.andExpect(content().string(containsString("hx-get=\"/jogos/" + jogo + "/rodada\"")));
+		mvc.perform(get("/jogos/" + jogo + "/rodada").with(como(admin)))
+			.andExpect(status().isOk())
+			.andExpect(content().string(containsString("Substituição · ")))
+			.andExpect(content().string(containsString("Os outros treinadores esperam por você")))
+			.andExpect(content().string(not(containsString("hx-get=\"/jogos/" + jogo + "/rodada\""))));
+		mvc.perform(get("/jogos/" + jogo + "/rodada/pausa").with(como(admin)).header("HX-Request", "true"))
+			.andExpect(status().isOk())
+			.andExpect(content().string(containsString("id=\"pausa-contagem\"")));
+
+		mvc.perform(post("/jogos/" + jogo + "/rodada/continuar").with(como(marcos)).with(csrf()));
+		mvc.perform(get("/jogos/" + jogo + "/rodada/pausa").with(como(admin)).header("HX-Request", "true"))
+			.andExpect(content().string(containsString("id=\"pausa-contagem\"")));
+		mvc.perform(post("/jogos/" + jogo + "/rodada/continuar").with(como(admin)).with(csrf()));
+		mvc.perform(get("/jogos/" + jogo + "/rodada/pausa").with(como(admin)).header("HX-Request", "true"))
+			.andExpect(header().string("HX-Redirect", "/jogos/" + jogo + "/rodada"));
 	}
 
 	private static RequestPostProcessor como(Usuario usuario) {

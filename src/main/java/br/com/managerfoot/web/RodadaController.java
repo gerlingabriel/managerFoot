@@ -36,6 +36,8 @@ import br.com.managerfoot.persistencia.PlantelRepositorio;
 import br.com.managerfoot.persistencia.RodadaAoVivoRepositorio;
 import br.com.managerfoot.persistencia.TrocaRepositorio;
 import br.com.managerfoot.persistencia.RodadaAoVivoRepositorio.EstadoRodada;
+import br.com.managerfoot.persistencia.RodadaAoVivoRepositorio.JanelaJogo;
+import br.com.managerfoot.persistencia.RodadaAoVivoRepositorio.PausaEmRede;
 import br.com.managerfoot.persistencia.RodadaAoVivoRepositorio.PlacarAoVivo;
 import br.com.managerfoot.temporada.Velocidade;
 import jakarta.servlet.http.HttpServletRequest;
@@ -213,21 +215,51 @@ class RodadaController {
 		model.addAttribute("titulo", estado.get().copa() != null ? estado.get().copa()
 				: titulo(estado.get().rodada(), rodadas.totalDeRodadas(jogoId)));
 		model.addAttribute("velocidades", Velocidade.values());
+		EstadoRodada e = estado.get();
 		if (janela == null) {
-			// lesão no clube do usuário: a rodada parou e a janela do jogo abre sozinha (SPEC §7.5, rev. 69)
-			janela = estado.get().janelaLesao();
+			// lesão no clube do usuário, ou em rede quem parou o jogo: a janela abre sozinha (SPEC §7.5, rev. 69; modelo 18f)
+			janela = e.janelaQueAbre();
 		}
-		if (janela != null && estado.get().comUsuario()) {
-			aoVivo.janela(jogoId, usuario.id(), janela, agora).ifPresent(j -> model.addAttribute("janela", j));
+		Optional<JanelaJogo> aberta = janela != null && e.comUsuario() ? aoVivo.janela(jogoId, usuario.id(), janela, agora)
+				: Optional.empty();
+		if (e.emRede()) {
+			// a janela do próprio clube só fica aberta com o jogo parado: ao fim dos 60 s ela fecha (§3.3 item 8)
+			aberta = aberta.filter(j -> j.doUsuario() == null || j.pausada());
 		}
+		aberta.ifPresent(j -> model.addAttribute("janela", j));
+		// com a janela de substituição aberta, a consulta do quadro apagaria a escolha de quem sai e entra
+		boolean comSubstituicao = aberta.map(j -> j.doUsuario() != null).orElse(false);
+		model.addAttribute("consultar", e.emRede() ? !comSubstituicao : !(e.comUsuario() && e.pausada()));
+		model.addAttribute("consultaUrl", "/jogos/" + jogoId + "/rodada"
+				+ (e.emRede() && aberta.isPresent() && !comSubstituicao ? "?janela=" + aberta.get().mandanteId() : ""));
 		return "rodada";
 	}
 
-	/** Clicar num clube da divisão do usuário pausa a partida e abre a janela do jogo (SPEC rev. 30 e 33). */
+	/**
+	 * A contagem da pausa da substituição no jogo em rede (modelo 18f), consultada a cada segundo pela
+	 * janela aberta; quando o jogo volta a andar, a tela volta ao quadro e a janela fecha.
+	 */
+	@GetMapping("/jogos/{jogoId}/rodada/pausa")
+	String pausa(@AuthenticationPrincipal Usuario usuario, @PathVariable long jogoId, Model model,
+			HttpServletResponse response) {
+		Optional<PausaEmRede> pausa = aoVivo.pausaEmRede(jogoId, usuario.id(), relogio.instant());
+		if (pausa.isEmpty()) {
+			response.setHeader("HX-Redirect", "/jogos/" + jogoId + "/rodada");
+			return null;
+		}
+		model.addAttribute("jogoId", jogoId);
+		model.addAttribute("pausa", pausa.get());
+		return "janela :: contagem";
+	}
+
+	/**
+	 * Clicar num clube da divisão do usuário pausa a partida e abre a janela do jogo (SPEC rev. 30 e 33).
+	 * Em rede, só o próprio clube para o jogo, e para todos (§3.3 item 3).
+	 */
 	@PostMapping("/jogos/{jogoId}/rodada/janela")
 	String abrirJanela(@AuthenticationPrincipal Usuario usuario, @PathVariable long jogoId,
 			@RequestParam("mandante") long mandante) {
-		aoVivo.pausar(jogoId, usuario.id(), relogio.instant());
+		aoVivo.pausar(jogoId, usuario.id(), mandante, relogio.instant());
 		return "redirect:/jogos/" + jogoId + "/rodada?janela=" + mandante;
 	}
 

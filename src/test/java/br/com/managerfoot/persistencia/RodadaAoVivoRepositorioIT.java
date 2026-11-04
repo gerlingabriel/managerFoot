@@ -107,7 +107,7 @@ class RodadaAoVivoRepositorioIT {
 	@Test
 	void pausaParaORelogioEContinuarRetoma() {
 		aoVivo.iniciar(jogo, usuario, 1, T0);
-		aoVivo.pausar(jogo, usuario, T0.plusSeconds(10));
+		aoVivo.pausar(jogo, usuario, 0, T0.plusSeconds(10));
 
 		assertThat(estado(60).minuto()).isEqualTo(20);
 		assertThat(estado(60).pausada()).isTrue();
@@ -130,7 +130,7 @@ class RodadaAoVivoRepositorioIT {
 	void divisaoSemUsuarioNaoPausa() {
 		aoVivo.iniciar(jogo, usuario, 1, T0);
 		// Série B inteira em 45 s (normal) e mais 1 s na Série A (20 minutos a 0,05 s)
-		aoVivo.pausar(jogo, usuario, T0.plusSeconds(46));
+		aoVivo.pausar(jogo, usuario, 0, T0.plusSeconds(46));
 
 		EstadoRodada estado = estado(47);
 		assertThat(estado.divisaoAtual()).isEqualTo(1);
@@ -185,7 +185,7 @@ class RodadaAoVivoRepositorioIT {
 		assertThatIllegalArgumentException().isThrownBy(() -> plantel.mover(jogo, usuario, sai.id(), Lugar.FORA))
 			.withMessageContaining("em andamento");
 
-		aoVivo.pausar(jogo, usuario, T0.plusSeconds(10));
+		aoVivo.pausar(jogo, usuario, 0, T0.plusSeconds(10));
 		aoVivo.substituir(jogo, usuario, sai.id(), entra.id(), T0.plusSeconds(11));
 		assertThatIllegalArgumentException()
 			.isThrownBy(() -> aoVivo.substituir(jogo, usuario, sai.id(), entra.id(), T0.plusSeconds(12)))
@@ -217,7 +217,7 @@ class RodadaAoVivoRepositorioIT {
 		assertThat(parada.pausada()).isTrue();
 		assertThat(parada.minuto()).isEqualTo(lesao.minuto());
 		long mandante = parada.jogoDoUsuario().mandante().id();
-		assertThat(parada.janelaLesao()).isEqualTo(mandante);
+		assertThat(parada.janelaQueAbre()).isEqualTo(mandante);
 		RodadaAoVivoRepositorio.JanelaJogo janela = aoVivo.janela(jogo, usuario, mandante, T0.plusSeconds(200))
 			.orElseThrow();
 		RodadaAoVivoRepositorio.TimeNaJanela meu = janela.doUsuario() == Lado.CASA ? janela.casa() : janela.fora();
@@ -230,7 +230,7 @@ class RodadaAoVivoRepositorioIT {
 		aoVivo.continuar(jogo, usuario, continuou);
 		Instant minutoSeguinte = continuou.plusMillis(600);
 		EstadoRodada seguinte = aoVivo.estado(jogo, usuario, minutoSeguinte).orElseThrow();
-		assertThat(seguinte.janelaLesao()).isNull();
+		assertThat(seguinte.janelaQueAbre()).isNull();
 		assertThat(seguinte.pausada()).isFalse();
 		assertThat(seguinte.minuto()).isEqualTo(lesao.minuto() + 1);
 		RodadaAoVivoRepositorio.JanelaJogo depois = aoVivo.janela(jogo, usuario, mandante, minutoSeguinte)

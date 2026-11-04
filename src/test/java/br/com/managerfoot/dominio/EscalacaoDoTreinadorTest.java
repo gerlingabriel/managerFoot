@@ -64,12 +64,12 @@ class EscalacaoDoTreinadorTest {
 	}
 
 	@Test
-	void semTiraDoTimeEDoPenalti() {
+	void semTiraDoTimeMasOBatedorContinuaEscolhido() {
 		EscalacaoDoTreinador sem = EscalacaoDoTreinador.de(DA_MAQUINA).sem(Set.of(18L, 2L));
 
 		assertThat(sem.titulares()).doesNotContain(18L).hasSize(10);
 		assertThat(sem.reservas()).doesNotContain(2L).hasSize(3);
-		assertThat(sem.batedor()).isNull();
+		assertThat(sem.batedor()).as("só a venda tira o batedor (rev. 99)").isEqualTo(18L);
 		assertThat(sem.problemas(PLANTEL, id -> false))
 			.containsExactly("são necessários 11 titulares, mas há 10", "faltam 1 atacante");
 	}
@@ -97,13 +97,14 @@ class EscalacaoDoTreinadorTest {
 	}
 
 	@Test
-	void batedorPrecisaEstarNoTimeEJogadorNaoEstaEmDoisLugares() {
+	void batedorForaDoBancoContinuaEscolhidoEJogadorNaoEstaEmDoisLugares() {
 		EscalacaoDoTreinador escalacao = EscalacaoDoTreinador.de(DA_MAQUINA);
 		EscalacaoDoTreinador batedorDeFora = new EscalacaoDoTreinador(Formacao.F_4_4_2, escalacao.titulares(),
 				escalacao.reservas(), 23L);
 
-		assertThat(batedorDeFora.problemas(PLANTEL, id -> false))
-			.containsExactly("o batedor de pênalti precisa estar entre os titulares ou no banco");
+		assertThat(batedorDeFora.problemas(PLANTEL, id -> false)).isEmpty();
+		assertThat(batedorDeFora.escalacao(PLANTEL, id -> false, 0.5).batedorPreferido()).map(Jogador::id).contains(23L);
+		assertThat(batedorDeFora.com(23, Lugar.FORA).batedor()).isEqualTo(23L);
 		assertThatIllegalArgumentException()
 			.isThrownBy(() -> new EscalacaoDoTreinador(Formacao.F_4_4_2, Set.of(1L), Set.of(1L), null));
 	}
@@ -282,10 +283,10 @@ class EscalacaoDoTreinadorTest {
 	}
 
 	@Test
-	void retirarTodosDeixaSoAFormacao() {
+	void retirarTodosDeixaAFormacaoEOBatedor() {
 		EscalacaoDoTreinador vazia = EscalacaoDoTreinador.de(DA_MAQUINA).vazia();
 
-		assertThat(vazia).isEqualTo(new EscalacaoDoTreinador(Formacao.F_4_4_2, Set.of(), Set.of(), null));
+		assertThat(vazia).isEqualTo(new EscalacaoDoTreinador(Formacao.F_4_4_2, Set.of(), Set.of(), 18L));
 	}
 
 	private static EscalacaoDoTreinador vazia(Formacao formacao) {

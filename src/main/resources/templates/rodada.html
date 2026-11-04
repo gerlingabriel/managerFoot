@@ -5,9 +5,11 @@
 <div class="campo campo-pagina">
 <div class="pagina">
 
-<!--/* Parado, o quadro fica sem hx-get: sem hx-trigger, o htmx recarregaria a cada clique dentro dele e fecharia a janela. */-->
-<div id="quadro" class="pilha-larga" th:attr="hx-get=${e.comUsuario and e.pausada ? null : '/jogos/' + e.jogoId + '/rodada'},
-		hx-trigger=${e.comUsuario and e.pausada ? null : 'every 1s'},
+<!--/* Sem consulta (jogo individual parado ou janela de substituição aberta), o quadro fica sem hx-get: sem hx-trigger,
+	o htmx recarregaria a cada clique dentro dele e fecharia a janela. Em rede, o quadro segue consultando com o jogo
+	parado por outro (modelo 18f). */-->
+<div id="quadro" class="pilha-larga" th:attr="hx-get=${consultar ? consultaUrl : null},
+		hx-trigger=${consultar ? 'every 1s' : null},
 		data-gols-pro=${e.golsPro()}, data-gols-contra=${e.golsContra()}, data-som=${e.somGols}"
 	hx-select="#quadro" hx-swap="outerHTML">
 
@@ -49,7 +51,12 @@
 </form>
 </div>
 
-<div th:if="${e.comUsuario and e.pausada and janela == null}" role="status" class="aviso-pausa">
+<div th:if="${e.pausa != null and !e.pausa.minha}" role="status" class="aviso-pausa">
+<span th:text="|Jogo parado para todos: ${e.pausa.treinador} (${e.pausa.clube}) está fazendo substituição.|">Jogo parado para todos: Lúcia (Real Guará) está fazendo substituição.</span>
+<strong class="pausa-contagem" th:text="|${e.pausa.segundos} s|">42 s</strong>
+</div>
+
+<div th:if="${e.comUsuario and e.pausada and janela == null and (e.pausa == null or e.pausa.minha)}" role="status" class="aviso-pausa">
 <span>Partida pausada.</span>
 <form th:action="@{/jogos/{id}/rodada/continuar(id=${e.jogoId})}" method="post">
 <button type="submit" class="botao">Continuar</button>
@@ -59,7 +66,7 @@
 <section th:with="atual=${e.divisoes[e.divisaoAtual]}" th:attr="aria-label=${atual.nome}" class="painel grupo">
 <div class="painel-cabecalho">
 <h2 class="titulo-secao pequeno" th:text="${e.tituloDoBloco()}">Divisão</h2>
-<span class="suave" th:text="|${e.comUsuario and e.pausada ? 'Pausada' : 'Ao vivo'} · ${e.partidas.size()} ${e.partidas.size() == 1 ? 'jogo' : 'jogos'}|">Ao vivo</span>
+<span class="suave" th:text="|${e.comUsuario and e.pausada ? (e.emRede ? 'Parada' : 'Pausada') : 'Ao vivo'} · ${e.partidas.size()} ${e.partidas.size() == 1 ? 'jogo' : 'jogos'}|">Ao vivo</span>
 </div>
 <div class="tabela-rolagem">
 <div class="jogos-rodada" th:with="comTotal=${!e.partidas.?[volta() or primeiroJogo() or grupo != null].isEmpty()}" th:classappend="${comTotal} ? 'com-total'">
@@ -69,7 +76,7 @@
 <span th:if="${j.expulsaoCasa}" class="expulsao" role="img" aria-label="Expulsão"></span>
 <form th:if="${e.comUsuario}" th:action="@{/jogos/{id}/rodada/janela(id=${e.jogoId})}" method="post" class="clube-clicavel">
 <input type="hidden" name="mandante" th:value="${j.mandante.id}">
-<button type="submit" class="jogo-nome" th:text="${j.mandante.nome}" th:attr="aria-label=|${j.mandante.nome}: pausar e ver o jogo|">Mandante</button>
+<button type="submit" class="jogo-nome" th:text="${j.mandante.nome}" th:attr="aria-label=|${j.mandante.nome}: ${!e.emRede ? 'pausar e ver o jogo' : (j.doUsuario ? 'parar o jogo de todos e substituir' : 'ver o jogo')}|">Mandante</button>
 </form>
 <span th:unless="${e.comUsuario}" class="jogo-nome" th:text="${j.mandante.nome}">Mandante</span>
 <span aria-hidden="true" th:style="${@escudos.estilo(j.mandante.escudo, 22, 26)}"></span>
@@ -81,7 +88,7 @@
 <span aria-hidden="true" th:style="${@escudos.estilo(j.visitante.escudo, 22, 26)}"></span>
 <form th:if="${e.comUsuario}" th:action="@{/jogos/{id}/rodada/janela(id=${e.jogoId})}" method="post" class="clube-clicavel">
 <input type="hidden" name="mandante" th:value="${j.mandante.id}">
-<button type="submit" class="jogo-nome" th:text="${j.visitante.nome}" th:attr="aria-label=|${j.visitante.nome}: pausar e ver o jogo|">Visitante</button>
+<button type="submit" class="jogo-nome" th:text="${j.visitante.nome}" th:attr="aria-label=|${j.visitante.nome}: ${!e.emRede ? 'pausar e ver o jogo' : (j.doUsuario ? 'parar o jogo de todos e substituir' : 'ver o jogo')}|">Visitante</button>
 </form>
 <span th:unless="${e.comUsuario}" class="jogo-nome" th:text="${j.visitante.nome}">Visitante</span>
 <span th:if="${j.expulsaoFora}" class="expulsao" role="img" aria-label="Expulsão"></span>
@@ -109,7 +116,7 @@
 </section>
 
 <footer class="rodape-rodada suave">
-<span th:text="${e.comUsuario} ? 'A linha mostra o último lance. Clique num clube para pausar e ver todos os lances; no seu clube, também as substituições.' : (${e.mundial()} ? 'Seu clube não joga esta etapa do Mundial: os jogos correm rápido.' : (${e.continental()} ? 'Seu clube não joga esta etapa da continental: os jogos correm rápido.' : (${e.copa != null} ? 'Seu clube não joga esta etapa da copa: os jogos correm rápido.' : 'Nenhum clube desta divisão é seu: os jogos correm sempre rápido.')))">texto</span>
+<span th:text="${e.comUsuario} ? (${e.emRede} ? 'A linha mostra o último lance. Clique num clube para ver todos os lances; no seu clube, a substituição para o jogo de todos por um tempo limitado.' : 'A linha mostra o último lance. Clique num clube para pausar e ver todos os lances; no seu clube, também as substituições.') : (${e.mundial()} ? 'Seu clube não joga esta etapa do Mundial: os jogos correm rápido.' : (${e.continental()} ? 'Seu clube não joga esta etapa da continental: os jogos correm rápido.' : (${e.copa != null} ? 'Seu clube não joga esta etapa da copa: os jogos correm rápido.' : 'Nenhum clube desta divisão é seu: os jogos correm sempre rápido.')))">texto</span>
 <span th:text="${e.divisaoAtual == e.divisoes.size() - 1} ? 'Ao fim desta divisão você volta ao plantel.' : 'Ao terminar, começa a próxima divisão.'">texto</span>
 <span th:if="${!e.partidas.?[volta()].isEmpty()}">Ida · total: o placar da ida e o total, com os gols do mandante desta partida primeiro. Total empatado (em amarelo) vai à prorrogação e aos pênaltis.</span>
 </footer>

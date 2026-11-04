@@ -164,6 +164,12 @@ public final class Partida {
 				&& aleatorio.nextDouble() < parametros.chancePorMinuto() * parametros.sorte().chancesExtras()) {
 			finalizar(beneficiado);
 		}
+		// com um a mais, mais lances (rev. 99); só sorteia depois de uma expulsão, para não mudar as outras partidas
+		int aMaisNaCasa = expulsos(Lado.CASA) - expulsos(Lado.FORA);
+		if (aMaisNaCasa != 0 && parametros.disciplina().chancesExtrasPorExpulsao() > 0 && aleatorio.nextDouble()
+				< parametros.chancePorMinuto() * parametros.disciplina().chancesExtrasPorExpulsao() * Math.abs(aMaisNaCasa)) {
+			finalizar(aMaisNaCasa > 0 ? Lado.FORA : Lado.CASA);
+		}
 		verificarCartao(Lado.CASA);
 		verificarCartao(Lado.FORA);
 		verificarLesao(Lado.CASA);
@@ -206,10 +212,34 @@ public final class Partida {
 		double meioCasa = potencia(forcaSetor(casa, Posicao.MEIO_CAMPISTA)) * (campoNeutro ? 1 : parametros.fatorMando())
 				* fatorDominio(Lado.CASA);
 		double meioFora = potencia(forcaSetor(fora, Posicao.MEIO_CAMPISTA)) * fatorDominio(Lado.FORA);
-		if (meioCasa + meioFora == 0) {
-			return aleatorio.nextBoolean() ? Lado.CASA : Lado.FORA;
+		double chanceCasa = meioCasa + meioFora == 0 ? 0.5 : meioCasa / (meioCasa + meioFora);
+		chanceCasa = comExpulsoes(chanceCasa, expulsos(Lado.CASA) - expulsos(Lado.FORA), parametros.disciplina());
+		return aleatorio.nextDouble() < chanceCasa ? Lado.CASA : Lado.FORA;
+	}
+
+	/**
+	 * Expulsão (SPEC §7.4, rev. 98): além do buraco no setor, o adversário fica com 50% a mais da chance
+	 * de ter a jogada, por expulso a mais: 50/50 vira 75/25, 60/40 vira 90/10, com teto de 99/1.
+	 *
+	 * @param chanceCasa chance do mandante ficar com a jogada pelo meio
+	 * @param aMaisNaCasa expulsos do mandante menos os do visitante
+	 * @return a chance do mandante com a expulsão
+	 */
+	static double comExpulsoes(double chanceCasa, int aMaisNaCasa, ParametrosDisciplina disciplina) {
+		if (aMaisNaCasa == 0) {
+			return chanceCasa;
 		}
-		return aleatorio.nextDouble() * (meioCasa + meioFora) < meioCasa ? Lado.CASA : Lado.FORA;
+		double fator = Math.pow(1 + disciplina.bonusDominioPorExpulsao(), Math.abs(aMaisNaCasa));
+		if (aMaisNaCasa > 0) {
+			double fora = 1 - chanceCasa;
+			return 1 - Math.max(fora, Math.min(disciplina.dominioMaximo(), fora * fator));
+		}
+		return Math.max(chanceCasa, Math.min(disciplina.dominioMaximo(), chanceCasa * fator));
+	}
+
+	/** Expulsos por cartão até agora; quem sai lesionado sem substituto não conta. */
+	private int expulsos(Lado lado) {
+		return (int) eventos.stream().filter(e -> e.lado() == lado && e.tipo().expulsao()).count();
 	}
 
 	private void finalizar(Lado lado) {

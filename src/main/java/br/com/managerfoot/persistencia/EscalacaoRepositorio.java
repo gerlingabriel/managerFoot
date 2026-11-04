@@ -68,11 +68,7 @@ public class EscalacaoRepositorio {
 				WHERE j.id = ej.jogador_id AND c.id = j.clube_id AND c.jogo_id = :jogo AND (j.suspensao > 0 OR j.lesao > 0)""")
 			.param("jogo", jogoId)
 			.update();
-		jdbc.sql("""
-				UPDATE jogo_escalacao e SET batedor_id = NULL FROM jogo_jogador j, jogo_clube c
-				WHERE j.id = e.batedor_id AND c.id = j.clube_id AND c.jogo_id = :jogo AND (j.suspensao > 0 OR j.lesao > 0)""")
-			.param("jogo", jogoId)
-			.update();
+		// o batedor escolhido continua escolhido: só a venda tira (rev. 99)
 	}
 
 	private void inserirJogador(long clubeId, long jogadorId, String papel) {
