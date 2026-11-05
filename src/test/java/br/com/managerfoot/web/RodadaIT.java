@@ -341,6 +341,18 @@ class RodadaIT {
 			.andExpect(content().string(not(containsString("pausar e ver o jogo"))));
 	}
 
+	@Test
+	void fimDaDivisaoFicaNaTelaComOsPlacaresFinais() throws Exception {
+		iniciar();
+		// a divisão do usuário termina aos 45 s em normal e fica 2 s na tela
+		agora(46);
+		mvc.perform(get(rodada).with(como(treinador)))
+			.andExpect(content().string(containsString("Fim de jogo · ")))
+			.andExpect(content().string(containsString("Fim de jogo: os placares são os finais.")))
+			.andExpect(content().string(containsString("90&#39;")))
+			.andExpect(content().string(not(containsString("Clique num clube para pausar"))));
+	}
+
 	private void iniciar() throws Exception {
 		mvc.perform(post(rodada).param("rodada", "1").with(como(treinador)).with(csrf())).andExpect(redirectedUrl(rodada));
 	}
