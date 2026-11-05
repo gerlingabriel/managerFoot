@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.OptionalDouble;
+import java.util.Set;
 import java.util.SplittableRandom;
 
 import org.junit.jupiter.api.Tag;
@@ -34,6 +35,7 @@ import br.com.managerfoot.temporada.ConfiguracaoLiga;
 import br.com.managerfoot.temporada.Disciplina;
 import br.com.managerfoot.temporada.Divisao;
 import br.com.managerfoot.temporada.EvolucaoForca;
+import br.com.managerfoot.temporada.ParametrosEvolucao;
 import br.com.managerfoot.temporada.Jogo;
 import br.com.managerfoot.temporada.ProcessamentoRodada;
 import br.com.managerfoot.temporada.ResultadoJogo;
@@ -58,6 +60,7 @@ class RelatorioCicloMercadoTest {
 	private static final int TEMPORADAS = 6;
 	private static final Path SAIDA = Path.of("docs/simulacoes/ciclo-do-mercado.md");
 	private static final Path SAIDA_AJUSTE = Path.of("docs/simulacoes/ajuste-caixa.md");
+	private static final Path SAIDA_PROMOVIDOS = Path.of("docs/simulacoes/promovidos.md");
 	private static final String[] TERCOS = { "Topo", "Meio", "Fundo" };
 	private static final String[] RIQUEZA = { "Rico", "Médio", "Pobre" };
 
@@ -88,10 +91,25 @@ class RelatorioCicloMercadoTest {
 			new Cenario("Salário ×1,6", true, faixas(0.70, 0.85, 1.10, 1.20), 23, 40, 1.6),
 			new Cenario("Ingresso R$ 35 e salário ×1,2", true, faixas(0.70, 0.85, 1.10, 1.20), 23, 35, 1.2));
 
+	/**
+	 * Quem sobe da 2ª (Etapa 6): no jogo completo 81% dos promovidos caem de volta. Variantes da evolução de força só
+	 * na simulação. Roda com {@code RELATORIO_PROMOVIDOS=1} e grava {@code docs/simulacoes/promovidos.md}.
+	 */
+	private static final List<Cenario> PROMOVIDOS = List.of(
+			new Cenario("Atual", true, faixas(0.70, 0.85, 1.10, 1.20), 23, 40, 1.0, 1.0, false),
+			new Cenario("Promovido cresce 2× no 1º ano", true, faixas(0.70, 0.85, 1.10, 1.20), 23, 40, 1.0, 2.0, false),
+			new Cenario("Promovido cresce 3× no 1º ano", true, faixas(0.70, 0.85, 1.10, 1.20), 23, 40, 1.0, 3.0, false),
+			new Cenario("Base móvel: piso pela força em campo no início da temporada", true, faixas(0.70, 0.85, 1.10, 1.20), 23, 40, 1.0, 1.0, true),
+			new Cenario("Base móvel e promovido cresce 2×", true, faixas(0.70, 0.85, 1.10, 1.20), 23, 40, 1.0, 2.0, true),
+			new Cenario("Teto da 2ª 35 (em vez de 30)", true, faixas(0.70, 0.85, 1.10, 1.20), 23, 40, 1.0, 1.0, false, 5),
+			new Cenario("Teto da 2ª 35 e base móvel", true, faixas(0.70, 0.85, 1.10, 1.20), 23, 40, 1.0, 1.0, true, 5),
+			new Cenario("Ingresso R$ 30 (sem mudar a evolução)", true, faixas(0.70, 0.85, 1.10, 1.20), 23, 30, 1.0, 1.0, false));
+
 	@Test
 	void gerarRelatorio() throws IOException {
 		boolean ajuste = System.getenv("RELATORIO_AJUSTE_CAIXA") != null;
-		List<Cenario> cenarios = ajuste ? AJUSTES : CENARIOS;
+		boolean promovidos = System.getenv("RELATORIO_PROMOVIDOS") != null;
+		List<Cenario> cenarios = promovidos ? PROMOVIDOS : ajuste ? AJUSTES : CENARIOS;
 		GeradorBancoPadrao gerador = new GeradorBancoPadrao(ParametrosBancoPadrao.padrao(), ParametrosMotor.padrao());
 		List<GeradorBancoPadrao.PaisGerado> gerados = PaisPadrao.TODOS.stream().map(gerador::gerar).toList();
 		List<Simulacao> simulacoes = new ArrayList<>();
@@ -110,6 +128,12 @@ class RelatorioCicloMercadoTest {
 			simulacoes.add(sim);
 		}
 		Files.createDirectories(SAIDA.getParent());
+		if (promovidos) {
+			String md = promovidos(cenarios, simulacoes);
+			Files.writeString(SAIDA_PROMOVIDOS, md);
+			System.out.println(md);
+			return;
+		}
 		if (ajuste) {
 			String md = ajusteCaixa(cenarios, simulacoes);
 			Files.writeString(SAIDA_AJUSTE, md);
@@ -163,6 +187,39 @@ class RelatorioCicloMercadoTest {
 		md.append("\n*Ligas travadas*: liga × semente em que um clube ficou sem 7 disponíveis (vendas até o plantel mínimo de 14 ")
 			.append("mais suspensões); a simulação dessa liga para ali e as medidas contam só as temporadas jogadas.\n\n")
 			.append("As tabelas abaixo são do cenário \"").append(CENARIOS.get(DETALHADO).nome()).append("\".\n\n");
+		return md.toString();
+	}
+
+	/** Quem sobe da 2ª: posição e queda na temporada seguinte, força e saldo, por variante. */
+	private static String promovidos(List<Cenario> cenarios, List<Simulacao> simulacoes) {
+		StringBuilder md = new StringBuilder();
+		md.append("# Quem sobe da 2ª: variantes da evolução de força\n\n")
+			.append("Gerado por `RelatorioCicloMercadoTest` com `RELATORIO_PROMOVIDOS=1` (ferramenta de desenvolvimento; SPEC §15, ")
+			.append("Etapa 6). O simulador de `ciclo-do-mercado.md` com o padrão atual: as 6 ligas do banco padrão, ").append(SEMENTES)
+			.append(" sementes, ").append(TEMPORADAS).append(" temporadas, só máquina. No jogo completo (`jogo-completo.md`) 81% ")
+			.append("dos promovidos caem de volta.\n\n")
+			.append("Variantes só na simulação: *cresce 2×/3×*: no 1º ano na 1ª, os sorteados que ganham 1 ponto (4, 2 ou 0,5 ")
+			.append("por partida, §6.1) são o dobro/triplo. *Base móvel*: o piso do desgaste (força do clube − 5) usa a força em ")
+			.append("campo do clube no início de cada temporada, em vez da força cadastrada, que hoje nunca muda. *Teto da 2ª 35*: ")
+			.append("na 2ª os jogadores crescem até 35 em vez de 30; os clubes do banco padrão continuam com 23 a 30.\n\n")
+			.append("*Caem de volta*: terminam entre os últimos, tantos quantos subiram. *Força*: força em campo no início menos a ")
+			.append("média da 1ª. *Força no fim por origem*: força em campo no fim da ").append(TEMPORADAS)
+			.append("ª temporada dos clubes que começaram na 1ª e na 2ª.\n\n")
+			.append("| Cenário | Promovidos | Posição média | Caem de volta | Força em relação à média da 1ª | ")
+			.append("Força no fim: começaram na 1ª / na 2ª | Força em campo 1ª / 2ª (fim) | Saldo 1ª / 2ª (fim, rodadas de folha) |\n")
+			.append("|---|---|---|---|---|---|---|---|\n");
+		for (int i = 0; i < cenarios.size(); i++) {
+			Simulacao s = simulacoes.get(i);
+			double[] p = s.promovidos;
+			Medida d1 = s.temporadas.get(1).get(TEMPORADAS);
+			Medida d2 = s.temporadas.get(2).get(TEMPORADAS);
+			md.append("| ").append(cenarios.get(i).nome()).append(" | ").append((int) p[0]).append(" | ")
+				.append(dec(p[1] / p[0])).append("ª | ").append(pct(p[2] / p[0])).append(" | ")
+				.append(String.format(Locale.forLanguageTag("pt-BR"), "%+.1f", p[3] / p[0])).append(" | ")
+				.append(dec(s.forcaPorOrigem[0] / s.forcaPorOrigem[1])).append(" / ").append(dec(s.forcaPorOrigem[2] / s.forcaPorOrigem[3]))
+				.append(" | ").append(dec(s.forcaFinal[0] / s.forcaFinal[1])).append(" / ").append(dec(s.forcaFinal[2] / s.forcaFinal[3]))
+				.append(" | ").append(dec(rodadas(d1))).append(" / ").append(dec(rodadas(d2))).append(" |\n");
+		}
 		return md.toString();
 	}
 
@@ -255,7 +312,16 @@ class RelatorioCicloMercadoTest {
 	 * @param salario multiplicador do salário de referência (e com ele do preço, do prêmio e da obra)
 	 */
 	private record Cenario(String nome, boolean peloClube, List<FaixaSalario> faixas, int plantelAlvo, long ingresso,
-			double salario) {
+			double salario, double crescimentoPromovido, boolean baseMovel, int tetoExtraDaSegunda) {
+
+		Cenario(String nome, boolean peloClube, List<FaixaSalario> faixas, int plantelAlvo, long ingresso, double salario) {
+			this(nome, peloClube, faixas, plantelAlvo, ingresso, salario, 1.0, false, 0);
+		}
+
+		Cenario(String nome, boolean peloClube, List<FaixaSalario> faixas, int plantelAlvo, long ingresso, double salario,
+				double crescimentoPromovido, boolean baseMovel) {
+			this(nome, peloClube, faixas, plantelAlvo, ingresso, salario, crescimentoPromovido, baseMovel, 0);
+		}
 	}
 
 	/** Acumuladores e regras de um cenário. */
@@ -267,6 +333,15 @@ class RelatorioCicloMercadoTest {
 		private final AmpliacaoEstadio ampliacao;
 		private final Premiacao premiacao;
 		private final EvolucaoForca evolucao = EvolucaoForca.padrao();
+		private final EvolucaoForca evolucaoPromovido;
+		private final boolean baseMovel;
+		private final int tetoExtraDaSegunda;
+		/** Promovidos na temporada seguinte: quantos, soma das posições, caem de volta, soma da força − média da 1ª. */
+		private final double[] promovidos = new double[4];
+		/** Força em campo no fim da simulação: média dos clubes que começaram na 1ª e dos que começaram na 2ª. */
+		private final double[] forcaPorOrigem = new double[4];
+		/** Força em campo no fim da simulação por divisão em que o clube está: soma e quantos, 1ª e 2ª. */
+		private final double[] forcaFinal = new double[4];
 		private final PrecoJogador preco;
 		private final MercadoDaMaquina mercado;
 		private final LeiloesDaRodada leiloes;
@@ -308,6 +383,12 @@ class RelatorioCicloMercadoTest {
 			mercado = new MercadoDaMaquina(ParametrosMercadoMaquina.padrao().comPlantelAlvo(cenario.plantelAlvo()), preco, caixa);
 			leiloes = new LeiloesDaRodada(mercado, preco);
 			premiacao = new Premiacao(ParametrosPremiacao.padrao(), preco);
+			ParametrosEvolucao pe = ParametrosEvolucao.padrao();
+			Map<ParametrosEvolucao.Desfecho, Double> crescem = new java.util.EnumMap<>(ParametrosEvolucao.Desfecho.class);
+			pe.crescem().forEach((k, v) -> crescem.put(k, v * cenario.crescimentoPromovido()));
+			evolucaoPromovido = new EvolucaoForca(new ParametrosEvolucao(pe.perdem(), crescem, pe.perdaAcimaDoTeto(), pe.abaixoDoClube()));
+			baseMovel = cenario.baseMovel();
+			tetoExtraDaSegunda = cenario.tetoExtraDaSegunda();
 			ampliacao = new AmpliacaoEstadio(parametros, publico, preco, mercado);
 		}
 
@@ -412,12 +493,28 @@ class RelatorioCicloMercadoTest {
 				saldo.put(c.id(), caixa.saldoInicial(planteis.get(c.id())));
 			});
 			Map<Long, int[]> posicaoAnterior = new HashMap<>();
+			Map<Long, Integer> divisaoOriginal = new HashMap<>();
+			liga.divisoes().forEach(d -> d.clubes().forEach(c -> divisaoOriginal.put(c.id(), d.prioridade())));
+			Map<Long, Integer> divisaoAnterior = new HashMap<>();
+			Map<Long, Integer> base = new HashMap<>();
+			clubes.forEach(c -> base.put(c.id(), c.forca()));
 			ProcessamentoRodada processamento = ProcessamentoRodada.padrao();
 			SplittableRandom aleatorio = new SplittableRandom(semente * 131 + 7);
 			Disciplina disciplina = Disciplina.vazia();
 			Map<Long, Moral> moral = new HashMap<>();
 			for (int numero = 1; numero <= TEMPORADAS; numero++) {
 				temporadaAtual = numero;
+				Set<Long> subiram = new java.util.HashSet<>();
+				for (Divisao d : liga.divisoes()) {
+					for (Clube c : d.clubes()) {
+						if (d.prioridade() == 1 && Integer.valueOf(2).equals(divisaoAnterior.get(c.id()))) {
+							subiram.add(c.id());
+						}
+						if (baseMovel) {
+							base.put(c.id(), (int) Math.round(emCampo(planteis.get(c.id()))));
+						}
+					}
+				}
 				Temporada temporada = Temporada.iniciar(numero, liga, planteis, aleatorio.nextLong());
 				Map<Long, Integer> teto = new HashMap<>();
 				Map<Long, Divisao> divisaoDe = new HashMap<>();
@@ -425,7 +522,7 @@ class RelatorioCicloMercadoTest {
 				Map<Long, Integer> trocas = new HashMap<>();
 				for (Divisao d : liga.divisoes()) {
 					for (Clube c : d.clubes()) {
-						teto.put(c.id(), d.limiteForca());
+						teto.put(c.id(), d.limiteForca() + (d.prioridade() == 2 ? tetoExtraDaSegunda : 0));
 						divisaoDe.put(c.id(), d);
 						clubePorId.put(c.id(), c);
 						int[] anterior = posicaoAnterior.get(c.id());
@@ -434,6 +531,8 @@ class RelatorioCicloMercadoTest {
 					}
 				}
 				Map<Long, Integer> riqueza = riqueza(liga, saldo, planteis);
+				Map<Long, Double> forcaNoInicio = new HashMap<>();
+				planteis.forEach((id, pl) -> forcaNoInicio.put(id, emCampo(pl)));
 				Map<Long, OptionalDouble> anterior = new HashMap<>();
 				divisaoDe.keySet().forEach(id -> {
 					int[] a = posicaoAnterior.get(id);
@@ -477,8 +576,9 @@ class RelatorioCicloMercadoTest {
 							.add(new ResultadoJogo(jogada.jogo(), jogada.resultado().golsCasa(), jogada.resultado().golsFora()));
 						for (Lado lado : Lado.values()) {
 							Clube c = partida.clube(lado);
-							planteis.put(c.id(), evolucao.aposPartida(planteis.get(c.id()), lado == Lado.CASA ? partida.casa() : partida.fora(),
-									jogada.resultado(), lado, teto.get(c.id()), c.forca(), aleatorio));
+							EvolucaoForca regra = subiram.contains(c.id()) ? evolucaoPromovido : evolucao;
+							planteis.put(c.id(), regra.aposPartida(planteis.get(c.id()), lado == Lado.CASA ? partida.casa() : partida.fora(),
+									jogada.resultado(), lado, teto.get(c.id()), base.get(c.id()), aleatorio));
 						}
 					}
 					disciplina = res.disciplina();
@@ -500,6 +600,17 @@ class RelatorioCicloMercadoTest {
 				for (Divisao d : liga.divisoes()) {
 					Classificacao c = Classificacao.calcular(d.clubes(), resultados.get(d.prioridade()), temporada.semente());
 					finais.put(d.prioridade(), c);
+					divisaoAnterior.putAll(d.clubes().stream().collect(java.util.stream.Collectors.toMap(Clube::id, x -> d.prioridade())));
+					if (d.prioridade() == 1 && !subiram.isEmpty()) {
+						double media = d.clubes().stream().mapToDouble(x -> forcaNoInicio.get(x.id())).average().orElse(0);
+						for (Long id : subiram) {
+							int pos = c.posicao(clubePorId.get(id));
+							promovidos[0]++;
+							promovidos[1] += pos;
+							promovidos[2] += pos > d.clubes().size() - subiram.size() ? 1 : 0;
+							promovidos[3] += forcaNoInicio.get(id) - media;
+						}
+					}
 					Medida m = temporadas.computeIfAbsent(d.prioridade(), k -> new java.util.TreeMap<>())
 						.computeIfAbsent(numero, k -> new Medida());
 					for (Clube clube : d.clubes()) {
@@ -514,10 +625,27 @@ class RelatorioCicloMercadoTest {
 					m.jogadores += planteis.get(clube.id()).size();
 					}
 				}
+				if (numero == TEMPORADAS) {
+					for (Divisao d : liga.divisoes()) {
+						if (d.prioridade() <= 2) {
+							for (Clube c : d.clubes()) {
+								forcaFinal[2 * (d.prioridade() - 1)] += emCampo(planteis.get(c.id()));
+								forcaFinal[2 * (d.prioridade() - 1) + 1]++;
+							}
+						}
+					}
+				}
 				liga = TransicaoTemporada.aplicar(liga, finais, aleatorio).proxima();
 				disciplina = disciplina.novaTemporada();
 			}
 			Map<Long, Integer> tercoFinal = tercosDeForca(clubes, planteis);
+			for (Clube c : clubes) {
+				int o = divisaoOriginal.getOrDefault(c.id(), 0);
+				if (o == 1 || o == 2) {
+					forcaPorOrigem[2 * (o - 1)] += emCampo(planteis.get(c.id()));
+					forcaPorOrigem[2 * (o - 1) + 1]++;
+				}
+			}
 			clubesNaMobilidade += clubes.size();
 			mudaramDeTerco += clubes.stream().filter(c -> !tercoInicial.get(c.id()).equals(tercoFinal.get(c.id()))).count();
 		}
