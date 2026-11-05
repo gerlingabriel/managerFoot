@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: cabeca('Tirar do jogo')}"></head>
+<body>
+<!-- Confirmação de "Tirar do jogo" (SPEC §11.4, rev. 104): só quem criou o jogo em rede chega aqui. -->
+<div class="campo campo-pagina">
+<div class="pagina">
+<header th:replace="~{fragmentos :: topo}"></header>
+</div>
+</div>
+<div class="janela-fundo">
+<div role="dialog" aria-modal="true" aria-labelledby="t-tirar" class="janela janela-apagar">
+<h2 id="t-tirar" class="titulo-secao" th:text="|Tirar ${treinador.nome} do jogo?|">Tirar Marcos do jogo?</h2>
+<p class="texto" th:text="|O clube ${treinador.clube} passa a ser da máquina até o fim do jogo. ${treinador.nome} não volta: depois que a temporada começou, ninguém entra. Se todos os outros já deram OK, o jogo segue.|">
+O clube passa a ser da máquina até o fim do jogo.</p>
+<div class="acoes-jogo">
+<a th:href="@{/jogos/{id}/plantel(id=${jogoId})}" class="botao-discreto botao-link" autofocus>Cancelar</a>
+<form th:action="@{/jogos/{id}/rede/tirar(id=${jogoId})}" method="post" data-envio-unico>
+<input type="hidden" name="usuario" th:value="${treinador.usuarioId}">
+<button type="submit" class="botao-perigo">Tirar do jogo</button>
+</form>
+</div>
+</div>
+</div>
+</body>
+</html>

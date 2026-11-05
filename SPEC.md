@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 103 — 2026-11-04)
+-   **Status:** versão inicial para revisão (rev. 104 — 2026-11-04)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -14,6 +14,8 @@
     descreve intenção geral ainda não detalhada.
 
 ### Histórico de revisões
+
+-   **rev. 104 (2026-11-04):** pelo usuário (§11.4): no jogo em rede começado, quem criou o jogo pode tirar um treinador entre as rodadas, mas nunca convidar alguém depois que começa; o administrador do jogo é sempre quem o criou, mesmo que outros treinadores tenham conta de administrador. Tela aprovada: "Tirar do jogo" na faixa "Treinadores", com confirmação. Agente: o clube passa à máquina até o fim; quem sai não volta; se os que ficaram já deram OK, o jogo segue; o patrocínio não escolhido vira o fixo, o convite para outro clube é recusado e os lances guardados são apagados (ADR 0023).
 
 -   **rev. 103 (2026-11-04):** parte 5d conferida no navegador pelo agente (lance de um treinador no leilão de outro, com o dinheiro passando entre os dois; falta o usuário conferir). A ajuda dos leilões diz que, no leilão de um treinador, o lance mínimo é o que ele pediu. Na lista de jogos do Início, o jogo em rede mostra "Aguardando o seu OK", "Você deu OK · aguardando …" ou "Rodada ao vivo" (modelo 18a). §11.3 e §11.4 apontam para as decisões da §3.3.
 
@@ -3252,10 +3254,20 @@ liga principal (1) por último. Com uma única liga, basta a prioridade 1.
 jogo não segue e não há máquina jogando pelo ausente; vale também para o
 administrador. Todos ficam parados até todos voltarem e darem OK.
 
-**Em aberto:**
-- O que fazer com quem nunca volta (por exemplo, o administrador tirar o
-  participante depois de a temporada começar e o clube passar à máquina).
-  Hoje só é possível tirar alguém antes de começar (§3.3, rev. 92).
+**Definido (rev. 104), pelo usuário — quem nunca volta:** quem criou o jogo
+(o administrador do jogo) pode tirar um treinador **entre as rodadas**, nunca
+durante a rodada ao vivo. Não pode convidar ninguém depois que a temporada
+começa. O administrador do jogo é sempre quem o criou, mesmo que outros
+treinadores do jogo tenham conta de administrador.
+- **Tela (aprovada):** "Tirar do jogo" ao lado de cada outro treinador na faixa
+  "Treinadores" (plantel e leilões), só para o administrador do jogo, com uma
+  confirmação.
+- **Definido (rev. 104), aprovado com a tela:** o clube passa à máquina, com o
+  treinador dela, até o fim; quem sai não volta; se todos os que ficaram já deram
+  OK, o jogo segue na hora.
+- **Provisório (agente):** as decisões de quem sai que ainda esperavam ficam
+  resolvidas: o patrocínio não escolhido vira o fixo, o convite para assumir outro
+  clube é recusado e os lances guardados nos leilões são apagados.
 - ~~Como saber que um navegador "caiu" usando polling.~~ Definido (rev. 92):
   sem consulta por 30 s.
 

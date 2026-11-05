@@ -53,6 +53,8 @@ class FaixaDoTurno {
 
 	private Painel painel(long jogoId, long eu, Turno turno, String tela, String rotulo) {
 		Instant agora = relogio.instant();
+		// quem criou o jogo pode tirar os outros entre as rodadas (SPEC §11.4, rev. 104)
+		boolean souAdministrador = turnos.administrador(jogoId).filter(d -> d == eu).isPresent();
 		List<Linha> linhas = turno.treinadores().stream().map(t -> {
 			Turno.Situacao situacao = t.situacao(agora, semConexaoApos);
 			return new Linha(t.nome(), t.usuarioId() == eu ? "(você)" : "", t.clube() == null ? "" : t.clube(),
@@ -68,7 +70,7 @@ class FaixaDoTurno {
 						case OK -> "estado-pronto";
 						case MONTANDO -> "estado-mexendo";
 						case SEM_CONEXAO -> "estado-fora";
-					});
+					}, souAdministrador && t.usuarioId() != eu ? t.usuarioId() : null);
 		}).toList();
 		String segue = switch (turno.passo()) {
 			case LANCES -> "Os lances são secretos: ninguém vê o lance de ninguém até o resultado.";
@@ -81,8 +83,12 @@ class FaixaDoTurno {
 				turno.passo() == Passo.LANCES ? "Mudar meus lances" : "Tirar meu OK e mexer");
 	}
 
-	/** Um treinador na faixa. */
-	record Linha(String nome, String nota, String clube, String estado, String classe) {
+	/**
+	 * Um treinador na faixa.
+	 *
+	 * @param tirar para o administrador, o treinador que ele pode tirar do jogo; nulo nos outros casos
+	 */
+	record Linha(String nome, String nota, String clube, String estado, String classe, Long tirar) {
 	}
 
 	/**

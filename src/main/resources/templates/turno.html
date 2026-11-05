@@ -12,7 +12,9 @@
 <div class="sala-mini">
 <th:block th:each="l : ${painel.linhas}">
 <span><strong th:text="${l.nome}">Nome</strong> <span th:if="${!l.nota.isEmpty()}" class="suave" th:text="${l.nota}">(você)</span>
-<span class="suave turno-clube" th:text="${l.clube}">Clube</span></span>
+<span class="suave turno-clube" th:text="${l.clube}">Clube</span>
+<a th:if="${l.tirar != null}" th:href="@{/jogos/{id}/rede/tirar(id=${painel.jogoId},usuario=${l.tirar})}" class="turno-tirar"
+	hx-boost="false" th:attr="aria-label=|Tirar ${l.nome} do jogo|">Tirar do jogo</a></span>
 <span class="estado" th:classappend="${l.classe}" th:text="${l.estado}">OK</span>
 </th:block>
 </div>

@@ -1683,6 +1683,7 @@ a.financas-link:hover, a.financas-link:focus-visible { border-color: var(--desta
 /* faixa "Aguardando" do jogo em rede (modelo 18e) */
 .turno .sala-mini { padding: 4px 0; }
 .turno-clube { display: block; font-size: 13px; }
+.turno-tirar { font-size: 13px; color: var(--erro); }
 .ok-dado { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--continental); background: rgba(142, 201, 240, 0.10); }
 .leiloes .turno { margin-bottom: 16px; }
 /* "Convidar pessoas" do administrador (modelo 20c) */

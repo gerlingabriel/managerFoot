@@ -11,6 +11,8 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import br.com.managerfoot.contas.AcessoNegadoException;
+import br.com.managerfoot.economia.PropostasPatrocinio;
 import br.com.managerfoot.multiplayer.Turno;
 import br.com.managerfoot.multiplayer.Turno.Passo;
 import br.com.managerfoot.multiplayer.Turno.Treinador;
@@ -34,9 +36,14 @@ public class TurnoRepositorio {
 	private final LeilaoRepositorio leiloes;
 	private final RodadaAoVivoRepositorio aoVivo;
 	private final FimDeTemporadaRepositorio fimDeTemporada;
+	private final TrocaRepositorio trocas;
+	private final PatrocinioRepositorio patrocinios;
 
 	public TurnoRepositorio(JdbcClient jdbc, JogoRepositorio jogos, RodadaRepositorio rodadas, LeilaoRepositorio leiloes,
-			RodadaAoVivoRepositorio aoVivo, FimDeTemporadaRepositorio fimDeTemporada) {
+			RodadaAoVivoRepositorio aoVivo, FimDeTemporadaRepositorio fimDeTemporada, TrocaRepositorio trocas,
+			PatrocinioRepositorio patrocinios) {
+		this.trocas = trocas;
+		this.patrocinios = patrocinios;
 		this.jdbc = jdbc;
 		this.jogos = jogos;
 		this.rodadas = rodadas;
@@ -139,6 +146,62 @@ public class TurnoRepositorio {
 			.param("jogo", jogoId)
 			.param("usuario", usuarioId)
 			.update();
+	}
+
+	/** Se o usuário ainda treina no jogo em rede (quem foi tirado não). */
+	public boolean participa(long jogoId, long usuarioId) {
+		return participantes(jogoId).contains(usuarioId);
+	}
+
+	/** Quem criou o jogo em rede: o administrador dele, mesmo que outros treinadores tenham conta de administrador. */
+	public Optional<Long> administrador(long jogoId) {
+		return jdbc.sql("SELECT j.dono_id FROM jogo j JOIN jogo_rede r ON r.jogo_id = j.id WHERE j.id = :jogo")
+			.param("jogo", jogoId)
+			.query(Long.class)
+			.optional();
+	}
+
+	/**
+	 * O administrador tira um treinador do jogo em rede começado, entre as rodadas (SPEC §11.4, rev. 104). O
+	 * clube passa à máquina, com o treinador dela, até o fim; quem sai não volta (ninguém entra depois que a
+	 * temporada começa). As decisões dele que ainda esperavam ficam resolvidas: o patrocínio não escolhido
+	 * vira o fixo, o convite para outro clube é recusado e os lances guardados são apagados. Se todos os que
+	 * ficaram já tinham dado OK, o jogo segue na hora.
+	 *
+	 * @param semente sorteio da temporada seguinte, se o jogo seguir no fim da temporada
+	 * @throws AcessoNegadoException se quem pede não é quem criou o jogo
+	 * @throws IllegalArgumentException se o treinador não está no jogo, é o próprio administrador, ou a
+	 *         rodada está ao vivo; com o motivo para a tela
+	 */
+	@Transactional
+	public Desfecho tirarDoJogo(long jogoId, long administradorId, long usuarioId, long semente, Instant agora) {
+		jogos.travar(jogoId);
+		if (!administrador(jogoId).filter(d -> d == administradorId).isPresent() || !emRede(jogoId)) {
+			throw new AcessoNegadoException("só quem criou o jogo em rede tira um treinador");
+		}
+		if (usuarioId == administradorId) {
+			throw new IllegalArgumentException("O administrador não sai do próprio jogo.");
+		}
+		if (!participantes(jogoId).contains(usuarioId)) {
+			throw new IllegalArgumentException("Este treinador não está mais no jogo.");
+		}
+		Momento m = momento(jogoId)
+			.orElseThrow(() -> new IllegalArgumentException("Espere a rodada terminar para tirar alguém do jogo."));
+		trocas.convitePendente(jogoId, usuarioId).ifPresent(c -> trocas.recusar(jogoId, usuarioId, c.id()));
+		if (patrocinios.pendente(jogoId, usuarioId).isPresent()) {
+			patrocinios.assinar(jogoId, usuarioId, PropostasPatrocinio.Tipo.FIXA);
+		}
+		jogos.clubeDoTreinador(jogoId, usuarioId).ifPresent(clube -> {
+			jdbc.sql("DELETE FROM jogo_rede_lance WHERE clube_id = :clube").param("clube", clube).update();
+			// clube da máquina não tem escalação gravada nem salário fixado (SPEC §10.3, rev. 34 e 58)
+			jdbc.sql("DELETE FROM jogo_escalacao WHERE clube_id = :clube").param("clube", clube).update();
+			jdbc.sql("UPDATE jogo_jogador SET forca_salario = NULL WHERE clube_id = :clube").param("clube", clube).update();
+		});
+		jdbc.sql("DELETE FROM jogo_treinador WHERE jogo_id = :jogo AND usuario_id = :usuario")
+			.param("jogo", jogoId).param("usuario", usuarioId).update();
+		jdbc.sql("DELETE FROM jogo_rede_participante WHERE jogo_id = :jogo AND usuario_id = :usuario")
+			.param("jogo", jogoId).param("usuario", usuarioId).update();
+		return todosDeramOk(jogoId, m.chave()) ? seguir(jogoId, administradorId, m, semente, agora) : Desfecho.AGUARDANDO;
 	}
 
 	/** Todos deram OK: o jogo segue e os OK são apagados para o próximo momento. */

@@ -207,6 +207,35 @@ class TurnoIT {
 			.andExpect(header().string("HX-Redirect", "/jogos/" + jogo + "/rodada"));
 	}
 
+	@Test
+	void soQuemCriouOJogoVeTirarDoJogoEConfirmaNumaTelaAParte() throws Exception {
+		patrocinios.assinar(jogo, admin.id(), PropostasPatrocinio.Tipo.FIXA);
+		patrocinios.assinar(jogo, marcos.id(), PropostasPatrocinio.Tipo.FIXA);
+		String link = "/jogos/" + jogo + "/rede/tirar?usuario=" + marcos.id();
+		mvc.perform(get("/jogos/" + jogo + "/plantel").with(como(admin)))
+			.andExpect(content().string(containsString("Tirar do jogo")));
+		mvc.perform(get("/jogos/" + jogo + "/plantel").with(como(marcos)))
+			.andExpect(content().string(not(containsString("Tirar do jogo"))));
+		mvc.perform(get("/jogos/" + jogo + "/rede/tirar").param("usuario", String.valueOf(admin.id())).with(como(marcos)))
+			.andExpect(redirectedUrl("/jogos/" + jogo + "/plantel"));
+		mvc.perform(get(link).with(como(admin)))
+			.andExpect(status().isOk())
+			.andExpect(content().string(containsString("Tirar " + marcos.nome() + " do jogo?")))
+			.andExpect(content().string(containsString("passa a ser da máquina")));
+		mvc.perform(post("/jogos/" + jogo + "/rede/tirar").param("usuario", String.valueOf(admin.id())).with(como(marcos)).with(csrf()))
+			.andExpect(status().isForbidden());
+
+		mvc.perform(post("/jogos/" + jogo + "/rede/tirar").param("usuario", String.valueOf(marcos.id())).with(como(admin)).with(csrf()))
+			.andExpect(redirectedUrl("/jogos/" + jogo + "/plantel"))
+			.andExpect(flash().attribute("resultado", containsString("saiu do jogo")));
+		mvc.perform(get("/jogos/" + jogo + "/plantel").with(como(marcos)))
+			.andExpect(status().isNotFound());
+		// a faixa aberta na tela de quem saiu leva ao início com o aviso
+		mvc.perform(get("/jogos/" + jogo + "/turno").param("momento", "t1/r1/tatica").param("tela", "plantel")
+			.with(como(marcos)).header("HX-Request", "true"))
+			.andExpect(header().string("HX-Redirect", "/"));
+	}
+
 	private static RequestPostProcessor como(Usuario usuario) {
 		return authentication(AutenticacaoContas.autenticado(usuario));
 	}

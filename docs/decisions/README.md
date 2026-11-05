@@ -34,3 +34,4 @@ consideradas, decisão e consequências.
 | [0020](0020-sala-do-jogo-em-rede.md) | Sala do jogo em rede e convite por link | Aceita |
 | [0021](0021-ok-de-todos-no-jogo-em-rede.md) | OK de todos no jogo em rede | Aceita |
 | [0022](0022-pausa-da-substituicao-em-rede.md) | Pausa de 60 s da substituição no jogo em rede | Aceita |
+| [0023](0023-tirar-treinador-do-jogo-em-rede.md) | Tirar um treinador do jogo em rede começado | Aceita |

@@ -1,6 +1,7 @@
 package br.com.managerfoot.persistencia;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
@@ -16,6 +17,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 import br.com.managerfoot.TestcontainersConfiguration;
+import br.com.managerfoot.contas.AcessoNegadoException;
 import br.com.managerfoot.contas.Usuario;
 import br.com.managerfoot.dominio.Lugar;
 import br.com.managerfoot.dominio.Posicao;
@@ -219,6 +221,47 @@ class TurnoRepositorioIT {
 		aoVivo.pausar(jogo, admin.id(), meu, t.plusSeconds(63));
 		assertThat(aoVivo.estado(jogo, marcos.id(), t.plusSeconds(63)).orElseThrow().pausada())
 			.as("quem parou pode parar de novo").isTrue();
+	}
+
+	@Test
+	void oAdministradorTiraUmTreinadorEntreAsRodadasEOJogoSegue() {
+		long clubeMarcos = jogos.clubeDoTreinador(jogo, marcos.id()).orElseThrow();
+		assertThatExceptionOfType(AcessoNegadoException.class).as("só quem criou o jogo tira alguém")
+			.isThrownBy(() -> turnos.tirarDoJogo(jogo, marcos.id(), admin.id(), 0, AGORA));
+		assertThatIllegalArgumentException().isThrownBy(() -> turnos.tirarDoJogo(jogo, admin.id(), admin.id(), 0, AGORA))
+			.withMessageContaining("não sai");
+		// o patrocínio que Marcos ainda não escolheu vira o fixo
+		jdbc.sql("UPDATE jogo_patrocinio SET escolha = NULL WHERE clube_id = :clube").param("clube", clubeMarcos).update();
+
+		assertThat(turnos.darOk(jogo, admin.id(), Passo.PLANTEL, 0, AGORA)).isEqualTo(Desfecho.AGUARDANDO);
+		Desfecho desfecho = turnos.tirarDoJogo(jogo, admin.id(), marcos.id(), 0, AGORA);
+
+		assertThat(desfecho).as("o único que ficou já tinha dado OK: o jogo segue").isNotEqualTo(Desfecho.AGUARDANDO);
+		assertThat(jogos.clubeDoTreinador(jogo, marcos.id())).as("o clube passou à máquina").isEmpty();
+		assertThat(contar("SELECT count(*) FROM jogo_rede_participante WHERE jogo_id = :id", jogo)).isEqualTo(1);
+		assertThat(contar("SELECT count(*) FROM jogo_escalacao WHERE clube_id = :id", clubeMarcos)).isZero();
+		assertThat(jdbc.sql("SELECT escolha FROM jogo_patrocinio WHERE clube_id = :clube").param("clube", clubeMarcos)
+			.query(String.class).single()).isEqualTo("FIXA");
+		assertThat(plantel.visao(jogo, marcos.id())).as("quem saiu não vê mais o jogo").isEmpty();
+		assertThatIllegalArgumentException().isThrownBy(() -> turnos.tirarDoJogo(jogo, admin.id(), marcos.id(), 0, AGORA))
+			.withMessageContaining("não está mais");
+	}
+
+	@Test
+	void comARodadaAoVivoNinguemEhTiradoEContaDeAdministradorConvidadaNaoEhOAdministradorDoJogo() {
+		ateAoVivo();
+		assertThatIllegalArgumentException().isThrownBy(() -> turnos.tirarDoJogo(jogo, admin.id(), marcos.id(), 0, AGORA))
+			.withMessageContaining("rodada terminar");
+
+		// outra conta de administrador, num jogo criado por ela, convida o administrador deste: lá ele é só treinador
+		long pais = LigaDeTeste.criarPais(moldes);
+		Usuario outroAdmin = LigaDeTeste.administrador(contas);
+		long outroJogo = jogosDoTreinador.criarEmRedeComSorteio(pais, outroAdmin.id(), AGORA).jogoId();
+		salas.entrar(salas.visao(outroJogo, outroAdmin.id()).orElseThrow().convite().orElseThrow().token(), admin.id(), AGORA);
+		salas.comecar(outroJogo, outroAdmin.id(), AGORA, Duration.ofSeconds(30));
+		assertThat(turnos.administrador(outroJogo)).contains(outroAdmin.id());
+		assertThatExceptionOfType(AcessoNegadoException.class)
+			.isThrownBy(() -> turnos.tirarDoJogo(outroJogo, admin.id(), outroAdmin.id(), 0, AGORA));
 	}
 
 	/** Um instante com a partida do treinador em andamento, no começo do jogo. */
