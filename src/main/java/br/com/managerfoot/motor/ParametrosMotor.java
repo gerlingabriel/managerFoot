@@ -1,6 +1,7 @@
 package br.com.managerfoot.motor;
 
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -30,15 +31,21 @@ import br.com.managerfoot.dominio.Formacao;
  * @param sorte efeito da sorte e do azar da temporada
  * @param asterisco efeitos do asterisco
  * @param lesao lesões (SPEC §7.5)
+ * @param aberturaPorAtacantes jogo aberto pela quantidade de atacantes em campo (índice 0 a 4): multiplica a conversão
+ *        do próprio time e a do adversário contra ele, então mais atacantes fazem e sofrem mais gols (SPEC §7.2, rev. 107)
  */
 public record ParametrosMotor(int minutos, double chancePorMinuto, double fatorMando, double conversaoBase,
 		double sensibilidadeForca, double expoenteMeias, double expoenteAtacantes, double expoenteDefensores,
 		double fatorPorGolMarcado, double conversaoMinima, double conversaoMaxima,
 		double proporcaoDefesa, double proporcaoTrave, Map<Formacao, PesosFinalizador> pesosFinalizador,
 		ParametrosDisciplina disciplina, ParametrosPenalti penalti, ParametrosSorte sorte,
-		ParametrosAsterisco asterisco, ParametrosLesao lesao) {
+		ParametrosAsterisco asterisco, ParametrosLesao lesao, List<Double> aberturaPorAtacantes) {
 
 	public ParametrosMotor {
+		aberturaPorAtacantes = List.copyOf(aberturaPorAtacantes);
+		if (aberturaPorAtacantes.size() != 5 || aberturaPorAtacantes.stream().anyMatch(a -> a <= 0)) {
+			throw new IllegalArgumentException("aberturaPorAtacantes precisa de 5 valores positivos (0 a 4 atacantes)");
+		}
 		Objects.requireNonNull(lesao, "parâmetros de lesão são obrigatórios");
 		Objects.requireNonNull(disciplina, "parâmetros de disciplina são obrigatórios");
 		Objects.requireNonNull(penalti, "parâmetros de pênalti são obrigatórios");
@@ -87,7 +94,23 @@ public record ParametrosMotor(int minutos, double chancePorMinuto, double fatorM
 		// calibrado na Etapa 1d: docs/simulacoes/calibracao-motor.md
 		return new ParametrosMotor(90, 0.15, 1.45, 0.23, 0.95, 0.5, 0.55, 1.25, 0.85, 0.10, 0.35, 0.5, 0.1, pesos,
 				ParametrosDisciplina.padrao(), ParametrosPenalti.padrao(), ParametrosSorte.padrao(),
-				ParametrosAsterisco.padrao(), ParametrosLesao.padrao());
+				ParametrosAsterisco.padrao(), ParametrosLesao.padrao(), ABERTURA_PADRAO);
+	}
+
+	/** Jogo aberto (rev. 107): até 2 atacantes nada muda; 3 e 4 fazem e sofrem mais gols. */
+	public static final List<Double> ABERTURA_PADRAO = List.of(1.0, 1.0, 1.0, 1.15, 1.30);
+
+	/** Fator de jogo aberto de um time com esta quantidade de atacantes em campo. */
+	public double abertura(int atacantes) {
+		return aberturaPorAtacantes.get(Math.min(atacantes, aberturaPorAtacantes.size() - 1));
+	}
+
+	/** Cópia com outro jogo aberto (calibração e testes). */
+	public ParametrosMotor comAbertura(List<Double> novaAbertura) {
+		return new ParametrosMotor(minutos, chancePorMinuto, fatorMando, conversaoBase, sensibilidadeForca,
+				expoenteMeias, expoenteAtacantes, expoenteDefensores, fatorPorGolMarcado, conversaoMinima,
+				conversaoMaxima, proporcaoDefesa, proporcaoTrave, pesosFinalizador, disciplina, penalti, sorte,
+				asterisco, lesao, novaAbertura);
 	}
 
 	/** Cópia com outro efeito de sorte (calibração e testes). */
@@ -95,7 +118,7 @@ public record ParametrosMotor(int minutos, double chancePorMinuto, double fatorM
 		return new ParametrosMotor(minutos, chancePorMinuto, fatorMando, conversaoBase, sensibilidadeForca,
 				expoenteMeias, expoenteAtacantes, expoenteDefensores, fatorPorGolMarcado, conversaoMinima,
 				conversaoMaxima, proporcaoDefesa, proporcaoTrave, pesosFinalizador, disciplina, penalti, novaSorte,
-				asterisco, lesao);
+				asterisco, lesao, aberturaPorAtacantes);
 	}
 
 	/** Cópia com outros efeitos do asterisco (calibração e testes). */
@@ -103,7 +126,7 @@ public record ParametrosMotor(int minutos, double chancePorMinuto, double fatorM
 		return new ParametrosMotor(minutos, chancePorMinuto, fatorMando, conversaoBase, sensibilidadeForca,
 				expoenteMeias, expoenteAtacantes, expoenteDefensores, fatorPorGolMarcado, conversaoMinima,
 				conversaoMaxima, proporcaoDefesa, proporcaoTrave, pesosFinalizador, disciplina, penalti, sorte,
-				novoAsterisco, lesao);
+				novoAsterisco, lesao, aberturaPorAtacantes);
 	}
 
 	/** Cópia com outras lesões (simulação e testes). */
@@ -111,7 +134,7 @@ public record ParametrosMotor(int minutos, double chancePorMinuto, double fatorM
 		return new ParametrosMotor(minutos, chancePorMinuto, fatorMando, conversaoBase, sensibilidadeForca,
 				expoenteMeias, expoenteAtacantes, expoenteDefensores, fatorPorGolMarcado, conversaoMinima,
 				conversaoMaxima, proporcaoDefesa, proporcaoTrave, pesosFinalizador, disciplina, penalti, sorte,
-				asterisco, novaLesao);
+				asterisco, novaLesao, aberturaPorAtacantes);
 	}
 
 	private static void exigirProbabilidade(String nome, double valor) {

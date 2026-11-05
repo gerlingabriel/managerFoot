@@ -123,7 +123,7 @@ class RelatorioExpulsaoTest {
 		return new ParametrosMotor(p.minutos(), p.chancePorMinuto(), p.fatorMando(), p.conversaoBase(), p.sensibilidadeForca(),
 				p.expoenteMeias(), p.expoenteAtacantes(), p.expoenteDefensores(), p.fatorPorGolMarcado(), p.conversaoMinima(),
 				p.conversaoMaxima(), p.proporcaoDefesa(), p.proporcaoTrave(), p.pesosFinalizador(), outra, p.penalti(), p.sorte(),
-				p.asterisco(), p.lesao());
+				p.asterisco(), p.lesao(), p.aberturaPorAtacantes());
 	}
 
 	private void linha(String texto) {

@@ -251,7 +251,8 @@ public final class Partida {
 		double duelo = disputa(finalizador.forca(), defesa.forcaGoleiro());
 		double antiGoleada = Math.pow(parametros.fatorPorGolMarcado(), gols(lado));
 		double conversao = Math.clamp(parametros.conversaoBase() * pressao * duelo * antiGoleada,
-				parametros.conversaoMinima(), parametros.conversaoMaxima()) * bonusFinalizacao(finalizador);
+				parametros.conversaoMinima(), parametros.conversaoMaxima()) * bonusFinalizacao(finalizador)
+				* abertura(ataque) * abertura(defesa);
 
 		registrarFinalizacao(lado, finalizador, conversao, false);
 	}
@@ -447,6 +448,11 @@ public final class Partida {
 	}
 
 	/** Asterisco e bônus de artilharia somam, cada um, {@code bonusConversao} (SPEC §5.2, §5.3). */
+	/** Jogo aberto pelos atacantes em campo (SPEC §7.2, rev. 107): vale para o ataque e para a defesa do time. */
+	private double abertura(TimeEmCampo time) {
+		return parametros.abertura(time.jogadoresNa(Posicao.ATACANTE).size());
+	}
+
 	private double bonusFinalizacao(Jogador jogador) {
 		double bonus = parametros.asterisco().bonusConversao();
 		int bonificacoes = (jogador.asterisco() ? 1 : 0) + (condicoes.bonusExtra().contains(jogador.id()) ? 1 : 0);

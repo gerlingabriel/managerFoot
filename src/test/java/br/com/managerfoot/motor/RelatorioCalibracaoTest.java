@@ -27,7 +27,10 @@ class RelatorioCalibracaoTest {
 	private static final int PARTIDAS = 10_000;
 	private static final Path SAIDA = Path.of("docs/simulacoes/calibracao-motor.md");
 
-	private final ParametrosMotor parametros = ParametrosMotor.padrao();
+	/** {@code ABERTURA=1,1,1,1.15,1.3} troca o jogo aberto só na simulação (0 a 4 atacantes). */
+	private final ParametrosMotor parametros = java.util.Optional.ofNullable(System.getenv("ABERTURA"))
+		.map(a -> ParametrosMotor.padrao().comAbertura(java.util.Arrays.stream(a.split(",")).map(Double::valueOf).toList()))
+		.orElse(ParametrosMotor.padrao());
 	private final MotorPartida motor = new MotorPartida(parametros);
 	private final StringBuilder md = new StringBuilder();
 
@@ -64,6 +67,8 @@ class RelatorioCalibracaoTest {
 		linha("| expoentes meias / atacantes / defensores | " + f(parametros.expoenteMeias(), 2) + " / "
 				+ f(parametros.expoenteAtacantes(), 2) + " / " + f(parametros.expoenteDefensores(), 2) + " |");
 		linha("| fatorPorGolMarcado | " + f(parametros.fatorPorGolMarcado(), 2) + " |");
+		linha("| jogo aberto com 0 / 1 / 2 / 3 / 4 atacantes | " + String.join(" / ",
+				parametros.aberturaPorAtacantes().stream().map(a -> f(a, 2)).toList()) + " |");
 		linha("| conversaoMinima / Maxima | " + f(parametros.conversaoMinima(), 2) + " / "
 				+ f(parametros.conversaoMaxima(), 2) + " |");
 		linha("| cartoesPorMinuto (por time) | " + f(parametros.disciplina().cartoesPorMinuto(), 4) + " |");
@@ -119,17 +124,25 @@ class RelatorioCalibracaoTest {
 	}
 
 	private void formacoes() {
-		linha("## Formações contra 4-4-2 (força 25 × 25, formação testada em casa)");
-		linha("");
-		linha("| Formação | Estilo | Gols pró | Gols contra | Vitória | Empate | Derrota |");
-		linha("|---|---|---|---|---|---|---|");
-		for (Formacao formacao : Formacao.values()) {
-			EstatisticasLote e = medir(escalacao(formacao, 25, 1), escalacao(Formacao.F_4_4_2, 25, 100));
-			linha("| " + formacao.rotulo() + " | " + formacao.estilo() + " | " + f(e.porPartida(e.golsCasa), 2) + " | "
-					+ f(e.porPartida(e.golsFora), 2) + " | " + pct(e.pctCasa()) + " | " + pct(e.pctEmpate()) + " | "
-					+ pct(e.pctFora()) + " |");
+		for (boolean emCasa : new boolean[] { true, false }) {
+			linha("## Formações contra 4-4-2 (força 25 × 25, formação testada " + (emCasa ? "em casa" : "fora") + ")");
+			linha("");
+			linha("Do ponto de vista da formação testada; *Total*: gols da partida.");
+			linha("");
+			linha("| Formação | Estilo | Gols pró | Gols contra | Total | Vitória | Empate | Derrota |");
+			linha("|---|---|---|---|---|---|---|---|");
+			for (Formacao formacao : Formacao.values()) {
+				Escalacao testada = escalacao(formacao, 25, 1);
+				Escalacao base = escalacao(Formacao.F_4_4_2, 25, 100);
+				EstatisticasLote e = emCasa ? medir(testada, base) : medir(base, testada);
+				double pro = e.porPartida(emCasa ? e.golsCasa : e.golsFora);
+				double contra = e.porPartida(emCasa ? e.golsFora : e.golsCasa);
+				linha("| " + formacao.rotulo() + " | " + formacao.estilo() + " | " + f(pro, 2) + " | " + f(contra, 2) + " | "
+						+ f(pro + contra, 2) + " | " + pct(emCasa ? e.pctCasa() : e.pctFora()) + " | " + pct(e.pctEmpate())
+						+ " | " + pct(emCasa ? e.pctFora() : e.pctCasa()) + " |");
+			}
+			linha("");
 		}
-		linha("");
 	}
 
 	/** Cada formação joga em casa e fora contra todas (inclusive ela mesma), força 25 × 25. */

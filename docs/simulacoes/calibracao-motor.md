@@ -14,6 +14,7 @@ Todos os titulares de um time têm a mesma força; temperamento normal salvo ind
 | sensibilidadeForca | 0,95 |
 | expoentes meias / atacantes / defensores | 0,50 / 0,55 / 1,25 |
 | fatorPorGolMarcado | 0,85 |
+| jogo aberto com 0 / 1 / 2 / 3 / 4 atacantes | 1,00 / 1,00 / 1,00 / 1,15 / 1,30 |
 | conversaoMinima / Maxima | 0,10 / 0,35 |
 | cartoesPorMinuto (por time) | 0,0119 |
 | proporcaoVermelhoDireto | 0,05 |
@@ -64,16 +65,33 @@ Placares mais comuns (mandante × visitante):
 
 ## Formações contra 4-4-2 (força 25 × 25, formação testada em casa)
 
-| Formação | Estilo | Gols pró | Gols contra | Vitória | Empate | Derrota |
-|---|---|---|---|---|---|---|
-| 4-4-2 | NORMAL | 1,43 | 1,04 | 46,4% | 26,4% | 27,1% |
-| 3-5-2 | NORMAL | 1,48 | 1,16 | 45,0% | 25,5% | 29,6% |
-| 4-3-3 | OFENSIVO | 1,50 | 1,11 | 46,3% | 26,0% | 27,7% |
-| 3-4-3 | OFENSIVO | 1,57 | 1,23 | 45,8% | 24,9% | 29,3% |
-| 4-2-4 | OFENSIVO | 1,50 | 1,20 | 44,4% | 25,5% | 30,2% |
-| 5-4-1 | DEFENSIVO | 1,19 | 0,90 | 43,0% | 29,7% | 27,4% |
-| 4-5-1 | DEFENSIVO | 1,23 | 0,98 | 42,3% | 28,8% | 28,9% |
-| 3-6-1 | DEFENSIVO | 1,27 | 1,11 | 40,3% | 27,9% | 31,8% |
+Do ponto de vista da formação testada; *Total*: gols da partida.
+
+| Formação | Estilo | Gols pró | Gols contra | Total | Vitória | Empate | Derrota |
+|---|---|---|---|---|---|---|---|
+| 4-4-2 | NORMAL | 1,43 | 1,04 | 2,46 | 46,4% | 26,4% | 27,1% |
+| 3-5-2 | NORMAL | 1,48 | 1,16 | 2,64 | 45,0% | 25,5% | 29,6% |
+| 4-3-3 | OFENSIVO | 1,68 | 1,23 | 2,91 | 48,0% | 24,0% | 28,0% |
+| 3-4-3 | OFENSIVO | 1,76 | 1,37 | 3,13 | 47,1% | 23,1% | 29,8% |
+| 4-2-4 | OFENSIVO | 1,86 | 1,49 | 3,34 | 46,9% | 21,8% | 31,3% |
+| 5-4-1 | DEFENSIVO | 1,19 | 0,90 | 2,08 | 43,0% | 29,7% | 27,4% |
+| 4-5-1 | DEFENSIVO | 1,23 | 0,98 | 2,21 | 42,3% | 28,8% | 28,9% |
+| 3-6-1 | DEFENSIVO | 1,27 | 1,11 | 2,38 | 40,3% | 27,9% | 31,8% |
+
+## Formações contra 4-4-2 (força 25 × 25, formação testada fora)
+
+Do ponto de vista da formação testada; *Total*: gols da partida.
+
+| Formação | Estilo | Gols pró | Gols contra | Total | Vitória | Empate | Derrota |
+|---|---|---|---|---|---|---|---|
+| 4-4-2 | NORMAL | 1,04 | 1,43 | 2,46 | 27,1% | 26,4% | 46,4% |
+| 3-5-2 | NORMAL | 1,09 | 1,62 | 2,70 | 25,3% | 25,1% | 49,7% |
+| 4-3-3 | OFENSIVO | 1,21 | 1,65 | 2,86 | 27,4% | 24,1% | 48,5% |
+| 3-4-3 | OFENSIVO | 1,29 | 1,87 | 3,16 | 26,2% | 22,3% | 51,5% |
+| 4-2-4 | OFENSIVO | 1,30 | 1,93 | 3,23 | 25,0% | 21,9% | 53,1% |
+| 5-4-1 | DEFENSIVO | 0,85 | 1,24 | 2,09 | 25,2% | 29,1% | 45,7% |
+| 4-5-1 | DEFENSIVO | 0,90 | 1,37 | 2,27 | 24,7% | 27,3% | 48,1% |
+| 3-6-1 | DEFENSIVO | 0,94 | 1,56 | 2,50 | 22,5% | 25,1% | 52,5% |
 
 ## Todas as formações contra todas (força 25 × 25, ida e volta, 2000 partidas por jogo)
 
@@ -81,13 +99,13 @@ Pontos por jogo (vitória 3, empate 1) e contra quantas das outras 7 formações
 
 | Formação | Estilo | Pontos por jogo | Supera |
 |---|---|---|---|
-| 4-4-2 | NORMAL | 1,43 | 7 de 7 |
+| 4-4-2 | NORMAL | 1,43 | 6 de 7 |
 | 3-5-2 | NORMAL | 1,37 | 3 de 7 |
-| 4-3-3 | OFENSIVO | 1,42 | 6 de 7 |
-| 3-4-3 | OFENSIVO | 1,39 | 4 de 7 |
-| 4-2-4 | OFENSIVO | 1,35 | 2 de 7 |
+| 4-3-3 | OFENSIVO | 1,45 | 7 de 7 |
+| 3-4-3 | OFENSIVO | 1,40 | 4 de 7 |
+| 4-2-4 | OFENSIVO | 1,37 | 2 de 7 |
 | 5-4-1 | DEFENSIVO | 1,38 | 5 de 7 |
-| 4-5-1 | DEFENSIVO | 1,35 | 1 de 7 |
+| 4-5-1 | DEFENSIVO | 1,34 | 1 de 7 |
 | 3-6-1 | DEFENSIVO | 1,27 | 0 de 7 |
 
 ## Temperamento e cartões (25 × 25, 4-4-2; todos os titulares com o temperamento indicado)

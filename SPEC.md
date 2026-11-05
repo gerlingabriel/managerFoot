@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 106 — 2026-11-05)
+-   **Status:** versão inicial para revisão (rev. 107 — 2026-11-05)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -14,6 +14,8 @@
     descreve intenção geral ainda não detalhada.
 
 ### Histórico de revisões
+
+-   **rev. 107 (2026-11-05):** pelo usuário (§7.2): times com 3 atacantes fazem e sofrem mais gols, e com 4 atacantes mais ainda, mantendo vitórias, empates e derrotas. Agente: fator de jogo aberto pela quantidade de atacantes em campo (1,15 com 3, 1,30 com 4), que multiplica a conversão do próprio time e a do adversário; tabela das formações em casa e fora em `docs/simulacoes/calibracao-motor.md`.
 
 -   **rev. 106 (2026-11-05):** pelo usuário: nova tabela de quem finaliza por formação (§7.2), com mais meias e defensores e menos atacantes; o 0,01% do goleiro continua, tirado da defesa (agente, como na tabela anterior).
 
@@ -1316,6 +1318,24 @@ inteira: 6%, 5%, 4%, 4%, 6%, 12%, 8%, 4%).
 ~~Rev. 6: 4-4-2 64/31/4,99; 4-3-3 75/21/3,99; 3-5-2 58/38/3,99; 3-4-3
 74/23/2,99; 4-2-4 82/14/3,99; 5-4-1 45/47/7,99; 4-5-1 43/51/5,99; 3-6-1
 40/55/4,99 (atacante/meio/defesa, goleiro 0,01).~~
+
+**Definido (rev. 107), pelo usuário — jogo aberto:** times com 3 atacantes
+fazem e sofrem mais gols; com 4 atacantes, mais ainda; a média de vitórias,
+empates e derrotas se mantém (pode variar um pouco). **Proposta do agente,
+calibrada na simulação:** um fator pela quantidade de atacantes **em campo**
+multiplica a conversão das finalizações do próprio time e a das do adversário
+contra ele: **1,0** com até 2 atacantes, **1,15** com 3 e **1,30** com 4
+(`ParametrosMotor.aberturaPorAtacantes`). Quem perde um atacante por expulsão
+passa a valer pela quantidade que ficou. Contra o 4-4-2 (força 25 × 25):
+
+| Formação | Total de gols em casa (antes → agora) | Fora (antes → agora) | Pontos por jogo, todas contra todas (antes → agora) |
+|---|---|---|---|
+| 4-3-3 | 2,61 → 2,91 | 2,57 → 2,86 | 1,42 → 1,45 |
+| 3-4-3 | 2,80 → 3,13 | 2,82 → 3,16 | 1,39 → 1,40 |
+| 4-2-4 | 2,70 → 3,34 | 2,62 → 3,23 | 1,35 → 1,37 |
+
+4-4-2 contra 4-4-2 não muda (2,46 gols; metas da §7.6). O empate das ofensivas
+cai 2 a 4 pontos (mais gols, menos empates).
 
 **Definido — escolha do finalizador:** depois de sorteado o setor, o
 jogador do setor é escolhido com **peso pela força**. Jogadores mais
