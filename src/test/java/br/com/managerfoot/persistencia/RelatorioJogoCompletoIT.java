@@ -34,7 +34,8 @@ import br.com.managerfoot.persistencia.MoldeRepositorio.CampeonatoDisponivel;
  * máquina, e grava {@code docs/simulacoes/jogo-completo.md}.
  *
  * <p>Só roda com {@code RELATORIO_JOGO=1}. Opcionais: {@code RELATORIO_PAISES} (códigos separados por
- * vírgula), {@code RELATORIO_SEMENTES} (padrão 2) e {@code RELATORIO_TEMPORADAS} (padrão 5). Exemplo:
+ * vírgula), {@code RELATORIO_SEMENTES} (padrão 2), {@code RELATORIO_TEMPORADAS} (padrão 5) e {@code RELATORIO_SAIDA}
+ * (arquivo do relatório; padrão {@code docs/simulacoes/jogo-completo.md}). Exemplo:
  * {@code RELATORIO_JOGO=1 ./mvnw verify -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=RelatorioJogoCompletoIT}
  */
 @Import(TestcontainersConfiguration.class)
@@ -100,7 +101,8 @@ class RelatorioJogoCompletoIT {
 				medidas.addAll(jogar(c, s, quantasTemporadas));
 			}
 		}
-		Path arquivo = Path.of("docs/simulacoes/jogo-completo.md");
+		Path arquivo = Path.of(Optional.ofNullable(System.getenv("RELATORIO_SAIDA")).filter(x -> !x.isBlank())
+			.orElse("docs/simulacoes/jogo-completo.md"));
 		Files.writeString(arquivo, relatorio(medidas, sementes, quantasTemporadas));
 		System.out.println("Relatório gravado em " + arquivo.toAbsolutePath());
 	}
