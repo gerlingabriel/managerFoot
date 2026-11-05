@@ -281,7 +281,8 @@ class RodadaAoVivoRepositorioIT {
 		aoVivo.iniciarCopa(jogo, usuario, 1, T0);
 
 		// modelo 12b: durante a volta, a ida e o total
-		EstadoRodada durante = estado(5);
+		// no instante em que começa: sem o clube do usuário, a etapa corre rápida e acaba em poucos segundos
+		EstadoRodada durante = estado(0);
 		assertThat(durante.copa()).isEqualTo("Copa · Oitavas de final · volta");
 		assertThat(durante.partidas()).hasSize(8).allMatch(p -> p.volta() && !p.primeiroJogo());
 		// quem passa só aparece com a partida terminada (sem o clube do usuário a etapa corre rápida)

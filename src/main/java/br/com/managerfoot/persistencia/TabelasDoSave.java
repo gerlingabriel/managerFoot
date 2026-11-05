@@ -33,6 +33,8 @@ final class TabelasDoSave {
 			gerada(TEMPORADA, "jogo_id", JOGO, Map.of("jogo_id", JOGO)),
 			composta("jogo_temporada_divisao", List.of("temporada_id", "divisao_id"), "temporada_id", TEMPORADA,
 					Map.of("temporada_id", TEMPORADA, "divisao_id", DIVISAO, "beneficiado_id", CLUBE, "prejudicado_id", CLUBE)),
+			composta("jogo_temporada_beneficiado", List.of("temporada_id", "clube_id"), "temporada_id", TEMPORADA,
+					Map.of("temporada_id", TEMPORADA, "divisao_id", DIVISAO, "clube_id", CLUBE)),
 			gerada(CONFRONTO, "temporada_id", TEMPORADA, Map.of("temporada_id", TEMPORADA, "mandante_id", CLUBE, "visitante_id", CLUBE)),
 			gerada(PARTIDA, "temporada_id", TEMPORADA, Map.of("temporada_id", TEMPORADA, "divisao_id", DIVISAO, "mandante_id", CLUBE,
 					"visitante_id", CLUBE, "confronto_id", CONFRONTO)),

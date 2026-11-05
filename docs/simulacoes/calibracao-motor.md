@@ -120,7 +120,7 @@ Pontos por jogo (vitória 3, empate 1) e contra quantas das outras 7 formações
 
 ## Sorte e azar da temporada (25 × 25, 4-4-2; SPEC §5.3.1)
 
-Meta: cerca de 5 pontos percentuais a mais de vitórias (beneficiado) e de derrotas (prejudicado).
+Meta: cerca de 5 pontos percentuais a mais de vitórias (beneficiado) e de derrotas (prejudicado). Desde a rev. 108 nenhum clube é sorteado prejudicado (dois beneficiados da máquina por divisão e o usuário fraco); a linha fica como medida do efeito que o motor ainda sabe aplicar.
 
 | Cenário | Vitórias do clube sorteado | Empates | Derrotas do clube sorteado | Diferença vs. neutro (V / D) | Gols/partida |
 |---|---|---|---|---|---|

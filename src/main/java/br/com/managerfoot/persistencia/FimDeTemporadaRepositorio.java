@@ -129,7 +129,8 @@ public class FimDeTemporadaRepositorio {
 		// o clube novo do demitido grava os salários; o antigo passa a readequar como a máquina (rev. 58)
 		aumentos.fixarSalarios(jogoId);
 
-		Temporada nova = Temporada.iniciar(numero + 1, transicao.proxima(), jogos.carregarPlanteis(jogoId), semente);
+		Temporada nova = Temporada.iniciar(numero + 1, transicao.proxima(), jogos.carregarPlanteis(jogoId), semente,
+				temporadas.clubesDeUsuario(jogoId));
 		temporadas.gravar(jogoId, nova);
 		// caixa negativo: a venda vem antes de qualquer coisa da temporada nova, inclusive do patrocínio
 		List<VendaPorCaixa> vendas = leiloes.venderNoInicioDaTemporada(jogoId);

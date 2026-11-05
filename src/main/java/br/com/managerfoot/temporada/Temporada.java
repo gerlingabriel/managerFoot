@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.SplittableRandom;
 
 import br.com.managerfoot.dominio.Jogador;
@@ -43,6 +44,17 @@ public record Temporada(int numero, long semente, List<SorteiosDivisao> divisoes
 	 */
 	public static Temporada iniciar(int numero, ConfiguracaoLiga liga, Map<Long, List<Jogador>> planteis,
 			long semente) {
+		return iniciar(numero, liga, planteis, semente, Set.of());
+	}
+
+	/**
+	 * Como {@link #iniciar(int, ConfiguracaoLiga, Map, long)}, com os clubes de usuário fora do sorteio da sorte e com o
+	 * benefício quando fracos (SPEC §5.3.1, rev. 108).
+	 *
+	 * @param deUsuario ids dos clubes que têm treinador usuário no início da temporada
+	 */
+	public static Temporada iniciar(int numero, ConfiguracaoLiga liga, Map<Long, List<Jogador>> planteis,
+			long semente, Set<Long> deUsuario) {
 		SplittableRandom aleatorio = new SplittableRandom(semente);
 		List<SorteiosDivisao> divisoes = new ArrayList<>();
 		for (Divisao divisao : liga.divisoes()) {
@@ -52,7 +64,8 @@ public record Temporada(int numero, long semente, List<SorteiosDivisao> divisoes
 				.flatMap(c -> planteis.getOrDefault(c.id(), List.of()).stream())
 				.toList();
 			Calendario calendario = Calendario.sorteado(divisao.clubes(), daDivisao);
-			SorteTemporada sorte = SorteTemporada.sortear(divisao.clubes(), daDivisao);
+			SorteTemporada sorte = SorteTemporada.sortear(divisao.clubes(), deUsuario, planteis,
+					ParametrosSorteTemporada.padrao(), daDivisao);
 			BonusArtilharia bonus = BonusArtilharia.sortear(jogadores, BonusArtilharia.QUANTIDADE_POR_DIVISAO, daDivisao);
 			divisoes.add(new SorteiosDivisao(divisao.prioridade(), calendario, sorte, bonus));
 		}

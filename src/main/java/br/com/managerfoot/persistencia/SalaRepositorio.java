@@ -43,11 +43,12 @@ public class SalaRepositorio {
 	private final AumentoRepositorio aumentos;
 	private final MercadoRepositorio mercado;
 	private final ContasRepositorio contas;
+	private final TemporadaRepositorio temporadas;
 	private final int candidatosClubeInicial;
 	private final Duration validadeConvite;
 
 	public SalaRepositorio(JdbcClient jdbc, JogoRepositorio jogos, CaixaRepositorio caixas, AumentoRepositorio aumentos,
-			MercadoRepositorio mercado, ContasRepositorio contas,
+			MercadoRepositorio mercado, ContasRepositorio contas, TemporadaRepositorio temporadas,
 			@Value("${managerfoot.jogo.candidatos-clube-inicial}") int candidatosClubeInicial,
 			@Value("${managerfoot.rede.validade-convite}") Duration validadeConvite) {
 		this.jdbc = jdbc;
@@ -56,6 +57,7 @@ public class SalaRepositorio {
 		this.aumentos = aumentos;
 		this.mercado = mercado;
 		this.contas = contas;
+		this.temporadas = temporadas;
 		this.candidatosClubeInicial = candidatosClubeInicial;
 		this.validadeConvite = validadeConvite;
 	}
@@ -186,6 +188,7 @@ public class SalaRepositorio {
 		}
 		caixas.pagarPatrocinio(jogoId, Map.of());
 		aumentos.fixarSalarios(jogoId);
+		temporadas.refazerSorteDaPrimeiraTemporada(jogoId);
 		long semente = jdbc.sql("SELECT semente FROM jogo_temporada WHERE jogo_id = :jogo AND numero = 1")
 			.param("jogo", jogoId)
 			.query(Long.class)

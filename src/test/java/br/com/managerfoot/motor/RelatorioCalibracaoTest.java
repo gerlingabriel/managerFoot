@@ -214,7 +214,9 @@ class RelatorioCalibracaoTest {
 		EstatisticasLote base = medir(a, b);
 		linha("## Sorte e azar da temporada (25 × 25, 4-4-2; SPEC §5.3.1)");
 		linha("");
-		linha("Meta: cerca de 5 pontos percentuais a mais de vitórias (beneficiado) e de derrotas (prejudicado).");
+		linha("Meta: cerca de 5 pontos percentuais a mais de vitórias (beneficiado) e de derrotas (prejudicado). Desde a rev. 108 "
+				+ "nenhum clube é sorteado prejudicado (dois beneficiados da máquina por divisão e o usuário fraco); a linha fica "
+				+ "como medida do efeito que o motor ainda sabe aplicar.");
 		linha("");
 		linha("| Cenário | Vitórias do clube sorteado | Empates | Derrotas do clube sorteado | Diferença vs. neutro (V / D) | Gols/partida |");
 		linha("|---|---|---|---|---|---|");

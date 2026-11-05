@@ -1,43 +1,53 @@
 package br.com.managerfoot.temporada;
 
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Objects;
+import java.util.Map;
+import java.util.Set;
 import java.util.random.RandomGenerator;
 
 import br.com.managerfoot.dominio.Clube;
+import br.com.managerfoot.dominio.Jogador;
 import br.com.managerfoot.dominio.Sorte;
 
 /**
- * Beneficiado e prejudicado de uma divisão na temporada (SPEC §5.3.1). O sorteio é oculto dos
- * participantes e qualquer clube pode sair, inclusive os de usuários.
+ * Beneficiados de uma divisão na temporada (SPEC §5.3.1, rev. 108), ocultos dos participantes: dois clubes da máquina
+ * sorteados e todo clube de usuário com força média do plantel abaixo de 40 no início da temporada. Clube de usuário
+ * não entra no sorteio. Não há mais prejudicado.
  */
-public record SorteTemporada(Clube beneficiado, Clube prejudicado) {
+public record SorteTemporada(Set<Clube> beneficiados) {
 
 	public SorteTemporada {
-		Objects.requireNonNull(beneficiado, "beneficiado é obrigatório");
-		Objects.requireNonNull(prejudicado, "prejudicado é obrigatório");
-		if (beneficiado.equals(prejudicado)) {
-			throw new IllegalArgumentException("o mesmo clube não pode ser beneficiado e prejudicado: " + beneficiado.nome());
-		}
+		beneficiados = Set.copyOf(beneficiados);
 	}
 
-	/** Sorteia dois clubes distintos da divisão, com chance igual para todos. */
-	public static SorteTemporada sortear(List<Clube> clubes, RandomGenerator aleatorio) {
-		if (clubes.size() < 2) {
-			throw new IllegalArgumentException("o sorteio da sorte precisa de pelo menos 2 clubes, mas há " + clubes.size());
+	/**
+	 * Sorteia os beneficiados da máquina, com chance igual para todos, e junta os clubes de usuário fracos.
+	 *
+	 * @param deUsuario ids dos clubes que têm treinador usuário no início da temporada
+	 * @param planteis jogadores de cada clube; clube ausente conta como sem jogadores (fica sem o benefício)
+	 */
+	public static SorteTemporada sortear(List<Clube> clubes, Set<Long> deUsuario, Map<Long, List<Jogador>> planteis,
+			ParametrosSorteTemporada parametros, RandomGenerator aleatorio) {
+		Set<Clube> beneficiados = new LinkedHashSet<>();
+		List<Clube> daMaquina = new ArrayList<>(clubes.stream().filter(c -> !deUsuario.contains(c.id())).toList());
+		for (int i = 0; i < parametros.sorteados() && !daMaquina.isEmpty(); i++) {
+			beneficiados.add(daMaquina.remove(aleatorio.nextInt(daMaquina.size())));
 		}
-		int b = aleatorio.nextInt(clubes.size());
-		int p = aleatorio.nextInt(clubes.size() - 1);
-		if (p >= b) {
-			p++;
-		}
-		return new SorteTemporada(clubes.get(b), clubes.get(p));
+		clubes.stream()
+			.filter(c -> deUsuario.contains(c.id()))
+			.filter(c -> forcaMedia(planteis.getOrDefault(c.id(), List.of())) < parametros.forcaMediaLimiteDoUsuario())
+			.forEach(beneficiados::add);
+		return new SorteTemporada(beneficiados);
+	}
+
+	/** Força média do plantel inteiro; sem jogadores, infinita (não dá o benefício). */
+	static double forcaMedia(List<Jogador> plantel) {
+		return plantel.stream().mapToInt(Jogador::forca).average().orElse(Double.POSITIVE_INFINITY);
 	}
 
 	public Sorte de(Clube clube) {
-		if (clube.equals(beneficiado)) {
-			return Sorte.BENEFICIADO;
-		}
-		return clube.equals(prejudicado) ? Sorte.PREJUDICADO : Sorte.NEUTRA;
+		return beneficiados.contains(clube) ? Sorte.BENEFICIADO : Sorte.NEUTRA;
 	}
 }

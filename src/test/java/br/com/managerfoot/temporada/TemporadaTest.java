@@ -51,7 +51,7 @@ class TemporadaTest {
 			assertThat(sorteios.calendario().rodadas()).hasSize(rodadas);
 			assertThat(sorteios.calendario().jogos()).hasSize(n * (n - 1))
 				.allMatch(j -> divisao.clubes().contains(j.mandante()) && divisao.clubes().contains(j.visitante()));
-			assertThat(divisao.clubes()).contains(sorteios.sorte().beneficiado(), sorteios.sorte().prejudicado());
+			assertThat(sorteios.sorte().beneficiados()).hasSize(2).isSubsetOf(divisao.clubes());
 
 			Set<Long> daDivisao = new HashSet<>();
 			divisao.clubes().forEach(c -> PLANTEIS.get(c.id()).forEach(j -> daDivisao.add(j.id())));

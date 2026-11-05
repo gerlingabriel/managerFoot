@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -71,7 +72,8 @@ class TemporadaRepositorioIT {
 	void temporadaGravadaVoltaIgualAosSorteiosDaSemente() {
 		Temporada iniciada = temporadas.iniciarPrimeiraTemporada(jogo, 2026);
 
-		assertThat(iniciada).isEqualTo(Temporada.iniciar(1, jogos.carregarLiga(jogo), jogos.carregarPlanteis(jogo), 2026));
+		assertThat(iniciada).isEqualTo(Temporada.iniciar(1, jogos.carregarLiga(jogo), jogos.carregarPlanteis(jogo), 2026,
+				Set.of(clubeDoUsuario())));
 		assertThat(temporadas.carregarAtual(jogo)).isEqualTo(iniciada);
 		assertThat(iniciada.divisoes().get(1).calendario().rodadas()).allMatch(r -> r.folga().isPresent());
 		assertThat(iniciada.divisoes())
@@ -136,6 +138,63 @@ class TemporadaRepositorioIT {
 			assertThat(jdbc.sql("SELECT count(*) FROM " + tabela + " WHERE temporada_id = ?").param(temporada)
 				.query(Long.class).single()).as(tabela).isZero();
 		}
+	}
+
+	@Test
+	void clubeDoUsuarioComMediaAbaixoDe40TemOBeneficioEOsDoisSorteadosSaoDaMaquina() {
+		long clube = usuarioNoClubeComJogadores(20);
+
+		Temporada iniciada = temporadas.iniciarPrimeiraTemporada(jogo, 2026);
+
+		Temporada.SorteiosDivisao serieA = iniciada.divisoes().get(0);
+		assertThat(serieA.sorte().beneficiados()).hasSize(3).anyMatch(c -> c.id() == clube);
+		assertThat(iniciada.divisoes().get(1).sorte().beneficiados()).hasSize(2);
+		assertThat(contar("SELECT count(*) FROM jogo_temporada_beneficiado b JOIN jogo_temporada t ON t.id = b.temporada_id "
+				+ "WHERE t.jogo_id = ?")).isEqualTo(5);
+		assertThat(temporadas.carregarAtual(jogo)).isEqualTo(iniciada);
+	}
+
+	@Test
+	void clubeDoUsuarioComMedia40OuMaisNaoTemOBeneficioNemEntraNoSorteio() {
+		long clube = usuarioNoClubeComJogadores(45);
+
+		for (long semente = 0; semente < 20; semente++) {
+			Temporada t = Temporada.iniciar(1, jogos.carregarLiga(jogo), jogos.carregarPlanteis(jogo), semente, Set.of(clube));
+			assertThat(t.divisoes().get(0).sorte().beneficiados()).hasSize(2).noneMatch(c -> c.id() == clube);
+		}
+	}
+
+	@Test
+	void temporadaComecadaAntesDaRev108UsaOBeneficiadoAntigo() {
+		temporadas.iniciarPrimeiraTemporada(jogo, 2026);
+		long temporada = contar("SELECT id FROM jogo_temporada WHERE jogo_id = ?");
+		long serieA = contar("SELECT id FROM jogo_divisao WHERE jogo_id = ? AND prioridade = 1");
+		List<Long> clubesA = jdbc.sql("SELECT id FROM jogo_clube WHERE divisao_id = ? ORDER BY id").param(serieA)
+			.query(Long.class).list();
+		// como gravava a V6: um beneficiado e um prejudicado, sem a tabela nova
+		jdbc.sql("DELETE FROM jogo_temporada_beneficiado WHERE temporada_id = ? AND divisao_id = ?").params(temporada, serieA).update();
+		jdbc.sql("INSERT INTO jogo_temporada_divisao (temporada_id, divisao_id, beneficiado_id, prejudicado_id) VALUES (?, ?, ?, ?)")
+			.params(temporada, serieA, clubesA.get(0), clubesA.get(1)).update();
+
+		Temporada carregada = temporadas.carregarAtual(jogo);
+
+		assertThat(carregada.divisoes().get(0).sorte().beneficiados()).extracting(Clube::id).containsExactly(clubesA.get(0));
+		assertThat(carregada.divisoes().get(1).sorte().beneficiados()).hasSize(2);
+	}
+
+	/** Põe o usuário no 1º clube da Série A, que tem 23 jogadores, todos com a força dada. */
+	private long usuarioNoClubeComJogadores(int forca) {
+		long clube = jdbc.sql("""
+				SELECT c.id FROM jogo_clube c JOIN jogo_divisao d ON d.id = c.divisao_id
+				WHERE c.jogo_id = ? AND d.prioridade = 1 AND EXISTS (SELECT 1 FROM jogo_jogador j WHERE j.clube_id = c.id)
+				ORDER BY c.id LIMIT 1""").param(jogo).query(Long.class).single();
+		jdbc.sql("UPDATE jogo_treinador SET clube_id = ? WHERE jogo_id = ?").params(clube, jogo).update();
+		jdbc.sql("UPDATE jogo_jogador SET forca = ? WHERE clube_id = ?").params(forca, clube).update();
+		return clube;
+	}
+
+	private long clubeDoUsuario() {
+		return contar("SELECT clube_id FROM jogo_treinador WHERE jogo_id = ?");
 	}
 
 	private long contar(String sql) {

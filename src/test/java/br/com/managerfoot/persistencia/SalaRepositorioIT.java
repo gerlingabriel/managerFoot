@@ -204,6 +204,17 @@ class SalaRepositorioIT {
 		salas.comecar(jogo, admin.id(), AGORA.plusSeconds(32), TRINTA);
 
 		assertThat(salas.naSala(jogo)).isFalse();
+		// a sorte da 1ª temporada é refeita com os dois treinadores nos clubes (SPEC §5.3.1, rev. 108)
+		List<Long> deUsuario = List.of(jogos.clubeDoTreinador(jogo, admin.id()).orElseThrow(), livre);
+		for (long clube : deUsuario) {
+			long divisao = contar("SELECT divisao_id FROM jogo_clube WHERE id = :jogo", clube);
+			List<Long> beneficiados = jdbc.sql("SELECT clube_id FROM jogo_temporada_beneficiado WHERE divisao_id = :divisao")
+				.param("divisao", divisao).query(Long.class).list();
+			assertThat(beneficiados.stream().filter(b -> !deUsuario.contains(b))).hasSize(2);
+			double media = jdbc.sql("SELECT avg(forca) FROM jogo_jogador WHERE clube_id = :clube").param("clube", clube)
+				.query(Double.class).single();
+			assertThat(beneficiados.contains(clube)).as("clube %d com média %.1f", clube, media).isEqualTo(media < 40);
+		}
 		List<Long> comPatrocinio = jdbc.sql("""
 				SELECT p.clube_id FROM jogo_patrocinio p JOIN jogo_clube c ON c.id = p.clube_id WHERE c.jogo_id = :jogo""")
 			.param("jogo", jogo).query(Long.class).list();

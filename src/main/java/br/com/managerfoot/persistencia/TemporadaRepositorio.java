@@ -60,7 +60,7 @@ public class TemporadaRepositorio {
 			throw new IllegalStateException("o jogo " + jogoId + " já tem temporada iniciada");
 		}
 		ConfiguracaoLiga liga = jogos.carregarLiga(jogoId);
-		Temporada temporada = Temporada.iniciar(1, liga, jogos.carregarPlanteis(jogoId), semente);
+		Temporada temporada = Temporada.iniciar(1, liga, jogos.carregarPlanteis(jogoId), semente, clubesDeUsuario(jogoId));
 		gravar(jogoId, temporada);
 		return temporada;
 	}
@@ -78,14 +78,7 @@ public class TemporadaRepositorio {
 		Map<Integer, Long> divisaoPorPrioridade = divisaoPorPrioridade(jogoId);
 		for (Temporada.SorteiosDivisao sorteios : temporada.divisoes()) {
 			long divisaoId = divisaoPorPrioridade.get(sorteios.prioridade());
-			jdbc.sql("""
-					INSERT INTO jogo_temporada_divisao (temporada_id, divisao_id, beneficiado_id, prejudicado_id)
-					VALUES (:temporada, :divisao, :beneficiado, :prejudicado)""")
-				.param("temporada", temporadaId)
-				.param("divisao", divisaoId)
-				.param("beneficiado", sorteios.sorte().beneficiado().id())
-				.param("prejudicado", sorteios.sorte().prejudicado().id())
-				.update();
+			gravarBeneficiados(temporadaId, divisaoId, sorteios.sorte());
 			for (Jogo jogo : sorteios.calendario().jogos()) {
 				jdbc.sql("""
 						INSERT INTO jogo_partida (temporada_id, divisao_id, rodada, mandante_id, visitante_id)
@@ -104,6 +97,46 @@ public class TemporadaRepositorio {
 		continentais.criar(jogoId, temporadaId, temporada.numero(), semente);
 		mercado.reporAVenda(jogoId, MercadoRepositorio.semente(semente, 0));
 		mercado.renovarClubesDeFora(jogoId, MercadoRepositorio.semente(semente, 0));
+	}
+
+	private void gravarBeneficiados(long temporadaId, long divisaoId, SorteTemporada sorte) {
+		for (Clube clube : sorte.beneficiados()) {
+			jdbc.sql("""
+					INSERT INTO jogo_temporada_beneficiado (temporada_id, divisao_id, clube_id)
+					VALUES (:temporada, :divisao, :clube)""")
+				.param("temporada", temporadaId)
+				.param("divisao", divisaoId)
+				.param("clube", clube.id())
+				.update();
+		}
+	}
+
+	/** Clubes com treinador usuário: ficam fora do sorteio da sorte e, fracos, têm o benefício (SPEC §5.3.1, rev. 108). */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public Set<Long> clubesDeUsuario(long jogoId) {
+		return Set.copyOf(jdbc.sql("SELECT clube_id FROM jogo_treinador WHERE jogo_id = :jogo")
+			.param("jogo", jogoId)
+			.query(Long.class)
+			.list());
+	}
+
+	/**
+	 * Jogo em rede (SPEC §5.3.1, rev. 108): a 1ª temporada foi sorteada com a sala aberta, só com o administrador. Ao
+	 * começar, com todos nos clubes, refaz os beneficiados pela mesma semente; calendário e bônus não mudam.
+	 */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void refazerSorteDaPrimeiraTemporada(long jogoId) {
+		LinhaTemporada linha = jdbc.sql("SELECT id, numero, semente FROM jogo_temporada WHERE jogo_id = :jogo AND numero = 1")
+			.param("jogo", jogoId)
+			.query((rs, n) -> new LinhaTemporada(rs.getLong("id"), rs.getInt("numero"), rs.getLong("semente")))
+			.single();
+		Temporada refeita = Temporada.iniciar(1, jogos.carregarLiga(jogoId), jogos.carregarPlanteis(jogoId), linha.semente(),
+				clubesDeUsuario(jogoId));
+		jdbc.sql("DELETE FROM jogo_temporada_beneficiado WHERE temporada_id = :temporada").param("temporada", linha.id()).update();
+		Map<Integer, Long> divisaoPorPrioridade = divisaoPorPrioridade(jogoId);
+		for (Temporada.SorteiosDivisao sorteios : refeita.divisoes()) {
+			gravarBeneficiados(linha.id(), divisaoPorPrioridade.get(sorteios.prioridade()), sorteios.sorte());
+		}
 	}
 
 	/**
@@ -140,15 +173,21 @@ public class TemporadaRepositorio {
 			.list()
 			.forEach(e -> jogosPorPrioridade.computeIfAbsent(e.getKey(), p -> new ArrayList<>()).add(e.getValue()));
 
-		Map<Integer, SorteTemporada> sortes = new HashMap<>();
+		// beneficiados (rev. 108); temporada começada antes dela só tem o beneficiado antigo, que vale até a próxima
+		Map<Integer, Set<Clube>> beneficiados = new HashMap<>();
 		jdbc.sql("""
-				SELECT divisao_id, beneficiado_id, prejudicado_id FROM jogo_temporada_divisao
-				WHERE temporada_id = :temporada""")
+				SELECT divisao_id, clube_id FROM jogo_temporada_beneficiado WHERE temporada_id = :temporada
+				UNION ALL
+				SELECT d.divisao_id, d.beneficiado_id FROM jogo_temporada_divisao d
+				WHERE d.temporada_id = :temporada AND d.beneficiado_id IS NOT NULL
+				  AND NOT EXISTS (SELECT 1 FROM jogo_temporada_beneficiado b
+				                  WHERE b.temporada_id = d.temporada_id AND b.divisao_id = d.divisao_id)""")
 			.param("temporada", linha.id())
-			.query((rs, n) -> Map.entry(prioridades.get(rs.getLong("divisao_id")),
-					new SorteTemporada(clubes.get(rs.getLong("beneficiado_id")), clubes.get(rs.getLong("prejudicado_id")))))
+			.query((rs, n) -> Map.entry(prioridades.get(rs.getLong("divisao_id")), clubes.get(rs.getLong("clube_id"))))
 			.list()
-			.forEach(e -> sortes.put(e.getKey(), e.getValue()));
+			.forEach(e -> beneficiados.computeIfAbsent(e.getKey(), p -> new HashSet<>()).add(e.getValue()));
+		Map<Integer, SorteTemporada> sortes = new HashMap<>();
+		prioridades.values().forEach(p -> sortes.put(p, new SorteTemporada(beneficiados.getOrDefault(p, Set.of()))));
 
 		Map<Integer, Set<Long>> temporarios = new HashMap<>();
 		Map<Integer, Set<Long>> extras = new HashMap<>();

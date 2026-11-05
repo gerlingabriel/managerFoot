@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 107 — 2026-11-05)
+-   **Status:** versão inicial para revisão (rev. 108 — 2026-11-05)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -14,6 +14,8 @@
     descreve intenção geral ainda não detalhada.
 
 ### Histórico de revisões
+
+-   **rev. 108 (2026-11-05):** pelo usuário (§5.3.1): a sorte da temporada é refeita. Cada divisão sorteia **dois beneficiados** entre os clubes da máquina e **não há mais prejudicado**; clube de usuário não entra no sorteio. Todo clube de usuário com **força média do plantel inteiro abaixo de 40 no início da temporada** tem o benefício a temporada inteira; a avaliação é só no início. Gravado na V46 (`jogo_temporada_beneficiado`); temporadas já começadas e saves antigos mantêm o sorteio antigo até a próxima temporada.
 
 -   **rev. 107 (2026-11-05):** pelo usuário (§7.2): times com 3 atacantes fazem e sofrem mais gols, e com 4 atacantes mais ainda, mantendo vitórias, empates e derrotas. Agente: fator de jogo aberto pela quantidade de atacantes em campo (1,15 com 3, 1,30 com 4), que multiplica a conversão do próprio time e a do adversário; tabela das formações em casa e fora em `docs/simulacoes/calibracao-motor.md`.
 
@@ -877,30 +879,39 @@ torne uma vantagem desproporcional.
   - Os efeitos se combinam: um batedor com asterisco contra um goleiro com
     asterisco converte 75% × 1,15 × (65/75).
 
-### 5.3.1 Sorte e azar da temporada
+### 5.3.1 Sorte da temporada
 
-**Definido (rev. 17):**
-- No início de cada temporada, o sistema sorteia **dois clubes**: um
-  **beneficiado** e um **prejudicado**, válidos só naquela temporada.
-- Representa o fator imprevisível: um clube grande que joga mal num ano e
-  um pequeno que joga bem. Qualquer clube pode ser sorteado, inclusive um
-  forte para o benefício.
-- Beneficiado: **mais chances de gol** por partida. Prejudicado: **menos
-  domínio (posse de bola)**.
-- Efeito pequeno: cerca de **5 pontos percentuais a mais de vitórias**
-  para o beneficiado (por exemplo, de 45% para 50% contra um adversário de
-  mesma força) e **5 pontos percentuais a mais de derrotas** para o
-  prejudicado, a confirmar por simulação.
-- **Definido (rev. 18):**
-  - O sorteio é **por divisão**: cada divisão tem um beneficiado e um
-    prejudicado.
-  - **Qualquer clube** pode ser sorteado, inclusive clubes de usuários.
-  - O sorteio é **oculto**: ninguém vê quem foi sorteado.
-- **Provisório (rev. 18, calibrado por simulação):** o beneficiado ganha
-  uma chance extra de finalização por minuto com 9,5% da chance normal; o
-  prejudicado tem o domínio do meio-campo multiplicado por 0,83. Medido:
-  cerca de +5 p.p. de vitórias e +5 p.p. de derrotas
-  (`docs/simulacoes/calibracao-motor.md`).
+**Definido (rev. 108), pelo usuário** (substitui o sorteio das rev. 17 e 18):
+- No início de cada temporada, **cada divisão sorteia dois beneficiados**
+  entre os **clubes da máquina**, com chance igual para todos, válidos só
+  naquela temporada. **Não há mais prejudicado.**
+- **Clube de usuário não entra no sorteio.** Todo clube de usuário com
+  **força média do plantel inteiro abaixo de 40** no início da temporada
+  tem o benefício a temporada inteira (além dos dois sorteados); com 40 ou
+  mais, não tem.
+- A avaliação é **só no início da temporada**: quem começou com média 39 e
+  chegou a 42 no meio continua beneficiado e perde na temporada seguinte;
+  quem começou sem o benefício e caiu abaixo de 40 no meio só o recebe na
+  temporada seguinte.
+- Beneficiado: **mais chances de gol** por partida (efeito da rev. 18,
+  abaixo). O sorteio continua **oculto**.
+- **Agente:** no jogo em rede, a 1ª temporada é sorteada com a sala aberta;
+  ao começar, com todos nos clubes, os beneficiados são refeitos pela mesma
+  semente (calendário e bônus não mudam). Divisão com menos de dois clubes
+  da máquina sorteia os que houver. Valores em
+  `temporada.ParametrosSorteTemporada` (2 sorteados, limite 40).
+- **Jogos salvos:** a temporada em andamento mantém o sorteio antigo (um
+  beneficiado; o prejudicado deixa de valer); a regra nova vale a partir da
+  próxima temporada. Saves exportados antes também abrem.
+
+**Provisório (rev. 18, calibrado por simulação):** o beneficiado ganha uma
+chance extra de finalização por minuto com 9,5% da chance normal: cerca de
++5 p.p. de vitórias contra adversário de mesma força
+(`docs/simulacoes/calibracao-motor.md`). O motor ainda sabe aplicar o efeito
+do prejudicado (domínio × 0,83), mas nenhum clube é sorteado para ele.
+
+~~Rev. 17 e 18: um beneficiado e um prejudicado por divisão, sorteados entre
+todos os clubes, inclusive os de usuários.~~
 
 ### 5.4 Treinadores e demissões
 
