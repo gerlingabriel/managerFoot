@@ -10,13 +10,44 @@ import org.junit.jupiter.api.Test;
 class RelogioRodadaTest {
 
 	/** 3ª sem usuário, 2ª com usuário, 1ª sem usuário: a ordem de exibição. */
-	private final RelogioRodada relogio = new RelogioRodada(List.of(false, true, false), 90);
+	private final RelogioRodada relogio = new RelogioRodada(List.of(false, true, false), 90, 0);
+
+	/** O mesmo, com o fim de cada divisão 2 s na tela (SPEC §11.2, rev. 111). */
+	private final RelogioRodada comFimNaTela = new RelogioRodada(List.of(false, true, false), 90, 2_000);
 
 	@Test
 	void divisaoSemUsuarioLevaCercaDeCincoSegundos() {
 		assertThat(relogio.avancar(0, 4_500, Velocidade.NORMAL)).isCloseTo(90, within(1e-9));
-		assertThat(relogio.divisao(90)).isEqualTo(1);
-		assertThat(relogio.minuto(90)).isZero();
+		assertThat(relogio.divisao(90.001)).isEqualTo(1);
+		assertThat(relogio.minuto(90.001)).isZero();
+	}
+
+	@Test
+	void fimDaDivisaoMostraOUltimoMinutoDelaENaoADaSeguinte() {
+		assertThat(relogio.noFimDeDivisao(90)).isTrue();
+		assertThat(relogio.divisao(90)).isZero();
+		assertThat(relogio.minuto(90)).isEqualTo(90);
+		assertThat(relogio.noFimDeDivisao(0)).isFalse();
+		assertThat(relogio.noFimDeDivisao(270)).isFalse();
+	}
+
+	@Test
+	void fimDaDivisaoFicaNaTelaAntesDaSeguinte() {
+		// 3ª inteira em 4,5 s; depois 2 s parado no 90 dela
+		assertThat(comFimNaTela.avancar(0, 4_500, Velocidade.NORMAL)).isEqualTo(90);
+		assertThat(comFimNaTela.avancar(0, 6_500, Velocidade.NORMAL)).isEqualTo(90);
+		assertThat(comFimNaTela.divisao(90)).isZero();
+		// 1 s depois da espera, 2 minutos da 2ª na normal
+		assertThat(comFimNaTela.avancar(0, 7_500, Velocidade.NORMAL)).isCloseTo(92, within(1e-9));
+		// retomado do fim (por exemplo, gravado ali), espera de novo
+		assertThat(comFimNaTela.avancar(90, 1_000, Velocidade.NORMAL)).isEqualTo(90);
+	}
+
+	@Test
+	void fimDaUltimaNaoEsperaNoRelogio() {
+		// 3ª (4,5 s) + espera + 2ª rápida (18 s) + espera + 1ª (4,5 s): o fim da rodada fica na tela pelo repositório
+		assertThat(comFimNaTela.avancar(0, 4_500 + 2_000 + 18_000 + 2_000 + 4_500, Velocidade.RAPIDA)).isEqualTo(270);
+		assertThat(comFimNaTela.avancar(0, 4_500 + 2_000 + 18_000 + 2_000 + 4_499, Velocidade.RAPIDA)).isLessThan(270);
 	}
 
 	@Test

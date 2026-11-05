@@ -383,7 +383,9 @@ public class RodadaAoVivoRepositorio {
 		Map<Integer, List<PartidaDaRodada>> porDivisao = porDivisao(rodada);
 		RelogioRodada relogio = relogio(rodada, porDivisao);
 		double progresso = progresso(linha, relogio, velocidade(jogoId, usuarioId), agora);
-		if (relogio.terminado(progresso) || !relogio.comUsuario().get(relogio.divisao(progresso))) {
+		// no fim de uma divisão, a partida já acabou: não há o que pausar
+		if (relogio.terminado(progresso) || relogio.noFimDeDivisao(progresso)
+				|| !relogio.comUsuario().get(relogio.divisao(progresso))) {
 			return;
 		}
 		if (!emRede(jogoId)) {
@@ -689,8 +691,10 @@ public class RodadaAoVivoRepositorio {
 		}
 		Map<Long, String> grupos = gruposDosMandantes(jogoId, linha);
 		List<DivisaoNaRodada> divisoes = new ArrayList<>();
+		// no fim de uma divisão ou da rodada, o último minuto com os placares finais fica na tela (rev. 110 e 111)
+		boolean noFim = terminada || relogio.noFimDeDivisao(progresso);
 		for (int i = 0; i < prioridades.size(); i++) {
-			Situacao situacao = terminada || i < atual ? Situacao.TERMINADA : i == atual ? Situacao.JOGANDO : Situacao.AGUARDANDO;
+			Situacao situacao = terminada || i < atual || (noFim && i == atual) ? Situacao.TERMINADA : i == atual ? Situacao.JOGANDO : Situacao.AGUARDANDO;
 			divisoes.add(new DivisaoNaRodada(nomes.get(prioridades.get(i)), situacao, relogio.comUsuario().get(i)));
 		}
 		Map<Long, Integer> publicos = caixas.publicos(jogoId, rodada.partidas());
@@ -720,7 +724,7 @@ public class RodadaAoVivoRepositorio {
 		boolean abre = pausa.isPresent() ? pausa.get().parouEu() && pausa.get().minha() : linha.pausadaNaLesao();
 		Long janelaQueAbre = !terminada && abre && doUsuarioJogando ? doUsuario.mandante().id() : null;
 		return new EstadoRodada(jogoId, temporada, linha.rodada(), copa, divisoes, atual, minuto, relogio.minutos(),
-				linha.andandoDesde() == null, terminada, gravada, velocidade, relogio.comUsuario().get(atual), placares, doUsuario,
+				linha.andandoDesde() == null, noFim, gravada, velocidade, relogio.comUsuario().get(atual), placares, doUsuario,
 				doUsuario != null && doUsuario.mandante().id() == clube, som,
 				janelaQueAbre, quemEscolheAVelocidade(jogoId, usuarioId).orElse(null), emRede(jogoId), pausa.orElse(null));
 	}
@@ -787,7 +791,7 @@ public class RodadaAoVivoRepositorio {
 		}
 		return new RelogioRodada(porDivisao.values().stream()
 			.map(ps -> ps.stream().anyMatch(p -> !p.ladosDoUsuario().isEmpty()))
-			.toList(), duracao);
+			.toList(), duracao, fimNaTela.toMillis());
 	}
 
 	private static double progresso(Linha linha, RelogioRodada relogio, Velocidade velocidade, Instant agora) {
@@ -1001,7 +1005,8 @@ public class RodadaAoVivoRepositorio {
 	 * @param copa nome da etapa ("Copa · Oitavas de final · ida", "Continental · Grupos · 5º jogo"); nulo
 	 *        numa rodada da liga
 	 * @param minutos duração do relógio de cada divisão: 90, ou 120 na etapa da copa com prorrogação
-	 * @param terminada o relógio chegou ao fim: o quadro mostra o último minuto com os placares finais
+	 * @param terminada o relógio está no fim da divisão em jogo (ou da rodada): o quadro mostra o último minuto com
+	 *        os placares finais antes da próxima divisão ou do plantel
 	 * @param gravada a rodada terminou e foi gravada: a tela vai ao plantel
 	 * @param divisaoAtual índice em {@code divisoes} da divisão em jogo
 	 * @param comUsuario se a divisão em jogo tem clube do usuário (só ela tem velocidade e pausa)

@@ -129,14 +129,39 @@ class RodadaAoVivoRepositorioIT {
 	@Test
 	void divisaoSemUsuarioNaoPausa() {
 		aoVivo.iniciar(jogo, usuario, 1, T0);
-		// Série B inteira em 45 s (normal) e mais 1 s na Série A (20 minutos a 0,05 s)
-		aoVivo.pausar(jogo, usuario, 0, T0.plusSeconds(46));
+		// Série B inteira em 45 s (normal), o fim dela 2 s na tela e mais 1 s na Série A (20 minutos a 0,05 s)
+		aoVivo.pausar(jogo, usuario, 0, T0.plusSeconds(48));
 
-		EstadoRodada estado = estado(47);
+		EstadoRodada estado = estado(49);
 		assertThat(estado.divisaoAtual()).isEqualTo(1);
 		assertThat(estado.comUsuario()).isFalse();
 		assertThat(estado.pausada()).isFalse();
 		assertThat(estado.minuto()).isEqualTo(40);
+	}
+
+	@Test
+	void fimDaDivisaoFicaNaTelaAntesDaSeguinte() {
+		aoVivo.iniciar(jogo, usuario, 1, T0);
+		EstadoRodada quase = estado(44);
+
+		for (int segundo : List.of(46, 47)) {
+			EstadoRodada noFim = estado(segundo);
+			assertThat(noFim.divisaoAtual()).isZero();
+			assertThat(noFim.minuto()).isEqualTo(90);
+			assertThat(noFim.terminada()).isTrue();
+			assertThat(noFim.gravada()).isFalse();
+			assertThat(noFim.divisoes()).extracting(RodadaAoVivoRepositorio.DivisaoNaRodada::situacao)
+				.containsExactly(Situacao.TERMINADA, Situacao.AGUARDANDO);
+			assertThat(noFim.partidas()).extracting(p -> p.mandante().id())
+				.isEqualTo(quase.partidas().stream().map(p -> p.mandante().id()).toList());
+		}
+		// clicar num clube no fim da divisão não pausa: a partida já acabou
+		aoVivo.pausar(jogo, usuario, 0, T0.plusSeconds(46));
+		assertThat(estado(47).pausada()).isFalse();
+
+		EstadoRodada seguinte = estado(48);
+		assertThat(seguinte.divisaoAtual()).isEqualTo(1);
+		assertThat(seguinte.terminada()).isFalse();
 	}
 
 	@Test
@@ -160,8 +185,9 @@ class RodadaAoVivoRepositorioIT {
 	void fimFicaNaTelaDoisSegundosAntesDeGravar() {
 		aoVivo.iniciar(jogo, usuario, 1, T0);
 
-		// Série B em 45 s (normal) e Série A em 4,5 s (0,05 s por minuto): o relógio chega ao fim em 49,5 s
-		EstadoRodada noFim = estado(50);
+		// Série B em 45 s (normal), 2 s com o fim dela na tela e Série A em 4,5 s (0,05 s por minuto): o relógio chega
+		// ao fim em 51,5 s
+		EstadoRodada noFim = estado(52);
 		assertThat(noFim.terminada()).isTrue();
 		assertThat(noFim.gravada()).isFalse();
 		assertThat(noFim.minuto()).isEqualTo(90);
@@ -169,8 +195,8 @@ class RodadaAoVivoRepositorioIT {
 		assertThat(rodadas.rodadasProcessadas(jogo)).isZero();
 		assertThat(aoVivo.emAndamento(jogo)).isTrue();
 
-		assertThat(estado(51).gravada()).isFalse();
-		EstadoRodada gravada = estado(52);
+		assertThat(estado(53).gravada()).isFalse();
+		EstadoRodada gravada = estado(54);
 		assertThat(gravada.gravada()).isTrue();
 		assertThat(placares(gravada)).isEqualTo(placares(noFim));
 		assertThat(rodadas.rodadasProcessadas(jogo)).isEqualTo(1);

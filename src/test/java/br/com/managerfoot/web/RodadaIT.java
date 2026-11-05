@@ -334,8 +334,8 @@ class RodadaIT {
 	@Test
 	void divisaoSemUsuarioNaoTemClubesClicaveis() throws Exception {
 		iniciar();
-		// a divisão do usuário (a última) joga primeiro e dura 45 s em normal
-		agora(46);
+		// a divisão do usuário (a última) joga primeiro, dura 45 s em normal e o fim dela fica 2 s na tela
+		agora(48);
 		mvc.perform(get(rodada).with(como(treinador)))
 			.andExpect(content().string(containsString("Nenhum clube desta divisão é seu")))
 			.andExpect(content().string(not(containsString("pausar e ver o jogo"))));
