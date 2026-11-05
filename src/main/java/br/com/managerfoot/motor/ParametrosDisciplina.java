@@ -20,10 +20,13 @@ import br.com.managerfoot.dominio.Temperamento;
  * @param dominioMaximo teto da chance de ficar com a jogada depois do bônus da expulsão
  * @param chancesExtrasPorExpulsao lance a mais por minuto para quem tem um jogador a mais, em fração de
  *        {@code chancePorMinuto}, por expulso a mais (SPEC §7.4, rev. 99)
+ * @param travaGoleadaComExpulsao trava das goleadas com expulso (SPEC §7.4, rev. 114): quem tem jogador a mais
+ *        e já ganha por 2 gols ou mais tem a conversão multiplicada por este fator a cada gol de vantagem além do
+ *        primeiro; 1 = sem trava. Sem expulso a mais, nada muda
  */
 public record ParametrosDisciplina(double cartoesPorMinuto, double proporcaoVermelhoDireto,
 		double sensibilidadeTemperamento, Map<Temperamento, Double> pesosTemperamento, double bonusDominioPorExpulsao,
-		double dominioMaximo, double chancesExtrasPorExpulsao) {
+		double dominioMaximo, double chancesExtrasPorExpulsao, double travaGoleadaComExpulsao) {
 
 	public ParametrosDisciplina {
 		Objects.requireNonNull(pesosTemperamento, "pesos de temperamento são obrigatórios");
@@ -46,6 +49,9 @@ public record ParametrosDisciplina(double cartoesPorMinuto, double proporcaoVerm
 		if (chancesExtrasPorExpulsao < 0) {
 			throw new IllegalArgumentException("chancesExtrasPorExpulsao não pode ser negativa");
 		}
+		if (travaGoleadaComExpulsao <= 0 || travaGoleadaComExpulsao > 1) {
+			throw new IllegalArgumentException("travaGoleadaComExpulsao deve ficar entre 0 (exclusive) e 1");
+		}
 		if (dominioMaximo <= 0.5 || dominioMaximo >= 1) {
 			throw new IllegalArgumentException("dominioMaximo deve ficar entre 0,5 e 1");
 		}
@@ -65,6 +71,13 @@ public record ParametrosDisciplina(double cartoesPorMinuto, double proporcaoVerm
 		pesos.put(Temperamento.VIOLENTO, 8.0);
 		// expulsão: o adversário fica com 50% a mais da chance da jogada, até 99/1 (rev. 98, pelo usuário), e com
 		// um lance extra por minuto com 2 vezes a chance normal (rev. 99; docs/simulacoes/expulsao.md)
-		return new ParametrosDisciplina(2.15 / 90 / 2, 0.05, 0.25, pesos, 0.5, 0.99, 2.0);
+		// trava das goleadas com expulso: 0,4 por gol de vantagem além do primeiro (rev. 114, recomendação aprovada)
+		return new ParametrosDisciplina(2.15 / 90 / 2, 0.05, 0.25, pesos, 0.5, 0.99, 2.0, 0.4);
+	}
+
+	/** Cópia com outra trava das goleadas com expulso (calibração e testes). */
+	public ParametrosDisciplina comTravaGoleada(double trava) {
+		return new ParametrosDisciplina(cartoesPorMinuto, proporcaoVermelhoDireto, sensibilidadeTemperamento,
+				pesosTemperamento, bonusDominioPorExpulsao, dominioMaximo, chancesExtrasPorExpulsao, trava);
 	}
 }

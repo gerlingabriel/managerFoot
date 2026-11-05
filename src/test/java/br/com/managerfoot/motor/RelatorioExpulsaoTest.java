@@ -36,7 +36,8 @@ class RelatorioExpulsaoTest {
 		linha("Gerado por `RelatorioExpulsaoTest` (SPEC §7.4, rev. 98). Cada cenário: " + PARTIDAS
 				+ " partidas, sementes 0 a " + (PARTIDAS - 1) + " (reproduzível), 4-4-2 × 4-4-2, temperamento normal.");
 		linha("As expulsões acontecem naturalmente (cerca de 0,2 por partida). Contam só as partidas em que um time");
-		linha("terminou com mais expulsos que o outro; o resultado é o desse time.");
+		linha("terminou com mais expulsos que o outro; o resultado é o desse time. As tabelas de domínio e lances extras");
+		linha("usam a trava das goleadas padrão (rev. 114).");
 		linha("");
 		linha("- **Domínio:** quanto a chance do adversário de ficar com a jogada cresce (0 = regra anterior, só o buraco");
 		linha("  no setor; 0,5 = rev. 98, 50/50 vira 75/25).");
@@ -46,6 +47,7 @@ class RelatorioExpulsaoTest {
 		cenario("Times iguais (25 × 25)", 25, 25);
 		cenario("Mandante mais forte (30 × 20)", 30, 20);
 		cenario("Visitante mais forte (20 × 30)", 20, 30);
+		travaGoleadas();
 		Files.createDirectories(SAIDA.getParent());
 		Files.writeString(SAIDA, md.toString());
 		System.out.println(md);
@@ -114,12 +116,65 @@ class RelatorioExpulsaoTest {
 		linha("");
 	}
 
+	/** Trava das goleadas com expulso (rev. 114): tamanho do placar com e sem expulso a mais, por valor da trava. */
+	private void travaGoleadas() {
+		linha("## Trava das goleadas com expulso (rev. 114)");
+		linha("");
+		linha("Com jogador a mais e 2 gols ou mais de vantagem, a conversão de quem tem um a mais é multiplicada pela trava");
+		linha("a cada gol de vantagem além do primeiro (1 = sem trava; padrão " + f(ParametrosDisciplina.padrao().travaGoleadaComExpulsao(), 2)
+				+ "). *Sem expulso*: partidas que terminaram sem expulso a mais. *Perde por 4+* e *Adversário faz 5+*: do ponto");
+		linha("de vista de quem tem o expulso.");
+		linha("");
+		linha("| Cenário | Trava | Gols, sem expulso | Diferença 4+, sem expulso | 5+ de um time, sem expulso | Gols, com expulso | Perde | Empata | Perde por 4+ | Adversário faz 5+ |");
+		linha("|---|---|---|---|---|---|---|---|---|---|");
+		int[][] forcas = { { 25, 25 }, { 30, 20 }, { 20, 30 } };
+		for (int[] forca : forcas) {
+			Escalacao casa = escalacao(Formacao.F_4_4_2, forca[0], 1);
+			Escalacao fora = escalacao(Formacao.F_4_4_2, forca[1], 100);
+			for (double trava : new double[] { 1, 0.65, 0.5, 0.4, 0.3 }) {
+				ParametrosMotor p = ParametrosMotor.padrao();
+				MotorPartida motor = new MotorPartida(p.comDisciplina(p.disciplina().comTravaGoleada(trava)));
+				int sem = 0, semQuatro = 0, semCinco = 0, com = 0, perde = 0, empata = 0, comQuatro = 0, comCinco = 0;
+				long golsSem = 0, golsCom = 0;
+				for (long semente = 0; semente < PARTIDAS; semente++) {
+					ResultadoPartida r = motor.simular(casa, fora, semente);
+					int diferenca = 0;
+					for (EventoPartida e : r.eventos()) {
+						if (e.tipo().expulsao()) {
+							diferenca += e.lado() == Lado.CASA ? 1 : -1;
+						}
+					}
+					if (diferenca == 0) {
+						sem++;
+						golsSem += r.golsCasa() + r.golsFora();
+						semQuatro += Math.abs(r.golsCasa() - r.golsFora()) >= 4 ? 1 : 0;
+						semCinco += Math.max(r.golsCasa(), r.golsFora()) >= 5 ? 1 : 0;
+						continue;
+					}
+					int dele = diferenca > 0 ? r.golsCasa() : r.golsFora();
+					int outro = diferenca > 0 ? r.golsFora() : r.golsCasa();
+					com++;
+					golsCom += dele + outro;
+					perde += dele < outro ? 1 : 0;
+					empata += dele == outro ? 1 : 0;
+					comQuatro += outro - dele >= 4 ? 1 : 0;
+					comCinco += outro >= 5 ? 1 : 0;
+				}
+				linha("| " + forca[0] + " × " + forca[1] + " | " + f(trava, 2) + " | " + f((double) golsSem / sem, 2) + " | "
+						+ pct(semQuatro, sem) + " | " + pct(semCinco, sem) + " | " + f((double) golsCom / com, 2) + " | "
+						+ pct(perde, com) + " | " + pct(empata, com) + " | " + pct(comQuatro, com) + " | " + pct(comCinco, com) + " |");
+			}
+		}
+		linha("");
+	}
+
 	/** Os parâmetros padrão com outra regra da expulsão. */
 	private static ParametrosMotor comRegra(double bonus, double extras) {
 		ParametrosMotor p = ParametrosMotor.padrao();
 		ParametrosDisciplina d = p.disciplina();
 		ParametrosDisciplina outra = new ParametrosDisciplina(d.cartoesPorMinuto(), d.proporcaoVermelhoDireto(),
-				d.sensibilidadeTemperamento(), d.pesosTemperamento(), bonus, d.dominioMaximo(), extras);
+				d.sensibilidadeTemperamento(), d.pesosTemperamento(), bonus, d.dominioMaximo(), extras,
+				d.travaGoleadaComExpulsao());
 		return new ParametrosMotor(p.minutos(), p.chancePorMinuto(), p.fatorMando(), p.conversaoBase(), p.sensibilidadeForca(),
 				p.expoenteMeias(), p.expoenteAtacantes(), p.expoenteDefensores(), p.fatorPorGolMarcado(), p.conversaoMinima(),
 				p.conversaoMaxima(), p.proporcaoDefesa(), p.proporcaoTrave(), p.pesosFinalizador(), outra, p.penalti(), p.sorte(),

@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 113 — 2026-11-05)
+-   **Status:** versão inicial para revisão (rev. 114 — 2026-11-05)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -14,6 +14,8 @@
     descreve intenção geral ainda não detalhada.
 
 ### Histórico de revisões
+
+-   **rev. 114 (2026-11-05):** pelo usuário (§7.4): com expulsão ficou fácil fazer muitos gols; sem expulsão o motor fica igual. Trava das goleadas com expulso: quem tem jogador a mais e já ganha por 2 gols ou mais converte menos a cada gol de vantagem além do primeiro (fator 0,4, recomendação do agente aprovada). Com times iguais, quem tem o expulso perde por 4 ou mais em 5% (era 22%) e o adversário faz 5 ou mais em 3% (era 18%); vitórias, empates e derrotas não mudam. Goleadas de times equilibrados: 1,2% (era 4,0%); gols por partida 2,36 (era 2,46).
 
 -   **rev. 113 (2026-11-05):** pelo usuário (§7.2): as formações com 3 zagueiros perdiam para as de 4. Agora ganham bônus de meio na disputa de quem fica com a jogada (3-5-2 e 3-6-1 cheio, 3-4-3 menor); o 4-2-4 ganha bônus de ataque (só na conversão dele, sem mudar a do adversário) e as de 1 atacante com defesa forte (4-5-1, 5-4-1) ganham bônus de defesa. Valores do agente, pela simulação de todas contra todas: pontos por jogo entre 1,36 e 1,40 (antes 1,27 a 1,45).
 
@@ -1506,6 +1508,25 @@ ficar com a jogada no meio: 50/50 vira 75/25, 60/40 vira 90/10. Se passar de
     vence 11%; com o vermelho no 1º tempo, não perde em 6%. A média de gols de todas
     as partidas sobe de 2,19 para 2,45 (meta 1,75 a 2,5). Com 3 vezes, perderia 80%,
     mas a média passaria de 2,5.
+- **Definido (rev. 114), pelo usuário — trava das goleadas com expulso:** com
+  expulsão ficava fácil fazer muitos gols; sem expulsão, o motor fica igual. Quem
+  tem jogador a mais **e já ganha por 2 gols ou mais** tem a chance de cada lance
+  virar gol multiplicada por **0,4** a cada gol de vantagem além do primeiro (2 de
+  vantagem: × 0,4; 3: × 0,16…). A trava fica fora do piso e do teto da conversão.
+  Valor recomendado pelo agente e aprovado, pela simulação `docs/simulacoes/expulsao.md`
+  (times iguais, 40 mil partidas):
+
+  | Trava | Gols com expulso | Quem tem o expulso perde por 4+ | Adversário faz 5+ |
+  |---|---|---|---|
+  | sem trava (antes) | 3,73 | 22,4% | 17,9% |
+  | 0,65 | 3,35 | 12,0% | 6,7% |
+  | 0,5 | 3,24 | 7,2% | 3,9% |
+  | **0,4** | **3,18** | **5,2%** | **3,1%** |
+  | 0,3 | 3,12 | 2,8% | 2,0% |
+
+  Sem expulso a mais: diferença de 4+ em 1,8% e 5+ de um time em 0,7%. Quem tem
+  o expulso continua perdendo 76% e empatando 13%: a trava só segura o placar.
+  Parâmetro `travaGoleadaComExpulsao` em `ParametrosDisciplina` (1 = sem trava).
 - **Provisório (agente):** quem sai lesionado sem substituto não conta. Conta a
   diferença de expulsos: um de cada lado se anula, e cada expulso a mais multiplica
   de novo por 1,5. A chance de cada lance virar gol não muda.
@@ -1652,7 +1673,8 @@ expulsão (§7.4), aceitam-se **goleadas (5 ou mais gols de um time) em até cer
 4%** das partidas de times equilibrados (eram menos de 2%), a zebra de 10 pontos
 **até 21%** (era até 20%) e a de 20 pontos **até 12%** (era até 10%): o forte que
 leva vermelho também sofre. Medido (10 mil partidas): goleadas 4,0%, zebras 20,0% /
-11,2% / 2,9%, gols por partida 2,46.
+11,2% / 2,9%, gols por partida 2,46. **Rev. 114:** com a trava das goleadas com
+expulso (§7.4), goleadas 1,2% e gols por partida 2,36; as zebras não mudam.
 
 **Resultado da calibração (Etapa 1d):** ver
 `docs/simulacoes/calibracao-motor.md`. Todas as metas desta seção foram

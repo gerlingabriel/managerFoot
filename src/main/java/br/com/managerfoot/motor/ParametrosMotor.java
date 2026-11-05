@@ -150,6 +150,14 @@ public record ParametrosMotor(int minutos, double chancePorMinuto, double fatorM
 				asterisco, lesao, novaAbertura, ajustesFormacao);
 	}
 
+	/** Cópia com outros cartões e expulsões (calibração e testes). */
+	public ParametrosMotor comDisciplina(ParametrosDisciplina novaDisciplina) {
+		return new ParametrosMotor(minutos, chancePorMinuto, fatorMando, conversaoBase, sensibilidadeForca,
+				expoenteMeias, expoenteAtacantes, expoenteDefensores, fatorPorGolMarcado, conversaoMinima,
+				conversaoMaxima, proporcaoDefesa, proporcaoTrave, pesosFinalizador, novaDisciplina, penalti, sorte,
+				asterisco, lesao, aberturaPorAtacantes, ajustesFormacao);
+	}
+
 	/** Cópia com outro efeito de sorte (calibração e testes). */
 	public ParametrosMotor comSorte(ParametrosSorte novaSorte) {
 		return new ParametrosMotor(minutos, chancePorMinuto, fatorMando, conversaoBase, sensibilidadeForca,

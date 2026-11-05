@@ -238,6 +238,18 @@ public final class Partida {
 		return Math.max(chanceCasa, Math.min(disciplina.dominioMaximo(), chanceCasa * fator));
 	}
 
+	/**
+	 * Trava das goleadas com expulso (SPEC §7.4, rev. 114): com jogador a mais e 2 gols ou mais de vantagem,
+	 * a conversão cai a cada gol de vantagem além do primeiro. Sem expulso a mais vale 1, e o motor não muda.
+	 */
+	private double travaComExpulsao(Lado lado) {
+		int vantagem = gols(lado) - gols(lado.adversario());
+		if (expulsos(lado.adversario()) <= expulsos(lado) || vantagem < 2) {
+			return 1;
+		}
+		return Math.pow(parametros.disciplina().travaGoleadaComExpulsao(), vantagem - 1);
+	}
+
 	/** Expulsos por cartão até agora; quem sai lesionado sem substituto não conta. */
 	private int expulsos(Lado lado) {
 		return (int) eventos.stream().filter(e -> e.lado() == lado && e.tipo().expulsao()).count();
@@ -253,7 +265,8 @@ public final class Partida {
 		double antiGoleada = Math.pow(parametros.fatorPorGolMarcado(), gols(lado));
 		double conversao = Math.clamp(parametros.conversaoBase() * pressao * duelo * antiGoleada,
 				parametros.conversaoMinima(), parametros.conversaoMaxima()) * bonusFinalizacao(finalizador)
-				* abertura(ataque) * abertura(defesa) * ajuste(ataque).ataque() / ajuste(defesa).defesa();
+				* abertura(ataque) * abertura(defesa) * ajuste(ataque).ataque() / ajuste(defesa).defesa()
+				* travaComExpulsao(lado);
 
 		registrarFinalizacao(lado, finalizador, conversao, false);
 	}
