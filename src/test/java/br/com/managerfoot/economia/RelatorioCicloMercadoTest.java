@@ -57,6 +57,7 @@ class RelatorioCicloMercadoTest {
 	private static final int SEMENTES = 3;
 	private static final int TEMPORADAS = 6;
 	private static final Path SAIDA = Path.of("docs/simulacoes/ciclo-do-mercado.md");
+	private static final Path SAIDA_AJUSTE = Path.of("docs/simulacoes/ajuste-caixa.md");
 	private static final String[] TERCOS = { "Topo", "Meio", "Fundo" };
 	private static final String[] RIQUEZA = { "Rico", "Médio", "Pobre" };
 
@@ -67,18 +68,34 @@ class RelatorioCicloMercadoTest {
 
 	/** Cenários da rev. 66: o primeiro é o jogo antes dela, o último é o padrão atual. */
 	private static final List<Cenario> CENARIOS = List.of(
-			new Cenario("Antes (rev. 61): faixa pelo jogador (−10/−5/0/+5/+10)", false, faixas(0.90, 0.95, 1.05, 1.10), 0),
-			new Cenario("Pelo clube −10/−5/0/+10/+20, preço sem faixa", true, faixas(0.90, 0.95, 1.10, 1.20), 0),
-			new Cenario("Pelo clube −10/−5/0/+10/+20, preço sem faixa, plantel até 23", true, faixas(0.90, 0.95, 1.10, 1.20), 23),
-			new Cenario("Pelo clube −20/−10/0/+10/+20, preço sem faixa, plantel até 23", true, faixas(0.80, 0.90, 1.10, 1.20), 23),
-			new Cenario("Escolhido (rev. 66): pelo clube −30/−15/0/+10/+20, preço sem faixa, plantel até 23", true, faixas(0.70, 0.85, 1.10, 1.20), 23));
+			new Cenario("Antes (rev. 61): faixa pelo jogador (−10/−5/0/+5/+10)", false, faixas(0.90, 0.95, 1.05, 1.10), 0, 40, 1.0),
+			new Cenario("Pelo clube −10/−5/0/+10/+20, preço sem faixa", true, faixas(0.90, 0.95, 1.10, 1.20), 0, 40, 1.0),
+			new Cenario("Pelo clube −10/−5/0/+10/+20, preço sem faixa, plantel até 23", true, faixas(0.90, 0.95, 1.10, 1.20), 23, 40, 1.0),
+			new Cenario("Pelo clube −20/−10/0/+10/+20, preço sem faixa, plantel até 23", true, faixas(0.80, 0.90, 1.10, 1.20), 23, 40, 1.0),
+			new Cenario("Escolhido (rev. 66): pelo clube −30/−15/0/+10/+20, preço sem faixa, plantel até 23", true, faixas(0.70, 0.85, 1.10, 1.20), 23, 40, 1.0));
+
+	/**
+	 * Ajuste do caixa (Etapa 6, depois do relatório do jogo completo): o padrão atual com outro ingresso ou outro
+	 * salário. Roda com {@code RELATORIO_AJUSTE_CAIXA=1} e grava {@code docs/simulacoes/ajuste-caixa.md}.
+	 */
+	private static final List<Cenario> AJUSTES = List.of(
+			new Cenario("Atual: ingresso R$ 40, salário ×1", true, faixas(0.70, 0.85, 1.10, 1.20), 23, 40, 1.0),
+			new Cenario("Ingresso R$ 35", true, faixas(0.70, 0.85, 1.10, 1.20), 23, 35, 1.0),
+			new Cenario("Ingresso R$ 30", true, faixas(0.70, 0.85, 1.10, 1.20), 23, 30, 1.0),
+			new Cenario("Ingresso R$ 25", true, faixas(0.70, 0.85, 1.10, 1.20), 23, 25, 1.0),
+			new Cenario("Salário ×1,3", true, faixas(0.70, 0.85, 1.10, 1.20), 23, 40, 1.3),
+			new Cenario("Salário ×1,45", true, faixas(0.70, 0.85, 1.10, 1.20), 23, 40, 1.45),
+			new Cenario("Salário ×1,6", true, faixas(0.70, 0.85, 1.10, 1.20), 23, 40, 1.6),
+			new Cenario("Ingresso R$ 35 e salário ×1,2", true, faixas(0.70, 0.85, 1.10, 1.20), 23, 35, 1.2));
 
 	@Test
 	void gerarRelatorio() throws IOException {
+		boolean ajuste = System.getenv("RELATORIO_AJUSTE_CAIXA") != null;
+		List<Cenario> cenarios = ajuste ? AJUSTES : CENARIOS;
 		GeradorBancoPadrao gerador = new GeradorBancoPadrao(ParametrosBancoPadrao.padrao(), ParametrosMotor.padrao());
 		List<GeradorBancoPadrao.PaisGerado> gerados = PaisPadrao.TODOS.stream().map(gerador::gerar).toList();
 		List<Simulacao> simulacoes = new ArrayList<>();
-		for (Cenario cenario : CENARIOS) {
+		for (Cenario cenario : cenarios) {
 			Simulacao sim = new Simulacao(cenario);
 			for (int p = 0; p < PaisPadrao.TODOS.size(); p++) {
 				for (int semente = 0; semente < SEMENTES; semente++) {
@@ -93,6 +110,12 @@ class RelatorioCicloMercadoTest {
 			simulacoes.add(sim);
 		}
 		Files.createDirectories(SAIDA.getParent());
+		if (ajuste) {
+			String md = ajusteCaixa(cenarios, simulacoes);
+			Files.writeString(SAIDA_AJUSTE, md);
+			System.out.println(md);
+			return;
+		}
 		String md = comparacao(simulacoes) + simulacoes.get(DETALHADO).relatorio();
 		Files.writeString(SAIDA, md);
 		System.out.println(md);
@@ -143,6 +166,83 @@ class RelatorioCicloMercadoTest {
 		return md.toString();
 	}
 
+	/** Comparação do ajuste do caixa: saldo em rodadas da folha, clubes negativos e mercado da máquina por temporada. */
+	private static String ajusteCaixa(List<Cenario> cenarios, List<Simulacao> simulacoes) {
+		int ligas = PaisPadrao.TODOS.size() * SEMENTES;
+		StringBuilder md = new StringBuilder();
+		md.append("# Ajuste do caixa: ingresso e salário\n\n")
+			.append("Gerado por `RelatorioCicloMercadoTest` com `RELATORIO_AJUSTE_CAIXA=1` (ferramenta de desenvolvimento; ")
+			.append("SPEC §15, Etapa 6). O mesmo simulador de `ciclo-do-mercado.md`, com o padrão atual (faixas da rev. 66, plantel ")
+			.append("até 23): as 6 ligas do banco padrão, ").append(SEMENTES).append(" sementes, ").append(TEMPORADAS)
+			.append(" temporadas com promoção e rebaixamento, só máquina, leilões da máquina antes de cada rodada. Sem copa, ")
+			.append("continental e Mundial (o jogo completo tem mais jogos em casa). Cada linha muda só o ingresso (todas as ")
+			.append("divisões) ou o salário de referência; o salário maior também encarece o preço do jogador, o prêmio, o ")
+			.append("patrocínio e a obra do estádio, como no jogo.\n\n")
+			.append("*Saldo*: média dos clubes da divisão no fim da temporada, em rodadas da folha do próprio clube (o jogo ")
+			.append("começa com 10). *Ganho por temporada*: (saldo no fim da ").append(TEMPORADAS)
+			.append("ª − no fim da 1ª) ÷ ").append(TEMPORADAS - 1).append(". *Negativos*: clubes com saldo abaixo de zero ")
+			.append("no fim da temporada, média das temporadas. *Vendas*: leilões da máquina vendidos por liga e temporada.\n\n")
+			.append("| Cenário | Saldo 1ª fim da 1ª | Saldo 1ª fim da ").append(TEMPORADAS).append("ª | Ganho por temporada 1ª | ")
+			.append("1ª topo / meio / fundo (fim) | Saldo 2ª fim da 1ª | Saldo 2ª fim da ").append(TEMPORADAS)
+			.append("ª | Ganho por temporada 2ª | 2ª topo / meio / fundo (fim) | Negativos 1ª / 2ª | Vendas 1ª temporada | ")
+			.append("Vendas 2ª a ").append(TEMPORADAS).append("ª | Sem lance 2ª a ").append(TEMPORADAS).append("ª | Ligas travadas |\n")
+			.append("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|\n");
+		for (int i = 0; i < cenarios.size(); i++) {
+			Simulacao s = simulacoes.get(i);
+			md.append("| ").append(cenarios.get(i).nome());
+			for (int d = 1; d <= 2; d++) {
+				Medida primeira = s.temporadas.get(d).get(1);
+				Medida ultima = s.temporadas.get(d).get(TEMPORADAS);
+				double fim = rodadas(ultima);
+				md.append(" | ").append(dec(rodadas(primeira))).append(" | ").append(dec(fim)).append(" | ")
+					.append(dec((fim - rodadas(primeira)) / (TEMPORADAS - 1))).append(" | ")
+					.append(dec(10 * ultima.limites[0] / ultima.n[0])).append(" / ").append(dec(10 * ultima.limites[1] / ultima.n[1]))
+					.append(" / ").append(dec(10 * ultima.limites[2] / ultima.n[2]));
+			}
+			md.append(" | ").append(pct(negativos(s.temporadas.get(1)))).append(" / ").append(pct(negativos(s.temporadas.get(2))));
+			long[] v1 = s.mercadoPorTemporada.getOrDefault(1, new long[2]);
+			long vendasDepois = 0;
+			long semLanceDepois = 0;
+			for (int t = 2; t <= TEMPORADAS; t++) {
+				long[] v = s.mercadoPorTemporada.getOrDefault(t, new long[2]);
+				vendasDepois += v[0];
+				semLanceDepois += v[1];
+			}
+			md.append(" | ").append(dec(v1[0] / (double) ligas)).append(" | ")
+				.append(dec(vendasDepois / (double) ligas / (TEMPORADAS - 1))).append(" | ")
+				.append(dec(semLanceDepois / (double) ligas / (TEMPORADAS - 1))).append(" | ").append(s.travadas)
+				.append(" de ").append(ligas).append(" |\n");
+		}
+		md.append("\n## Saldo médio por temporada (rodadas da folha)\n\n| Cenário | Divisão |");
+		for (int t = 1; t <= TEMPORADAS; t++) {
+			md.append(" ").append(t).append("ª |");
+		}
+		md.append("\n|---|---|").append("---|".repeat(TEMPORADAS)).append("\n");
+		for (int i = 0; i < cenarios.size(); i++) {
+			for (int d = 1; d <= 2; d++) {
+				md.append("| ").append(cenarios.get(i).nome()).append(" | ").append(d).append("ª |");
+				for (int t = 1; t <= TEMPORADAS; t++) {
+					Medida m = simulacoes.get(i).temporadas.get(d).get(t);
+					md.append(" ").append(m == null ? "–" : dec(rodadas(m)) + " (" + pct(m.negativos / total(m)) + " neg.)").append(" |");
+				}
+				md.append("\n");
+			}
+		}
+		return md.toString();
+	}
+
+	private static double total(Medida m) {
+		return m.n[0] + m.n[1] + m.n[2];
+	}
+
+	private static double rodadas(Medida m) {
+		return 10 * (m.limites[0] + m.limites[1] + m.limites[2]) / total(m);
+	}
+
+	private static double negativos(Map<Integer, Medida> porTemporada) {
+		return porTemporada.values().stream().mapToDouble(m -> m.negativos / total(m)).average().orElse(0);
+	}
+
 	/** Cenário com as tabelas completas no relatório. */
 	private static final int DETALHADO = 4;
 
@@ -150,7 +250,12 @@ class RelatorioCicloMercadoTest {
 	 * @param peloClube a faixa do salário segue a força em campo do clube e o preço sai sem faixa
 	 * @param plantelAlvo abaixo disto o clube com caixa compra até jogador fraco (0 desliga)
 	 */
-	private record Cenario(String nome, boolean peloClube, List<FaixaSalario> faixas, int plantelAlvo) {
+	/**
+	 * @param ingresso preço do ingresso em Reais, igual em todas as divisões
+	 * @param salario multiplicador do salário de referência (e com ele do preço, do prêmio e da obra)
+	 */
+	private record Cenario(String nome, boolean peloClube, List<FaixaSalario> faixas, int plantelAlvo, long ingresso,
+			double salario) {
 	}
 
 	/** Acumuladores e regras de um cenário. */
@@ -159,8 +264,8 @@ class RelatorioCicloMercadoTest {
 		private final CaixaDaRodada caixa;
 		private final ParametrosPublico parametros = ParametrosPublico.padrao();
 		private final PublicoDoJogo publico = PublicoDoJogo.padrao();
-		private final AmpliacaoEstadio ampliacao = AmpliacaoEstadio.padrao();
-		private final Premiacao premiacao = Premiacao.padrao();
+		private final AmpliacaoEstadio ampliacao;
+		private final Premiacao premiacao;
 		private final EvolucaoForca evolucao = EvolucaoForca.padrao();
 		private final PrecoJogador preco;
 		private final MercadoDaMaquina mercado;
@@ -188,13 +293,22 @@ class RelatorioCicloMercadoTest {
 		private long clubesNaMobilidade;
 		private long mudaramDeTerco;
 		private int travadas;
+		private int temporadaAtual;
+		/** Vendas e leilões sem lance por número da temporada (somados entre ligas e sementes). */
+		private final Map<Integer, long[]> mercadoPorTemporada = new java.util.TreeMap<>();
 
 		private Simulacao(Cenario cenario) {
-			caixa = new CaixaDaRodada(ParametrosEconomia.padrao().comFaixas(cenario.faixas(), cenario.peloClube()),
-					ParametrosMoral.padrao());
+			ParametrosEconomia e = ParametrosEconomia.padrao().comFaixas(cenario.faixas(), cenario.peloClube());
+			e = new ParametrosEconomia(e.forcaCapacidadeMinima(), e.capacidadeMinima(), e.capacidadeMaxima(),
+					List.of(cenario.ingresso() * 100), e.ocupacaoBase(), e.pesoMoral(), e.pesoAdversario(), e.variacaoPublico(),
+					e.custoDoJogo(), e.deslocamentoPorDivisao(), Math.round(e.salarioReferencia() * cenario.salario()),
+					e.forcaReferencia(), e.crescimentoSalario(), e.rodadasDeFolhaNoInicio(), e.faixasSalario(), e.salarioPeloClube());
+			caixa = new CaixaDaRodada(e, ParametrosMoral.padrao());
 			preco = new PrecoJogador(ParametrosMercado.padrao().comPrecoSemFaixa(cenario.peloClube()), caixa);
 			mercado = new MercadoDaMaquina(ParametrosMercadoMaquina.padrao().comPlantelAlvo(cenario.plantelAlvo()), preco, caixa);
 			leiloes = new LeiloesDaRodada(mercado, preco);
+			premiacao = new Premiacao(ParametrosPremiacao.padrao(), preco);
+			ampliacao = new AmpliacaoEstadio(parametros, publico, preco, mercado);
 		}
 
 		private String relatorio() {
@@ -303,6 +417,7 @@ class RelatorioCicloMercadoTest {
 			Disciplina disciplina = Disciplina.vazia();
 			Map<Long, Moral> moral = new HashMap<>();
 			for (int numero = 1; numero <= TEMPORADAS; numero++) {
+				temporadaAtual = numero;
 				Temporada temporada = Temporada.iniciar(numero, liga, planteis, aleatorio.nextLong());
 				Map<Long, Integer> teto = new HashMap<>();
 				Map<Long, Divisao> divisaoDe = new HashMap<>();
@@ -431,6 +546,7 @@ class RelatorioCicloMercadoTest {
 				}
 				d.lances().forEach(l -> lances[divisaoDe.get(l.clubeId()).prioridade() - 1][terco(l.clubeId(), posicao, divisaoDe)]++);
 				if (d.vencedor().isEmpty()) {
+					mercadoPorTemporada.computeIfAbsent(temporadaAtual, k -> new long[2])[1]++;
 					semLance[dv]++;
 					continue;
 				}
@@ -458,6 +574,7 @@ class RelatorioCicloMercadoTest {
 			trocas.merge(vend, 1, Integer::sum);
 			trocas.merge(comp, 1, Integer::sum);
 			vendidos[dv]++;
+			mercadoPorTemporada.computeIfAbsent(temporadaAtual, k -> new long[2])[0]++;
 			pagoSobrePreco[dv] += valor / (double) preco.preco(jogador, paisDaLiga);
 			porDivisao[dv][dc]++;
 			int tv = terco(vend, posicao, divisaoDe);
