@@ -26,6 +26,20 @@ Gerado por `RelatorioJogoCompletoIT` (ferramenta de desenvolvimento; SPEC §15, 
 | 4 | 37,9 (25,5 a 49,1) | 22,7 (17,3 a 32,1) | 35,2 | 1% | 28,9 | 13% | 40.363 / 12.158 | 2,7 | 20,7 | 0,0 |
 | 5 | 38,1 (26,0 a 48,7) | 22,8 (17,5 a 31,5) | 38,1 | 1% | 31,1 | 13% | 40.852 / 12.202 | 2,6 | 18,5 | 0,0 |
 
+## Quem marca (liga, todos os países)
+
+Gols da liga pela posição do autor; o pênalti fica à parte. *Artilheiro*: gols do maior artilheiro da 1ª na liga, média das temporadas. A máquina escolhe a formação a cada jogo (§7.2 dá os pesos por formação).
+
+| País | Atacante | Meia | Defensor | Goleiro | Pênalti | Artilheiro da 1ª |
+|---|---|---|---|---|---|---|
+| ARG | 56% | 30% | 6% | 0 | 8% | 21,6 |
+| BRA | 56% | 30% | 6% | 1 | 8% | 19,2 |
+| ENG | 56% | 30% | 5% | 0 | 8% | 20,2 |
+| ESP | 56% | 30% | 6% | 1 | 9% | 19,6 |
+| ITA | 56% | 30% | 6% | 0 | 8% | 19,8 |
+| POR | 57% | 30% | 5% | 4 | 8% | 18,6 |
+| Todos | 56% | 30% | 6% | 6 | 8% | 19,8 |
+
 ## Quem sobe da 2ª (todos os países)
 
 Clubes que subiram no fim da temporada anterior, na 1ª. *Caem de volta*: terminam entre os últimos, tantos quantos subiram (a zona de rebaixamento). *Força*: força em campo no início menos a média da 1ª.
@@ -55,4 +69,4 @@ Média dos clubes da divisão no fim da temporada, em rodadas da folha do própr
 | 5 | 1ª | 53,9 | -1,5 | -8,1 | -7,8 | -0,6 | 1,0 | 1,5 | -37,8 | 2,4 | 2,9 |
 | 5 | 2ª | 61,4 | -1,7 | -9,2 | -13,6 | 0,0 | 1,0 | 0,0 | -37,1 | 1,9 | 2,7 |
 
-Tempo de simulação: 267 s para 30 temporadas.
+Tempo de simulação: 260 s para 30 temporadas.

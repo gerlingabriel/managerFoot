@@ -80,7 +80,7 @@ class RelatorioJogoCompletoIT {
 	record Medida(String pais, int semente, int temporada, int partidas, int gols, int vitoriasMandante, int empates,
 			int goleadas, int expulsoes, int lesoes, Map<Integer, double[]> campeaoLanterna, boolean campeaoEntreOs3,
 			Long campeao1, Integer copaDivisao, Boolean continentalNacional, Boolean mundialNacional, int vendas, int semLance,
-			int trocas, Map<Integer, double[]> forcaDivisao, Map<Integer, double[]> saldoDivisao, Map<Integer, Double> estadio, double[] promovidos,
+			int trocas, Map<Integer, double[]> forcaDivisao, Map<Integer, double[]> saldoDivisao, Map<Integer, Double> estadio, double[] promovidos, Map<String, Integer> golsPorPosicao, int artilheiro,
 			Map<Integer, Map<String, Double>> fluxo, long milissegundos) {
 	}
 
@@ -193,6 +193,21 @@ class RelatorioJogoCompletoIT {
 			.query(rs -> {
 				eventos.put(rs.getString("tipo"), rs.getInt("n"));
 			});
+		// gols de jogada da liga pela posição do autor (sem pênalti) e os gols do artilheiro da 1ª
+		Map<String, Integer> golsPorPosicao = new HashMap<>();
+		jdbc.sql("""
+				SELECT CASE WHEN e.penalti THEN 'PENALTI' ELSE j.posicao END AS chave, count(*) AS n
+				FROM jogo_evento e JOIN jogo_partida p ON p.id = e.partida_id JOIN jogo_jogador j ON j.id = e.jogador_id
+				WHERE p.temporada_id = :t AND p.divisao_id IS NOT NULL AND e.tipo = 'GOL' GROUP BY 1""")
+			.param("t", temporada)
+			.query(rs -> {
+				golsPorPosicao.put(rs.getString("chave"), rs.getInt("n"));
+			});
+		int artilheiro = jdbc.sql("""
+				SELECT coalesce(max(n), 0) FROM (SELECT count(*) AS n FROM jogo_evento e JOIN jogo_partida p ON p.id = e.partida_id
+				  JOIN jogo_divisao d ON d.id = p.divisao_id WHERE p.temporada_id = :t AND d.prioridade = 1 AND e.tipo = 'GOL'
+				  GROUP BY e.jogador_id) x""")
+			.param("t", temporada).query(Integer.class).single();
 		Map<Integer, double[]> campeaoLanterna = new HashMap<>();
 		// quem subiu da 2ª no fim da temporada anterior: quantos, soma das posições na 1ª, quantos terminaram entre os
 		// últimos (tantos quantos subiram), soma da força em campo menos a média da 1ª
@@ -295,7 +310,7 @@ class RelatorioJogoCompletoIT {
 				eventos.getOrDefault("CARTAO_VERMELHO", 0) + eventos.getOrDefault("SEGUNDO_AMARELO", 0),
 				eventos.getOrDefault("LESAO", 0), campeaoLanterna, entreOs3, campeao1, copaDivisao, continental, mundial,
 				leilao.getOrDefault("VENDIDO", 0), leilao.getOrDefault("SEM_LANCE", 0), trocas, forcaDivisao, saldoDivisao,
-				estadioMedio, promovidos, fluxo, ms);
+				estadioMedio, promovidos, golsPorPosicao, artilheiro, fluxo, ms);
 	}
 
 	private static String linhaPromovidos(String rotulo, double[] p) {
@@ -391,6 +406,19 @@ class RelatorioJogoCompletoIT {
 				.append(" | ").append(num(media(ms, Medida::vendas))).append(" | ").append(num(media(ms, Medida::semLance)))
 				.append(" |\n");
 		}
+		md.append("\n## Quem marca (liga, todos os países)\n\n")
+			.append("Gols da liga pela posição do autor; o pênalti fica à parte. *Artilheiro*: gols do maior artilheiro da 1ª ")
+			.append("na liga, média das temporadas. A máquina escolhe a formação a cada jogo (§7.2 dá os pesos por formação).\n\n")
+			.append("| País | Atacante | Meia | Defensor | Goleiro | Pênalti | Artilheiro da 1ª |\n|---|---|---|---|---|---|---|\n");
+		porPais.forEach((pais, ms) -> {
+			double total = ms.stream().mapToDouble(m -> m.golsPorPosicao().values().stream().mapToInt(Integer::intValue).sum()).sum();
+			md.append("| ").append(pais);
+			for (String chave : List.of("ATACANTE", "MEIO_CAMPISTA", "DEFENSOR", "GOLEIRO", "PENALTI")) {
+				double n = ms.stream().mapToDouble(m -> m.golsPorPosicao().getOrDefault(chave, 0)).sum();
+				md.append(" | ").append(chave.equals("GOLEIRO") ? String.valueOf((long) n) : pct(n / Math.max(1, total)));
+			}
+			md.append(" | ").append(num(media(ms, Medida::artilheiro))).append(" |\n");
+		});
 		md.append("\n## Quem sobe da 2ª (todos os países)\n\n")
 			.append("Clubes que subiram no fim da temporada anterior, na 1ª. *Caem de volta*: terminam entre os últimos, tantos ")
 			.append("quantos subiram (a zona de rebaixamento). *Força*: força em campo no início menos a média da 1ª.\n\n")
