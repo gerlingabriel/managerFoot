@@ -41,7 +41,7 @@
 <button type="submit" class="botao">Confirmar lances</button>
 </div>
 </form>
-<p class="suave leiloes-nota">Deixe em branco o leilão em que não quer dar lance. Lance mínimo é o lance inicial (preço com 20% de desconto). Depois do seu OK, a máquina dá os lances dela<th:block th:if="${emRede}">, com os dos outros treinadores; os lances são secretos até o resultado</th:block>. Se todos os leilões estiverem acima do seu caixa, esta etapa é pulada e você vê só o resultado.</p>
+<p class="suave leiloes-nota">Deixe em branco o leilão em que não quer dar lance. Lance mínimo é o lance inicial: nos leilões da máquina, o preço com 20% de desconto; nos de um treinador, o mínimo que ele pediu. Depois do seu OK, a máquina dá os lances dela<th:block th:if="${emRede}">, com os dos outros treinadores; os lances são secretos até o resultado</th:block>. Se todos os leilões estiverem acima do seu caixa, esta etapa é pulada e você vê só o resultado.</p>
 </section>
 
 <section th:unless="${v.aguardandoLances}" aria-labelledby="t-resultado" class="leiloes">

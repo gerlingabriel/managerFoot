@@ -24,6 +24,7 @@ import br.com.managerfoot.contas.Papel;
 import br.com.managerfoot.contas.Papel;
 import br.com.managerfoot.contas.Usuario;
 import br.com.managerfoot.dominio.Clube;
+import br.com.managerfoot.multiplayer.Turno;
 import br.com.managerfoot.persistencia.BancoEditavelRepositorio;
 import br.com.managerfoot.persistencia.ContasRepositorio;
 import br.com.managerfoot.persistencia.BancoRecusadoException;
@@ -32,6 +33,8 @@ import br.com.managerfoot.persistencia.JogosDoTreinadorRepositorio.JogoGravado;
 import br.com.managerfoot.persistencia.JogosDoTreinadorRepositorio.NovoJogo;
 import br.com.managerfoot.persistencia.JogosDoTreinadorRepositorio.Rede;
 import br.com.managerfoot.persistencia.MoldeRepositorio;
+import br.com.managerfoot.persistencia.RodadaAoVivoRepositorio;
+import br.com.managerfoot.persistencia.TurnoRepositorio;
 import br.com.managerfoot.persistencia.MoldeRepositorio.CampeonatoDisponivel;
 import br.com.managerfoot.temporada.FormatoDivisao;
 import br.com.managerfoot.temporada.FormatoLiga;
@@ -52,10 +55,15 @@ class JogosController {
 	private final int candidatosClubeInicial;
 	private final ContasRepositorio contas;
 	private final boolean urlSoNesteComputador;
+	private final TurnoRepositorio turnos;
+	private final RodadaAoVivoRepositorio aoVivo;
 
 	JogosController(JogosDoTreinadorRepositorio jogos, MoldeRepositorio moldes, Campeonatos campeonatos, BancoEditavelRepositorio bancos,
 			Clock relogio, @Value("${managerfoot.jogo.candidatos-clube-inicial}") int candidatosClubeInicial,
-			ContasRepositorio contas, @Value("${managerfoot.url-base}") String urlBase) {
+			ContasRepositorio contas, @Value("${managerfoot.url-base}") String urlBase, TurnoRepositorio turnos,
+			RodadaAoVivoRepositorio aoVivo) {
+		this.turnos = turnos;
+		this.aoVivo = aoVivo;
 		this.contas = contas;
 		this.urlSoNesteComputador = ConvitesController.soNesteComputador(urlBase);
 		this.relogio = relogio;
@@ -69,7 +77,7 @@ class JogosController {
 	@GetMapping("/")
 	String inicio(@AuthenticationPrincipal Usuario usuario, @RequestParam(name = "apagar", required = false) Long apagar, Model model) {
 		model.addAttribute("usuario", usuario);
-		List<Linha> linhas = jogos.listar(usuario.id()).stream().map(JogosController::linha).toList();
+		List<Linha> linhas = jogos.listar(usuario.id()).stream().map(j -> linha(j, usuario.id())).toList();
 		model.addAttribute("jogos", linhas);
 		model.addAttribute("salasSemClube", jogos.salasSemClube(usuario.id()));
 		if (usuario.papel() == Papel.ADMINISTRADOR) {
@@ -145,7 +153,7 @@ class JogosController {
 		JogoGravado jogo = jogos.abrir(jogoId, usuario.id())
 			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 		model.addAttribute("usuario", usuario);
-		model.addAttribute("jogo", linha(jogo));
+		model.addAttribute("jogo", linha(jogo, usuario.id()));
 		return "jogo";
 	}
 
@@ -172,7 +180,7 @@ class JogosController {
 		return texto;
 	}
 
-	private static Linha linha(JogoGravado j) {
+	private Linha linha(JogoGravado j, long usuarioId) {
 		String divisao = j.divisao() == null ? "Fila de espera" : j.divisao();
 		String onde = j.pais() + " · " + divisao + " · temporada " + j.ano() + ", rodada " + j.rodada();
 		String quando = "Jogado em " + QUANDO.format(j.ultimoAcesso().atZone(ZoneId.systemDefault()));
@@ -186,8 +194,18 @@ class JogosController {
 					+ " · aguardando o início da temporada", r.treinadores() + (r.treinadores() == 1 ? " treinador" : " treinadores")
 					+ " na sala", true, true, r.souAdministrador());
 		}
-		return new Linha(j.jogoId(), j.clube(), divisao, "Jogo de " + r.administrador() + " · " + onde, quando, true, false,
-				r.souAdministrador());
+		return new Linha(j.jogoId(), j.clube(), divisao, "Jogo de " + r.administrador() + " · " + onde,
+				esperando(j.jogoId(), usuarioId).orElse(quando), true, false, r.souAdministrador());
+	}
+
+	/** O que o jogo em rede começado está esperando (modelo 18a): o OK de quem vê, o dos outros ou a rodada. */
+	private Optional<String> esperando(long jogoId, long usuarioId) {
+		Optional<Turno> turno = turnos.turno(jogoId);
+		if (turno.isPresent()) {
+			return Optional.of(turno.get().deuOk(usuarioId) ? "Você deu OK · aguardando " + turno.get().faltam()
+					: "Aguardando o seu OK");
+		}
+		return aoVivo.emAndamento(jogoId) ? Optional.of("Rodada ao vivo") : Optional.empty();
 	}
 
 	/**

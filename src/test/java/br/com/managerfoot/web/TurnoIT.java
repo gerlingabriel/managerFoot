@@ -116,6 +116,11 @@ class TurnoIT {
 		mvc.perform(get("/jogos/" + jogo + "/plantel").with(como(marcos)))
 			.andExpect(content().string(containsString("1 de 2 com OK")))
 			.andExpect(content().string(containsString("Confirmar e jogar rodada")));
+		// a lista de jogos do início diz o que o jogo espera (modelo 18a)
+		mvc.perform(get("/").with(como(marcos)))
+			.andExpect(content().string(containsString("Aguardando o seu OK")));
+		mvc.perform(get("/").with(como(admin)))
+			.andExpect(content().string(containsString("Você deu OK · aguardando " + marcos.nome())));
 
 		// a faixa: no mesmo momento, só ela; com o momento mudado, a tela vai para o plantel
 		mvc.perform(get("/jogos/" + jogo + "/turno").param("momento", "t1/r1/tatica").param("tela", "plantel")

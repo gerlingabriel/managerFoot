@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 102 — 2026-11-04)
+-   **Status:** versão inicial para revisão (rev. 103 — 2026-11-04)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -14,6 +14,8 @@
     descreve intenção geral ainda não detalhada.
 
 ### Histórico de revisões
+
+-   **rev. 103 (2026-11-04):** parte 5d conferida no navegador pelo agente (lance de um treinador no leilão de outro, com o dinheiro passando entre os dois; falta o usuário conferir). A ajuda dos leilões diz que, no leilão de um treinador, o lance mínimo é o que ele pediu. Na lista de jogos do Início, o jogo em rede mostra "Aguardando o seu OK", "Você deu OK · aguardando …" ou "Rodada ao vivo" (modelo 18a). §11.3 e §11.4 apontam para as decisões da §3.3.
 
 -   **rev. 102 (2026-11-04):** pelo usuário (§3.3): com o jogo em rede parado, cada um fica livre para mexer no próprio time ou ver outros clubes; se quem parou termina e outro ainda está mexendo, o jogo segue parado. O tempo é um só, os 60 s de quem parou primeiro; ao fim dele todas as janelas fecham. Não há limite de paradas. Migração V45 (quem está na parada).
 
@@ -3227,6 +3229,10 @@ liga principal (1) por último. Com uma única liga, basta a prioridade 1.
     relógio compartilhado pare quando alguém abrir certas telas e só
     continue quando a tela for fechada; isso pode prejudicar a
     experiência dos demais e deve ser validado antes de se tornar regra.
+    **Definido (rev. 90 a 102):** ver §3.3. No jogo em rede, só a substituição
+    e a lesão param o jogo, para todos e por até 60 s; ver o clube de outro
+    não para; com o jogo parado, cada um fica livre e o jogo volta quando todos
+    fecham ou o tempo acaba.
 -   O relógio e os eventos precisam permanecer consistentes para todos
     os participantes.
 -   Cada usuário deve conseguir acompanhar sua própria tela, sem que
@@ -3242,11 +3248,14 @@ liga principal (1) por último. Com uma única liga, basta a prioridade 1.
   sessão **não avança** para a próxima fase enquanto ele estiver
   desconectado. O jogo fica parado aguardando a reconexão.
 
+**Definido (rev. 90), pelo usuário (§3.3 item 4):** sem o OK de alguém, o
+jogo não segue e não há máquina jogando pelo ausente; vale também para o
+administrador. Todos ficam parados até todos voltarem e darem OK.
+
 **Em aberto:**
-- Tempo limite de espera e o que fazer com quem nunca volta: o
-  administrador remove o participante, o clube passa à máquina ou a sessão
-  fica parada indefinidamente.
-- Se o próprio administrador desconectar.
+- O que fazer com quem nunca volta (por exemplo, o administrador tirar o
+  participante depois de a temporada começar e o clube passar à máquina).
+  Hoje só é possível tirar alguém antes de começar (§3.3, rev. 92).
 - ~~Como saber que um navegador "caiu" usando polling.~~ Definido (rev. 92):
   sem consulta por 30 s.
 
@@ -3518,7 +3527,7 @@ começa depois que a anterior estiver testada.
   jogável e testado pelo usuário (mecânica e bugs).
 - **Partes (rev. 90):** 5a sala, convite e entrada (**concluída**, rev. 92); 5b
   OK de todos na gestão e nos leilões (**concluída**, rev. 95); 5c rodada
-  compartilhada com pausa de 60 s (**concluída**, rev. 100); 5d lances de amigos nos leilões (os lances já
+  compartilhada com pausa de 60 s (**concluída**, rev. 100 a 102); 5d lances de amigos nos leilões (**feita**, rev. 103, falta o usuário conferir; os lances já
   funcionam desde a 5b; falta conferir a tela com o usuário).
 - Sala, convites por e-mail, confirmação de turno, polling e velocidade
   definida pelo administrador.

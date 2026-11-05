@@ -49,4 +49,4 @@
   domínio dos leilões já aceitava lances de vários humanos.
 - A rodada ao vivo ainda é a do jogo individual: qualquer um pausa e muda a velocidade. A pausa de 60 s
   e a velocidade do administrador são a parte 5c.
-- A lista de jogos ainda não mostra "Aguardando o seu OK" (modelo 18a).
+- ~~A lista de jogos ainda não mostra "Aguardando o seu OK" (modelo 18a).~~ Feito na rev. 103.
