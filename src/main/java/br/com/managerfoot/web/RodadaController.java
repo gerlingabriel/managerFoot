@@ -17,9 +17,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.servlet.FlashMap;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-import org.springframework.web.servlet.support.RequestContextUtils;
 
 import br.com.managerfoot.contas.Usuario;
 import br.com.managerfoot.multiplayer.Turno;
@@ -38,9 +36,7 @@ import br.com.managerfoot.persistencia.TrocaRepositorio;
 import br.com.managerfoot.persistencia.RodadaAoVivoRepositorio.EstadoRodada;
 import br.com.managerfoot.persistencia.RodadaAoVivoRepositorio.JanelaJogo;
 import br.com.managerfoot.persistencia.RodadaAoVivoRepositorio.PausaEmRede;
-import br.com.managerfoot.persistencia.RodadaAoVivoRepositorio.PlacarAoVivo;
 import br.com.managerfoot.temporada.Velocidade;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 /**
@@ -194,16 +190,13 @@ class RodadaController {
 	@GetMapping("/jogos/{jogoId}/rodada")
 	String quadro(@AuthenticationPrincipal Usuario usuario, @PathVariable long jogoId,
 			@RequestParam(name = "janela", required = false) Long janela,
-			@RequestHeader(name = "HX-Request", required = false) String htmx, Model model, HttpServletRequest request,
+			@RequestHeader(name = "HX-Request", required = false) String htmx, Model model,
 			HttpServletResponse response) {
 		Instant agora = relogio.instant();
 		Optional<EstadoRodada> estado = aoVivo.estado(jogoId, usuario.id(), agora);
 		if (estado.isEmpty() || estado.get().gravada()) {
+			// sem aviso do placar no plantel: o fim ficou na tela (rev. 110) e o calendário do clube tem os placares (rev. 112)
 			String plantel = "/jogos/" + jogoId + "/plantel";
-			estado.map(EstadoRodada::jogoDoUsuario).ifPresentOrElse(
-					jogo -> guardarResultado(request, response, plantel, resultado(estado.get(), jogo)),
-					() -> estado.ifPresent(e -> guardarResultado(request, response, plantel, e.copa() != null
-							? e.copa() + ": seu clube não jogou." : "Rodada " + e.rodada() + ": seu clube folgou.")));
 			if (htmx != null) {
 				response.setHeader("HX-Redirect", plantel);
 				return null;
@@ -312,22 +305,6 @@ class RodadaController {
 	@ExceptionHandler(NoSuchElementException.class)
 	void naoEncontrado(HttpServletResponse response) throws IOException {
 		response.sendError(HttpStatus.NOT_FOUND.value());
-	}
-
-	static String resultado(EstadoRodada estado, PlacarAoVivo jogo) {
-		String placar = jogo.golsCasa() + " x " + jogo.golsFora();
-		String penaltis = jogo.penaltisCasa() == null ? "" : " (pên. " + jogo.penaltisCasa() + " x " + jogo.penaltisFora() + ")";
-		return (estado.copa() != null ? estado.copa() : "Rodada " + estado.rodada()) + ": " + jogo.mandante().nome() + " "
-				+ placar + " " + jogo.visitante().nome() + penaltis;
-	}
-
-	/** Mensagem para a próxima tela, também quando o redirecionamento é feito pelo HTMX. */
-	private static void guardarResultado(HttpServletRequest request, HttpServletResponse response, String destino,
-			String texto) {
-		FlashMap flash = RequestContextUtils.getOutputFlashMap(request);
-		flash.put("resultado", texto);
-		flash.setTargetRequestPath(destino);
-		RequestContextUtils.getFlashMapManager(request).saveOutputFlashMap(flash, request, response);
 	}
 
 	/** "1º turno · 3ª rodada": a rodada da temporada e o turno dela; o returno começa depois da metade das rodadas. */

@@ -166,7 +166,17 @@ public class PlantelRepositorio {
 				processadas + 1, seguinte instanceof RodadaRepositorio.Proximo.Fim, etapaCopa, indiceCopa, detalheCopa, finalCopa,
 				continental, mundial, proximo.map(j -> j.mandante().id() == clube).orElse(null), adversario,
 				adversario == null || !(continental || mundial) ? null : continentais.paisesDeFora(jogoId).get(adversario.id()), escalacao,
-				linhas, problemas, goleiroImprovisado, caixas.saldo(clube, plantel), caixas.moeda(jogoId)));
+				linhas, problemas, goleiroImprovisado, caixas.saldo(clube, plantel), caixas.moeda(jogoId),
+				forcaMediaDoPlantel(clube).orElse(null),
+				adversario == null ? null : forcaMediaDoPlantel(adversario.id()).orElse(null)));
+	}
+
+	/** Força média do plantel inteiro do clube, com lesionados e suspensos; vazio sem jogadores. */
+	private Optional<Double> forcaMediaDoPlantel(long clubeId) {
+		return Optional.ofNullable(jdbc.sql("SELECT avg(forca)::float8 FROM jogo_jogador WHERE clube_id = :clube")
+			.param("clube", clubeId)
+			.query(Double.class)
+			.single());
 	}
 
 	/** Move o jogador para titular, banco ou fora (SPEC §10.3, rev. 34). */
@@ -322,12 +332,14 @@ public class PlantelRepositorio {
 	 * @param mundial a etapa do próximo jogo é do Mundial, com o nome em {@code etapaCopa}
 	 * @param paisAdversario sigla do adversário de fora, na continental; nulo nos outros casos
 	 * @param saldo caixa do clube em centavos de Real, para saber se pode contratar (rev. 39)
+	 * @param forcaMedia força média do plantel inteiro do clube; nulo sem jogadores
+	 * @param forcaMediaAdversario a do adversário do próximo jogo; nulo sem próximo jogo
 	 */
 	public record VisaoPlantel(long jogoId, int temporada, int ano, Clube clube, String divisao, int posicao, int pontos, int jogos,
 			int moral, int moralMaxima, Moral.Faixa faixaMoral, int rodada, boolean temporadaEncerrada, String etapaCopa,
 			Integer indiceCopa, String detalheCopa, boolean finalCopa, boolean continental, boolean mundial, Boolean emCasa,
 			Clube adversario, String paisAdversario, EscalacaoDoTreinador escalacao, List<LinhaJogador> jogadores, List<String> problemas,
-			String goleiroImprovisado, long saldo, Moeda moeda) {
+			String goleiroImprovisado, long saldo, Moeda moeda, Double forcaMedia, Double forcaMediaAdversario) {
 
 		/** Só o clube que joga a próxima etapa precisa da escalação completa para seguir. */
 		public boolean escalacaoPendente() {

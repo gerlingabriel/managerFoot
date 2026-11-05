@@ -700,6 +700,11 @@ a.clube-linha:hover { color: var(--texto); background: rgba(242, 201, 76, 0.1); 
 	font-size: 20px;
 }
 
+.forca-media { font-size: 14px; }
+
+/* o calendário do clube: abre a janela do próprio clube, com os jogos da temporada */
+.link-clube.botao-calendario { min-height: 36px; padding: 0 14px; font-size: 14px; color: var(--destaque); text-decoration: none; }
+
 .aviso-resultado {
 	padding: 12px 16px;
 	border-radius: 10px;

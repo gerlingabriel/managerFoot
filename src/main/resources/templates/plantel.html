@@ -47,7 +47,10 @@
 <span class="proximo-jogo" th:if="${!v.temporadaEncerrada and v.adversario == null}" th:text="${v.etapaCopa != null} ? 'Seu clube não joga' : 'Folga'">Folga</span>
 <span class="proximo-jogo" th:if="${v.adversario != null}"><span th:text="|${v.finalCopa or v.mundial ? 'Campo neutro' : (v.emCasa ? 'Em casa' : 'Fora')} ·|">Fora ·</span> <a th:replace="~{fragmentos :: clube(${v.adversario.id}, ${v.adversario.nome}, '')}">Adversário</a> <span th:if="${v.paisAdversario != null}" class="sigla-pais" th:text="${v.paisAdversario}">ARG</span></span>
 <span th:if="${!v.temporadaEncerrada and v.detalheCopa != null}" class="suave" th:text="${v.detalheCopa}">Ida 1 x 1</span>
+<span th:if="${v.forcaMediaAdversario != null}" class="suave forca-media"
+	th:text="|Força média do plantel: adversário ${#numbers.formatDecimal(v.forcaMediaAdversario, 1, 'POINT', 1, 'COMMA')} · seu clube ${v.forcaMedia == null ? '—' : #numbers.formatDecimal(v.forcaMedia, 1, 'POINT', 1, 'COMMA')}|">Força média do plantel: adversário 31,4 · seu clube 28,9</span>
 </div>
+<a th:replace="~{fragmentos :: clube(${v.clube.id}, 'Calendário', 'botao-contorno botao-calendario')}">Calendário</a>
 </div>
 </header>
 

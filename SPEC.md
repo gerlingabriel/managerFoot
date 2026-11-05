@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 111 — 2026-11-05)
+-   **Status:** versão inicial para revisão (rev. 112 — 2026-11-05)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -14,6 +14,8 @@
     descreve intenção geral ainda não detalhada.
 
 ### Histórico de revisões
+
+-   **rev. 112 (2026-11-05):** pelo usuário (§10.3): o plantel não mostra mais o aviso com o placar da rodada anterior; o "Próximo jogo" mostra a força média do plantel inteiro do adversário e a do clube, e um botão "Calendário" abre a janela do próprio clube com os jogos da temporada.
 
 -   **rev. 111 (2026-11-05):** pelo usuário (§11.2): o mesmo vale entre as divisões. O fim de cada divisão fica 2 s na tela, no último minuto e com "Fim de jogo", antes de a seguinte começar; nesse tempo, clicar num clube não pausa.
 
@@ -2991,6 +2993,12 @@ da mesma divisão seguem na mesma tela.
 
 -   A tela de elenco deve preservar a leitura simples do Elifoot 98, com
     modernizações.
+-   **Definido (rev. 112), pelo usuário:** ao voltar da rodada, o plantel
+    **não mostra mais o aviso com o placar** do jogo anterior (os outros
+    avisos, como patrocínio assinado ou jogador comprado, continuam). O
+    bloco "Próximo jogo" mostra a **força média do plantel inteiro** do
+    adversário e a do clube do usuário, e um botão **"Calendário"** abre a
+    janela do próprio clube com os jogos e placares da temporada.
 -   **Definido (rev. 97), pelo usuário — modelo 20b, aba "Comprar":** lista os
     jogadores à venda dos clubes da máquina (das divisões e de fora), para a
     compra pelo preço, com filtros de posição, força de/até, preço de/até,

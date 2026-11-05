@@ -115,6 +115,27 @@ class PlantelIT {
 	}
 
 	@Test
+	void proximoJogoMostraAForcaMediaDosDoisPlanteisEOCalendario() throws Exception {
+		// muda as forças: o plantel do clube fica 20 e 30 (média 25); o do adversário, todo 41
+		long adversario = rodadas.preparar(jogoId, 1, java.util.List.of()).partidas().stream()
+			.map(p -> p.jogo())
+			.filter(j -> j.mandante().id() == clube || j.visitante().id() == clube)
+			.map(j -> j.mandante().id() == clube ? j.visitante().id() : j.mandante().id())
+			.findFirst().orElseThrow();
+		jdbc.sql("UPDATE jogo_jogador SET forca = CASE WHEN id % 2 = 0 THEN 20 ELSE 30 END WHERE clube_id = :c")
+			.param("c", clube).update();
+		jdbc.sql("UPDATE jogo_jogador SET forca = 41 WHERE clube_id = :c").param("c", adversario).update();
+		double media = jdbc.sql("SELECT avg(forca)::float8 FROM jogo_jogador WHERE clube_id = :c").param("c", clube)
+			.query(Double.class).single();
+
+		mvc.perform(get(plantel).with(como(treinador)))
+			.andExpect(content().string(containsString("Força média do plantel: adversário 41,0 · seu clube "
+					+ String.format(java.util.Locale.forLanguageTag("pt-BR"), "%.1f", media))))
+			.andExpect(content().string(containsString("href=\"/jogos/" + jogoId + "/clube/" + clube + "\"")))
+			.andExpect(content().string(containsString(">Calendário</a>")));
+	}
+
+	@Test
 	void tirarUmTitularDeixaAEscalacaoIncompletaEVoltarConserta() throws Exception {
 		EscalacaoDoTreinador antes = escalacoes.carregar(clube).orElseThrow();
 		long titular = antes.titulares().iterator().next();

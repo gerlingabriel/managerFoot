@@ -169,7 +169,7 @@ class RodadaIT {
 	}
 
 	@Test
-	void fimDaRodadaVoltaAoPlantelComOPlacar() throws Exception {
+	void fimDaRodadaVoltaAoPlantelSemOAvisoDoPlacar() throws Exception {
 		mvc.perform(post(rodada).param("rodada", "1").with(como(treinador)).with(csrf()));
 		agora(3_600);
 
@@ -178,7 +178,8 @@ class RodadaIT {
 		mvc.perform(get(rodada).header("HX-Request", "true").session(sessao).with(como(treinador)))
 			.andExpect(header().string("HX-Redirect", plantel));
 		mvc.perform(get(plantel).session(sessao).with(como(treinador)))
-			.andExpect(content().string(containsString("Rodada 1: ")))
+			.andExpect(content().string(not(containsString("Rodada 1: "))))
+			.andExpect(content().string(not(containsString("aviso-resultado"))))
 			.andExpect(content().string(containsString("Próximo jogo · Rodada 2")));
 		assertThat(rodadas.rodadasProcessadas(jogoId)).isEqualTo(1);
 
@@ -215,7 +216,6 @@ class RodadaIT {
 		mvc.perform(get(rodada).header("HX-Request", "true").session(sessao).with(como(treinador)))
 			.andExpect(header().string("HX-Redirect", plantel));
 		mvc.perform(get(plantel).session(sessao).with(como(treinador)))
-			.andExpect(content().string(containsString("Copa · 16 avos de final · ida: ")))
 			.andExpect(content().string(containsString("Próximo jogo · Rodada 4")));
 		assertThat(rodadas.proximo(jogoId)).isEqualTo(new RodadaRepositorio.Proximo.Liga(4));
 
@@ -231,13 +231,13 @@ class RodadaIT {
 	}
 
 	@Test
-	void fimSemHtmxRedirecionaComOPlacar() throws Exception {
+	void fimSemHtmxRedirecionaAoPlantel() throws Exception {
 		mvc.perform(post(rodada).param("rodada", "1").with(como(treinador)).with(csrf()));
 		agora(3_600);
 
 		mvc.perform(get(rodada).with(como(treinador)))
 			.andExpect(redirectedUrl(plantel))
-			.andExpect(flash().attribute("resultado", containsString("Rodada 1: ")));
+			.andExpect(flash().attributeCount(0));
 	}
 
 	@Test
