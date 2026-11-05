@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 112 — 2026-11-05)
+-   **Status:** versão inicial para revisão (rev. 113 — 2026-11-05)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -14,6 +14,8 @@
     descreve intenção geral ainda não detalhada.
 
 ### Histórico de revisões
+
+-   **rev. 113 (2026-11-05):** pelo usuário (§7.2): as formações com 3 zagueiros perdiam para as de 4. Agora ganham bônus de meio na disputa de quem fica com a jogada (3-5-2 e 3-6-1 cheio, 3-4-3 menor); o 4-2-4 ganha bônus de ataque (só na conversão dele, sem mudar a do adversário) e as de 1 atacante com defesa forte (4-5-1, 5-4-1) ganham bônus de defesa. Valores do agente, pela simulação de todas contra todas: pontos por jogo entre 1,36 e 1,40 (antes 1,27 a 1,45).
 
 -   **rev. 112 (2026-11-05):** pelo usuário (§10.3): o plantel não mostra mais o aviso com o placar da rodada anterior; o "Próximo jogo" mostra a força média do plantel inteiro do adversário e a do clube, e um botão "Calendário" abre a janela do próprio clube com os jogos da temporada.
 
@@ -1360,6 +1362,36 @@ passa a valer pela quantidade que ficou. Contra o 4-4-2 (força 25 × 25):
 
 4-4-2 contra 4-4-2 não muda (2,46 gols; metas da §7.6). O empate das ofensivas
 cai 2 a 4 pontos (mais gols, menos empates).
+
+**Definido (rev. 113), pelo usuário — ajustes de equilíbrio das formações:**
+as formações com 3 zagueiros perdiam para as de 4, e o 4-2-4 e o 4-5-1
+também estavam fracos. Cada formação passa a ter três fatores (1 = sem
+ajuste), que vêm do esquema escolhido e continuam valendo depois de
+expulsões e substituições (`ParametrosMotor.ajustesFormacao`):
+- **meio:** multiplica a força do meio na disputa de quem fica com a jogada
+  (3 zagueiros: 3-5-2 e 3-6-1 com bônus cheio, 3-4-3 com bônus menor);
+- **ataque:** multiplica só a conversão do próprio time (4-2-4). O jogo
+  aberto da rev. 107 vale para os dois lados e não muda vitórias;
+- **defesa:** divide a conversão do adversário (1 atacante com defesa forte:
+  4-5-1 e 5-4-1; o 3-6-1 não, porque tem a defesa mais fraca).
+
+Limite do usuário: pode passar do 4-4-2, mas sem ficar desproporcional.
+**Valores do agente, calibrados na simulação** (todas contra todas, força
+25 × 25, ida e volta, 2000 partidas por jogo; `docs/simulacoes/calibracao-motor.md`):
+
+| Formação | Meio | Ataque | Defesa | Pontos por jogo (antes → agora) |
+|---|---|---|---|---|
+| 4-4-2 | 1 | 1 | 1 | 1,43 → 1,39 |
+| 3-5-2 | 1,07 | 1 | 1 | 1,37 → 1,37 |
+| 4-3-3 | 1 | 1 | 1 | 1,45 → 1,40 |
+| 3-4-3 | 1,04 | 1 | 1 | 1,40 → 1,38 |
+| 4-2-4 | 1 | 1,07 | 1 | 1,37 → 1,37 |
+| 5-4-1 | 1 | 1 | 1,05 | 1,38 → 1,36 |
+| 4-5-1 | 1 | 1 | 1,10 | 1,34 → 1,36 |
+| 3-6-1 | 1,22 | 1 | 1 | 1,27 → 1,37 |
+
+Os pontos são uma soma quase fixa entre as formações: subir as fracas
+desce as fortes. 4-4-2 contra 4-4-2 não muda (metas da §7.6).
 
 **Definido — escolha do finalizador:** depois de sorteado o setor, o
 jogador do setor é escolhido com **peso pela força**. Jogadores mais

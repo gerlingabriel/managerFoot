@@ -82,6 +82,15 @@ class RelatorioCalibracaoTest {
 		linha("| sorte: chancesExtras / fatorDominioPrejudicado | " + f(parametros.sorte().chancesExtras(), 3) + " / "
 				+ f(parametros.sorte().fatorDominioPrejudicado(), 2) + " |");
 		linha("");
+		linha("### Ajustes das formações (meio / ataque / defesa; 1 = sem ajuste)");
+		linha("");
+		linha("| Formação | Meio | Ataque | Defesa |");
+		linha("|---|---|---|---|");
+		for (Formacao formacao : Formacao.values()) {
+			AjusteFormacao a = parametros.ajuste(formacao);
+			linha("| " + formacao.rotulo() + " | " + f(a.meio(), 2) + " | " + f(a.ataque(), 2) + " | " + f(a.defesa(), 2) + " |");
+		}
+		linha("");
 	}
 
 	private void equilibrados() {

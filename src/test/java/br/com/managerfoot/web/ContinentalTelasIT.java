@@ -349,10 +349,13 @@ class ContinentalTelasIT {
 				.param("t", temporada).param("j", jogoId).query(String.class).single();
 			assertThat(l.campeao().detalhe()).startsWith(esperado);
 		});
-		// todos os títulos: só nacionais; somam a liga, a copa e a continental ganha por clube do país
+		// todos os títulos: só nacionais; somam a liga, a copa, e a continental e o mundial ganhos por clube do país
 		boolean campeaoDoPais = !continentais.paisesDeFora(jogoId).containsKey(encerrada.campeao().orElseThrow().id());
+		int mundialDoPais = jdbc.sql("SELECT count(*) FROM jogo_campeao_mundial WHERE jogo_id = :j"
+				+ " AND (usuario_id IS NOT NULL OR treinador_maquina_id IS NOT NULL)")
+			.param("j", jogoId).query(Integer.class).single();
 		assertThat(historico.titulos().stream().mapToInt(ConsultasRepositorio.TreinadorNoRanking::total).sum())
-			.isEqualTo(2 + (campeaoDoPais ? 1 : 0));
+			.isEqualTo(2 + (campeaoDoPais ? 1 : 0) + mundialDoPais);
 		mvc.perform(get("/jogos/" + jogoId + "/historico").with(como(treinador)))
 			.andExpect(status().isOk())
 			.andExpect(content().string(containsString("Liga · ")))

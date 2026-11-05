@@ -34,7 +34,8 @@ import br.com.managerfoot.dominio.Temperamento;
  * </ol>
  * A sorte da temporada (SPEC §5.3.1) dá ao beneficiado uma chance extra de finalização por minuto
  * e tira domínio do prejudicado. O asterisco (SPEC §5.3) aumenta a chance de ser o finalizador e de
- * marcar; acima do limite em campo, cada asterisco a mais tira domínio do time.
+ * marcar; acima do limite em campo, cada asterisco a mais tira domínio do time. Cada formação
+ * tem um ajuste de equilíbrio no meio, no ataque e na defesa ({@link AjusteFormacao}, SPEC §7.2).
  * Entre os minutos, o treinador do usuário pode substituir ({@link #substituir}); os times da
  * máquina só reagem ao goleiro expulso ({@link TreinadorMaquina}).
  * Numa partida que precisa de vencedor ({@link JogoDecisivo}, SPEC §8.2), o placar somado empatado
@@ -210,8 +211,8 @@ public final class Partida {
 	private Lado sortearQuemDomina() {
 		boolean campoNeutro = condicoes.decisivo().map(JogoDecisivo::campoNeutro).orElse(false);
 		double meioCasa = potencia(forcaSetor(casa, Posicao.MEIO_CAMPISTA)) * (campoNeutro ? 1 : parametros.fatorMando())
-				* fatorDominio(Lado.CASA);
-		double meioFora = potencia(forcaSetor(fora, Posicao.MEIO_CAMPISTA)) * fatorDominio(Lado.FORA);
+				* fatorDominio(Lado.CASA) * ajuste(casa).meio();
+		double meioFora = potencia(forcaSetor(fora, Posicao.MEIO_CAMPISTA)) * fatorDominio(Lado.FORA) * ajuste(fora).meio();
 		double chanceCasa = meioCasa + meioFora == 0 ? 0.5 : meioCasa / (meioCasa + meioFora);
 		chanceCasa = comExpulsoes(chanceCasa, expulsos(Lado.CASA) - expulsos(Lado.FORA), parametros.disciplina());
 		return aleatorio.nextDouble() < chanceCasa ? Lado.CASA : Lado.FORA;
@@ -252,7 +253,7 @@ public final class Partida {
 		double antiGoleada = Math.pow(parametros.fatorPorGolMarcado(), gols(lado));
 		double conversao = Math.clamp(parametros.conversaoBase() * pressao * duelo * antiGoleada,
 				parametros.conversaoMinima(), parametros.conversaoMaxima()) * bonusFinalizacao(finalizador)
-				* abertura(ataque) * abertura(defesa);
+				* abertura(ataque) * abertura(defesa) * ajuste(ataque).ataque() / ajuste(defesa).defesa();
 
 		registrarFinalizacao(lado, finalizador, conversao, false);
 	}
@@ -451,6 +452,11 @@ public final class Partida {
 	/** Jogo aberto pelos atacantes em campo (SPEC §7.2, rev. 107): vale para o ataque e para a defesa do time. */
 	private double abertura(TimeEmCampo time) {
 		return parametros.abertura(time.jogadoresNa(Posicao.ATACANTE).size());
+	}
+
+	/** Bônus de equilíbrio do esquema escolhido (SPEC §7.2, rev. 113). */
+	private AjusteFormacao ajuste(TimeEmCampo time) {
+		return parametros.ajuste(time.formacao());
 	}
 
 	private double bonusFinalizacao(Jogador jogador) {
