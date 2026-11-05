@@ -70,7 +70,7 @@
 <section th:with="atual=${e.divisoes[e.divisaoAtual]}" th:attr="aria-label=${atual.nome}" class="painel grupo">
 <div class="painel-cabecalho">
 <h2 class="titulo-secao pequeno" th:text="${e.tituloDoBloco()}">Divisão</h2>
-<span class="suave" th:text="|${e.comUsuario and e.pausada ? (e.emRede ? 'Parada' : 'Pausada') : 'Ao vivo'} · ${e.partidas.size()} ${e.partidas.size() == 1 ? 'jogo' : 'jogos'}|">Ao vivo</span>
+<span class="suave" th:text="|${e.terminada ? 'Fim de jogo' : (e.comUsuario and e.pausada ? (e.emRede ? 'Parada' : 'Pausada') : 'Ao vivo')} · ${e.partidas.size()} ${e.partidas.size() == 1 ? 'jogo' : 'jogos'}|">Ao vivo</span>
 </div>
 <div class="tabela-rolagem">
 <div class="jogos-rodada" th:with="comTotal=${!e.partidas.?[volta() or primeiroJogo() or grupo != null].isEmpty()}" th:classappend="${comTotal} ? 'com-total'">

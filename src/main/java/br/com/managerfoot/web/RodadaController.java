@@ -198,7 +198,7 @@ class RodadaController {
 			HttpServletResponse response) {
 		Instant agora = relogio.instant();
 		Optional<EstadoRodada> estado = aoVivo.estado(jogoId, usuario.id(), agora);
-		if (estado.isEmpty() || estado.get().terminada()) {
+		if (estado.isEmpty() || estado.get().gravada()) {
 			String plantel = "/jogos/" + jogoId + "/plantel";
 			estado.map(EstadoRodada::jogoDoUsuario).ifPresentOrElse(
 					jogo -> guardarResultado(request, response, plantel, resultado(estado.get(), jogo)),
@@ -230,7 +230,8 @@ class RodadaController {
 		// quem está na parada em rede tem a janela aberta: a consulta do quadro apagaria a escolha de quem sai e
 		// entra; a contagem da janela consulta e a fecha quando o jogo volta (rev. 102)
 		boolean naParada = e.pausa() != null && e.pausa().minha();
-		model.addAttribute("consultar", e.emRede() ? !naParada : !(e.comUsuario() && e.pausada()));
+		// no fim, o quadro segue consultando até a rodada ser gravada e a tela ir ao plantel
+		model.addAttribute("consultar", e.terminada() || (e.emRede() ? !naParada : !(e.comUsuario() && e.pausada())));
 		model.addAttribute("consultaUrl", "/jogos/" + jogoId + "/rodada"
 				+ (e.emRede() && aberta.isPresent() && !naParada ? "?janela=" + aberta.get().mandanteId() : ""));
 		return "rodada";

@@ -224,8 +224,8 @@ class ContinentalTelasIT {
 			.andExpect(status().isOk())
 			.andExpect(content().string(containsString("Seu clube não joga esta etapa da continental")))
 			.andExpect(content().string(not(containsString("Velocidade da partida"))));
-		// cerca de 5 s no bloco sem usuário
-		agora(6);
+		// cerca de 5 s no bloco sem usuário e 2 s com o fim na tela
+		agora(8);
 		mvc.perform(get(rodada).with(como(treinador))).andExpect(redirectedUrl(plantel));
 		assertThat(List.of(rodadas.proximo(jogoId))).containsExactly(new RodadaRepositorio.Proximo.Liga(3));
 	}
@@ -242,7 +242,7 @@ class ContinentalTelasIT {
 		assertThat(tela).containsPattern("<button type=\"submit\" class=\"botao botao-largo\"\\s+aria-describedby=\"jogar-ajuda\"");
 		mvc.perform(post(rodada).param("rodada", "3").param("etapa", "0").param("continental", "true")
 			.with(como(treinador)).with(csrf())).andExpect(redirectedUrl(rodada));
-		agora(6);
+		agora(8);
 		mvc.perform(get(rodada).with(como(treinador))).andExpect(redirectedUrl(plantel));
 		assertThat(List.of(rodadas.proximo(jogoId))).containsExactly(new RodadaRepositorio.Proximo.Liga(3));
 
@@ -260,7 +260,7 @@ class ContinentalTelasIT {
 			.with(como(treinador)).with(csrf()));
 		agora(1);
 		String tela = mvc.perform(get(rodada).with(como(treinador))).andReturn().getResponse().getContentAsString();
-		agora(6);
+		agora(8);
 		mvc.perform(get(rodada).with(como(treinador)));
 
 		List<Integer> publicos = jdbc.sql("""

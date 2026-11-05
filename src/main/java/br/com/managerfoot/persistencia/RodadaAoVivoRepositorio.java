@@ -68,12 +68,15 @@ public class RodadaAoVivoRepositorio {
 	private final ContinentalRepositorio continentais;
 	private final int minutos = ParametrosMotor.padrao().minutos();
 	private final Duration pausaEmRede;
+	private final Duration fimNaTela;
 
 	public RodadaAoVivoRepositorio(JdbcClient jdbc, JogoRepositorio jogos, RodadaRepositorio rodadas,
 			CaixaRepositorio caixas, AumentoRepositorio aumentos, TrocaRepositorio trocas, CopaRepositorio copas,
 			ContinentalRepositorio continentais,
-			@Value("${managerfoot.rede.pausa-da-substituicao}") Duration pausaEmRede) {
+			@Value("${managerfoot.rede.pausa-da-substituicao}") Duration pausaEmRede,
+			@Value("${managerfoot.rodada.fim-na-tela}") Duration fimNaTela) {
 		this.pausaEmRede = pausaEmRede;
+		this.fimNaTela = fimNaTela;
 		this.jdbc = jdbc;
 		this.jogos = jogos;
 		this.rodadas = rodadas;
@@ -272,8 +275,9 @@ public class RodadaAoVivoRepositorio {
 	}
 
 	/**
-	 * O quadro da rodada no instante. Quando o tempo passa do fim, grava a rodada (uma vez só) e
-	 * devolve o estado terminado. Vazio se não há rodada ao vivo.
+	 * O quadro da rodada no instante. Quando o relógio chega ao fim, o quadro fica no último minuto com os placares
+	 * finais por {@code managerfoot.rodada.fim-na-tela}; passado esse tempo, grava a rodada (uma vez só) e devolve o
+	 * estado gravado. Vazio se não há rodada ao vivo.
 	 */
 	@Transactional
 	public Optional<EstadoRodada> estado(long jogoId, long usuarioId, Instant agora) {
@@ -316,11 +320,15 @@ public class RodadaAoVivoRepositorio {
 			}
 		}
 		boolean terminada = relogio.terminado(progresso);
-		if (terminada) {
+		// o último minuto com os placares finais fica na tela antes de ir ao plantel: o relógio já estava no fim
+		// fimNaTela atrás (parado no fim, não há o que esperar)
+		boolean encerrada = terminada && (atual.andandoDesde() == null
+				|| relogio.terminado(progresso(atual, relogio, velocidade, agora.minus(fimNaTela))));
+		if (encerrada) {
 			finalizar(jogoId, atual, substituicoes);
 		}
 		return Optional.of(montar(jogoId, usuarioId, clube, atual, rodada, porDivisao, relogio, progresso, terminada,
-				velocidade, agora));
+				encerrada, velocidade, agora));
 	}
 
 	/** Lesão que para a rodada: em que ponto do relógio e de qual clube. */
@@ -657,7 +665,7 @@ public class RodadaAoVivoRepositorio {
 
 	private EstadoRodada montar(long jogoId, long usuarioId, long clube, Linha linha, RodadaAoVivo rodada,
 			Map<Integer, List<PartidaDaRodada>> porDivisao, RelogioRodada relogio, double progresso, boolean terminada,
-			Velocidade velocidade, Instant agora) {
+			boolean gravada, Velocidade velocidade, Instant agora) {
 		List<Integer> prioridades = new ArrayList<>(porDivisao.keySet());
 		int atual = relogio.divisao(progresso);
 		int minuto = relogio.minuto(progresso);
@@ -712,7 +720,7 @@ public class RodadaAoVivoRepositorio {
 		boolean abre = pausa.isPresent() ? pausa.get().parouEu() && pausa.get().minha() : linha.pausadaNaLesao();
 		Long janelaQueAbre = !terminada && abre && doUsuarioJogando ? doUsuario.mandante().id() : null;
 		return new EstadoRodada(jogoId, temporada, linha.rodada(), copa, divisoes, atual, minuto, relogio.minutos(),
-				linha.andandoDesde() == null, terminada, velocidade, relogio.comUsuario().get(atual), placares, doUsuario,
+				linha.andandoDesde() == null, terminada, gravada, velocidade, relogio.comUsuario().get(atual), placares, doUsuario,
 				doUsuario != null && doUsuario.mandante().id() == clube, som,
 				janelaQueAbre, quemEscolheAVelocidade(jogoId, usuarioId).orElse(null), emRede(jogoId), pausa.orElse(null));
 	}
@@ -993,6 +1001,8 @@ public class RodadaAoVivoRepositorio {
 	 * @param copa nome da etapa ("Copa · Oitavas de final · ida", "Continental · Grupos · 5º jogo"); nulo
 	 *        numa rodada da liga
 	 * @param minutos duração do relógio de cada divisão: 90, ou 120 na etapa da copa com prorrogação
+	 * @param terminada o relógio chegou ao fim: o quadro mostra o último minuto com os placares finais
+	 * @param gravada a rodada terminou e foi gravada: a tela vai ao plantel
 	 * @param divisaoAtual índice em {@code divisoes} da divisão em jogo
 	 * @param comUsuario se a divisão em jogo tem clube do usuário (só ela tem velocidade e pausa)
 	 * @param janelaQueAbre mandante do jogo do usuário quando a janela dele abre sozinha: a rodada parou
@@ -1003,7 +1013,7 @@ public class RodadaAoVivoRepositorio {
 	 * @param pausa no jogo em rede parado pela substituição, quem parou e o tempo que falta; nulo nos outros casos
 	 */
 	public record EstadoRodada(long jogoId, int temporada, int rodada, String copa, List<DivisaoNaRodada> divisoes,
-			int divisaoAtual, int minuto, int minutos, boolean pausada, boolean terminada, Velocidade velocidade, boolean comUsuario,
+			int divisaoAtual, int minuto, int minutos, boolean pausada, boolean terminada, boolean gravada, Velocidade velocidade, boolean comUsuario,
 			List<PlacarAoVivo> partidas, PlacarAoVivo jogoDoUsuario, boolean usuarioEmCasa, boolean somGols, Long janelaQueAbre,
 			String velocidadeDe, boolean emRede, PausaEmRede pausa) {
 

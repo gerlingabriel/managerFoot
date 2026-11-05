@@ -147,12 +147,40 @@ class RodadaAoVivoRepositorioIT {
 		EstadoRodada fim = estado(3_600);
 
 		assertThat(fim.terminada()).isTrue();
+		assertThat(fim.gravada()).isTrue();
 		assertThat(fim.divisoes()).allMatch(d -> d.situacao() == Situacao.TERMINADA);
 		assertThat(rodadas.rodadasProcessadas(jogo)).isEqualTo(1);
 		assertThat(aoVivo.estado(jogo, usuario, T0.plusSeconds(3_601))).isEmpty();
 		assertThat(aoVivo.emAndamento(jogo)).isFalse();
 		assertThatIllegalStateException().isThrownBy(() -> aoVivo.iniciar(jogo, usuario, 1, T0.plusSeconds(3_700)));
 		assertThatIllegalStateException().isThrownBy(() -> aoVivo.iniciar(jogo, usuario, 3, T0.plusSeconds(3_700)));
+	}
+
+	@Test
+	void fimFicaNaTelaDoisSegundosAntesDeGravar() {
+		aoVivo.iniciar(jogo, usuario, 1, T0);
+
+		// Série B em 45 s (normal) e Série A em 4,5 s (0,05 s por minuto): o relógio chega ao fim em 49,5 s
+		EstadoRodada noFim = estado(50);
+		assertThat(noFim.terminada()).isTrue();
+		assertThat(noFim.gravada()).isFalse();
+		assertThat(noFim.minuto()).isEqualTo(90);
+		assertThat(noFim.divisoes()).allMatch(d -> d.situacao() == Situacao.TERMINADA);
+		assertThat(rodadas.rodadasProcessadas(jogo)).isZero();
+		assertThat(aoVivo.emAndamento(jogo)).isTrue();
+
+		assertThat(estado(51).gravada()).isFalse();
+		EstadoRodada gravada = estado(52);
+		assertThat(gravada.gravada()).isTrue();
+		assertThat(placares(gravada)).isEqualTo(placares(noFim));
+		assertThat(rodadas.rodadasProcessadas(jogo)).isEqualTo(1);
+		assertThat(aoVivo.emAndamento(jogo)).isFalse();
+	}
+
+	private static List<String> placares(EstadoRodada estado) {
+		return estado.partidas().stream()
+			.map(p -> p.mandante().id() + " " + p.golsCasa() + " x " + p.golsFora() + " " + p.visitante().id())
+			.toList();
 	}
 
 	@Test

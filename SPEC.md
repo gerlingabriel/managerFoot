@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 109 — 2026-11-05)
+-   **Status:** versão inicial para revisão (rev. 110 — 2026-11-05)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -14,6 +14,8 @@
     descreve intenção geral ainda não detalhada.
 
 ### Histórico de revisões
+
+-   **rev. 110 (2026-11-05):** pelo usuário (§11.2, exibição da rodada): o relógio sumia antes do 90 e às vezes saía gol que não aparecia. Agora a tela fica 2 s no último minuto com os placares finais ("Fim de jogo") antes de gravar a rodada e voltar ao plantel.
 
 -   **rev. 109 (2026-11-05):** pelo usuário (§5.3.1): o clube de usuário volta ao sorteio dos dois beneficiados, e o **prejudicado volta** (um por divisão), sorteado só entre os clubes da máquina; o benefício do usuário com média abaixo de 40 continua. V47: coluna `prejudicado` em `jogo_temporada_beneficiado`.
 
@@ -3267,6 +3269,11 @@ Na tela, a divisão sem usuário é exibida sempre em velocidade rápida
   velocidade (decidido no modelo de tela, rev. 16).
 - Ao terminar a 1ª divisão, a tela de jogos fecha e o usuário volta à tela
   do plantel.
+- **Definido (rev. 110), pelo usuário:** antes de fechar, a tela fica
+  **2 segundos** no último minuto (90, ou 120 com prorrogação) com os
+  placares finais e "Fim de jogo"; só então a rodada é gravada e o usuário
+  volta ao plantel. Vale para todos os participantes do jogo em rede.
+  **Agente:** valor em `managerfoot.rodada.fim-na-tela`.
 
 **Definido:** o processamento segue a prioridade em ordem **decrescente**.
 As divisões de número maior vêm primeiro (por exemplo, 3, depois 2) e a
