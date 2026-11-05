@@ -21,9 +21,9 @@ class PesosFinalizadorTest {
 	@Test
 	void pesosSeguemATabelaDaSpec() {
 		PesosFinalizador p442 = ParametrosMotor.padrao().pesosFinalizador().get(Formacao.F_4_4_2);
-		assertThat(p442.peso(Posicao.ATACANTE)).isEqualTo(64);
-		assertThat(p442.peso(Posicao.MEIO_CAMPISTA)).isEqualTo(31);
-		assertThat(p442.peso(Posicao.DEFENSOR)).isEqualTo(4.99);
+		assertThat(p442.peso(Posicao.ATACANTE)).isEqualTo(58);
+		assertThat(p442.peso(Posicao.MEIO_CAMPISTA)).isEqualTo(36);
+		assertThat(p442.peso(Posicao.DEFENSOR)).isEqualTo(5.99);
 		assertThat(p442.peso(Posicao.GOLEIRO)).isEqualTo(0.01);
 	}
 

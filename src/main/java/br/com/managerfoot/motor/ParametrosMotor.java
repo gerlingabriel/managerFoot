@@ -75,14 +75,15 @@ public record ParametrosMotor(int minutos, double chancePorMinuto, double fatorM
 
 	public static ParametrosMotor padrao() {
 		Map<Formacao, PesosFinalizador> pesos = new EnumMap<>(Formacao.class);
-		pesos.put(Formacao.F_4_4_2, new PesosFinalizador(64, 31, 4.99, 0.01));
-		pesos.put(Formacao.F_4_3_3, new PesosFinalizador(75, 21, 3.99, 0.01));
-		pesos.put(Formacao.F_3_5_2, new PesosFinalizador(58, 38, 3.99, 0.01));
-		pesos.put(Formacao.F_3_4_3, new PesosFinalizador(74, 23, 2.99, 0.01));
-		pesos.put(Formacao.F_4_2_4, new PesosFinalizador(82, 14, 3.99, 0.01));
-		pesos.put(Formacao.F_5_4_1, new PesosFinalizador(45, 47, 7.99, 0.01));
-		pesos.put(Formacao.F_4_5_1, new PesosFinalizador(43, 51, 5.99, 0.01));
-		pesos.put(Formacao.F_3_6_1, new PesosFinalizador(40, 55, 4.99, 0.01));
+		// pesos do finalizador (SPEC §7.2, rev. 106, pelo usuário); o 0,01% do goleiro sai da defesa
+		pesos.put(Formacao.F_4_4_2, new PesosFinalizador(58, 36, 5.99, 0.01));
+		pesos.put(Formacao.F_4_3_3, new PesosFinalizador(70, 25, 4.99, 0.01));
+		pesos.put(Formacao.F_3_5_2, new PesosFinalizador(55, 41, 3.99, 0.01));
+		pesos.put(Formacao.F_3_4_3, new PesosFinalizador(68, 28, 3.99, 0.01));
+		pesos.put(Formacao.F_4_2_4, new PesosFinalizador(78, 16, 5.99, 0.01));
+		pesos.put(Formacao.F_5_4_1, new PesosFinalizador(42, 46, 11.99, 0.01));
+		pesos.put(Formacao.F_4_5_1, new PesosFinalizador(42, 50, 7.99, 0.01));
+		pesos.put(Formacao.F_3_6_1, new PesosFinalizador(38, 58, 3.99, 0.01));
 		// calibrado na Etapa 1d: docs/simulacoes/calibracao-motor.md
 		return new ParametrosMotor(90, 0.15, 1.45, 0.23, 0.95, 0.5, 0.55, 1.25, 0.85, 0.10, 0.35, 0.5, 0.1, pesos,
 				ParametrosDisciplina.padrao(), ParametrosPenalti.padrao(), ParametrosSorte.padrao(),

@@ -57,10 +57,12 @@ public record ParametrosEconomia(int forcaCapacidadeMinima, int capacidadeMinima
 	/**
 	 * Proposta inicial (rev. 37), em centavos de Real. Faixas do salário pela força em campo do clube
 	 * (rev. 66; +10% e +20% em cima pelo usuário, deflação embaixo escolhida pelo agente na simulação):
-	 * força 45 a 50 +20%, 35 a 44 +10%, 25 a 34 sem ajuste, 15 a 24 −15%, abaixo de 15 −30%.
+	 * força 45 a 50 +20%, 35 a 44 +10%, 25 a 34 sem ajuste, 15 a 24 −15%, abaixo de 15 −30%. Ingresso de R$ 30
+	 * (rev. 105, pelo usuário; era R$ 40): com R$ 40 todo clube ganhava cerca de 20 rodadas da folha por temporada e o
+	 * mercado da máquina parava ({@code docs/simulacoes/ajuste-caixa.md}).
 	 */
 	public static ParametrosEconomia padrao() {
-		return new ParametrosEconomia(12, 5_000, 80_000, List.of(40_00L, 40_00L, 40_00L), 0.45, 0.5, 0.15, 0.08, 0.15,
+		return new ParametrosEconomia(12, 5_000, 80_000, List.of(30_00L, 30_00L, 30_00L), 0.45, 0.5, 0.15, 0.08, 0.15,
 				List.of(60_000_00L, 30_000_00L, 15_000_00L), 2_000_00L, 17, 1.072, 10,
 				List.of(new FaixaSalario(0, 0.70), new FaixaSalario(15, 0.85), new FaixaSalario(25, 1.0),
 						new FaixaSalario(35, 1.10), new FaixaSalario(45, 1.20)), true);

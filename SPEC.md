@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 104 — 2026-11-04)
+-   **Status:** versão inicial para revisão (rev. 106 — 2026-11-05)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -14,6 +14,10 @@
     descreve intenção geral ainda não detalhada.
 
 ### Histórico de revisões
+
+-   **rev. 106 (2026-11-05):** pelo usuário: nova tabela de quem finaliza por formação (§7.2), com mais meias e defensores e menos atacantes; o 0,01% do goleiro continua, tirado da defesa (agente, como na tabela anterior).
+
+-   **rev. 105 (2026-11-05):** Etapa 6, balanceamento por simulação do jogo completo (`docs/simulacoes/jogo-completo.md`, 6 países × 5 temporadas, e `jogo-completo-10-temporadas.md`). Pelo usuário: **ingresso de R$ 30** em todas as divisões (era R$ 40; §9.1), valendo também nos jogos salvos a partir da próxima rodada. Com R$ 40 todo clube ganhava cerca de 20 rodadas da folha por temporada, nenhum ficava negativo e as vendas da máquina caíam de 21 para menos de 1 por país e temporada (`ajuste-caixa.md`). Pelo usuário: o **"elevador"** fica como está (70% a 80% dos promovidos caem de volta; §6.1; `promovidos.md`). Motor, lesões, competitividade, trocas de treinador e força no longo prazo conferidos sem mudança.
 
 -   **rev. 104 (2026-11-04):** pelo usuário (§11.4): no jogo em rede começado, quem criou o jogo pode tirar um treinador entre as rodadas, mas nunca convidar alguém depois que começa; o administrador do jogo é sempre quem o criou, mesmo que outros treinadores tenham conta de administrador. Tela aprovada: "Tirar do jogo" na faixa "Treinadores", com confirmação. Agente: o clube passa à máquina até o fim; quem sai não volta; se os que ficaram já deram OK, o jogo segue; o patrocínio não escolhido vira o fixo, o convite para outro clube é recusado e os lances guardados são apagados (ADR 0023).
 
@@ -1112,6 +1116,15 @@ temporadas com promoção e rebaixamento, só máquina):
   cada rodada; desde a rev. 58 isso vale só para a máquina: no clube do
   usuário o salário fica no contrato e há o pedido de aumento (§9.5).
 
+**Definido (rev. 105), pelo usuário — quem sobe da 2ª fica como está:** no
+jogo completo, 70% a 80% dos promovidos caem de volta na temporada seguinte,
+cerca de 10 pontos de força em campo abaixo da média da 1ª. Quase todo clube
+assenta no piso (força do clube − 5), então a hierarquia é a das forças
+cadastradas. Crescer 2× ou 3× no 1º ano e teto da 2ª em 35 quase não mudaram
+isso; piso pela força em campo do início da temporada levou a 47%, mas baixou
+4 a 6 pontos de todas as divisões (`docs/simulacoes/promovidos.md`). Quem sobe
+precisa comprar para ficar.
+
 ### 6.2 Moral do time
 
 A moral será numérica, em vez de ser representada apenas por uma barra.
@@ -1284,19 +1297,25 @@ Consequências de ficar com um jogador a menos.
 
 Exemplos iniciais de pesos para seleção do finalizador:
 
-**Definido (rev. 6) — pesos iniciais**, configuráveis e sujeitos a ajuste
-por simulação:
+**Definido (rev. 106), pelo usuário — pesos do finalizador** (substituem os
+da rev. 6), configuráveis em `ParametrosMotor`. A coluna Goleiro é do agente:
+o 0,01% sai da defesa, como na tabela anterior (o usuário deu a defesa
+inteira: 6%, 5%, 4%, 4%, 6%, 12%, 8%, 4%).
 
 | Formação | Atacante | Meio-campista | Defesa | Goleiro |
 |---|---|---|---|---|
-| 4-4-2 | 64% | 31% | 4,99% | 0,01% |
-| 4-3-3 | 75% | 21% | 3,99% | 0,01% |
-| 3-5-2 | 58% | 38% | 3,99% | 0,01% |
-| 3-4-3 | 74% | 23% | 2,99% | 0,01% |
-| 4-2-4 | 82% | 14% | 3,99% | 0,01% |
-| 5-4-1 | 45% | 47% | 7,99% | 0,01% |
-| 4-5-1 | 43% | 51% | 5,99% | 0,01% |
-| 3-6-1 | 40% | 55% | 4,99% | 0,01% |
+| 4-4-2 | 58% | 36% | 5,99% | 0,01% |
+| 4-3-3 | 70% | 25% | 4,99% | 0,01% |
+| 3-5-2 | 55% | 41% | 3,99% | 0,01% |
+| 3-4-3 | 68% | 28% | 3,99% | 0,01% |
+| 4-2-4 | 78% | 16% | 5,99% | 0,01% |
+| 5-4-1 | 42% | 46% | 11,99% | 0,01% |
+| 4-5-1 | 42% | 50% | 7,99% | 0,01% |
+| 3-6-1 | 38% | 58% | 3,99% | 0,01% |
+
+~~Rev. 6: 4-4-2 64/31/4,99; 4-3-3 75/21/3,99; 3-5-2 58/38/3,99; 3-4-3
+74/23/2,99; 4-2-4 82/14/3,99; 5-4-1 45/47/7,99; 4-5-1 43/51/5,99; 3-6-1
+40/55/4,99 (atacante/meio/defesa, goleiro 0,01).~~
 
 **Definido — escolha do finalizador:** depois de sorteado o setor, o
 jogador do setor é escolhido com **peso pela força**. Jogadores mais
@@ -2161,7 +2180,8 @@ reajustados por nova simulação (`docs/simulacoes/economia-caixa.md`):
   múltiplos de 500.
 - **Salário por rodada:** R$ 2.000 na força 17, crescendo 7,2% por ponto
   (cerca de R$ 1.400 na força 12 e R$ 19.800 na força 50).
-- **Ingresso:** R$ 40 em todas as divisões. Com preços diferentes por
+- **Ingresso:** R$ 30 em todas as divisões (**Definido, rev. 105**, pelo usuário;
+  era R$ 40, ver abaixo). Com preços diferentes por
   divisão, a simulação deixava uma divisão rica e outra quebrada.
 - **Público:** 45% do estádio com moral inicial e adversário de mesma
   força; a moral máxima soma 20 pontos e a moral zero tira 30; adversário
@@ -2180,6 +2200,16 @@ reajustados por nova simulação (`docs/simulacoes/economia-caixa.md`):
   público de cada jogo é gravado na partida e sorteado pela semente
   dela. Estádio e saldo inicial são calculados no primeiro avanço
   (também em jogos salvos antes da economia).
+- **Definido (rev. 105), pelo usuário — ingresso de R$ 30:** no jogo completo
+  com R$ 40 (todas as receitas e despesas, copa, continental e mercado da
+  máquina), a bilheteria pagava duas vezes a folha: todo clube ganhava cerca
+  de 20 rodadas da folha por temporada, nenhum ficava negativo e a máquina,
+  que só vende abaixo de 10 rodadas da folha (§9.4), quase parou de vender.
+  Com R$ 30 a 1ª ganha cerca de 3 rodadas da folha por temporada, a 2ª de 2 a
+  9, até 17% dos clubes da 2ª ficam negativos e as vendas da máquina passam
+  de 21 a 3 para 42 a 16 por país e temporada (`docs/simulacoes/ajuste-caixa.md`).
+  R$ 25 e salário ×1,6 quebravam metade dos clubes. Jogos salvos: o novo
+  ingresso vale a partir da próxima rodada.
 - **Provisório (rev. 38):** clubes da fila de espera não jogam e não têm
   lançamentos; numa divisão com menos rodadas que a maior, a rodada sem
   jogo também não tem lançamentos (como na simulação).
@@ -3548,7 +3578,9 @@ começa depois que a anterior estiver testada.
 ### Etapa 6 — Competições avançadas e balanceamento
 - Copa nacional (§8.2), competições continentais e Mundial (§8.3).
 - Importação/exportação de dados e saves (§3.5). **Saves concluídos na rev. 89.** A importação e a exportação do banco editável vêm antes da Etapa 5 (rev. 89, pelo usuário).
-- Balanceamento por simulação de temporadas completas.
+- Balanceamento por simulação de temporadas completas. **Rev. 105:** jogo
+  completo de 6 países × 5 e × 10 temporadas pelo caminho do servidor
+  (`RelatorioJogoCompletoIT`); ingresso para R$ 30 e "elevador" aceito.
 - Avaliar SSE apenas se o polling for insuficiente. Reavaliar React apenas
   se a interface da partida exigir.
 

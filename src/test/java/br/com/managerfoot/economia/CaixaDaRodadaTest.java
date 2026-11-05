@@ -91,7 +91,7 @@ class CaixaDaRodadaTest {
 		List<Jogador> plantel = List.of(jogador(17));
 
 		assertThat(caixa.lancamentos(Local.CASA, 1, 1_000, plantel)).containsExactly(
-				new Lancamento(TipoLancamento.BILHETERIA, 40_000_00L), new Lancamento(TipoLancamento.CUSTO_DO_JOGO, -6_000_00L),
+				new Lancamento(TipoLancamento.BILHETERIA, 30_000_00L), new Lancamento(TipoLancamento.CUSTO_DO_JOGO, -4_500_00L),
 				new Lancamento(TipoLancamento.SALARIOS, -1_700_00L));
 		assertThat(caixa.lancamentos(Local.FORA, 2, 0, plantel)).containsExactly(
 				new Lancamento(TipoLancamento.DESLOCAMENTO, -30_000_00L), new Lancamento(TipoLancamento.SALARIOS, -1_700_00L));

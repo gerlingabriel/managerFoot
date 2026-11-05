@@ -141,10 +141,10 @@ class RodadaRepositorioIT {
 				SELECT count(*) FROM jogo_partida p JOIN jogo_temporada t ON t.id = p.temporada_id
 				WHERE t.jogo_id = ? AND p.rodada = 1 AND (p.publico IS NULL OR p.publico > (
 				  SELECT c.estadio_capacidade FROM jogo_clube c WHERE c.id = p.mandante_id))""")).isZero();
-		// bilheteria de cada mandante = público × ingresso de R$ 40
+		// bilheteria de cada mandante = público × ingresso de R$ 30 (rev. 105)
 		assertThat(contar("""
 				SELECT count(*) FROM jogo_partida p JOIN jogo_temporada t ON t.id = p.temporada_id
-				WHERE t.jogo_id = ? AND p.rodada = 1 AND p.publico * 4000 IS DISTINCT FROM (SELECT l.valor
+				WHERE t.jogo_id = ? AND p.rodada = 1 AND p.publico * 3000 IS DISTINCT FROM (SELECT l.valor
 				  FROM jogo_lancamento l WHERE l.clube_id = p.mandante_id AND l.rodada = 1 AND l.tipo = 'BILHETERIA')"""))
 			.isZero();
 		long saldos = contar("SELECT sum(saldo) FROM jogo_clube WHERE jogo_id = ?");
