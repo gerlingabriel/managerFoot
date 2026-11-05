@@ -236,6 +236,25 @@ class TurnoIT {
 			.andExpect(header().string("HX-Redirect", "/"));
 	}
 
+	@Test
+	void avisoDeQuemSaiuChegaATelaAondeOJogoSeguiu() throws Exception {
+		patrocinios.assinar(jogo, admin.id(), PropostasPatrocinio.Tipo.FIXA);
+		mvc.perform(post("/jogos/" + jogo + "/rodada").param("rodada", "1").with(como(admin)).with(csrf()))
+			.andExpect(redirectedUrl("/jogos/" + jogo + "/plantel"));
+		// só faltava Marcos: tirado, o jogo segue e o plantel manda o administrador adiante, com o aviso
+		mvc.perform(post("/jogos/" + jogo + "/rede/tirar").param("usuario", String.valueOf(marcos.id())).with(como(admin)).with(csrf()))
+			.andExpect(flash().attribute("resultado", containsString("saiu do jogo")));
+		String aviso = marcos.nome() + " saiu do jogo. O clube dele agora é da máquina.";
+		String adiante = mvc.perform(get("/jogos/" + jogo + "/plantel").flashAttr("resultado", aviso).with(como(admin)))
+			.andExpect(status().is3xxRedirection())
+			.andExpect(flash().attribute("resultado", aviso))
+			.andReturn().getResponse().getRedirectedUrl();
+		assertThat(adiante).isIn("/jogos/" + jogo + "/leiloes", "/jogos/" + jogo + "/rodada");
+		mvc.perform(get(adiante).flashAttr("resultado", aviso).with(como(admin)))
+			.andExpect(status().isOk())
+			.andExpect(content().string(containsString(aviso)));
+	}
+
 	private static RequestPostProcessor como(Usuario usuario) {
 		return authentication(AutenticacaoContas.autenticado(usuario));
 	}

@@ -92,18 +92,33 @@ class PlantelController {
 		this.trocas = trocas;
 	}
 
+	/**
+	 * O aviso que chegou ao plantel (por exemplo, "X saiu do jogo", SPEC §11.4) segue para a tela aonde o plantel
+	 * manda, em vez de se perder no segundo redirecionamento.
+	 */
+	private static void repassarAvisos(Model model, RedirectAttributes redirect) {
+		for (String chave : new String[] { "resultado", "erro" }) {
+			Object aviso = model.getAttribute(chave);
+			if (aviso != null) {
+				redirect.addFlashAttribute(chave, aviso);
+			}
+		}
+	}
+
 	@GetMapping("/jogos/{jogoId}/plantel")
 	String plantel(@AuthenticationPrincipal Usuario usuario, @PathVariable long jogoId,
-			@RequestParam(name = "ficha", required = false) Long ficha, Model model) {
+			@RequestParam(name = "ficha", required = false) Long ficha, Model model, RedirectAttributes redirect) {
 		jogos.abrir(jogoId, usuario.id()).orElseThrow(NoSuchElementException::new);
 		if (aoVivo.emAndamento(jogoId)) {
 			// rodada ao vivo: o plantel fica fechado até ela terminar (docs/decisions/0010)
+			repassarAvisos(model, redirect);
 			return "redirect:/jogos/" + jogoId + "/rodada";
 		}
 		VisaoPlantel v = plantel.visao(jogoId, usuario.id()).orElseThrow(NoSuchElementException::new);
 		// jogo em rede: com os leilões abertos ou resolvidos, o lugar de todos é a tela dos leilões (modelo 18e)
 		Optional<Turno> turno = faixa.preencher(model, jogoId, usuario, "plantel", rotuloDoOk(v));
 		if (turno.isPresent() && turno.get().passo() != Passo.PLANTEL) {
+			repassarAvisos(model, redirect);
 			return "redirect:/jogos/" + jogoId + "/leiloes";
 		}
 		model.addAttribute("travado", turno.map(t -> t.deuOk(usuario.id())).orElse(false));

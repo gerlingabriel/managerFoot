@@ -4,6 +4,9 @@
 <body>
 <div class="campo campo-pagina">
 <div class="pagina">
+<!--/* Fora do quadro: a consulta a cada segundo troca só o #quadro e o aviso fica (por exemplo, "X saiu do jogo"). */-->
+<div th:if="${resultado}" role="status" class="aviso-resultado" th:text="${resultado}">Fulano saiu do jogo.</div>
+<div th:if="${erro}" role="alert" class="alerta" th:text="${erro}">erro</div>
 
 <!--/* Sem consulta (jogo individual parado ou janela de substituição aberta), o quadro fica sem hx-get: sem hx-trigger,
 	o htmx recarregaria a cada clique dentro dele e fecharia a janela. Em rede, o quadro segue consultando com o jogo

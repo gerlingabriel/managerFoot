@@ -5,6 +5,8 @@
 <div class="campo campo-pagina">
 <div class="pagina">
 <header th:replace="~{fragmentos :: topo}"></header>
+<div th:if="${resultado}" role="status" class="aviso-resultado" th:text="${resultado}">Fulano saiu do jogo.</div>
+<div th:if="${erro != null and !v.aguardandoLances}" role="alert" class="alerta" th:text="${erro}">erro</div>
 
 <!-- Leilões da máquina antes da rodada (modelo 7b, rev. 41 a 43): 1 · seus lances; 2 · resultado. -->
 <section th:if="${v.aguardandoLances}" aria-labelledby="t-leiloes" class="leiloes">
