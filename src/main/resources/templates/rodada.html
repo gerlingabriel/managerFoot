@@ -52,12 +52,13 @@
 </div>
 
 <div th:if="${e.pausa != null and !e.pausa.minha}" role="status" class="aviso-pausa">
-<span th:text="|Jogo parado para todos: ${e.pausa.treinador} (${e.pausa.clube}) está fazendo substituição.|">Jogo parado para todos: Lúcia (Real Guará) está fazendo substituição.</span>
+<span th:text="|Jogo parado para todos: ${e.pausa.descricao()}. Clique num clube para ver o jogo ou mexer no seu time enquanto isso.|">Jogo parado para todos: Lúcia (Real Guará) está fazendo substituição.</span>
 <strong class="pausa-contagem" th:text="|${e.pausa.segundos} s|">42 s</strong>
 </div>
 
 <div th:if="${e.comUsuario and e.pausada and janela == null and (e.pausa == null or e.pausa.minha)}" role="status" class="aviso-pausa">
-<span>Partida pausada.</span>
+<span th:if="${e.pausa == null}">Partida pausada.</span>
+<th:block th:if="${e.pausa != null}" th:with="jogoId=${e.jogoId}, pausa=${e.pausa}"><div th:replace="~{janela :: contagem}">42 s</div></th:block>
 <form th:action="@{/jogos/{id}/rodada/continuar(id=${e.jogoId})}" method="post">
 <button type="submit" class="botao">Continuar</button>
 </form>

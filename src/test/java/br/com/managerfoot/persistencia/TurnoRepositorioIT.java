@@ -132,7 +132,7 @@ class TurnoRepositorioIT {
 	}
 
 	@Test
-	void aSubstituicaoParaOJogoDeTodosPorAte60s() {
+	void aParadaEhDeTodosEOJogoVoltaQuandoTodosFecham() {
 		ateAoVivo();
 		// sem lesão que pare o jogo neste teste: só a substituição
 		jdbc.sql("UPDATE jogo_rodada_ao_vivo SET lesao_ate = 1e9 WHERE jogo_id = :jogo").param("jogo", jogo).update();
@@ -148,7 +148,7 @@ class TurnoRepositorioIT {
 		EstadoRodada deMarcos = aoVivo.estado(jogo, marcos.id(), t.plusSeconds(20)).orElseThrow();
 		assertThat(deMarcos.pausada()).as("parado para todos").isTrue();
 		assertThat(deMarcos.minuto()).isEqualTo(antes.minuto());
-		assertThat(deMarcos.pausa().treinador()).isEqualTo(admin.nome());
+		assertThat(deMarcos.pausa().descricao()).startsWith(admin.nome() + " (").endsWith("está fazendo substituição");
 		assertThat(deMarcos.pausa().minha()).isFalse();
 		assertThat(deMarcos.pausa().segundos()).isEqualTo(40);
 		assertThat(deMarcos.janelaQueAbre()).isNull();
@@ -157,27 +157,68 @@ class TurnoRepositorioIT {
 		assertThat(doAdmin.janelaQueAbre()).as("a janela de quem parou abre sozinha").isEqualTo(meu);
 
 		aoVivo.continuar(jogo, marcos.id(), t.plusSeconds(21));
-		assertThat(aoVivo.estado(jogo, marcos.id(), t.plusSeconds(22)).orElseThrow().pausada()).as("só quem parou continua")
-			.isTrue();
+		assertThat(aoVivo.estado(jogo, marcos.id(), t.plusSeconds(22)).orElseThrow().pausada())
+			.as("quem não está na parada não faz o jogo voltar").isTrue();
+
+		// Marcos abre um clube durante a parada e entra nela
+		aoVivo.pausar(jogo, marcos.id(), outro, t.plusSeconds(23));
+		var naParada = aoVivo.estado(jogo, marcos.id(), t.plusSeconds(23)).orElseThrow().pausa();
+		assertThat(naParada.minha()).isTrue();
+		assertThat(naParada.soQuemParou()).isFalse();
+		assertThat(naParada.descricao()).contains(" e ").endsWith("estão mexendo nos times");
+		assertThat(naParada.segundos()).as("o tempo é o de quem parou").isEqualTo(37);
 
 		var janela = aoVivo.janela(jogo, admin.id(), meu, t.plusSeconds(25)).orElseThrow();
 		var time = janela.doUsuario() == Lado.CASA ? janela.casa() : janela.fora();
 		long sai = time.emCampo().stream().filter(j -> j.posicao() != Posicao.GOLEIRO).findFirst().orElseThrow().id();
 		long entra = time.banco().stream().filter(j -> j.posicao() != Posicao.GOLEIRO).findFirst().orElseThrow().id();
 		aoVivo.substituir(jogo, admin.id(), sai, entra, t.plusSeconds(25));
+
+		aoVivo.continuar(jogo, admin.id(), t.plusSeconds(26));
+		EstadoRodada soMarcos = aoVivo.estado(jogo, admin.id(), t.plusSeconds(27)).orElseThrow();
+		assertThat(soMarcos.pausada()).as("Marcos ainda está mexendo: segue parado").isTrue();
+		assertThat(soMarcos.pausa().minha()).isFalse();
+		assertThat(soMarcos.pausa().descricao()).startsWith(marcos.nome()).endsWith("está mexendo nos times");
+		assertThat(soMarcos.janelaQueAbre()).as("quem saiu não tem a janela reaberta").isNull();
+
+		aoVivo.continuar(jogo, marcos.id(), t.plusSeconds(30));
+		EstadoRodada voltou = aoVivo.estado(jogo, marcos.id(), t.plusSeconds(30)).orElseThrow();
+		assertThat(voltou.pausada()).as("todos fecharam: o jogo volta").isFalse();
+		assertThat(voltou.pausa()).isNull();
+		assertThat(voltou.minuto()).isEqualTo(antes.minuto());
+		var trocas = aoVivo.janela(jogo, admin.id(), meu, t.plusSeconds(31)).orElseThrow();
+		assertThat((trocas.doUsuario() == Lado.CASA ? trocas.casa() : trocas.fora()).substituicoesFeitas())
+			.as("a troca feita na parada vale").isEqualTo(1);
+	}
+
+	@Test
+	void aos60sDeQuemParouOJogoVoltaParaTodos() {
+		ateAoVivo();
+		jdbc.sql("UPDATE jogo_rodada_ao_vivo SET lesao_ate = 1e9 WHERE jogo_id = :jogo").param("jogo", jogo).update();
+		Instant t = comAPartidaEmAndamento(admin);
+		EstadoRodada antes = aoVivo.estado(jogo, admin.id(), t).orElseThrow();
+		long meu = antes.jogoDoUsuario().mandante().id();
+
+		aoVivo.pausar(jogo, admin.id(), meu, t);
+		aoVivo.pausar(jogo, marcos.id(), meu, t.plusSeconds(50));
 		assertThat(aoVivo.pausaEmRede(jogo, admin.id(), t.plusSeconds(59))).isPresent();
 
 		EstadoRodada depois = aoVivo.estado(jogo, marcos.id(), t.plusSeconds(60)).orElseThrow();
-		assertThat(depois.pausada()).as("os 60 s acabaram: o jogo volta sozinho").isFalse();
+		assertThat(depois.pausada()).as("os 60 s acabaram: o jogo volta mesmo com os dois na parada").isFalse();
 		assertThat(depois.pausa()).isNull();
 		assertThat(depois.minuto()).isEqualTo(antes.minuto());
-		assertThat(aoVivo.pausaEmRede(jogo, admin.id(), t.plusSeconds(61))).isEmpty();
+		assertThat(aoVivo.pausaEmRede(jogo, marcos.id(), t.plusSeconds(61))).isEmpty();
 		assertThat(aoVivo.estado(jogo, admin.id(), t.plusSeconds(62)).orElseThrow().minuto()).isGreaterThan(antes.minuto());
-		assertThatIllegalArgumentException().isThrownBy(() -> aoVivo.substituir(jogo, admin.id(), entra, sai, t.plusSeconds(62)))
+		var janela = aoVivo.janela(jogo, admin.id(), meu, t.plusSeconds(62)).orElseThrow();
+		var time = janela.doUsuario() == Lado.CASA ? janela.casa() : janela.fora();
+		long sai = time.emCampo().stream().filter(j -> j.posicao() != Posicao.GOLEIRO).findFirst().orElseThrow().id();
+		long entra = time.banco().getFirst().id();
+		assertThatIllegalArgumentException().isThrownBy(() -> aoVivo.substituir(jogo, admin.id(), sai, entra, t.plusSeconds(62)))
 			.withMessageContaining("voltou a andar");
-		var trocas = aoVivo.janela(jogo, admin.id(), meu, t.plusSeconds(62)).orElseThrow();
-		assertThat((trocas.doUsuario() == Lado.CASA ? trocas.casa() : trocas.fora()).substituicoesFeitas())
-			.as("a troca feita na pausa vale").isEqualTo(1);
+
+		aoVivo.pausar(jogo, admin.id(), meu, t.plusSeconds(63));
+		assertThat(aoVivo.estado(jogo, marcos.id(), t.plusSeconds(63)).orElseThrow().pausada())
+			.as("quem parou pode parar de novo").isTrue();
 	}
 
 	/** Um instante com a partida do treinador em andamento, no começo do jogo. */

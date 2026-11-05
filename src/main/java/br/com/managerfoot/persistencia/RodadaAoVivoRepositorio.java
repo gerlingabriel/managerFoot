@@ -309,7 +309,7 @@ public class RodadaAoVivoRepositorio {
 				Long pausadaPor = emRede(jogoId) ? treinadorDoClube(jogoId, lesao.get().clube()).orElse(null) : null;
 				Instant pausaAte = pausadaPor == null ? null : agora.plus(pausaEmRede);
 				if (pausadaPor != null) {
-					marcarPausa(jogoId, pausadaPor, pausaAte);
+					marcarPausa(jogoId, pausadaPor, pausaAte, agora);
 				}
 				atual = new Linha(atual.rodada(), atual.etapaCopa(), atual.etapaContinental(), atual.etapaMundial(), atual.temporadaId(), progresso,
 						null, progresso, pausadaPor, pausaAte);
@@ -355,7 +355,8 @@ public class RodadaAoVivoRepositorio {
 	/**
 	 * Clicar num clube pausa o relógio, só durante a divisão com treinador (rev. 30). No jogo em rede
 	 * (SPEC §3.3 itens 3 e 8, rev. 90 e 92), só o clique no próprio clube, com a partida dele em andamento,
-	 * para o jogo, e para todos por até 60 s; ver o clube de outro não para.
+	 * para o jogo, e para todos por até 60 s; ver o clube de outro não para. Com o jogo já parado, qualquer
+	 * clique entra na parada: o jogo só volta quando todos fecham ou o tempo acaba (rev. 102).
 	 *
 	 * @param mandanteId mandante do jogo clicado
 	 */
@@ -365,6 +366,9 @@ public class RodadaAoVivoRepositorio {
 		jogos.travar(jogoId);
 		Linha linha = linha(jogoId, agora).orElseThrow(() -> new IllegalStateException("não há rodada em andamento"));
 		if (linha.andandoDesde() == null) {
+			if (linha.pausadaPor() != null) {
+				entrarNaParada(jogoId, usuarioId, agora);
+			}
 			return;
 		}
 		RodadaAoVivo rodada = preparar(jogoId, linha, substituicoes(jogoId));
@@ -386,22 +390,30 @@ public class RodadaAoVivoRepositorio {
 					&& !rodada.noMinuto(p, minuto).terminada());
 		if (propriaEmAndamento) {
 			gravarRelogio(jogoId, progresso, null);
-			marcarPausa(jogoId, usuarioId, agora.plus(pausaEmRede));
+			marcarPausa(jogoId, usuarioId, agora.plus(pausaEmRede), agora);
 		}
 	}
 
 	/**
-	 * "Continuar" ou fechar a janela: o relógio volta a andar. No jogo em rede, só quem parou o jogo faz
-	 * isso; para os outros, fechar a janela não muda o relógio.
+	 * "Continuar" ou fechar a janela: o relógio volta a andar. No jogo em rede, quem fecha sai da parada, e
+	 * o jogo só volta quando ninguém mais está nela (rev. 102); quem não está na parada não muda nada.
 	 */
 	@Transactional
 	public void continuar(long jogoId, long usuarioId, Instant agora) {
 		exigirClube(jogoId, usuarioId);
 		jogos.travar(jogoId);
 		Optional<Linha> linha = linha(jogoId, agora);
-		if (linha.isEmpty() || linha.get().andandoDesde() != null
-				|| (linha.get().pausadaPor() != null && linha.get().pausadaPor() != usuarioId)) {
+		if (linha.isEmpty() || linha.get().andandoDesde() != null) {
 			return;
+		}
+		if (linha.get().pausadaPor() != null) {
+			int saiu = jdbc.sql("DELETE FROM jogo_pausa_participante WHERE jogo_id = :jogo AND usuario_id = :usuario")
+				.param("jogo", jogoId)
+				.param("usuario", usuarioId)
+				.update();
+			if (saiu == 0 || !naParada(jogoId).isEmpty()) {
+				return;
+			}
 		}
 		gravarRelogio(jogoId, linha.get().progresso(), agora);
 	}
@@ -421,21 +433,46 @@ public class RodadaAoVivoRepositorio {
 			return Optional.empty();
 		}
 		long segundos = Math.max(0, (Duration.between(agora, linha.pausaAte()).toMillis() + 999) / 1000);
-		return jdbc.sql("""
-				SELECT u.nome AS treinador, c.nome AS clube FROM jogo_treinador t JOIN usuario u ON u.id = t.usuario_id
-				JOIN jogo_clube c ON c.id = t.clube_id WHERE t.jogo_id = :jogo AND t.usuario_id = :usuario""")
-			.param("jogo", jogoId)
-			.param("usuario", linha.pausadaPor())
-			.query((rs, n) -> new PausaEmRede(rs.getString("treinador"), rs.getString("clube"),
-					linha.pausadaPor() == usuarioId, segundos))
-			.optional();
+		List<NaParada> naParada = naParada(jogoId);
+		List<String> nomes = naParada.stream().map(t -> t.nome() + " (" + t.clube() + ")").toList();
+		boolean soQuemParou = naParada.size() == 1 && naParada.getFirst().usuarioId() == linha.pausadaPor();
+		return Optional.of(new PausaEmRede(nomes, soQuemParou, naParada.stream().anyMatch(t -> t.usuarioId() == usuarioId),
+				linha.pausadaPor() == usuarioId, segundos));
 	}
 
-	private void marcarPausa(long jogoId, long usuarioId, Instant ate) {
+	/** Um treinador com a janela aberta durante a parada. */
+	private record NaParada(long usuarioId, String nome, String clube) {
+	}
+
+	/** Quem está na parada, na ordem em que entrou. */
+	private List<NaParada> naParada(long jogoId) {
+		return jdbc.sql("""
+				SELECT p.usuario_id, u.nome, c.nome AS clube FROM jogo_pausa_participante p
+				JOIN usuario u ON u.id = p.usuario_id
+				JOIN jogo_treinador t ON t.jogo_id = p.jogo_id AND t.usuario_id = p.usuario_id
+				JOIN jogo_clube c ON c.id = t.clube_id
+				WHERE p.jogo_id = :jogo ORDER BY p.desde, p.usuario_id""")
+			.param("jogo", jogoId)
+			.query((rs, n) -> new NaParada(rs.getLong("usuario_id"), rs.getString("nome"), rs.getString("clube")))
+			.list();
+	}
+
+	private void marcarPausa(long jogoId, long usuarioId, Instant ate, Instant agora) {
 		jdbc.sql("UPDATE jogo_rodada_ao_vivo SET pausada_por = :usuario, pausa_ate = :ate WHERE jogo_id = :jogo")
 			.param("usuario", usuarioId)
 			.param("ate", OffsetDateTime.ofInstant(ate, ZoneOffset.UTC))
 			.param("jogo", jogoId)
+			.update();
+		entrarNaParada(jogoId, usuarioId, agora);
+	}
+
+	private void entrarNaParada(long jogoId, long usuarioId, Instant agora) {
+		jdbc.sql("""
+				INSERT INTO jogo_pausa_participante (jogo_id, usuario_id, desde) VALUES (:jogo, :usuario, :desde)
+				ON CONFLICT DO NOTHING""")
+			.param("jogo", jogoId)
+			.param("usuario", usuarioId)
+			.param("desde", OffsetDateTime.ofInstant(agora, ZoneOffset.UTC))
 			.update();
 	}
 
@@ -672,7 +709,7 @@ public class RodadaAoVivoRepositorio {
 			.param("jogo", jogoId).param("usuario", usuarioId).query(Boolean.class).single();
 		Optional<PausaEmRede> pausa = terminada ? Optional.empty() : pausa(jogoId, usuarioId, linha, agora);
 		// a janela abre sozinha na lesão do jogo individual e, em rede, para quem parou o jogo (modelo 18f)
-		boolean abre = pausa.isPresent() ? pausa.get().minha() : linha.pausadaNaLesao();
+		boolean abre = pausa.isPresent() ? pausa.get().parouEu() && pausa.get().minha() : linha.pausadaNaLesao();
 		Long janelaQueAbre = !terminada && abre && doUsuarioJogando ? doUsuario.mandante().id() : null;
 		return new EstadoRodada(jogoId, temporada, linha.rodada(), copa, divisoes, atual, minuto, relogio.minutos(),
 				linha.andandoDesde() == null, terminada, velocidade, relogio.comUsuario().get(atual), placares, doUsuario,
@@ -754,6 +791,7 @@ public class RodadaAoVivoRepositorio {
 	}
 
 	private void gravarRelogio(long jogoId, double progresso, Instant andandoDesde) {
+		jdbc.sql("DELETE FROM jogo_pausa_participante WHERE jogo_id = :jogo").param("jogo", jogoId).update();
 		// parar ou voltar a andar apaga a pausa em rede; quem para pela substituição a marca depois
 		jdbc.sql("""
 				UPDATE jogo_rodada_ao_vivo SET progresso = :progresso, andando_desde = :desde, pausada_por = NULL, pausa_ate = NULL
@@ -856,12 +894,33 @@ public class RodadaAoVivoRepositorio {
 	}
 
 	/**
-	 * O jogo em rede parado pela substituição de um treinador (modelo 18f).
+	 * O jogo em rede parado pela substituição ou lesão de um treinador (modelo 18f; rev. 102).
 	 *
-	 * @param minha quem vê é quem parou
+	 * @param naParada "Lúcia (Real Guará)" de cada um com a janela aberta, na ordem em que entrou
+	 * @param soQuemParou só quem parou está na parada
+	 * @param minha quem vê está na parada (com a janela aberta)
+	 * @param parouEu quem vê foi quem parou
 	 * @param segundos o que falta para o jogo voltar sozinho
 	 */
-	public record PausaEmRede(String treinador, String clube, boolean minha, long segundos) {
+	public record PausaEmRede(List<String> naParada, boolean soQuemParou, boolean minha, boolean parouEu, long segundos) {
+
+		/** Quem vê é o único ainda na parada: os outros esperam por ele. */
+		public boolean soEu() {
+			return minha && naParada.size() == 1;
+		}
+
+		/** "Lúcia (Real Guará) está fazendo substituição", ou quem ainda está mexendo. */
+		public String descricao() {
+			if (soQuemParou) {
+				return naParada.getFirst() + " está fazendo substituição";
+			}
+			if (naParada.isEmpty()) {
+				return "aguardando";
+			}
+			String nomes = naParada.size() == 1 ? naParada.getFirst()
+					: String.join(", ", naParada.subList(0, naParada.size() - 1)) + " e " + naParada.getLast();
+			return nomes + (naParada.size() == 1 ? " está mexendo nos times" : " estão mexendo nos times");
+		}
 	}
 
 	/**

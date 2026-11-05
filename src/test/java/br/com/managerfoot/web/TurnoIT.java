@@ -1,5 +1,6 @@
 package br.com.managerfoot.web;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
@@ -151,16 +152,19 @@ class TurnoIT {
 		Instant agora = relogio.instant();
 		turnos.darOk(jogo, admin.id(), Passo.PLANTEL, 0, agora);
 		Desfecho desfecho = turnos.darOk(jogo, marcos.id(), Passo.PLANTEL, 0, agora);
-		for (Usuario u : new Usuario[] { admin, marcos }) {
-			if (desfecho == Desfecho.LANCES && !turnos.okDado(jogo, u.id())) {
-				desfecho = turnos.darLances(jogo, u.id(), 1, Map.of(), agora);
+		if (desfecho == Desfecho.LANCES) {
+			// leilões com lance possível (sorteio): cada um dá os seus
+			for (Usuario u : new Usuario[] { admin, marcos }) {
+				if (!turnos.okDado(jogo, u.id())) {
+					desfecho = turnos.darLances(jogo, u.id(), 1, Map.of(), agora);
+				}
 			}
 		}
-		for (Usuario u : new Usuario[] { admin, marcos }) {
-			if (desfecho == Desfecho.RESULTADO) {
-				desfecho = turnos.darOk(jogo, u.id(), Passo.RESULTADO, 0, agora);
-			}
+		if (desfecho == Desfecho.RESULTADO) {
+			turnos.darOk(jogo, admin.id(), Passo.RESULTADO, 0, agora);
+			desfecho = turnos.darOk(jogo, marcos.id(), Passo.RESULTADO, 0, agora);
 		}
+		assertThat(desfecho).isEqualTo(Desfecho.AO_VIVO);
 		// o relógio parado pelo administrador no minuto 20 da divisão dele, com 60 s pela frente
 		for (int divisao = 0; divisao < 10; divisao++) {
 			jdbc.sql("""
@@ -169,6 +173,9 @@ class TurnoIT {
 				.param("p", divisao * 90 + 20.0).param("admin", admin.id())
 				.param("ate", OffsetDateTime.ofInstant(relogio.instant().plusSeconds(60), ZoneOffset.UTC)).param("jogo", jogo)
 				.update();
+			jdbc.sql("""
+					INSERT INTO jogo_pausa_participante (jogo_id, usuario_id, desde) VALUES (:jogo, :admin, now())
+					ON CONFLICT DO NOTHING""").param("jogo", jogo).param("admin", admin.id()).update();
 			if (aoVivo.estado(jogo, admin.id(), relogio.instant()).orElseThrow().janelaQueAbre() != null) {
 				break;
 			}

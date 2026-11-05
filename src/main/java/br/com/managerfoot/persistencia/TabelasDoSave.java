@@ -13,7 +13,7 @@ final class TabelasDoSave {
 
 	/** As da rodada ao vivo só existem durante ela, e o save a recusa; as da rede porque jogo em rede não baixa arquivo. */
 	static final Set<String> FORA_DO_SAVE = Set.of("jogo_rodada_ao_vivo", "jogo_substituicao_ao_vivo", "jogo_rede",
-			"jogo_rede_convite", "jogo_rede_participante", "jogo_rede_lance");
+			"jogo_rede_convite", "jogo_rede_participante", "jogo_rede_lance", "jogo_pausa_participante");
 
 	private static final String JOGO = "jogo";
 	private static final String DIVISAO = "jogo_divisao";

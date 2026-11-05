@@ -990,6 +990,7 @@ a.clube-linha:hover { color: var(--texto); background: rgba(242, 201, 76, 0.1); 
 
 /* Jogo em rede parado pela substituição (modelo 18f) */
 .pausa-contagem {
+	white-space: nowrap;
 	font: 700 20px 'Barlow Condensed', sans-serif;
 	color: var(--destaque);
 	font-variant-numeric: tabular-nums;
@@ -1003,14 +1004,15 @@ a.clube-linha:hover { color: var(--texto); background: rgba(242, 201, 76, 0.1); 
 	background: rgba(242, 201, 76, 0.08);
 }
 
-.janela-pausa-topo {
+.pausa-viva {
 	display: flex;
-	align-items: baseline;
+	align-items: center;
 	justify-content: space-between;
 	gap: 12px;
+	flex: 1;
 }
 
-.janela-pausa p { margin: 4px 0 0; }
+.pausa-viva p { margin: 4px 0 0; }
 
 .clube-clicavel { display: contents; }
 

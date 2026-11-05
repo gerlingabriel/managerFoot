@@ -227,11 +227,12 @@ class RodadaController {
 			aberta = aberta.filter(j -> j.doUsuario() == null || j.pausada());
 		}
 		aberta.ifPresent(j -> model.addAttribute("janela", j));
-		// com a janela de substituição aberta, a consulta do quadro apagaria a escolha de quem sai e entra
-		boolean comSubstituicao = aberta.map(j -> j.doUsuario() != null).orElse(false);
-		model.addAttribute("consultar", e.emRede() ? !comSubstituicao : !(e.comUsuario() && e.pausada()));
+		// quem está na parada em rede tem a janela aberta: a consulta do quadro apagaria a escolha de quem sai e
+		// entra; a contagem da janela consulta e a fecha quando o jogo volta (rev. 102)
+		boolean naParada = e.pausa() != null && e.pausa().minha();
+		model.addAttribute("consultar", e.emRede() ? !naParada : !(e.comUsuario() && e.pausada()));
 		model.addAttribute("consultaUrl", "/jogos/" + jogoId + "/rodada"
-				+ (e.emRede() && aberta.isPresent() && !comSubstituicao ? "?janela=" + aberta.get().mandanteId() : ""));
+				+ (e.emRede() && aberta.isPresent() && !naParada ? "?janela=" + aberta.get().mandanteId() : ""));
 		return "rodada";
 	}
 

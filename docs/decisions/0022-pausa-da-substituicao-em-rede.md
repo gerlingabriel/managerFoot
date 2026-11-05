@@ -35,12 +35,14 @@
   `/rodada/pausa`, que manda voltar ao quadro quando o jogo anda.
 - **Definido pelo usuário (rev. 101):** a lesão num clube de treinador também para todos por 60 s, com a
   janela aberta para o treinador dele; no fim do tempo a janela fecha e, sem troca, a máquina troca.
-- **Provisório:** com o jogo parado por um, os outros podem substituir no próprio jogo, dentro do mesmo
-  tempo. Não há limite de pausas.
+- **Definido pelo usuário (rev. 102):** com o jogo parado, qualquer treinador que abre uma janela (o
+  próprio time ou outro clube) entra na parada (migração V45, `jogo_pausa_participante`). Fechar a
+  janela tira a pessoa da parada; o jogo volta quando ninguém mais está nela, ou aos 60 s de quem parou
+  primeiro, o que vier antes. Quem não está na parada não faz o jogo voltar. Não há limite de paradas.
 
 ## Consequências
 
-- Um treinador pode parar o jogo de novo logo depois que ele volta. Se isso atrapalhar, cabe um limite
-  por partida.
+- Um treinador pode parar o jogo de novo logo depois que ele volta (aprovado). O teto de cada parada é
+  60 s, mesmo com várias pessoas entrando nela.
 - Duas lesões de treinadores no mesmo minuto, em jogos diferentes, param uma vez só. A segunda lesão fica
   com a troca automática.

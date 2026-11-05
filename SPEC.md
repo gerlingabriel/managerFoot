@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 101 — 2026-11-04)
+-   **Status:** versão inicial para revisão (rev. 102 — 2026-11-04)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -14,6 +14,8 @@
     descreve intenção geral ainda não detalhada.
 
 ### Histórico de revisões
+
+-   **rev. 102 (2026-11-04):** pelo usuário (§3.3): com o jogo em rede parado, cada um fica livre para mexer no próprio time ou ver outros clubes; se quem parou termina e outro ainda está mexendo, o jogo segue parado. O tempo é um só, os 60 s de quem parou primeiro; ao fim dele todas as janelas fecham. Não há limite de paradas. Migração V45 (quem está na parada).
 
 -   **rev. 101 (2026-11-04):** pelo usuário: no jogo em rede, qualquer parada, seja para substituir ou por lesão, para o jogo de todos por até 60 s; depois a janela de quem devia agir fecha e o jogo continua para todos (§3.3; era Provisório na rev. 100). Sem lesão trocada a tempo, a troca é automática, como no jogo individual.
 
@@ -496,10 +498,15 @@ tempo o jogo volta sozinho de onde parou, a janela fecha e as trocas feitas vale
   só para o treinador que deve agir; ao fim do tempo ela fecha e o jogo continua para
   todos. Sem a troca do lesionado, a máquina troca (como na rev. 69, que segue valendo
   no jogo individual, sem limite de tempo).
-- **Provisório (agente):** com o jogo parado por um treinador, os outros também
-  podem substituir no próprio jogo, dentro do mesmo tempo, sem estendê-lo.
-- **Provisório (agente):** não há limite de pausas: quem parou pode parar de novo
-  depois que o jogo volta.
+- **Definido (rev. 102), pelo usuário:** com o jogo parado, cada treinador fica
+  livre: pode abrir o próprio time e substituir, ou ver outros clubes. Quem abre uma
+  janela entra na parada. Se quem parou termina e outro ainda está mexendo, o jogo
+  segue parado; ele volta quando todos fecham a janela.
+- **Definido (rev. 102), pelo usuário:** o tempo é um só, os 60 s contados da
+  primeira parada. Quem entra depois usa o que sobra; ao fim, todas as janelas fecham
+  e o jogo volta.
+- **Definido (rev. 102), pelo usuário:** não há limite de paradas: quem parou pode
+  parar de novo depois que o jogo volta.
 
 ## 4. Estrutura de ligas e divisões
 

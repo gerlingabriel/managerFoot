@@ -49,15 +49,15 @@
 
 <div th:if="${erro}" role="alert" class="alerta janela-erro" th:text="${#strings.capitalize(erro)}">erro</div>
 
-<!-- Jogo em rede parado (modelo 18f): a contagem é consultada a cada segundo; no fim, a janela fecha. O hx-select
-	próprio evita herdar o "#quadro", que apagaria a contagem. -->
-<div th:if="${meu != null and e.pausa != null}" role="status" class="janela-pausa" th:with="jogoId=${e.jogoId}, pausa=${e.pausa}">
-<div class="janela-pausa-topo">
-<strong th:text="|Substituição · ${meu.clube.nome}|">Substituição · Real Guará</strong>
-<span th:fragment="contagem" id="pausa-contagem" class="pausa-contagem" th:attr="hx-get=@{/jogos/{id}/rodada/pausa(id=${jogoId})}"
-	hx-trigger="every 1s" hx-select="#pausa-contagem" hx-swap="outerHTML" th:text="|${pausa.segundos} s|">42 s</span>
+<!-- Jogo em rede parado (modelo 18f; rev. 102): a contagem e quem ainda está na parada são consultados a cada
+	segundo; quando o jogo volta, a janela fecha. O hx-select próprio evita herdar o "#quadro", que apagaria tudo. -->
+<div th:if="${e.pausa != null and e.pausa.minha}" role="status" class="janela-pausa" th:with="jogoId=${e.jogoId}, pausa=${e.pausa}">
+<strong th:text="${meu != null} ? |Substituição · ${meu.clube.nome}| : 'Jogo parado para todos'">Substituição · Real Guará</strong>
+<div th:fragment="contagem" id="pausa-contagem" class="pausa-viva" th:attr="hx-get=@{/jogos/{id}/rodada/pausa(id=${jogoId})}"
+	hx-trigger="every 1s" hx-select="#pausa-contagem" hx-swap="outerHTML">
+<p class="suave pequeno" th:text="${pausa.soEu()} ? 'Os outros treinadores esperam por você. Quando você fechar ou o tempo acabar, o jogo volta e a janela fecha sozinha; as trocas já feitas valem.' : |${pausa.descricao()}. O jogo volta quando todos fecharem a janela ou quando o tempo acabar; as trocas já feitas valem.|">Os outros treinadores esperam por você.</p>
+<strong class="pausa-contagem" th:text="|${pausa.segundos} s|">42 s</strong>
 </div>
-<p class="suave pequeno" th:text="${e.pausa.minha} ? 'Os outros treinadores esperam por você. Quando o tempo acabar, a janela fecha sozinha e o jogo volta; as trocas já feitas valem.' : |O jogo está parado por ${e.pausa.treinador}. Quando o tempo acabar, a janela fecha e o jogo volta; as trocas já feitas valem.|">Os outros treinadores esperam por você.</p>
 </div>
 
 <!-- Próprio clube (1d): em campo e banco para a substituição. -->
