@@ -26,6 +26,18 @@ Gerado por `RelatorioJogoCompletoIT` (ferramenta de desenvolvimento; SPEC §15, 
 | 4 | 37,8 (25,1 a 48,2) | 22,9 (17,1 a 32,9) | 128,3 | 0% | 94,2 | 0% | 41.080 / 12.443 | 2,7 | 6,5 | 0,0 |
 | 5 | 38,0 (25,2 a 48,7) | 22,6 (17,7 a 31,2) | 151,9 | 0% | 119,8 | 2% | 41.795 / 12.094 | 2,6 | 3,2 | 0,0 |
 
+## Quem sobe da 2ª (todos os países)
+
+Clubes que subiram no fim da temporada anterior, na 1ª. *Caem de volta*: terminam entre os últimos, tantos quantos subiram (a zona de rebaixamento). *Força*: força em campo no início menos a média da 1ª.
+
+| Temporada | Promovidos | Posição média | Caem de volta | Força em relação à média da 1ª |
+|---|---|---|---|---|
+| 2 | 18 | 18,6ª | 100% | -11,2 |
+| 3 | 18 | 17,7ª | 67% | -9,4 |
+| 4 | 18 | 18,2ª | 78% | -10,7 |
+| 5 | 18 | 18,1ª | 78% | -10,0 |
+| Todas | 72 | 18,2ª | 81% | -10,3 |
+
 ## Caixa por temporada, por tipo (todos os países)
 
 Média dos clubes da divisão no fim da temporada, em rodadas da folha do próprio clube (positivo entra, negativo sai). Uma temporada de liga com 20 clubes tem 38 rodadas.
@@ -43,4 +55,4 @@ Média dos clubes da divisão no fim da temporada, em rodadas da folha do própr
 | 5 | 1ª | 72,9 | -0,2 | -10,9 | -7,8 | -0,3 | 1,0 | 1,1 | -37,2 | 0,0 | 18,6 |
 | 5 | 2ª | 81,8 | -0,1 | -12,3 | -12,9 | -0,2 | 1,0 | 0,0 | -37,4 | 0,9 | 20,9 |
 
-Tempo de simulação: 394 s para 30 temporadas.
+Tempo de simulação: 375 s para 30 temporadas.

@@ -79,7 +79,7 @@ class RelatorioJogoCompletoIT {
 	record Medida(String pais, int semente, int temporada, int partidas, int gols, int vitoriasMandante, int empates,
 			int goleadas, int expulsoes, int lesoes, Map<Integer, double[]> campeaoLanterna, boolean campeaoEntreOs3,
 			Long campeao1, Integer copaDivisao, Boolean continentalNacional, Boolean mundialNacional, int vendas, int semLance,
-			int trocas, Map<Integer, double[]> forcaDivisao, Map<Integer, double[]> saldoDivisao, Map<Integer, Double> estadio,
+			int trocas, Map<Integer, double[]> forcaDivisao, Map<Integer, double[]> saldoDivisao, Map<Integer, Double> estadio, double[] promovidos,
 			Map<Integer, Map<String, Double>> fluxo, long milissegundos) {
 	}
 
@@ -116,13 +116,15 @@ class RelatorioJogoCompletoIT {
 		transacao.executeWithoutResult(st -> caixas.pagarPatrocinio(jogo, Map.of()));
 		List<Medida> medidas = new ArrayList<>();
 		Long campeaoAnterior = null;
+		Map<Long, Integer> divisaoAnterior = Map.of();
 		for (int t = 1; t <= quantasTemporadas; t++) {
 			long inicio = System.currentTimeMillis();
 			Map<Long, Double> forcaInicio = forcaEmCampo(jogo);
 			Map<Long, Integer> divisaoInicio = divisoes(jogo);
 			jogarTemporada(jogo);
-			Medida m = medir(campeonato.codigoPais(), semente, t, jogo, forcaInicio, divisaoInicio, campeaoAnterior,
-					System.currentTimeMillis() - inicio);
+			Medida m = medir(campeonato.codigoPais(), semente, t, jogo, forcaInicio, divisaoInicio, divisaoAnterior,
+					campeaoAnterior, System.currentTimeMillis() - inicio);
+			divisaoAnterior = divisaoInicio;
 			medidas.add(m);
 			System.out.printf(Locale.ROOT, "%s semente %d temporada %d: %d ms%n", campeonato.codigoPais(), semente, t,
 					m.milissegundos());
@@ -153,7 +155,7 @@ class RelatorioJogoCompletoIT {
 	}
 
 	private Medida medir(String pais, int semente, int numero, long jogo, Map<Long, Double> forcaInicio,
-			Map<Long, Integer> divisaoInicio, Long campeaoAnterior, long ms) {
+			Map<Long, Integer> divisaoInicio, Map<Long, Integer> divisaoAnterior, Long campeaoAnterior, long ms) {
 		long temporada = jdbc.sql("SELECT id FROM jogo_temporada WHERE jogo_id = :j AND numero = :n").param("j", jogo)
 			.param("n", numero).query(Long.class).single();
 		// partidas da liga: pontos, gols e mando
@@ -190,6 +192,9 @@ class RelatorioJogoCompletoIT {
 				eventos.put(rs.getString("tipo"), rs.getInt("n"));
 			});
 		Map<Integer, double[]> campeaoLanterna = new HashMap<>();
+		// quem subiu da 2ª no fim da temporada anterior: quantos, soma das posições na 1ª, quantos terminaram entre os
+		// últimos (tantos quantos subiram), soma da força em campo menos a média da 1ª
+		double[] promovidos = new double[4];
 		Long campeao1 = null;
 		boolean entreOs3 = false;
 		for (var e : tabela.entrySet()) {
@@ -200,6 +205,17 @@ class RelatorioJogoCompletoIT {
 			campeaoLanterna.put(e.getKey(), new double[] { ordem.getFirst().getValue()[0], ordem.getLast().getValue()[0],
 					3.0 * jogos });
 			if (e.getKey() == 1) {
+				List<Long> subiram = ordem.stream().map(Map.Entry::getKey)
+					.filter(id -> Integer.valueOf(2).equals(divisaoAnterior.get(id))).toList();
+				double mediaDaPrimeira = ordem.stream().mapToDouble(x -> forcaInicio.getOrDefault(x.getKey(), 0.0)).average()
+					.orElse(0);
+				for (Long id : subiram) {
+					int posicao = 1 + ordem.stream().map(Map.Entry::getKey).toList().indexOf(id);
+					promovidos[0]++;
+					promovidos[1] += posicao;
+					promovidos[2] += posicao > ordem.size() - subiram.size() ? 1 : 0;
+					promovidos[3] += forcaInicio.getOrDefault(id, 0.0) - mediaDaPrimeira;
+				}
 				campeao1 = ordem.getFirst().getKey();
 				List<Long> fortes = e.getValue().keySet().stream()
 					.sorted(Comparator.comparingDouble((Long id) -> -forcaInicio.getOrDefault(id, 0.0))).limit(3).toList();
@@ -277,7 +293,15 @@ class RelatorioJogoCompletoIT {
 				eventos.getOrDefault("CARTAO_VERMELHO", 0) + eventos.getOrDefault("SEGUNDO_AMARELO", 0),
 				eventos.getOrDefault("LESAO", 0), campeaoLanterna, entreOs3, campeao1, copaDivisao, continental, mundial,
 				leilao.getOrDefault("VENDIDO", 0), leilao.getOrDefault("SEM_LANCE", 0), trocas, forcaDivisao, saldoDivisao,
-				estadioMedio, fluxo, ms);
+				estadioMedio, promovidos, fluxo, ms);
+	}
+
+	private static String linhaPromovidos(String rotulo, double[] p) {
+		if (p[0] == 0) {
+			return "| " + rotulo + " | 0 | – | – | – |\n";
+		}
+		return "| " + rotulo + " | " + (int) p[0] + " | " + num(p[1] / p[0]) + "ª | " + pct(p[2] / p[0]) + " | "
+				+ String.format(Locale.forLanguageTag("pt-BR"), "%+.1f", p[3] / p[0]) + " |\n";
 	}
 
 	/** O campeão da competição é um clube do país do jogo; nulo se ela não terminou na temporada. */
@@ -365,6 +389,24 @@ class RelatorioJogoCompletoIT {
 				.append(" | ").append(num(media(ms, Medida::vendas))).append(" | ").append(num(media(ms, Medida::semLance)))
 				.append(" |\n");
 		}
+		md.append("\n## Quem sobe da 2ª (todos os países)\n\n")
+			.append("Clubes que subiram no fim da temporada anterior, na 1ª. *Caem de volta*: terminam entre os últimos, tantos ")
+			.append("quantos subiram (a zona de rebaixamento). *Força*: força em campo no início menos a média da 1ª.\n\n")
+			.append("| Temporada | Promovidos | Posição média | Caem de volta | Força em relação à média da 1ª |\n")
+			.append("|---|---|---|---|---|\n");
+		double[] todos = new double[4];
+		for (int t = 2; t <= temporadas; t++) {
+			int numero = t;
+			double[] p = new double[4];
+			medidas.stream().filter(m -> m.temporada() == numero).forEach(m -> {
+				for (int i = 0; i < 4; i++) {
+					p[i] += m.promovidos()[i];
+					todos[i] += m.promovidos()[i];
+				}
+			});
+			md.append(linhaPromovidos(String.valueOf(t), p));
+		}
+		md.append(linhaPromovidos("Todas", todos));
 		md.append("\n## Caixa por temporada, por tipo (todos os países)\n\n")
 			.append("Média dos clubes da divisão no fim da temporada, em rodadas da folha do próprio clube (positivo entra, ")
 			.append("negativo sai). Uma temporada de liga com 20 clubes tem 38 rodadas.\n\n");
