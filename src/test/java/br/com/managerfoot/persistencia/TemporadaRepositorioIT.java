@@ -141,27 +141,33 @@ class TemporadaRepositorioIT {
 	}
 
 	@Test
-	void clubeDoUsuarioComMediaAbaixoDe40TemOBeneficioEOsDoisSorteadosSaoDaMaquina() {
+	void clubeDoUsuarioComMediaAbaixoDe40TemOBeneficioENuncaEPrejudicado() {
 		long clube = usuarioNoClubeComJogadores(20);
 
 		Temporada iniciada = temporadas.iniciarPrimeiraTemporada(jogo, 2026);
 
 		Temporada.SorteiosDivisao serieA = iniciada.divisoes().get(0);
-		assertThat(serieA.sorte().beneficiados()).hasSize(3).anyMatch(c -> c.id() == clube);
+		assertThat(serieA.sorte().beneficiados()).anyMatch(c -> c.id() == clube);
+		assertThat(serieA.sorte().prejudicados()).hasSize(1).noneMatch(c -> c.id() == clube);
 		assertThat(iniciada.divisoes().get(1).sorte().beneficiados()).hasSize(2);
+		assertThat(iniciada.divisoes().get(1).sorte().prejudicados()).hasSize(1);
 		assertThat(contar("SELECT count(*) FROM jogo_temporada_beneficiado b JOIN jogo_temporada t ON t.id = b.temporada_id "
-				+ "WHERE t.jogo_id = ?")).isEqualTo(5);
+				+ "WHERE t.jogo_id = ? AND b.prejudicado")).isEqualTo(2);
 		assertThat(temporadas.carregarAtual(jogo)).isEqualTo(iniciada);
 	}
 
 	@Test
-	void clubeDoUsuarioComMedia40OuMaisNaoTemOBeneficioNemEntraNoSorteio() {
+	void clubeDoUsuarioComMedia40OuMaisSoEBeneficiadoQuandoSorteadoENuncaPrejudicado() {
 		long clube = usuarioNoClubeComJogadores(45);
 
-		for (long semente = 0; semente < 20; semente++) {
+		int beneficiado = 0;
+		for (long semente = 0; semente < 40; semente++) {
 			Temporada t = Temporada.iniciar(1, jogos.carregarLiga(jogo), jogos.carregarPlanteis(jogo), semente, Set.of(clube));
-			assertThat(t.divisoes().get(0).sorte().beneficiados()).hasSize(2).noneMatch(c -> c.id() == clube);
+			assertThat(t.divisoes().get(0).sorte().beneficiados()).hasSize(2);
+			assertThat(t.divisoes().get(0).sorte().prejudicados()).noneMatch(c -> c.id() == clube);
+			beneficiado += t.divisoes().get(0).sorte().beneficiados().stream().anyMatch(c -> c.id() == clube) ? 1 : 0;
 		}
+		assertThat(beneficiado).isLessThan(40);
 	}
 
 	@Test
@@ -179,6 +185,7 @@ class TemporadaRepositorioIT {
 		Temporada carregada = temporadas.carregarAtual(jogo);
 
 		assertThat(carregada.divisoes().get(0).sorte().beneficiados()).extracting(Clube::id).containsExactly(clubesA.get(0));
+		assertThat(carregada.divisoes().get(0).sorte().prejudicados()).extracting(Clube::id).containsExactly(clubesA.get(1));
 		assertThat(carregada.divisoes().get(1).sorte().beneficiados()).hasSize(2);
 	}
 

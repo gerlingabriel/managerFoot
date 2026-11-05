@@ -48,8 +48,8 @@ public record Temporada(int numero, long semente, List<SorteiosDivisao> divisoes
 	}
 
 	/**
-	 * Como {@link #iniciar(int, ConfiguracaoLiga, Map, long)}, com os clubes de usuário fora do sorteio da sorte e com o
-	 * benefício quando fracos (SPEC §5.3.1, rev. 108).
+	 * Como {@link #iniciar(int, ConfiguracaoLiga, Map, long)}, com os clubes de usuário fora do sorteio do prejudicado e com o
+	 * benefício quando fracos (SPEC §5.3.1, rev. 108 e 109).
 	 *
 	 * @param deUsuario ids dos clubes que têm treinador usuário no início da temporada
 	 */

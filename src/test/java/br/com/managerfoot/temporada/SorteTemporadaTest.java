@@ -1,6 +1,7 @@
 package br.com.managerfoot.temporada;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -18,7 +19,7 @@ import br.com.managerfoot.dominio.Posicao;
 import br.com.managerfoot.dominio.Sorte;
 import br.com.managerfoot.dominio.Temperamento;
 
-/** Sorte da temporada (SPEC §5.3.1, rev. 108). */
+/** Sorte da temporada (SPEC §5.3.1, rev. 108 e 109). */
 class SorteTemporadaTest {
 
 	private static final ParametrosSorteTemporada PADRAO = ParametrosSorteTemporada.padrao();
@@ -42,61 +43,72 @@ class SorteTemporadaTest {
 	}
 
 	@Test
-	void doisClubesDaMaquinaDistintosSemPrejudicado() {
+	void doisBeneficiadosEUmPrejudicadoDistintosDaDivisao() {
 		List<Clube> divisao = clubes(20);
 		for (long s = 0; s < 500; s++) {
 			SorteTemporada sorte = SorteTemporada.sortear(divisao, Set.of(), Map.of(), PADRAO, new SplittableRandom(s));
 			assertThat(sorte.beneficiados()).hasSize(2).allMatch(divisao::contains);
-			divisao.stream().filter(c -> !sorte.beneficiados().contains(c))
-				.forEach(c -> assertThat(sorte.de(c)).isEqualTo(Sorte.NEUTRA));
+			assertThat(sorte.prejudicados()).hasSize(1).allMatch(divisao::contains).doesNotContainAnyElementsOf(sorte.beneficiados());
 		}
 	}
 
 	@Test
-	void todoClubeDaMaquinaPodeSerSorteado() {
+	void todoClubePodeSerBeneficiadoOuPrejudicado() {
 		List<Clube> divisao = clubes(20);
-		Set<Clube> sorteados = new HashSet<>();
+		Set<Clube> beneficiados = new HashSet<>();
+		Set<Clube> prejudicados = new HashSet<>();
 		for (long s = 0; s < 500; s++) {
-			sorteados.addAll(SorteTemporada.sortear(divisao, Set.of(), Map.of(), PADRAO, new SplittableRandom(s)).beneficiados());
+			SorteTemporada sorte = SorteTemporada.sortear(divisao, Set.of(), Map.of(), PADRAO, new SplittableRandom(s));
+			beneficiados.addAll(sorte.beneficiados());
+			prejudicados.addAll(sorte.prejudicados());
 		}
-		assertThat(sorteados).containsExactlyInAnyOrderElementsOf(divisao);
+		assertThat(beneficiados).containsExactlyInAnyOrderElementsOf(divisao);
+		assertThat(prejudicados).containsExactlyInAnyOrderElementsOf(divisao);
 	}
 
 	@Test
-	void clubeDeUsuarioNuncaEntraNoSorteioEForteNaoTemOBeneficio() {
+	void clubeDeUsuarioPodeSerSorteadoBeneficiadoMasNuncaPrejudicado() {
 		List<Clube> divisao = clubes(20);
 		Clube doUsuario = divisao.get(4);
-		Map<Long, List<Jogador>> planteis = Map.of(doUsuario.id(), plantel(doUsuario.id(), 40));
+		Map<Long, List<Jogador>> planteis = Map.of(doUsuario.id(), plantel(doUsuario.id(), 45));
+		boolean sorteado = false;
 		for (long s = 0; s < 500; s++) {
 			SorteTemporada sorte = SorteTemporada.sortear(divisao, Set.of(doUsuario.id()), planteis, PADRAO, new SplittableRandom(s));
-			assertThat(sorte.beneficiados()).hasSize(2).doesNotContain(doUsuario);
+			assertThat(sorte.prejudicados()).hasSize(1).doesNotContain(doUsuario);
+			sorteado |= sorte.beneficiados().contains(doUsuario);
 		}
+		assertThat(sorteado).as("o clube do usuário sai beneficiado em alguma semente").isTrue();
 	}
 
 	@Test
-	void clubeDeUsuarioComMediaAbaixoDe40TemOBeneficioAlemDosDoisSorteados() {
+	void clubeDeUsuarioComMediaAbaixoDe40TemOBeneficioSempre() {
 		List<Clube> divisao = clubes(20);
 		Clube fraco = divisao.get(2);
 		Clube forte = divisao.get(3);
 		Map<Long, List<Jogador>> planteis = new HashMap<>();
 		planteis.put(fraco.id(), plantel(fraco.id(), 39));
 		planteis.put(forte.id(), plantel(forte.id(), 41));
-
-		SorteTemporada sorte = SorteTemporada.sortear(divisao, Set.of(fraco.id(), forte.id()), planteis, PADRAO,
-				new SplittableRandom(7));
-
-		assertThat(sorte.beneficiados()).hasSize(3).contains(fraco).doesNotContain(forte);
-		assertThat(sorte.de(fraco)).isEqualTo(Sorte.BENEFICIADO);
-		assertThat(sorte.de(forte)).isEqualTo(Sorte.NEUTRA);
+		for (long s = 0; s < 200; s++) {
+			SorteTemporada sorte = SorteTemporada.sortear(divisao, Set.of(fraco.id(), forte.id()), planteis, PADRAO,
+					new SplittableRandom(s));
+			assertThat(sorte.de(fraco)).isEqualTo(Sorte.BENEFICIADO);
+			assertThat(sorte.de(forte)).isNotEqualTo(Sorte.PREJUDICADO);
+		}
 	}
 
 	@Test
-	void mediaExatamente40NaoTemOBeneficio() {
+	void mediaExatamente40SoTemOBeneficioSeForSorteado() {
 		Clube doUsuario = new Clube(1, "U", 40);
-		List<Clube> divisao = List.of(doUsuario, new Clube(2, "A", 30), new Clube(3, "B", 30));
-		SorteTemporada sorte = SorteTemporada.sortear(divisao, Set.of(1L), Map.of(1L, plantel(1, 40)), PADRAO,
-				new SplittableRandom(1));
-		assertThat(sorte.beneficiados()).doesNotContain(doUsuario).hasSize(2);
+		List<Clube> divisao = List.of(doUsuario, new Clube(2, "A", 30), new Clube(3, "B", 30), new Clube(4, "C", 30),
+				new Clube(5, "D", 30));
+		Map<Long, List<Jogador>> planteis = Map.of(1L, plantel(1, 40));
+		int beneficiado = 0;
+		for (long s = 0; s < 500; s++) {
+			SorteTemporada sorte = SorteTemporada.sortear(divisao, Set.of(1L), planteis, PADRAO, new SplittableRandom(s));
+			beneficiado += sorte.beneficiados().contains(doUsuario) ? 1 : 0;
+		}
+		// sorteado em 2 de 5: cerca de 40%, nunca sempre
+		assertThat(beneficiado).isBetween(150, 250);
 	}
 
 	@Test
@@ -107,9 +119,16 @@ class SorteTemporadaTest {
 	}
 
 	@Test
-	void divisaoComPoucosClubesDaMaquinaSorteiaOsQueHa() {
+	void semClubeDaMaquinaQueSobreNaoHaPrejudicado() {
 		List<Clube> divisao = clubes(3);
-		SorteTemporada sorte = SorteTemporada.sortear(divisao, Set.of(1L, 2L), Map.of(), PADRAO, new SplittableRandom(1));
-		assertThat(sorte.beneficiados()).containsExactly(divisao.get(2));
+		SorteTemporada sorte = SorteTemporada.sortear(divisao, Set.of(1L, 2L, 3L), Map.of(), PADRAO, new SplittableRandom(1));
+		assertThat(sorte.beneficiados()).hasSize(2);
+		assertThat(sorte.prejudicados()).isEmpty();
+	}
+
+	@Test
+	void mesmoClubeNaoPodeSerBeneficiadoEPrejudicado() {
+		Clube c = clubes(1).getFirst();
+		assertThatIllegalArgumentException().isThrownBy(() -> new SorteTemporada(Set.of(c), Set.of(c)));
 	}
 }

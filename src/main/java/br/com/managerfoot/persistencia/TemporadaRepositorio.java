@@ -101,17 +101,28 @@ public class TemporadaRepositorio {
 
 	private void gravarBeneficiados(long temporadaId, long divisaoId, SorteTemporada sorte) {
 		for (Clube clube : sorte.beneficiados()) {
-			jdbc.sql("""
-					INSERT INTO jogo_temporada_beneficiado (temporada_id, divisao_id, clube_id)
-					VALUES (:temporada, :divisao, :clube)""")
-				.param("temporada", temporadaId)
-				.param("divisao", divisaoId)
-				.param("clube", clube.id())
-				.update();
+			gravarSorte(temporadaId, divisaoId, clube, false);
+		}
+		for (Clube clube : sorte.prejudicados()) {
+			gravarSorte(temporadaId, divisaoId, clube, true);
 		}
 	}
 
-	/** Clubes com treinador usuário: ficam fora do sorteio da sorte e, fracos, têm o benefício (SPEC §5.3.1, rev. 108). */
+	private void gravarSorte(long temporadaId, long divisaoId, Clube clube, boolean prejudicado) {
+		jdbc.sql("""
+				INSERT INTO jogo_temporada_beneficiado (temporada_id, divisao_id, clube_id, prejudicado)
+				VALUES (:temporada, :divisao, :clube, :prejudicado)""")
+			.param("temporada", temporadaId)
+			.param("divisao", divisaoId)
+			.param("clube", clube.id())
+			.param("prejudicado", prejudicado)
+			.update();
+	}
+
+	private record LinhaSorte(int prioridade, Clube clube, boolean prejudicado) {
+	}
+
+	/** Clubes com treinador usuário: nunca prejudicados e, fracos, beneficiados (SPEC §5.3.1, rev. 108 e 109). */
 	@Transactional(propagation = Propagation.MANDATORY)
 	public Set<Long> clubesDeUsuario(long jogoId) {
 		return Set.copyOf(jdbc.sql("SELECT clube_id FROM jogo_treinador WHERE jogo_id = :jogo")
@@ -173,21 +184,26 @@ public class TemporadaRepositorio {
 			.list()
 			.forEach(e -> jogosPorPrioridade.computeIfAbsent(e.getKey(), p -> new ArrayList<>()).add(e.getValue()));
 
-		// beneficiados (rev. 108); temporada começada antes dela só tem o beneficiado antigo, que vale até a próxima
+		// beneficiados e prejudicados (rev. 108 e 109); temporada começada antes da rev. 108 só tem o sorteio antigo
 		Map<Integer, Set<Clube>> beneficiados = new HashMap<>();
+		Map<Integer, Set<Clube>> prejudicados = new HashMap<>();
 		jdbc.sql("""
-				SELECT divisao_id, clube_id FROM jogo_temporada_beneficiado WHERE temporada_id = :temporada
+				SELECT divisao_id, clube_id, prejudicado FROM jogo_temporada_beneficiado WHERE temporada_id = :temporada
 				UNION ALL
-				SELECT d.divisao_id, d.beneficiado_id FROM jogo_temporada_divisao d
-				WHERE d.temporada_id = :temporada AND d.beneficiado_id IS NOT NULL
+				SELECT d.divisao_id, x.clube_id, x.prejudicado FROM jogo_temporada_divisao d
+				CROSS JOIN LATERAL (VALUES (d.beneficiado_id, false), (d.prejudicado_id, true)) AS x (clube_id, prejudicado)
+				WHERE d.temporada_id = :temporada AND x.clube_id IS NOT NULL
 				  AND NOT EXISTS (SELECT 1 FROM jogo_temporada_beneficiado b
 				                  WHERE b.temporada_id = d.temporada_id AND b.divisao_id = d.divisao_id)""")
 			.param("temporada", linha.id())
-			.query((rs, n) -> Map.entry(prioridades.get(rs.getLong("divisao_id")), clubes.get(rs.getLong("clube_id"))))
+			.query((rs, n) -> new LinhaSorte(prioridades.get(rs.getLong("divisao_id")), clubes.get(rs.getLong("clube_id")),
+					rs.getBoolean("prejudicado")))
 			.list()
-			.forEach(e -> beneficiados.computeIfAbsent(e.getKey(), p -> new HashSet<>()).add(e.getValue()));
+			.forEach(l -> (l.prejudicado() ? prejudicados : beneficiados).computeIfAbsent(l.prioridade(), p -> new HashSet<>())
+				.add(l.clube()));
 		Map<Integer, SorteTemporada> sortes = new HashMap<>();
-		prioridades.values().forEach(p -> sortes.put(p, new SorteTemporada(beneficiados.getOrDefault(p, Set.of()))));
+		prioridades.values().forEach(p -> sortes.put(p,
+				new SorteTemporada(beneficiados.getOrDefault(p, Set.of()), prejudicados.getOrDefault(p, Set.of()))));
 
 		Map<Integer, Set<Long>> temporarios = new HashMap<>();
 		Map<Integer, Set<Long>> extras = new HashMap<>();
