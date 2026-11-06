@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 125 — 2026-11-06)
+-   **Status:** versão inicial para revisão (rev. 126 — 2026-11-06)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 126 (2026-11-06):** pelo usuário (§6.1): desgaste menor. Dos que jogaram, perdem 1 ponto **1, 2 ou 3** jogadores (vitória, empate, derrota; eram 1, 3 e 5), e o piso passa a ser a **força do clube − 3** (era − 5). Relato do usuário: o clube da 2ª com campanha razoável perdia muita força; no jogo dele, quase todo o plantel de dois clubes da 2ª estava no piso. Simulado em `docs/simulacoes/desgaste.md` (10 temporadas): as divisões mantêm a força inicial (1ª 42,5 → 42,3; 2ª 26,6 → 26,3; antes 39,0 e 22,7), o caixa da 1ª na 10ª temporada fica em 48 rodadas da folha (era 74), o campeão fica menos previsível (entre os 3 mais fortes 82% → 52%). Vale nos jogos salvos a partir da próxima rodada; quem já está abaixo do novo piso não sobe na hora.
 -   **rev. 125 (2026-11-06):** pelo usuário (§5.2): o asterisco temporário do bônus de artilharia aparece no **plantel** e no **leilão** (★, com a dica "asterisco temporário do bônus de artilharia"), como já aparecia na substituição, e conta em "Asteriscos em campo". Antes ficava escondido nessas telas, mas contava no limite de 3 do motor, e o usuário podia passar do limite sem ver. Correção junto (agente): completar a tática passa a contar esse asterisco no limite. Vale o sorteado na divisão do clube do treinador, como no motor; o bônus extra de quem já tem asterisco continua sem marca.
 -   **rev. 124 (2026-11-06):** pelo usuário (§9.4): no lance da máquina, o acréscimo de até 5% conta a força do clube em relação ao **teto da sua divisão** (até 1), não mais até 50: o topo da 2ª passa a disputar o jogador com a 1ª. Simulado em `docs/simulacoes/compra-da-maquina.md`: o topo da 2ª compra em 6% das rodadas (era 2%), o caixa da 2ª cresce mais devagar (mediana no fim da 5ª temporada 48 → 32 rodadas da folha), o campeão da 1ª repete menos (42% → 21%). O fundo da 2ª segue sem comprar (falta caixa) e fica como está, por decisão do usuário; mais jogadores à venda (reserva de quem tem plantel acima de 23) foi descartado por girar demais o mercado. Vale nos jogos salvos a partir do próximo leilão.
 -   **rev. 123 (2026-11-06):** pelo usuário (§7.2): nova tabela de quem finaliza por formação, com mais meias e defensores e menos atacantes (4-4-2 50/40/10; 4-3-3 60/30/10; 3-5-2 54/41/5; 3-4-3 68/27/5; 4-2-4 75/16/9; 5-4-1 40/45/15; 4-5-1 40/50/10; 3-6-1 38/57/5). O 0,01% do goleiro continua, tirado da defesa (agente).
@@ -1228,7 +1229,7 @@ precisa comprar para ficar.
 - No **1º turno** da temporada seguinte à subida (rodadas da liga até a metade
   das da 1ª divisão), depois de cada partida da liga, **todo jogador fora da
   escalação** (nem titular nem no banco) ganha 1 ponto, mesmo na derrota, sem
-  passar do teto. O sorteio de sempre (1/3/5 perdem, 4/2/0,5 crescem) continua.
+  passar do teto. O sorteio de sempre (1/2/3 perdem desde a rev. 126, 4/2/0,5 crescem) continua.
 - Copa, continental e Mundial não dão o bônus.
 - Vale para o clube do usuário e para a máquina. Quem subiu é o clube que está
   na 1ª e jogou a temporada anterior numa divisão abaixo.
@@ -1236,6 +1237,23 @@ precisa comprar para ficar.
   Na simulação (`docs/simulacoes/promovidos.md`) os que caem de volta ficaram
   em 73% com e sem o bônus: quem está fora cresce até entrar no banco, e a força
   em campo muda pouco.
+
+**Definido (rev. 126), pelo usuário — desgaste menor:** substitui os números
+da rev. 56 para quem jogou e o piso.
+- Dos que jogaram, **1, 2 ou 3** sorteados perdem 1 ponto (vitória, empate,
+  derrota). Dos que não jogaram, continuam 4, 2 ou 0,5 crescendo.
+- **Piso:** o desgaste não leva abaixo da **força do clube − 3**.
+- **Por quê:** com 1/3/5 e piso − 5, um time que perde tanto quanto ganha perde
+  força a cada jogo e em cerca de uma temporada todo o plantel encosta no piso;
+  as divisões caíam cerca de 4 pontos de força em campo e ficavam lá. Com 1/2/3
+  e piso − 3 elas mantêm a força inicial em 10 temporadas
+  (`docs/simulacoes/desgaste.md`). Só 1/2/3 com piso − 5 também mantinha a
+  força, mas deixava 22% dos clubes da 2ª negativos na 10ª temporada (14% com
+  piso − 3).
+- **Efeito:** o campeão da 1ª fica menos previsível (entre os 3 mais fortes do
+  início em 52% das temporadas, eram 82%; repete o título em 13%, eram 28%).
+- Vale nos jogos salvos a partir da próxima rodada; quem já está abaixo do novo
+  piso não sobe na hora (só cresce quando não joga).
 
 ### 6.2 Moral do time
 

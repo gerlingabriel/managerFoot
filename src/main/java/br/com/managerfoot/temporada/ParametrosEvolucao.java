@@ -44,12 +44,14 @@ public record ParametrosEvolucao(Map<Desfecho, Double> perdem, Map<Desfecho, Dou
 	}
 
 	/**
-	 * Proposta do agente (variante C do relatório): crescem 4 na vitória, 2 no empate e 0,5 na derrota,
-	 * com piso na força do clube − 5. Sem piso, o clube que perde desce sem parar; crescendo 5/3/1, um
-	 * terço dos jogadores encosta no teto em 6 temporadas.
+	 * Valores em vigor (SPEC §6.1, rev. 126): dos que jogaram, perdem 1 ponto 1 jogador na vitória, 2 no
+	 * empate e 3 na derrota; dos que não jogaram, crescem 4, 2 e 0,5 (variante C da rev. 56); piso na
+	 * força do clube − 3. Com 1/3/5 e piso − 5 (rev. 56) as divisões perdiam cerca de 4 pontos de força
+	 * em campo no 1º ano e quase todo plantel assentava no piso; assim mantêm a força inicial
+	 * ({@code docs/simulacoes/desgaste.md}).
 	 */
 	public static ParametrosEvolucao padrao() {
-		return new ParametrosEvolucao(porDesfecho(1, 3, 5), porDesfecho(4, 2, 0.5), 0.25, 5);
+		return new ParametrosEvolucao(porDesfecho(1, 2, 3), porDesfecho(4, 2, 0.5), 0.25, 3);
 	}
 
 	public static Map<Desfecho, Double> porDesfecho(double vitoria, double empate, double derrota) {

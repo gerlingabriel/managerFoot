@@ -30,19 +30,19 @@ class EvolucaoForcaTest {
 	private final EvolucaoForca evolucao = EvolucaoForca.padrao();
 
 	@Test
-	void naDerrotaCincoDosQueJogaramPerdemUmPontoCadaEQuemNaoJogouQuaseNaoCresce() {
+	void naDerrotaTresDosQueJogaramPerdemUmPontoCadaEQuemNaoJogouQuaseNaoCresce() {
 		List<Jogador> depois = evolucao.aposPartida(plantel(30), JOGARAM, BANCO, Desfecho.DERROTA, 50, 30, new SplittableRandom(1));
 
-		assertThat(depois).filteredOn(j -> JOGARAM.contains(j.id())).filteredOn(j -> j.forca() == 29).hasSize(5);
+		assertThat(depois).filteredOn(j -> JOGARAM.contains(j.id())).filteredOn(j -> j.forca() == 29).hasSize(3);
 		assertThat(depois).allMatch(j -> j.forca() >= 29 && j.forca() <= 31);
 		assertThat(depois).filteredOn(j -> !JOGARAM.contains(j.id())).filteredOn(j -> j.forca() == 31).hasSizeLessThanOrEqualTo(1);
 	}
 
 	@Test
-	void naVitoriaUmPerdeENoEmpateTres() {
+	void naVitoriaUmPerdeENoEmpateDois() {
 		for (int s = 0; s < 50; s++) {
 			assertThat(perderam(Desfecho.VITORIA, s)).isEqualTo(1);
-			assertThat(perderam(Desfecho.EMPATE, s)).isEqualTo(3);
+			assertThat(perderam(Desfecho.EMPATE, s)).isEqualTo(2);
 			assertThat(cresceram(Desfecho.VITORIA, s)).isEqualTo(4);
 			assertThat(cresceram(Desfecho.EMPATE, s)).isEqualTo(2);
 		}
@@ -55,7 +55,7 @@ class EvolucaoForcaTest {
 			List<Jogador> depois = evolucao.aposPartida(plantel(30), JOGARAM, BANCO, Desfecho.DERROTA, 50, 30, true,
 					new SplittableRandom(s));
 			assertThat(depois).filteredOn(j -> j.id() > 16).allMatch(j -> j.forca() == 31);
-			assertThat(depois).filteredOn(j -> JOGARAM.contains(j.id())).filteredOn(j -> j.forca() == 29).hasSize(5);
+			assertThat(depois).filteredOn(j -> JOGARAM.contains(j.id())).filteredOn(j -> j.forca() == 29).hasSize(3);
 			assertThat(depois).filteredOn(j -> BANCO.contains(j.id())).filteredOn(j -> j.forca() == 31).hasSizeLessThanOrEqualTo(1);
 		}
 		// no teto não cresce
@@ -74,14 +74,14 @@ class EvolucaoForcaTest {
 
 	@Test
 	void desgasteParaNoPisoECrescimentoNoTeto() {
-		// força do clube 30: ninguém que joga cai abaixo de 25
-		List<Jogador> noPiso = plantel(25);
+		// força do clube 30: ninguém que joga cai abaixo de 27 (piso − 3, rev. 126)
+		List<Jogador> noPiso = plantel(28);
 		List<Jogador> noTeto = plantel(30);
 		for (int s = 0; s < 200; s++) {
 			noPiso = evolucao.aposPartida(noPiso, JOGARAM, Set.of(), Desfecho.DERROTA, 50, 30, new SplittableRandom(s));
 			noTeto = evolucao.aposPartida(noTeto, Set.of(), BANCO, Desfecho.VITORIA, 30, 30, new SplittableRandom(s));
 		}
-		assertThat(noPiso).allMatch(j -> j.forca() >= 25);
+		assertThat(noPiso).allMatch(j -> j.forca() >= 27).anyMatch(j -> j.forca() == 27);
 		assertThat(noTeto).allMatch(j -> j.forca() <= 30);
 	}
 
