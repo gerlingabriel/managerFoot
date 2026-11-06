@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 115 — 2026-11-05)
+-   **Status:** versão inicial para revisão (rev. 116 — 2026-11-05)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -14,6 +14,8 @@
     descreve intenção geral ainda não detalhada.
 
 ### Histórico de revisões
+
+-   **rev. 116 (2026-11-05):** pelo usuário (§5.3): no Resumo do plantel, "Asteriscos em campo" fica em vermelho quando passa de 3.
 
 -   **rev. 115 (2026-11-05):** correção (§9.5), relatada pelo usuário: o jogador do pedido de aumento recusado, vendido em leilão a um clube da máquina, voltava a leilão na rodada seguinte. A compra baixava o caixa do comprador, e a máquina punha à venda o mais caro do plantel, que costumava ser ele. A regra da rev. 81 (comprado tem contrato e só vai a leilão na próxima temporada) passa a valer também para os clubes da máquina.
 
@@ -880,6 +882,8 @@ torne uma vantagem desproporcional.
     escolhido finalizador**.
   - Até 3 asteriscos em campo, sem penalidade. **Mais de 3** gera uma
     penalidade que deve quase equilibrar os bônus dos asteriscos extras.
+  - **Definido (rev. 116), pelo usuário:** no Resumo do plantel, a quantidade
+    de "Asteriscos em campo" fica **em vermelho** quando passa do limite.
 - **Definido (rev. 19), valores provisórios:**
   - Jogador de linha com asterisco tem **15% a mais** de chance de gol em
     **todas** as finalizações, inclusive no pênalti que ele bate.

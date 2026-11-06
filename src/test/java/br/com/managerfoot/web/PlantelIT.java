@@ -136,6 +136,21 @@ class PlantelIT {
 	}
 
 	@Test
+	void maisAsteriscosQueOLimiteFicamEmVermelho() throws Exception {
+		java.util.List<Long> titulares = java.util.List.copyOf(escalacoes.carregar(clube).orElseThrow().titulares());
+		jdbc.sql("UPDATE jogo_jogador SET asterisco = false WHERE clube_id = :c").param("c", clube).update();
+		jdbc.sql("UPDATE jogo_jogador SET asterisco = true WHERE id IN (:ids)").param("ids", titulares.subList(0, 3)).update();
+		mvc.perform(get(plantel).with(como(treinador)))
+			.andExpect(content().string(containsString(">3 de 3</dd>")))
+			.andExpect(content().string(org.hamcrest.Matchers.not(containsString("acima-do-limite"))));
+
+		jdbc.sql("UPDATE jogo_jogador SET asterisco = true WHERE id = :id").param("id", titulares.get(3)).update();
+		mvc.perform(get(plantel).with(como(treinador)))
+			.andExpect(content().string(containsString("class=\"acima-do-limite\"")))
+			.andExpect(content().string(containsString(">4 de 3</dd>")));
+	}
+
+	@Test
 	void tirarUmTitularDeixaAEscalacaoIncompletaEVoltarConserta() throws Exception {
 		EscalacaoDoTreinador antes = escalacoes.carregar(clube).orElseThrow();
 		long titular = antes.titulares().iterator().next();

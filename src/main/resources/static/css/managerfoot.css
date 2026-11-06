@@ -1730,3 +1730,6 @@ a.financas-link:hover, a.financas-link:focus-visible { border-color: var(--desta
 .meta-patrocinio.perdida .rotulo, .meta-patrocinio.perdida .meta-valor .financas-numero { color: var(--texto-suave); }
 .inicio .convidar { flex: 1 1 100%; }
 .convidar form .botao { align-self: flex-start; padding: 0 28px; }
+
+/* asteriscos em campo acima do limite (SPEC §5.3): o número fica em vermelho */
+.resumo dd.acima-do-limite { color: var(--erro); font-weight: 700; }

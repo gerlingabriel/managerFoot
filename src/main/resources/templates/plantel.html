@@ -103,7 +103,9 @@
 <dl class="resumo">
 <div><dt>Força média dos titulares</dt><dd th:text="${forcaMedia}">0</dd></div>
 <div><dt>Estrangeiros em campo</dt><dd th:text="${estrangeirosEmCampo}">0</dd></div>
-<div><dt>Asteriscos em campo</dt><dd th:text="|${asteriscosEmCampo} de ${limiteAsteriscos}|">0 de 3</dd></div>
+<div><dt>Asteriscos em campo</dt><dd th:text="|${asteriscosEmCampo} de ${limiteAsteriscos}|"
+	th:classappend="${asteriscosEmCampo > limiteAsteriscos} ? 'acima-do-limite'"
+	th:title="${asteriscosEmCampo > limiteAsteriscos} ? 'Acima do limite: cada asterisco a mais tira domínio do time'">0 de 3</dd></div>
 <div><dt>Substituições na partida</dt><dd th:text="${substituicoes}">5</dd></div>
 </dl>
 </section>
