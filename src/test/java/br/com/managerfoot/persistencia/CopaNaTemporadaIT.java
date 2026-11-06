@@ -72,6 +72,16 @@ class CopaNaTemporadaIT {
 	}
 
 	@Test
+	void partidasDasOitavasTemAZebraDaCopaComSuperBonus() {
+		jogarAte(10);
+
+		// a copa de 1 divisão começa nas oitavas: primeiras fases, com o super bônus possível (rev. 117)
+		assertThat(rodadas.prepararCopa(jogo, 0, List.of()).partidas())
+			.hasSize(8)
+			.allSatisfy(p -> assertThat(p.condicoes().copa()).contains(new br.com.managerfoot.motor.CopaNacional(true)));
+	}
+
+	@Test
 	void depoisDaRodada10VemAIdaDasOitavasEARodada11Espera() {
 		jogarAte(10);
 

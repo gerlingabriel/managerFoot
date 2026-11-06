@@ -63,6 +63,10 @@ public final class Partida {
 	private int golsFora;
 	private boolean prorrogacao;
 	private DisputaPenaltis penaltis;
+	/** Zebra da copa (rev. 117): o lado mais fraco que joga com bônus, decidido no início; nulo sem bônus. */
+	private final Lado bonificado;
+	private final double bonusForca;
+	private final boolean superBonus;
 
 	/**
 	 * @param ladosDoUsuario times controlados por usuários; os demais seguem o {@link TreinadorMaquina}
@@ -79,6 +83,45 @@ public final class Partida {
 		this.condicoes = Objects.requireNonNull(condicoes);
 		this.aleatorio = Objects.requireNonNull(aleatorio);
 		this.fim = parametros.minutos();
+		// zebra da copa (SPEC §8.2, rev. 117): pela força em campo dos titulares, no início da partida;
+		// só sorteia o super bônus quando ele pode valer, para não mudar as outras partidas da mesma semente
+		ParametrosZebraCopa zebra = parametros.zebraCopa();
+		double mediaCasa = casa.titulares().stream().mapToInt(Jogador::forca).average().orElse(0);
+		double mediaFora = fora.titulares().stream().mapToInt(Jogador::forca).average().orElse(0);
+		double diferenca = Math.abs(mediaCasa - mediaFora);
+		if (condicoes.copa().isPresent() && diferenca >= zebra.diferencaMinima()) {
+			this.bonificado = mediaCasa < mediaFora ? Lado.CASA : Lado.FORA;
+			// só sobre o que passa do limite: sem salto em 15, quem está mais perto segue com mais chance
+			this.bonusForca = zebra.fracaoBonus() * (diferenca - zebra.diferencaMinima());
+			this.superBonus = condicoes.copa().get().primeirasFases() && zebra.chanceSuperBonus() > 0
+					&& this.aleatorio.nextDouble() < zebra.chanceSuperBonus();
+		} else {
+			this.bonificado = null;
+			this.bonusForca = 0;
+			this.superBonus = false;
+		}
+	}
+
+	/**
+	 * Força com a zebra da copa: o mais fraco joga com o bônus (até o teto) ou, no super bônus, com a força
+	 * do super bônus; os demais com a própria força.
+	 */
+	private double forcaEfetiva(Lado lado, double forca) {
+		if (lado != bonificado) {
+			return forca;
+		}
+		double teto = parametros.zebraCopa().forcaSuperBonus();
+		return superBonus ? teto : Math.min(teto, forca + bonusForca);
+	}
+
+	/** O lado que joga com a zebra da copa nesta partida, se houver (testes e relatórios). */
+	Optional<Lado> ladoComBonusDeCopa() {
+		return Optional.ofNullable(bonificado);
+	}
+
+	/** Se o lado com a zebra da copa joga com o super bônus (testes e relatórios). */
+	boolean comSuperBonusDeCopa() {
+		return superBonus;
 	}
 
 	/** Partida sem sorte nem bônus de artilharia. */
@@ -261,7 +304,7 @@ public final class Partida {
 		Jogador finalizador = sortearFinalizador(ataque);
 
 		double pressao = disputa(forcaSetor(ataque, Posicao.ATACANTE), forcaSetor(defesa, Posicao.DEFENSOR));
-		double duelo = disputa(finalizador.forca(), defesa.forcaGoleiro());
+		double duelo = disputa(forcaEfetiva(lado, finalizador.forca()), forcaEfetiva(lado.adversario(), defesa.forcaGoleiro()));
 		double antiGoleada = Math.pow(parametros.fatorPorGolMarcado(), gols(lado));
 		double conversao = Math.clamp(parametros.conversaoBase() * pressao * duelo * antiGoleada,
 				parametros.conversaoMinima(), parametros.conversaoMaxima()) * bonusFinalizacao(finalizador)
@@ -496,7 +539,7 @@ public final class Partida {
 			case DEFENSOR -> parametros.expoenteDefensores();
 			case GOLEIRO -> 1;
 		};
-		double media = time.soma(posicao) / quantidade;
+		double media = forcaEfetiva(time == casa ? Lado.CASA : Lado.FORA, time.soma(posicao) / quantidade);
 		return media * referencia * Math.pow((double) quantidade / referencia, expoente);
 	}
 

@@ -17,9 +17,10 @@ import br.com.managerfoot.dominio.Sorte;
  * @param lesoesPermitidas quantas lesões cada lado ainda pode ter na temporada (SPEC §7.5); lado
  *        ausente tem o limite da temporada inteiro
  * @param decisivo se a partida precisa de vencedor, com prorrogação e pênaltis (SPEC §8.2)
+ * @param copa partida da copa nacional, com a zebra do mais fraco (SPEC §8.2, rev. 117); vazia nas demais
  */
 public record CondicoesPartida(Map<Lado, Sorte> sorte, Set<Long> bonusExtra, Map<Lado, Integer> lesoesPermitidas,
-		Optional<JogoDecisivo> decisivo) {
+		Optional<JogoDecisivo> decisivo, Optional<CopaNacional> copa) {
 
 	public static final CondicoesPartida NEUTRAS = new CondicoesPartida(Map.of(), Set.of());
 
@@ -28,6 +29,12 @@ public record CondicoesPartida(Map<Lado, Sorte> sorte, Set<Long> bonusExtra, Map
 		bonusExtra = Set.copyOf(Objects.requireNonNull(bonusExtra));
 		lesoesPermitidas = Map.copyOf(Objects.requireNonNull(lesoesPermitidas));
 		Objects.requireNonNull(decisivo);
+		Objects.requireNonNull(copa);
+	}
+
+	public CondicoesPartida(Map<Lado, Sorte> sorte, Set<Long> bonusExtra, Map<Lado, Integer> lesoesPermitidas,
+			Optional<JogoDecisivo> decisivo) {
+		this(sorte, bonusExtra, lesoesPermitidas, decisivo, Optional.empty());
 	}
 
 	public CondicoesPartida(Map<Lado, Sorte> sorte, Set<Long> bonusExtra, Map<Lado, Integer> lesoesPermitidas) {
@@ -44,7 +51,12 @@ public record CondicoesPartida(Map<Lado, Sorte> sorte, Set<Long> bonusExtra, Map
 
 	/** As mesmas condições numa partida que precisa de vencedor. */
 	public CondicoesPartida comDecisivo(JogoDecisivo jogo) {
-		return new CondicoesPartida(sorte, bonusExtra, lesoesPermitidas, Optional.of(jogo));
+		return new CondicoesPartida(sorte, bonusExtra, lesoesPermitidas, Optional.of(jogo), copa);
+	}
+
+	/** As mesmas condições numa partida da copa nacional. */
+	public CondicoesPartida comCopa(CopaNacional copaNacional) {
+		return new CondicoesPartida(sorte, bonusExtra, lesoesPermitidas, decisivo, Optional.of(copaNacional));
 	}
 
 	int lesoesPermitidas(Lado lado, int limiteDaTemporada) {

@@ -18,6 +18,7 @@ import br.com.managerfoot.dominio.Moral;
 import br.com.managerfoot.dominio.ParametrosMoral;
 import br.com.managerfoot.dominio.Sorte;
 import br.com.managerfoot.motor.CondicoesPartida;
+import br.com.managerfoot.motor.CopaNacional;
 import br.com.managerfoot.motor.EscalacaoMaquina;
 import br.com.managerfoot.motor.JogoDecisivo;
 import br.com.managerfoot.motor.Lado;
@@ -60,8 +61,15 @@ public final class ProcessamentoRodada {
 	private static final long MISTURA_ETAPA_CONTINENTAL = 0xA0761D6478BD642FL;
 	private static final long MISTURA_ETAPA_MUNDIAL = 0x8EBC6AF09C88C6E3L;
 
-	/** Uma partida de etapa de copa ou continental: o jogo e, na volta e na final, o que decide. */
-	public record PartidaDaEtapa(Jogo jogo, Optional<JogoDecisivo> decisivo) {
+	/**
+	 * Uma partida de etapa de copa ou continental: o jogo, na volta e na final o que decide e, na copa
+	 * nacional, a zebra do mais fraco (rev. 117).
+	 */
+	public record PartidaDaEtapa(Jogo jogo, Optional<JogoDecisivo> decisivo, Optional<CopaNacional> copa) {
+
+		public PartidaDaEtapa(Jogo jogo, Optional<JogoDecisivo> decisivo) {
+			this(jogo, decisivo, Optional.empty());
+		}
 	}
 
 	/** Prioridade das partidas da copa na rodada ao vivo: as divisões começam em 1. */
@@ -177,8 +185,9 @@ public final class ProcessamentoRodada {
 			throw new IllegalArgumentException("a etapa " + indice + " da copa não tem partidas");
 		}
 		return prepararEtapa(temporada, new SplittableRandom(temporada.semente() ^ ((indice + 1) * MISTURA_ETAPA_COPA)),
-				jogos.stream().map(p -> new PartidaDaEtapa(p.jogo(), p.decisivo())).toList(), planteis, disciplina,
-				escalacoes, substituicoes);
+				jogos.stream().map(p -> new PartidaDaEtapa(p.jogo(), p.decisivo(), Optional.of(new CopaNacional(
+						p.confronto().fase() == FaseCopa.DEZESSEIS_AVOS || p.confronto().fase() == FaseCopa.OITAVAS))))
+					.toList(), planteis, disciplina, escalacoes, substituicoes);
 	}
 
 	/**
@@ -232,6 +241,9 @@ public final class ProcessamentoRodada {
 							lesoesPermitidas(disciplina, jogo.visitante())));
 			if (p.decisivo().isPresent()) {
 				condicoes = condicoes.comDecisivo(p.decisivo().get());
+			}
+			if (p.copa().isPresent()) {
+				condicoes = condicoes.comCopa(p.copa().get());
 			}
 			Set<Lado> doUsuario = EnumSet.noneOf(Lado.class);
 			if (escalacoes.containsKey(jogo.mandante().id())) {

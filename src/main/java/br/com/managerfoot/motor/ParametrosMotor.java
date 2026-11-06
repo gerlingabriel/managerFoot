@@ -34,6 +34,7 @@ import br.com.managerfoot.dominio.Formacao;
  * @param aberturaPorAtacantes jogo aberto pela quantidade de atacantes em campo (índice 0 a 4): multiplica a conversão
  *        do próprio time e a do adversário contra ele, então mais atacantes fazem e sofrem mais gols (SPEC §7.2, rev. 107)
  * @param ajustesFormacao bônus de meio, ataque e defesa de cada formação, para equilibrá-las (SPEC §7.2, rev. 113)
+ * @param zebraCopa bônus do mais fraco na copa nacional (SPEC §8.2, rev. 117)
  */
 public record ParametrosMotor(int minutos, double chancePorMinuto, double fatorMando, double conversaoBase,
 		double sensibilidadeForca, double expoenteMeias, double expoenteAtacantes, double expoenteDefensores,
@@ -41,7 +42,7 @@ public record ParametrosMotor(int minutos, double chancePorMinuto, double fatorM
 		double proporcaoDefesa, double proporcaoTrave, Map<Formacao, PesosFinalizador> pesosFinalizador,
 		ParametrosDisciplina disciplina, ParametrosPenalti penalti, ParametrosSorte sorte,
 		ParametrosAsterisco asterisco, ParametrosLesao lesao, List<Double> aberturaPorAtacantes,
-		Map<Formacao, AjusteFormacao> ajustesFormacao) {
+		Map<Formacao, AjusteFormacao> ajustesFormacao, ParametrosZebraCopa zebraCopa) {
 
 	public ParametrosMotor {
 		aberturaPorAtacantes = List.copyOf(aberturaPorAtacantes);
@@ -56,6 +57,7 @@ public record ParametrosMotor(int minutos, double chancePorMinuto, double fatorM
 		Objects.requireNonNull(pesosFinalizador, "pesos do finalizador são obrigatórios");
 		pesosFinalizador = Map.copyOf(pesosFinalizador);
 		Objects.requireNonNull(ajustesFormacao, "ajustes das formações são obrigatórios");
+		Objects.requireNonNull(zebraCopa, "parâmetros da zebra da copa são obrigatórios");
 		ajustesFormacao = Map.copyOf(ajustesFormacao);
 		for (Formacao formacao : Formacao.values()) {
 			if (!pesosFinalizador.containsKey(formacao)) {
@@ -101,7 +103,8 @@ public record ParametrosMotor(int minutos, double chancePorMinuto, double fatorM
 		// calibrado na Etapa 1d: docs/simulacoes/calibracao-motor.md
 		return new ParametrosMotor(90, 0.15, 1.45, 0.23, 0.95, 0.5, 0.55, 1.25, 0.85, 0.10, 0.35, 0.5, 0.1, pesos,
 				ParametrosDisciplina.padrao(), ParametrosPenalti.padrao(), ParametrosSorte.padrao(),
-				ParametrosAsterisco.padrao(), ParametrosLesao.padrao(), ABERTURA_PADRAO, ajustesPadrao());
+				ParametrosAsterisco.padrao(), ParametrosLesao.padrao(), ABERTURA_PADRAO, ajustesPadrao(),
+				ParametrosZebraCopa.padrao());
 	}
 
 	/** Jogo aberto (rev. 107): até 2 atacantes nada muda; 3 e 4 fazem e sofrem mais gols. */
@@ -134,7 +137,7 @@ public record ParametrosMotor(int minutos, double chancePorMinuto, double fatorM
 		return new ParametrosMotor(minutos, chancePorMinuto, fatorMando, conversaoBase, sensibilidadeForca,
 				expoenteMeias, expoenteAtacantes, expoenteDefensores, fatorPorGolMarcado, conversaoMinima,
 				conversaoMaxima, proporcaoDefesa, proporcaoTrave, pesosFinalizador, disciplina, penalti, sorte,
-				asterisco, lesao, aberturaPorAtacantes, novosAjustes);
+				asterisco, lesao, aberturaPorAtacantes, novosAjustes, zebraCopa);
 	}
 
 	/** Fator de jogo aberto de um time com esta quantidade de atacantes em campo. */
@@ -147,7 +150,15 @@ public record ParametrosMotor(int minutos, double chancePorMinuto, double fatorM
 		return new ParametrosMotor(minutos, chancePorMinuto, fatorMando, conversaoBase, sensibilidadeForca,
 				expoenteMeias, expoenteAtacantes, expoenteDefensores, fatorPorGolMarcado, conversaoMinima,
 				conversaoMaxima, proporcaoDefesa, proporcaoTrave, pesosFinalizador, disciplina, penalti, sorte,
-				asterisco, lesao, novaAbertura, ajustesFormacao);
+				asterisco, lesao, novaAbertura, ajustesFormacao, zebraCopa);
+	}
+
+	/** Cópia com outra zebra da copa (calibração e testes). */
+	public ParametrosMotor comZebraCopa(ParametrosZebraCopa novaZebra) {
+		return new ParametrosMotor(minutos, chancePorMinuto, fatorMando, conversaoBase, sensibilidadeForca,
+				expoenteMeias, expoenteAtacantes, expoenteDefensores, fatorPorGolMarcado, conversaoMinima,
+				conversaoMaxima, proporcaoDefesa, proporcaoTrave, pesosFinalizador, disciplina, penalti, sorte,
+				asterisco, lesao, aberturaPorAtacantes, ajustesFormacao, novaZebra);
 	}
 
 	/** Cópia com outros cartões e expulsões (calibração e testes). */
@@ -155,7 +166,7 @@ public record ParametrosMotor(int minutos, double chancePorMinuto, double fatorM
 		return new ParametrosMotor(minutos, chancePorMinuto, fatorMando, conversaoBase, sensibilidadeForca,
 				expoenteMeias, expoenteAtacantes, expoenteDefensores, fatorPorGolMarcado, conversaoMinima,
 				conversaoMaxima, proporcaoDefesa, proporcaoTrave, pesosFinalizador, novaDisciplina, penalti, sorte,
-				asterisco, lesao, aberturaPorAtacantes, ajustesFormacao);
+				asterisco, lesao, aberturaPorAtacantes, ajustesFormacao, zebraCopa);
 	}
 
 	/** Cópia com outro efeito de sorte (calibração e testes). */
@@ -163,7 +174,7 @@ public record ParametrosMotor(int minutos, double chancePorMinuto, double fatorM
 		return new ParametrosMotor(minutos, chancePorMinuto, fatorMando, conversaoBase, sensibilidadeForca,
 				expoenteMeias, expoenteAtacantes, expoenteDefensores, fatorPorGolMarcado, conversaoMinima,
 				conversaoMaxima, proporcaoDefesa, proporcaoTrave, pesosFinalizador, disciplina, penalti, novaSorte,
-				asterisco, lesao, aberturaPorAtacantes, ajustesFormacao);
+				asterisco, lesao, aberturaPorAtacantes, ajustesFormacao, zebraCopa);
 	}
 
 	/** Cópia com outros efeitos do asterisco (calibração e testes). */
@@ -171,7 +182,7 @@ public record ParametrosMotor(int minutos, double chancePorMinuto, double fatorM
 		return new ParametrosMotor(minutos, chancePorMinuto, fatorMando, conversaoBase, sensibilidadeForca,
 				expoenteMeias, expoenteAtacantes, expoenteDefensores, fatorPorGolMarcado, conversaoMinima,
 				conversaoMaxima, proporcaoDefesa, proporcaoTrave, pesosFinalizador, disciplina, penalti, sorte,
-				novoAsterisco, lesao, aberturaPorAtacantes, ajustesFormacao);
+				novoAsterisco, lesao, aberturaPorAtacantes, ajustesFormacao, zebraCopa);
 	}
 
 	/** Cópia com outras lesões (simulação e testes). */
@@ -179,7 +190,7 @@ public record ParametrosMotor(int minutos, double chancePorMinuto, double fatorM
 		return new ParametrosMotor(minutos, chancePorMinuto, fatorMando, conversaoBase, sensibilidadeForca,
 				expoenteMeias, expoenteAtacantes, expoenteDefensores, fatorPorGolMarcado, conversaoMinima,
 				conversaoMaxima, proporcaoDefesa, proporcaoTrave, pesosFinalizador, disciplina, penalti, sorte,
-				asterisco, novaLesao, aberturaPorAtacantes, ajustesFormacao);
+				asterisco, novaLesao, aberturaPorAtacantes, ajustesFormacao, zebraCopa);
 	}
 
 	private static void exigirProbabilidade(String nome, double valor) {

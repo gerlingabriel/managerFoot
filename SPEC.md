@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 116 — 2026-11-05)
+-   **Status:** versão inicial para revisão (rev. 117 — 2026-11-05)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -14,6 +14,8 @@
     descreve intenção geral ainda não detalhada.
 
 ### Histórico de revisões
+
+-   **rev. 117 (2026-11-05):** pelo usuário (§8.2): zebra da copa nacional. Com a força em campo 15 ou mais abaixo da do adversário, o mais fraco ganha bônus de força, que reduz a desigualdade sem igualar; nos 16 avos e oitavas, ele ainda tem 10% de chance por partida de jogar como força 50 (super bônus), sem aviso na tela. A forma do bônus foi escolhida pelo usuário pela simulação: 80% do que a diferença passa de 15 (a de 20 vale como 16, a de 30 como 18), em vez de 40% da diferença inteira, que fazia o clube 16 pontos mais fraco ter mais chance que o de 12. Zebras nos 16 avos e oitavas: de 11% para 18% (diferença de 15 a 20) e de 6% para 17% (20 ou mais).
 
 -   **rev. 116 (2026-11-05):** pelo usuário (§5.3): no Resumo do plantel, "Asteriscos em campo" fica em vermelho quando passa de 3.
 
@@ -1932,6 +1934,35 @@ modelo, a aprovar junto com as telas da copa.
 (chave fixa, prorrogação de 30 minutos, disputa e ordem dos batedores, fila
 de espera fora da copa, público e ingresso da final, clique obrigatório na
 etapa sem o clube do usuário) foram aprovadas junto com os modelos das telas.
+
+**Definido (rev. 117), pelo usuário — zebra da copa nacional** (só na copa
+nacional; continental e Mundial não mudam):
+- **Bônus do mais fraco:** quando a **força em campo** (média dos 11 titulares
+  no início da partida) de um clube está **15 pontos ou mais** abaixo da do
+  adversário, cada jogador dele joga com **80% do que a diferença passa de 15**
+  a mais. A diferença de 20 vale como 16, a de 30 como 18: reduz a desigualdade
+  sem igualar, e quem está mais perto continua com mais chance. Vale em todas
+  as fases, para qualquer clube, inclusive o do usuário.
+- **Super bônus nas primeiras fases:** nos **16 avos e oitavas**, o mais fraco
+  (15 ou mais abaixo) tem **10% de chance por partida** (ida e volta sorteadas
+  separadamente) de jogar a partida inteira como se todos fossem **força 50**.
+  Não aparece na tela: o usuário só vê o resultado.
+- O bônus e o sorteio são decididos no servidor, no início da partida, pela
+  semente dela; todos os participantes veem o mesmo resultado. Parâmetros em
+  `motor.ParametrosZebraCopa`.
+- **Escolha pela simulação** (`docs/simulacoes/copa.md`, 1.200 copas do banco
+  padrão, as mesmas copas sem e com a zebra). A primeira proposta, 40% da
+  diferença inteira, dava um salto em 15: o clube 16 pontos mais fraco passava
+  a ter mais chance que o de 12. O usuário escolheu a forma sem salto.
+
+  | Diferença de força em campo | Zebras sem (16 avos e oitavas) | Com | Sem (quartas em diante) | Com |
+  |---|---|---|---|---|
+  | 8 a 15 | 20,5% | 20,6% | 24,6% | 22,6% |
+  | 15 a 20 | 11,1% | 18,4% | 7,8% | 12,5% |
+  | 20 ou mais | 6,3% | 16,6% | 9,2% | 12,6% |
+
+  O super bônus sozinho acrescenta 3 a 4 pontos de zebra nos 16 avos e oitavas.
+  Campeão da 2ª divisão: 0,3% → 0,7% das copas.
 
 **Definido (rev. 71), modelos 12a a 12f aprovados — telas da copa:**
 - **12a · Aba Copa** (entre Classificação e Artilheiros): seletor das fases
