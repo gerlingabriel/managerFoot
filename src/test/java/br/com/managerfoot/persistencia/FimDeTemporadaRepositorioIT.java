@@ -178,6 +178,12 @@ class FimDeTemporadaRepositorioIT {
 		assertThat(contar("SELECT coalesce(sum(j.suspensao), 0) FROM jogo_jogador j "
 				+ "JOIN jogo_clube c ON c.id = j.clube_id WHERE c.jogo_id = ?")).isEqualTo(suspensoesAntes);
 
+		// recém-promovidos à 1ª, para o bônus de crescimento do 1º turno (SPEC §6.1, rev. 118)
+		assertThat(rodadas.subiramParaAPrimeira(jogo, 1)).isEmpty();
+		assertThat(rodadas.subiramParaAPrimeira(jogo, 2)).isNotEmpty()
+			.containsExactlyInAnyOrderElementsOf(esperada.promovidos().stream()
+				.filter(c -> esperada.proxima().divisoes().get(0).clubes().contains(c)).map(Clube::id).toList());
+
 		Temporada segunda = temporadas.carregarAtual(jogo);
 		assertThat(segunda).isEqualTo(nova.temporada());
 		assertThat(segunda.numero()).isEqualTo(2);

@@ -49,6 +49,21 @@ class EvolucaoForcaTest {
 	}
 
 	@Test
+	void recemPromovidoFazCrescerTodoJogadorForaDaEscalacaoMesmoNaDerrota() {
+		// plantel de 23: 11 jogaram, 5 no banco, 7 fora da escalação (17 a 23)
+		for (int s = 0; s < 50; s++) {
+			List<Jogador> depois = evolucao.aposPartida(plantel(30), JOGARAM, BANCO, Desfecho.DERROTA, 50, 30, true,
+					new SplittableRandom(s));
+			assertThat(depois).filteredOn(j -> j.id() > 16).allMatch(j -> j.forca() == 31);
+			assertThat(depois).filteredOn(j -> JOGARAM.contains(j.id())).filteredOn(j -> j.forca() == 29).hasSize(5);
+			assertThat(depois).filteredOn(j -> BANCO.contains(j.id())).filteredOn(j -> j.forca() == 31).hasSizeLessThanOrEqualTo(1);
+		}
+		// no teto não cresce
+		assertThat(evolucao.aposPartida(plantel(30), JOGARAM, BANCO, Desfecho.VITORIA, 30, 30, true, new SplittableRandom(1)))
+			.allMatch(j -> j.forca() <= 30);
+	}
+
+	@Test
 	void mesmaSementeMesmoResultadoEOrdemDoPlantelMantida() {
 		List<Jogador> plantel = plantel(30);
 		List<Jogador> a = evolucao.aposPartida(plantel, JOGARAM, BANCO, Desfecho.DERROTA, 50, 30, new SplittableRandom(4));

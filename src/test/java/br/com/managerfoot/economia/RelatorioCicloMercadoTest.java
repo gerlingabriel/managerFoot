@@ -97,6 +97,8 @@ class RelatorioCicloMercadoTest {
 	 */
 	private static final List<Cenario> PROMOVIDOS = List.of(
 			new Cenario("Atual", true, faixas(0.70, 0.85, 1.10, 1.20), 23, 40, 1.0, 1.0, false),
+			new Cenario("Promovido: fora da escalação cresce 1 por partida no 1º turno", true, faixas(0.70, 0.85, 1.10, 1.20), 23, 40, 1.0, 1.0, false, 0, 1),
+			new Cenario("Promovido: fora da escalação cresce 1 por partida no 1º ano", true, faixas(0.70, 0.85, 1.10, 1.20), 23, 40, 1.0, 1.0, false, 0, 2),
 			new Cenario("Promovido cresce 2× no 1º ano", true, faixas(0.70, 0.85, 1.10, 1.20), 23, 40, 1.0, 2.0, false),
 			new Cenario("Promovido cresce 3× no 1º ano", true, faixas(0.70, 0.85, 1.10, 1.20), 23, 40, 1.0, 3.0, false),
 			new Cenario("Base móvel: piso pela força em campo no início da temporada", true, faixas(0.70, 0.85, 1.10, 1.20), 23, 40, 1.0, 1.0, true),
@@ -198,6 +200,8 @@ class RelatorioCicloMercadoTest {
 			.append("Etapa 6). O simulador de `ciclo-do-mercado.md` com o padrão atual: as 6 ligas do banco padrão, ").append(SEMENTES)
 			.append(" sementes, ").append(TEMPORADAS).append(" temporadas, só máquina. No jogo completo (`jogo-completo.md`) 81% ")
 			.append("dos promovidos caem de volta.\n\n")
+			.append("*Fora da escalação cresce 1* (rev. 118, adotada no 1º turno): no clube que acabou de subir para a 1ª, todo jogador ")
+			.append("fora da escalação (nem titular nem no banco) ganha 1 ponto por partida, além do sorteio de sempre. ")
 			.append("Variantes só na simulação: *cresce 2×/3×*: no 1º ano na 1ª, os sorteados que ganham 1 ponto (4, 2 ou 0,5 ")
 			.append("por partida, §6.1) são o dobro/triplo. *Base móvel*: o piso do desgaste (força do clube − 5) usa a força em ")
 			.append("campo do clube no início de cada temporada, em vez da força cadastrada, que hoje nunca muda. *Teto da 2ª 35*: ")
@@ -312,10 +316,15 @@ class RelatorioCicloMercadoTest {
 	 * @param salario multiplicador do salário de referência (e com ele do preço, do prêmio e da obra)
 	 */
 	private record Cenario(String nome, boolean peloClube, List<FaixaSalario> faixas, int plantelAlvo, long ingresso,
-			double salario, double crescimentoPromovido, boolean baseMovel, int tetoExtraDaSegunda) {
+			double salario, double crescimentoPromovido, boolean baseMovel, int tetoExtraDaSegunda, int turnosForaCresce) {
+
+		Cenario(String nome, boolean peloClube, List<FaixaSalario> faixas, int plantelAlvo, long ingresso, double salario,
+				double crescimentoPromovido, boolean baseMovel, int tetoExtraDaSegunda) {
+			this(nome, peloClube, faixas, plantelAlvo, ingresso, salario, crescimentoPromovido, baseMovel, tetoExtraDaSegunda, 0);
+		}
 
 		Cenario(String nome, boolean peloClube, List<FaixaSalario> faixas, int plantelAlvo, long ingresso, double salario) {
-			this(nome, peloClube, faixas, plantelAlvo, ingresso, salario, 1.0, false, 0);
+			this(nome, peloClube, faixas, plantelAlvo, ingresso, salario, 1.0, false, 0, 0);
 		}
 
 		Cenario(String nome, boolean peloClube, List<FaixaSalario> faixas, int plantelAlvo, long ingresso, double salario,
@@ -336,6 +345,8 @@ class RelatorioCicloMercadoTest {
 		private final EvolucaoForca evolucaoPromovido;
 		private final boolean baseMovel;
 		private final int tetoExtraDaSegunda;
+		/** Recém-promovido à 1ª: fora da escalação cresce 1 por partida em 0, 1 (1º turno) ou 2 turnos (o ano). */
+		private final int turnosForaCresce;
 		/** Promovidos na temporada seguinte: quantos, soma das posições, caem de volta, soma da força − média da 1ª. */
 		private final double[] promovidos = new double[4];
 		/** Força em campo no fim da simulação: média dos clubes que começaram na 1ª e dos que começaram na 2ª. */
@@ -389,6 +400,7 @@ class RelatorioCicloMercadoTest {
 			evolucaoPromovido = new EvolucaoForca(new ParametrosEvolucao(pe.perdem(), crescem, pe.perdaAcimaDoTeto(), pe.abaixoDoClube()));
 			baseMovel = cenario.baseMovel();
 			tetoExtraDaSegunda = cenario.tetoExtraDaSegunda();
+			turnosForaCresce = cenario.turnosForaCresce();
 			ampliacao = new AmpliacaoEstadio(parametros, publico, preco, mercado);
 		}
 
@@ -540,6 +552,7 @@ class RelatorioCicloMercadoTest {
 				});
 				Map<Integer, List<ResultadoJogo>> resultados = new HashMap<>();
 				int rodadas = temporada.divisoes().stream().mapToInt(d -> d.calendario().rodadas().size()).max().orElse(0);
+				int rodadasDaPrimeira = temporada.divisoes().get(0).calendario().rodadas().size();
 				for (int r = 1; r <= rodadas; r++) {
 					Map<Long, Integer> posicao = new HashMap<>();
 					for (Divisao d : liga.divisoes()) {
@@ -577,8 +590,9 @@ class RelatorioCicloMercadoTest {
 						for (Lado lado : Lado.values()) {
 							Clube c = partida.clube(lado);
 							EvolucaoForca regra = subiram.contains(c.id()) ? evolucaoPromovido : evolucao;
+							boolean foraCresce = subiram.contains(c.id()) && r <= turnosForaCresce * rodadasDaPrimeira / 2;
 							planteis.put(c.id(), regra.aposPartida(planteis.get(c.id()), lado == Lado.CASA ? partida.casa() : partida.fora(),
-									jogada.resultado(), lado, teto.get(c.id()), base.get(c.id()), aleatorio));
+									jogada.resultado(), lado, teto.get(c.id()), base.get(c.id()), foraCresce, aleatorio));
 						}
 					}
 					disciplina = res.disciplina();

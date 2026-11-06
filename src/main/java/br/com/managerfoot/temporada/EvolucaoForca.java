@@ -46,6 +46,17 @@ public final class EvolucaoForca {
 	 */
 	public List<Jogador> aposPartida(List<Jogador> plantel, Set<Long> jogaram, Set<Long> banco, Desfecho desfecho, int teto,
 			int forcaDoClube, RandomGenerator aleatorio) {
+		return aposPartida(plantel, jogaram, banco, desfecho, teto, forcaDoClube, false, aleatorio);
+	}
+
+	/**
+	 * Como {@link #aposPartida(List, Set, Set, Desfecho, int, int, RandomGenerator)}; com
+	 * {@code foraCresce} (recém-promovido à 1ª divisão no 1º turno, SPEC §6.1 rev. 118), depois do
+	 * sorteio de sempre, todo jogador fora da escalação (nem titular nem no banco) que não mudou ganha
+	 * 1 ponto, sem passar do teto.
+	 */
+	public List<Jogador> aposPartida(List<Jogador> plantel, Set<Long> jogaram, Set<Long> banco, Desfecho desfecho, int teto,
+			int forcaDoClube, boolean foraCresce, RandomGenerator aleatorio) {
 		int piso = forcaDoClube - Math.min(parametros.abaixoDoClube(), forcaDoClube);
 		// ordem fixa antes dos sorteios, para a mesma semente dar o mesmo resultado
 		List<Jogador> ordem = plantel.stream().sorted(Comparator.comparingLong(Jogador::id)).toList();
@@ -54,6 +65,11 @@ public final class EvolucaoForca {
 		List<Jogador> podemCrescer = ordem.stream().filter(j -> !jogaram.contains(j.id()) && j.forca() < teto).toList();
 		sortear(podemPerder, parametros.perdem().get(desfecho), aleatorio).forEach(j -> variacao.put(j.id(), -1));
 		sortear(podemCrescer, parametros.crescem().get(desfecho), aleatorio).forEach(j -> variacao.put(j.id(), 1));
+		if (foraCresce) {
+			ordem.stream()
+				.filter(j -> !jogaram.contains(j.id()) && !banco.contains(j.id()) && j.forca() < teto && !variacao.containsKey(j.id()))
+				.forEach(j -> variacao.put(j.id(), 1));
+		}
 		for (Jogador j : ordem) {
 			if (j.forca() > teto && !variacao.containsKey(j.id()) && aleatorio.nextDouble() < parametros.perdaAcimaDoTeto()) {
 				variacao.put(j.id(), -1);
@@ -72,6 +88,12 @@ public final class EvolucaoForca {
 	 */
 	public List<Jogador> aposPartida(List<Jogador> plantel, Escalacao escalacao, ResultadoPartida resultado, Lado lado,
 			int teto, int forcaDoClube, RandomGenerator aleatorio) {
+		return aposPartida(plantel, escalacao, resultado, lado, teto, forcaDoClube, false, aleatorio);
+	}
+
+	/** Como o anterior; {@code foraCresce}: bônus do recém-promovido (SPEC §6.1, rev. 118). */
+	public List<Jogador> aposPartida(List<Jogador> plantel, Escalacao escalacao, ResultadoPartida resultado, Lado lado,
+			int teto, int forcaDoClube, boolean foraCresce, RandomGenerator aleatorio) {
 		Set<Long> jogaram = new HashSet<>();
 		escalacao.titulares().forEach(j -> jogaram.add(j.id()));
 		for (EventoPartida e : resultado.eventos()) {
@@ -90,7 +112,7 @@ public final class EvolucaoForca {
 				perdas.merge(e.jogador().id(), e.lesao().perdaForca(), Integer::sum);
 			}
 		}
-		return aposPartida(plantel, jogaram, banco, Desfecho.de(golsPro, golsContra), teto, forcaDoClube, aleatorio)
+		return aposPartida(plantel, jogaram, banco, Desfecho.de(golsPro, golsContra), teto, forcaDoClube, foraCresce, aleatorio)
 			.stream()
 			.map(j -> perdas.containsKey(j.id())
 					? j.comForca(Math.max(Jogador.FORCA_MINIMA, j.forca() - perdas.get(j.id())))

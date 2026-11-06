@@ -201,7 +201,8 @@ public class RodadaRepositorio {
 		patrocinios.pagarVitorias(linha.id(), rodada, resultado.partidas());
 		// a meta do patrocínio paga assim que fica garantida (rev. 97)
 		patrocinios.pagarMetasGarantidas(temporada, linha.id(), rodada);
-		evoluir(jogoId, new SplittableRandom(temporada.semente() * 41 + rodada), aoVivo, resultado, planteis);
+		evoluir(jogoId, new SplittableRandom(temporada.semente() * 41 + rodada), aoVivo, resultado, planteis,
+				noPrimeiroTurno(temporada, rodada) ? subiramParaAPrimeira(jogoId, temporada.numero()) : Set.of());
 		estadios.avancarObras(jogoId, linha.id(), rodada, planteis);
 		mercado.reporAVenda(jogoId, MercadoRepositorio.semente(temporada.semente(), rodada));
 		gravarMoralEDemitir(jogoId, linha.id(), rodada, moralAntes, resultado);
@@ -258,7 +259,7 @@ public class RodadaRepositorio {
 		escalacoes.retirarSuspensos(jogoId);
 		caixas.lancarCopa(jogoId, linha.id(), temporada, resultado.partidas(), etapa.fase() == FaseCopa.FINAL, planteis);
 		patrocinios.pagarVitorias(linha.id(), rodada, resultado.partidas(), Competicao.COPA);
-		evoluir(jogoId, new SplittableRandom(temporada.semente() * 43 + indice), aoVivo, resultado, planteis);
+		evoluir(jogoId, new SplittableRandom(temporada.semente() * 43 + indice), aoVivo, resultado, planteis, Set.of());
 
 		int atualizadas = jdbc.sql("""
 				UPDATE jogo_temporada SET etapas_copa_processadas = :etapa
@@ -336,7 +337,7 @@ public class RodadaRepositorio {
 		boolean finalDaEtapa = !etapa.grupos() && etapa.mataMata().fase() == FaseCopa.FINAL;
 		caixas.lancarContinental(jogoId, linha.id(), temporada, resultado.partidas(), finalDaEtapa, doPais);
 		patrocinios.pagarVitorias(linha.id(), rodada, resultado.partidas(), Competicao.CONTINENTAL);
-		evoluir(jogoId, new SplittableRandom(temporada.semente() * 47 + indice), aoVivo, resultado, doPais);
+		evoluir(jogoId, new SplittableRandom(temporada.semente() * 47 + indice), aoVivo, resultado, doPais, Set.of());
 
 		int atualizadas = jdbc.sql("""
 				UPDATE jogo_temporada SET etapas_continental_processadas = :etapa
@@ -420,7 +421,7 @@ public class RodadaRepositorio {
 		escalacoes.retirarSuspensos(jogoId);
 		caixas.lancarMundial(jogoId, linha.id(), temporada, resultado.partidas(), doPais);
 		patrocinios.pagarVitorias(linha.id(), rodada, resultado.partidas(), Competicao.MUNDIAL);
-		evoluir(jogoId, new SplittableRandom(temporada.semente() * 53 + indice), aoVivo, resultado, doPais);
+		evoluir(jogoId, new SplittableRandom(temporada.semente() * 53 + indice), aoVivo, resultado, doPais, Set.of());
 
 		int atualizadas = jdbc.sql("""
 				UPDATE jogo_temporada SET etapas_mundial_processadas = :etapa
@@ -526,12 +527,40 @@ public class RodadaRepositorio {
 		trocas.demitirDepoisDaRodada(jogoId, temporadaId, rodada, moralAntes, jogaram);
 	}
 
+	/** A rodada da liga está no 1º turno da 1ª divisão (SPEC §6.1, rev. 118). */
+	private static boolean noPrimeiroTurno(Temporada temporada, int rodada) {
+		return !temporada.divisoes().isEmpty() && rodada <= temporada.divisoes().get(0).calendario().rodadas().size() / 2;
+	}
+
+	/**
+	 * Clubes na 1ª divisão que jogaram a temporada anterior numa divisão abaixo (SPEC §6.1, rev. 118).
+	 * Na 1ª temporada, nenhum.
+	 */
+	Set<Long> subiramParaAPrimeira(long jogoId, int temporada) {
+		if (temporada <= 1) {
+			return Set.of();
+		}
+		return Set.copyOf(jdbc.sql("""
+				SELECT c.id FROM jogo_clube c JOIN jogo_divisao d ON d.id = c.divisao_id
+				WHERE c.jogo_id = :jogo AND d.prioridade = 1
+				  AND EXISTS (SELECT 1 FROM jogo_partida p
+				              JOIN jogo_temporada t ON t.id = p.temporada_id
+				              JOIN jogo_divisao d2 ON d2.id = p.divisao_id
+				              WHERE t.jogo_id = :jogo AND t.numero = :anterior AND d2.prioridade > 1
+				                AND (p.mandante_id = c.id OR p.visitante_id = c.id))""")
+			.param("jogo", jogoId)
+			.param("anterior", temporada - 1)
+			.query(Long.class)
+			.list());
+	}
+
 	/**
 	 * Evolução de força depois das partidas (SPEC §6.1, rev. 55): quem jogou se desgasta, quem não
-	 * jogou pode crescer. Grava só quem mudou. O teto é o da divisão de cada clube.
+	 * jogou pode crescer. Grava só quem mudou. O teto é o da divisão de cada clube. Nos clubes de
+	 * {@code foraCresce} (recém-promovidos no 1º turno, rev. 118), quem ficou fora da escalação ganha 1.
 	 */
 	private void evoluir(long jogoId, SplittableRandom aleatorio, RodadaAoVivo aoVivo,
-			ProcessamentoRodada.Resultado resultado, Map<Long, List<Jogador>> planteis) {
+			ProcessamentoRodada.Resultado resultado, Map<Long, List<Jogador>> planteis, Set<Long> foraCresce) {
 		ConfiguracaoLiga liga = jogos.carregarLiga(jogoId);
 		Map<Long, Integer> tetos = new HashMap<>();
 		liga.divisoes().forEach(d -> d.clubes().forEach(c -> tetos.put(c.id(), d.limiteForca())));
@@ -549,7 +578,7 @@ public class RodadaRepositorio {
 				}
 				List<Jogador> plantel = planteis.getOrDefault(clube.id(), List.of());
 				List<Jogador> depois = evolucao.aposPartida(plantel, lado == Lado.CASA ? partida.casa() : partida.fora(),
-						jogada.resultado(), lado, teto, clube.forca(), aleatorio);
+						jogada.resultado(), lado, teto, clube.forca(), foraCresce.contains(clube.id()), aleatorio);
 				for (int k = 0; k < plantel.size(); k++) {
 					if (depois.get(k).forca() != plantel.get(k).forca()) {
 						jdbc.sql("UPDATE jogo_jogador SET forca = :forca WHERE id = :jogador")

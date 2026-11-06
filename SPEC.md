@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 117 — 2026-11-05)
+-   **Status:** versão inicial para revisão (rev. 118 — 2026-11-06)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -14,6 +14,8 @@
     descreve intenção geral ainda não detalhada.
 
 ### Histórico de revisões
+
+-   **rev. 118 (2026-11-06):** pelo usuário (§6.1): bônus de crescimento de quem acabou de subir para a 1ª divisão. No 1º turno da temporada seguinte à subida, todo jogador fora da escalação (nem titular nem no banco) ganha 1 ponto por partida da liga, qualquer que seja o resultado, além do sorteio de sempre; vale para o usuário e a máquina. A intenção não é manter o promovido na 1ª, só fazê-lo cair menos depressa. Simulado (`promovidos.md`): caem de volta 73% com ou sem o bônus; quem fica fora da escalação cresce até entrar no banco e o efeito na força em campo é pequeno.
 
 -   **rev. 117 (2026-11-05):** pelo usuário (§8.2): zebra da copa nacional. Com a força em campo 15 ou mais abaixo da do adversário, o mais fraco ganha bônus de força, que reduz a desigualdade sem igualar; nos 16 avos e oitavas, ele ainda tem 10% de chance por partida de jogar como força 50 (super bônus), sem aviso na tela. A forma do bônus foi escolhida pelo usuário pela simulação: 80% do que a diferença passa de 15 (a de 20 vale como 16, a de 30 como 18), em vez de 40% da diferença inteira, que fazia o clube 16 pontos mais fraco ter mais chance que o de 12. Zebras nos 16 avos e oitavas: de 11% para 18% (diferença de 15 a 20) e de 6% para 17% (20 ou mais).
 
@@ -1162,6 +1164,19 @@ cadastradas. Crescer 2× ou 3× no 1º ano e teto da 2ª em 35 quase não mudara
 isso; piso pela força em campo do início da temporada levou a 47%, mas baixou
 4 a 6 pontos de todas as divisões (`docs/simulacoes/promovidos.md`). Quem sobe
 precisa comprar para ficar.
+
+**Definido (rev. 118), pelo usuário — bônus de quem acabou de subir para a 1ª:**
+- No **1º turno** da temporada seguinte à subida (rodadas da liga até a metade
+  das da 1ª divisão), depois de cada partida da liga, **todo jogador fora da
+  escalação** (nem titular nem no banco) ganha 1 ponto, mesmo na derrota, sem
+  passar do teto. O sorteio de sempre (1/3/5 perdem, 4/2/0,5 crescem) continua.
+- Copa, continental e Mundial não dão o bônus.
+- Vale para o clube do usuário e para a máquina. Quem subiu é o clube que está
+  na 1ª e jogou a temporada anterior numa divisão abaixo.
+- Intenção: o promovido não precisa ficar na 1ª, mas não deve cair tão rápido.
+  Na simulação (`docs/simulacoes/promovidos.md`) os que caem de volta ficaram
+  em 73% com e sem o bônus: quem está fora cresce até entrar no banco, e a força
+  em campo muda pouco.
 
 ### 6.2 Moral do time
 
