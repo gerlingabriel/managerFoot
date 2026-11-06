@@ -138,6 +138,8 @@ class PlantelIT {
 	@Test
 	void maisAsteriscosQueOLimiteFicamEmVermelho() throws Exception {
 		java.util.List<Long> titulares = java.util.List.copyOf(escalacoes.carregar(clube).orElseThrow().titulares());
+		// sem o bônus do treinador (rev. 121), que soma asteriscos temporários
+		jdbc.sql("DELETE FROM jogo_bonus_treinador WHERE clube_id = :c").param("c", clube).update();
 		jdbc.sql("UPDATE jogo_jogador SET asterisco = false WHERE clube_id = :c").param("c", clube).update();
 		jdbc.sql("UPDATE jogo_jogador SET asterisco = true WHERE id IN (:ids)").param("ids", titulares.subList(0, 3)).update();
 		mvc.perform(get(plantel).with(como(treinador)))

@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 120 — 2026-11-06)
+-   **Status:** versão inicial para revisão (rev. 121 — 2026-11-06)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -14,6 +14,8 @@
     descreve intenção geral ainda não detalhada.
 
 ### Histórico de revisões
+
+-   **rev. 121 (2026-11-06):** pelo usuário (§5.3.2): bônus do treinador usuário, para o jogo na 2ª divisão não ficar sem graça ("estado de flow"). Pela força em campo do clube na hora do sorteio: até 30, 3 jogadores com asterisco temporário e +10 de força em campo; de 31 a 40, 2 com +5; acima de 40, nada. Sorteio extra, fora do da artilharia, no início de cada temporada e quando o usuário assume outro clube. Detalhes escolhidos pelo usuário: força em campo, bônus só em campo (não muda salário, preço nem evolução), goleiro fora. Para testar se fica mais equilibrado.
 
 -   **rev. 120 (2026-11-06):** pelo usuário (§9.3): o rico enriquece mais devagar. O salário dos clubes fortes sobe: força em campo 35–44 **+20%** (era +10%) e 45–50 **+35%** (era +20%). Simulado em `docs/simulacoes/caixa-dos-ricos.md` (base rev. 119): o terço de cima da 1ª fecha a 6ª temporada com 35 rodadas da folha em vez de 58 (ganha cerca de 3 por temporada em vez de 7); o fundo continua estável (1ª 12, 2ª 13); as vendas sobem de 25 para 31 por liga e temporada. Diminuir o público do líder (65%) foi descartado: a ocupação cai em linha reta até o último e o fundo da 1ª voltava a afundar (21% de negativos). Vale para a máquina e para o usuário (a faixa é a da força em campo atual) a partir da próxima rodada.
 
@@ -943,6 +945,44 @@ de +5 p.p. de vitórias e +5 p.p. de derrotas
 ~~Rev. 17 e 18: um beneficiado e um prejudicado por divisão, sorteados entre
 todos os clubes, inclusive os de usuários.~~ ~~Rev. 108: dois beneficiados só
 da máquina, usuário fora do sorteio e sem prejudicado.~~
+
+### 5.3.2 Bônus do treinador usuário
+
+**Definido (rev. 121), pelo usuário** — para ajudar o usuário que começa
+fraco (na 2ª divisão o jogo ficava sem graça perdendo; quem começa na 1ª já
+fica mais equilibrado). A ideia é o "estado de flow": nem muito difícil nem
+muito fácil. **A testar** se fica equilibrado.
+- **Quem:** todo clube de usuário, também no jogo em rede, pela **força em
+  campo** do clube (média dos 11 mais fortes, arredondada) na hora do
+  sorteio:
+
+  | Força em campo | Sorteados | Força a mais em campo |
+  |---|---|---|
+  | até 30 | 3 | +10 |
+  | 31 a 40 | 2 | +5 |
+  | acima de 40 | nenhum | — |
+
+- **Sorteio:** chance igual entre defensores, meias e atacantes do plantel
+  (goleiro não). É **extra**: fora do sorteio da artilharia (§5.2), então um
+  jogador pode ter os dois.
+- **Asterisco:** quem não tem ganha o **asterisco temporário** (com todos os
+  efeitos, inclusive contar no limite de 3 em campo); quem já tem ganha o
+  **bônus extra** de finalização, como na artilharia.
+- **Força:** bônus **só em campo**, até 50. A força gravada, o salário, o
+  preço e a evolução (§6.1) não mudam; pode passar do teto da divisão.
+- **Quando:** no início de cada temporada (no jogo em rede, quando todos
+  entram) e quando o usuário **assume outro clube**: o clube novo sorteia, e
+  os jogadores do clube deixado continuam com o bônus. Um sorteio por clube e
+  temporada. Vale em liga, copa, continental e Mundial.
+- **Até quando:** acaba no **fim da temporada**; na seguinte há novo
+  sorteio. O jogador vendido leva o bônus até o fim da temporada.
+- **Tela:** no plantel, o sorteado mostra ★ᵀ ao lado do nome e "+10" (ou
+  "+5") ao lado da força; a força média dos titulares e os asteriscos em campo
+  contam o bônus.
+- **Gravado:** `temporada.BonusTreinador`, valores em
+  `temporada.ParametrosBonusTreinador`; tabelas `jogo_bonus_treinador_sorteio`
+  e `jogo_bonus_treinador` (V48), também no save exportado. **Jogos salvos:**
+  a temporada já começada sorteia antes da próxima partida.
 
 ### 5.4 Treinadores e demissões
 

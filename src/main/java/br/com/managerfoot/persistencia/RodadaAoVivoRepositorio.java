@@ -128,6 +128,7 @@ public class RodadaAoVivoRepositorio {
 			throw new IllegalStateException("há leilões abertos antes da rodada " + rodada);
 		}
 		exigirSemDecisaoPendente(jogoId);
+		rodadas.garantirBonusTreinador(jogoId);
 		rodadas.preparar(jogoId, rodada, List.of());
 		jdbc.sql("""
 				INSERT INTO jogo_rodada_ao_vivo (jogo_id, temporada_id, rodada, progresso, andando_desde)
@@ -162,6 +163,7 @@ public class RodadaAoVivoRepositorio {
 			throw new IllegalStateException("a etapa " + indice + " da copa não é a próxima do jogo " + jogoId);
 		}
 		exigirSemDecisaoPendente(jogoId);
+		rodadas.garantirBonusTreinador(jogoId);
 		rodadas.prepararCopa(jogoId, indice, List.of());
 		jdbc.sql("""
 				INSERT INTO jogo_rodada_ao_vivo (jogo_id, temporada_id, rodada, etapa_copa, progresso, andando_desde)
@@ -198,6 +200,7 @@ public class RodadaAoVivoRepositorio {
 			throw new IllegalStateException("a etapa " + indice + " da continental não é a próxima do jogo " + jogoId);
 		}
 		exigirSemDecisaoPendente(jogoId);
+		rodadas.garantirBonusTreinador(jogoId);
 		rodadas.prepararContinental(jogoId, indice, List.of());
 		jdbc.sql("""
 				INSERT INTO jogo_rodada_ao_vivo (jogo_id, temporada_id, rodada, etapa_continental, progresso, andando_desde)
@@ -230,6 +233,7 @@ public class RodadaAoVivoRepositorio {
 			throw new IllegalStateException("a etapa " + indice + " do Mundial não é a próxima do jogo " + jogoId);
 		}
 		exigirSemDecisaoPendente(jogoId);
+		rodadas.garantirBonusTreinador(jogoId);
 		RodadaAoVivo aoVivo = rodadas.prepararMundial(jogoId, indice, List.of());
 		jdbc.sql("""
 				INSERT INTO jogo_rodada_ao_vivo (jogo_id, temporada_id, rodada, etapa_mundial, progresso, andando_desde)

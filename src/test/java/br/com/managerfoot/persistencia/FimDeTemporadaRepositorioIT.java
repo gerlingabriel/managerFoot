@@ -187,6 +187,12 @@ class FimDeTemporadaRepositorioIT {
 		Temporada segunda = temporadas.carregarAtual(jogo);
 		assertThat(segunda).isEqualTo(nova.temporada());
 		assertThat(segunda.numero()).isEqualTo(2);
+		// novo sorteio do bônus do treinador na temporada nova; o da anterior fica para trás (rev. 121)
+		assertThat(contar("SELECT count(*) FROM jogo_bonus_treinador_sorteio s JOIN jogo_temporada t ON t.id = s.temporada_id "
+				+ "WHERE t.jogo_id = ? AND t.numero = 2")).isEqualTo(1);
+		assertThat(segunda.bonusTreinador().sorteados().keySet()).allMatch(id -> contar(
+				"SELECT count(*) FROM jogo_bonus_treinador b JOIN jogo_temporada t ON t.id = b.temporada_id "
+				+ "WHERE t.jogo_id = ? AND t.numero = 2 AND b.jogador_id = " + id) == 1);
 		assertThat(rodadas.rodadasProcessadas(jogo)).isZero();
 		assertThat(segunda.divisoes().get(1).calendario().jogos())
 			.anyMatch(j -> j.mandante().nome().equals("Fila 1"));

@@ -29,6 +29,7 @@ import br.com.managerfoot.temporada.FaseCopa;
 import br.com.managerfoot.temporada.Copa;
 import br.com.managerfoot.temporada.Jogo;
 import br.com.managerfoot.temporada.LinhaClassificacao;
+import br.com.managerfoot.temporada.BonusTreinador;
 import br.com.managerfoot.temporada.Temporada;
 
 /**
@@ -84,11 +85,14 @@ public class PlantelRepositorio {
 		String paisDoClube = jdbc.sql("SELECT pais_codigo FROM jogo WHERE id = :jogo").param("jogo", jogoId)
 			.query(String.class).single();
 
+		Map<Long, BonusTreinador.Sorteado> bonus = temporadas.bonusTreinadorAtual(jogoId).sorteados();
 		List<LinhaJogador> linhas = plantel.stream().map(j -> {
 			Situacao s = situacoes.getOrDefault(j.id(), Situacao.NENHUMA);
+			BonusTreinador.Sorteado b = bonus.get(j.id());
 			return new LinhaJogador(j, escalacao.lugarDe(j.id()), s.gols(), s.amarelos(), s.suspensao() > 0, s.lesao(),
 					RegraEstrangeiros.deOutroPais(j.nacionalidade(), paisDoClube) ? j.nacionalidade() : null,
-					RegraEstrangeiros.equiparado(j.nacionalidade(), paisDoClube), s.comContrato());
+					RegraEstrangeiros.equiparado(j.nacionalidade(), paisDoClube), s.comContrato(), b == null ? 0 : b.forcaExtra(),
+					b != null && !b.extra(), b != null && b.extra());
 		}).toList();
 		LongPredicate suspenso = id -> situacoes.getOrDefault(id, Situacao.NENHUMA).suspensao() > 0;
 		LongPredicate lesionado = id -> situacoes.getOrDefault(id, Situacao.NENHUMA).lesao() > 0;
@@ -193,7 +197,10 @@ public class PlantelRepositorio {
 	public void definirFormacao(long jogoId, long usuarioId, Formacao formacao) {
 		long clube = exigirClube(jogoId, usuarioId);
 		Map<Long, Situacao> situacoes = situacoes(clube);
-		List<Jogador> plantel = jogos.carregarPlanteis(jogoId).getOrDefault(clube, List.of());
+		// a tática completa pela força em campo, com o bônus do treinador (rev. 121)
+		BonusTreinador bonus = temporadas.bonusTreinadorAtual(jogoId);
+		List<Jogador> plantel = jogos.carregarPlanteis(jogoId).getOrDefault(clube, List.of()).stream().map(bonus::aplicar)
+			.toList();
 		alterar(jogoId, usuarioId, e -> e.com(formacao).completada(plantel,
 				id -> !situacoes.getOrDefault(id, Situacao.NENHUMA).disponivel(),
 				ParametrosMotor.padrao().asterisco().limiteSemPenalidade(),
@@ -308,8 +315,24 @@ public class PlantelRepositorio {
 	 * @param equiparado é de outro país, mas não conta como estrangeiro (SPEC §8.4)
 	 */
 	/** @param lesao jogos fora por lesão a cumprir (SPEC §7.5); zero se não está lesionado */
+	/**
+	 * @param bonusForca força a mais em campo pelo bônus do treinador (SPEC §5.3.2, rev. 121); zero sem bônus
+	 * @param asteriscoDoTreinador ganhou o asterisco temporário do bônus do treinador
+	 * @param bonusExtra já tinha asterisco e ganhou o bônus extra de finalização do treinador
+	 */
 	public record LinhaJogador(Jogador jogador, Lugar lugar, int gols, int amarelos, boolean suspenso, int lesao,
-			String estrangeiro, boolean equiparado, boolean comContrato) {
+			String estrangeiro, boolean equiparado, boolean comContrato, int bonusForca, boolean asteriscoDoTreinador,
+			boolean bonusExtra) {
+
+		/** Força em campo, com o bônus do treinador (até 50). */
+		public int forcaEmCampo() {
+			return Math.min(Jogador.FORCA_MAXIMA, jogador.forca() + bonusForca);
+		}
+
+		/** Tem asterisco em campo: o próprio ou o temporário do treinador. */
+		public boolean asteriscoEmCampo() {
+			return jogador.asterisco() || asteriscoDoTreinador;
+		}
 
 		/** Conta entre os estrangeiros em campo. */
 		public boolean contaComoEstrangeiro() {

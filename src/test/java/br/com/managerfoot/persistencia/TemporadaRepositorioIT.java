@@ -72,8 +72,9 @@ class TemporadaRepositorioIT {
 	void temporadaGravadaVoltaIgualAosSorteiosDaSemente() {
 		Temporada iniciada = temporadas.iniciarPrimeiraTemporada(jogo, 2026);
 
+		// o bônus do treinador (rev. 121) é sorteado e gravado à parte
 		assertThat(iniciada).isEqualTo(Temporada.iniciar(1, jogos.carregarLiga(jogo), jogos.carregarPlanteis(jogo), 2026,
-				Set.of(clubeDoUsuario())));
+				Set.of(clubeDoUsuario())).comBonusTreinador(iniciada.bonusTreinador()));
 		assertThat(temporadas.carregarAtual(jogo)).isEqualTo(iniciada);
 		assertThat(iniciada.divisoes().get(1).calendario().rodadas()).allMatch(r -> r.folga().isPresent());
 		assertThat(iniciada.divisoes())

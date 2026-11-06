@@ -146,9 +146,10 @@ class PlantelController {
 		model.addAttribute("batedores", v.jogadores().stream()
 			.filter(l -> l.lugar() != Lugar.FORA || Long.valueOf(l.jogador().id()).equals(v.escalacao().batedor())).toList());
 		model.addAttribute("forcaMedia", titulares.isEmpty() ? "–" : String.format(Locale.forLanguageTag("pt-BR"), "%.1f",
-				titulares.stream().mapToInt(l -> l.jogador().forca()).average().orElse(0)));
+				titulares.stream().mapToInt(LinhaJogador::forcaEmCampo).average().orElse(0)));
 		model.addAttribute("estrangeirosEmCampo", titulares.stream().filter(LinhaJogador::contaComoEstrangeiro).count());
-		model.addAttribute("asteriscosEmCampo", titulares.stream().filter(l -> l.jogador().asterisco()).count());
+		model.addAttribute("asteriscosEmCampo", titulares.stream().filter(LinhaJogador::asteriscoEmCampo).count());
+		model.addAttribute("temBonusTreinador", v.jogadores().stream().anyMatch(l -> l.bonusForca() > 0));
 		model.addAttribute("limiteAsteriscos", ParametrosMotor.padrao().asterisco().limiteSemPenalidade());
 		model.addAttribute("substituicoes", RegrasPartida.padrao().substituicoes());
 		if (ficha != null) {

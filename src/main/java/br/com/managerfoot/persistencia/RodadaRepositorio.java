@@ -168,6 +168,8 @@ public class RodadaRepositorio {
 	@Transactional
 	public RodadaJogada avancar(long jogoId, int rodada, List<RodadaAoVivo.Substituicao> substituicoes) {
 		LinhaTemporada linha = temporadaAtual(jogoId, true);
+		// jogos salvos antes da rev. 121 e usuário recém-chegado: o bônus do treinador antes das partidas
+		temporadas.garantirBonusTreinador(jogoId);
 		if (rodada != linha.rodadasProcessadas() + 1) {
 			throw new IllegalStateException("o jogo " + jogoId + " já processou " + linha.rodadasProcessadas()
 					+ " rodada(s); a próxima é a " + (linha.rodadasProcessadas() + 1) + ", não a " + rodada);
@@ -233,6 +235,8 @@ public class RodadaRepositorio {
 	@Transactional
 	public EtapaJogada avancarCopa(long jogoId, int indice, List<RodadaAoVivo.Substituicao> substituicoes) {
 		LinhaTemporada linha = temporadaAtual(jogoId, true);
+		// jogos salvos antes da rev. 121 e usuário recém-chegado: o bônus do treinador antes das partidas
+		temporadas.garantirBonusTreinador(jogoId);
 		if (!(proximo(jogoId, linha) instanceof Proximo.EtapaCopa(int esperado, Copa.Etapa etapa)) || esperado != indice) {
 			throw new IllegalStateException("a etapa " + indice + " da copa não é a próxima do jogo " + jogoId);
 		}
@@ -294,6 +298,8 @@ public class RodadaRepositorio {
 	@Transactional
 	public EtapaContinentalJogada avancarContinental(long jogoId, int indice, List<RodadaAoVivo.Substituicao> substituicoes) {
 		LinhaTemporada linha = temporadaAtual(jogoId, true);
+		// jogos salvos antes da rev. 121 e usuário recém-chegado: o bônus do treinador antes das partidas
+		temporadas.garantirBonusTreinador(jogoId);
 		if (!(proximo(jogoId, linha) instanceof Proximo.EtapaContinental(int esperado, Continental.Etapa etapa))
 				|| esperado != indice) {
 			throw new IllegalStateException("a etapa " + indice + " da continental não é a próxima do jogo " + jogoId);
@@ -394,6 +400,8 @@ public class RodadaRepositorio {
 	@Transactional
 	public Mundial avancarMundial(long jogoId, int indice, List<RodadaAoVivo.Substituicao> substituicoes) {
 		LinhaTemporada linha = temporadaAtual(jogoId, true);
+		// jogos salvos antes da rev. 121 e usuário recém-chegado: o bônus do treinador antes das partidas
+		temporadas.garantirBonusTreinador(jogoId);
 		if (!(proximo(jogoId, linha) instanceof Proximo.EtapaMundial(int esperado, FaseCopa fase)) || esperado != indice) {
 			throw new IllegalStateException("a etapa " + indice + " do Mundial não é a próxima do jogo " + jogoId);
 		}
@@ -552,6 +560,12 @@ public class RodadaRepositorio {
 			.param("anterior", temporada - 1)
 			.query(Long.class)
 			.list());
+	}
+
+	/** Sorteia o bônus do treinador de quem ainda não tem na temporada (SPEC §5.3.2, rev. 121). */
+	@Transactional
+	public void garantirBonusTreinador(long jogoId) {
+		temporadas.garantirBonusTreinador(jogoId);
 	}
 
 	/**

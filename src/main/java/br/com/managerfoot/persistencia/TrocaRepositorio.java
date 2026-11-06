@@ -289,6 +289,10 @@ public class TrocaRepositorio {
 		if (movidos > 1) {
 			throw new IllegalStateException("troca entre dois usuários nos clubes " + a + " e " + b);
 		}
+		if (movidos == 1) {
+			// o clube novo do usuário sorteia o bônus do treinador; o deixado mantém os seus (rev. 121)
+			temporadas.garantirBonusTreinador(jogoId);
+		}
 		jdbc.sql("UPDATE jogo_clube SET moral = :moral WHERE id IN (:a, :b)")
 			.param("moral", troca.moralDepoisDaTroca().valor()).param("a", a).param("b", b).update();
 		jdbc.sql("DELETE FROM jogo_escalacao WHERE clube_id IN (:a, :b)").param("a", a).param("b", b).update();

@@ -145,10 +145,12 @@ public final class ProcessamentoRodada {
 				.flatMap(r -> r.jogos().stream())
 				.toList();
 			for (Jogo jogo : jogos) {
+				Set<Long> extras = new HashSet<>(divisao.bonus().bonusExtra());
+				extras.addAll(temporada.bonusTreinador().bonusExtra());
 				CondicoesPartida condicoes = new CondicoesPartida(
 						Map.of(Lado.CASA, divisao.sorte().de(jogo.mandante()), Lado.FORA,
 								divisao.sorte().de(jogo.visitante())),
-						divisao.bonus().bonusExtra(),
+						extras,
 						Map.of(Lado.CASA, lesoesPermitidas(disciplina, jogo.mandante()), Lado.FORA,
 								lesoesPermitidas(disciplina, jogo.visitante())));
 				Set<Lado> doUsuario = EnumSet.noneOf(Lado.class);
@@ -159,8 +161,9 @@ public final class ProcessamentoRodada {
 					doUsuario.add(Lado.FORA);
 				}
 				partidas.add(new RodadaAoVivo.PartidaDaRodada(divisao.prioridade(), jogo, aleatorio.nextLong(),
-						escalar(jogo.mandante(), divisao.bonus(), planteis, disciplina, escalacoes),
-						escalar(jogo.visitante(), divisao.bonus(), planteis, disciplina, escalacoes), doUsuario, condicoes));
+						escalar(jogo.mandante(), divisao.bonus(), temporada.bonusTreinador(), planteis, disciplina, escalacoes),
+						escalar(jogo.visitante(), divisao.bonus(), temporada.bonusTreinador(), planteis, disciplina, escalacoes),
+						doUsuario, condicoes));
 			}
 		}
 		if (partidas.isEmpty()) {
@@ -234,6 +237,7 @@ public final class ProcessamentoRodada {
 			Set<Long> bonusExtra = new HashSet<>();
 			daCasa.ifPresent(d -> bonusExtra.addAll(d.bonus().bonusExtra()));
 			deFora.ifPresent(d -> bonusExtra.addAll(d.bonus().bonusExtra()));
+			bonusExtra.addAll(temporada.bonusTreinador().bonusExtra());
 			CondicoesPartida condicoes = new CondicoesPartida(
 					Map.of(Lado.CASA, daCasa.map(d -> d.sorte().de(jogo.mandante())).orElse(Sorte.NEUTRA), Lado.FORA,
 							deFora.map(d -> d.sorte().de(jogo.visitante())).orElse(Sorte.NEUTRA)),
@@ -253,8 +257,9 @@ public final class ProcessamentoRodada {
 				doUsuario.add(Lado.FORA);
 			}
 			partidas.add(new RodadaAoVivo.PartidaDaRodada(PRIORIDADE_COPA, jogo, aleatorio.nextLong(),
-					escalar(jogo.mandante(), bonusDe(daCasa), planteis, disciplina, escalacoes),
-					escalar(jogo.visitante(), bonusDe(deFora), planteis, disciplina, escalacoes), doUsuario, condicoes));
+					escalar(jogo.mandante(), bonusDe(daCasa), temporada.bonusTreinador(), planteis, disciplina, escalacoes),
+					escalar(jogo.visitante(), bonusDe(deFora), temporada.bonusTreinador(), planteis, disciplina, escalacoes),
+					doUsuario, condicoes));
 		}
 		return new RodadaAoVivo(motor, regras, suspensao, parametrosMoral, partidas, planteis, disciplina,
 				aleatorio.nextLong(), substituicoes);
@@ -290,8 +295,10 @@ public final class ProcessamentoRodada {
 	 * A escalação do treinador, se houver, ou a da máquina com quem não está suspenso nem lesionado;
 	 * nas duas, o asterisco temporário da temporada.
 	 */
-	private Escalacao escalar(Clube clube, BonusArtilharia bonus, Map<Long, List<Jogador>> planteis,
-			Disciplina disciplina, Map<Long, Escalacao> escalacoes) {
+	private Escalacao escalar(Clube clube, BonusArtilharia artilharia, BonusTreinador doUsuario,
+			Map<Long, List<Jogador>> planteis, Disciplina disciplina, Map<Long, Escalacao> escalacoes) {
+		// artilharia e bônus do treinador (rev. 121): só em campo, o plantel não muda
+		java.util.function.UnaryOperator<Jogador> bonus = j -> doUsuario.aplicar(artilharia.aplicar(j));
 		Escalacao doTreinador = escalacoes.get(clube.id());
 		if (doTreinador != null) {
 			List<Jogador> suspensos = new ArrayList<>(doTreinador.titulares());
@@ -302,13 +309,13 @@ public final class ProcessamentoRodada {
 				throw new IllegalStateException(clube.nome() + ": " + fora.nome() + " está "
 						+ (disciplina.suspenso(fora.id()) ? "suspenso" : "lesionado"));
 			}
-			return new Escalacao(doTreinador.formacao(), doTreinador.titulares().stream().map(bonus::aplicar).toList(),
-					doTreinador.reservas().stream().map(bonus::aplicar).toList(),
-					doTreinador.batedorPreferido().map(bonus::aplicar).orElse(null));
+			return new Escalacao(doTreinador.formacao(), doTreinador.titulares().stream().map(bonus).toList(),
+					doTreinador.reservas().stream().map(bonus).toList(),
+					doTreinador.batedorPreferido().map(bonus).orElse(null));
 		}
 		List<Jogador> disponiveis = plantel(clube, planteis).stream()
 			.filter(j -> !disciplina.indisponivel(j.id()))
-			.map(bonus::aplicar)
+			.map(bonus)
 			.toList();
 		try {
 			return escalacao.escalar(disponiveis);

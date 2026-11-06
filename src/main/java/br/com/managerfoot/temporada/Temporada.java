@@ -16,8 +16,9 @@ import br.com.managerfoot.dominio.Jogador;
  *
  * @param numero 1 na primeira temporada do jogo
  * @param divisoes uma por divisão da liga, em ordem de prioridade
+ * @param bonusTreinador bônus dos clubes de usuário (§5.3.2, rev. 121), sorteado e gravado à parte
  */
-public record Temporada(int numero, long semente, List<SorteiosDivisao> divisoes) {
+public record Temporada(int numero, long semente, List<SorteiosDivisao> divisoes, BonusTreinador bonusTreinador) {
 
 	/** Sorteios de uma divisão na temporada. */
 	public record SorteiosDivisao(int prioridade, Calendario calendario, SorteTemporada sorte, BonusArtilharia bonus) {
@@ -29,11 +30,22 @@ public record Temporada(int numero, long semente, List<SorteiosDivisao> divisoes
 		}
 	}
 
+	/** Sem bônus do treinador. */
+	public Temporada(int numero, long semente, List<SorteiosDivisao> divisoes) {
+		this(numero, semente, divisoes, BonusTreinador.NENHUM);
+	}
+
 	public Temporada {
+		Objects.requireNonNull(bonusTreinador, "bônus do treinador é obrigatório");
 		if (numero < 1) {
 			throw new IllegalArgumentException("o número da temporada começa em 1, mas foi " + numero);
 		}
 		divisoes = List.copyOf(divisoes);
+	}
+
+	/** A mesma temporada com o bônus do treinador dado. */
+	public Temporada comBonusTreinador(BonusTreinador bonus) {
+		return new Temporada(numero, semente, divisoes, bonus);
 	}
 
 	/**

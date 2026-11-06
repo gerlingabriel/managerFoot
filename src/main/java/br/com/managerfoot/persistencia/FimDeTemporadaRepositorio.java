@@ -135,7 +135,7 @@ public class FimDeTemporadaRepositorio {
 		// caixa negativo: a venda vem antes de qualquer coisa da temporada nova, inclusive do patrocínio
 		List<VendaPorCaixa> vendas = leiloes.venderNoInicioDaTemporada(jogoId);
 		caixas.pagarPatrocinio(jogoId, finais);
-		return new NovaTemporada(transicao, nova, demitidos, vendas);
+		return new NovaTemporada(transicao, nova.comBonusTreinador(temporadas.bonusTreinadorAtual(jogoId)), demitidos, vendas);
 	}
 
 	/**

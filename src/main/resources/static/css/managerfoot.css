@@ -633,6 +633,9 @@ a.clube-linha:hover { color: var(--texto); background: rgba(242, 201, 76, 0.1); 
 .plantel-tabela .num { text-align: right; }
 .jogador-nome { font-weight: 600; padding-left: 10px !important; }
 .asterisco { color: var(--destaque); font-weight: 700; }
+.bonus-treinador { color: var(--destaque); font-weight: 700; }
+.forca .bonus-treinador { margin-left: 2px; font-size: 0.85em; }
+.asterisco sup { font-size: 0.6em; }
 
 .pos {
 	display: inline-flex;

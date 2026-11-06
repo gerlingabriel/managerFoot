@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
+import java.util.SplittableRandom;
 import java.util.TreeMap;
 
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -17,11 +18,14 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import br.com.managerfoot.dominio.Clube;
+import br.com.managerfoot.dominio.Jogador;
 import br.com.managerfoot.temporada.BonusArtilharia;
+import br.com.managerfoot.temporada.BonusTreinador;
 import br.com.managerfoot.temporada.Calendario;
 import br.com.managerfoot.temporada.ConfiguracaoLiga;
 import br.com.managerfoot.temporada.Divisao;
 import br.com.managerfoot.temporada.Jogo;
+import br.com.managerfoot.temporada.ParametrosBonusTreinador;
 import br.com.managerfoot.temporada.Rodada;
 import br.com.managerfoot.temporada.SorteTemporada;
 import br.com.managerfoot.temporada.Temporada;
@@ -62,7 +66,7 @@ public class TemporadaRepositorio {
 		ConfiguracaoLiga liga = jogos.carregarLiga(jogoId);
 		Temporada temporada = Temporada.iniciar(1, liga, jogos.carregarPlanteis(jogoId), semente, clubesDeUsuario(jogoId));
 		gravar(jogoId, temporada);
-		return temporada;
+		return temporada.comBonusTreinador(bonusTreinadorAtual(jogoId));
 	}
 
 	/**
@@ -97,6 +101,80 @@ public class TemporadaRepositorio {
 		continentais.criar(jogoId, temporadaId, temporada.numero(), semente);
 		mercado.reporAVenda(jogoId, MercadoRepositorio.semente(semente, 0));
 		mercado.renovarClubesDeFora(jogoId, MercadoRepositorio.semente(semente, 0));
+		garantirBonusTreinador(jogoId);
+	}
+
+	/**
+	 * Sorteia o bônus do treinador (SPEC §5.3.2, rev. 121) de cada clube de usuário que ainda não sorteou na
+	 * temporada atual: no início da temporada, quando o usuário assume outro clube e, nos jogos salvos antes da rev.
+	 * 121, na primeira rodada. Quem já sorteou não sorteia de novo; o clube deixado mantém os seus sorteados.
+	 * Chamar antes de preparar qualquer partida, para a rodada ao vivo e o resultado gravado usarem o mesmo bônus.
+	 */
+	@Transactional
+	public void garantirBonusTreinador(long jogoId) {
+		Optional<LinhaTemporada> atual = jdbc.sql("""
+				SELECT id, numero, semente FROM jogo_temporada WHERE jogo_id = :jogo ORDER BY numero DESC LIMIT 1""")
+			.param("jogo", jogoId)
+			.query((rs, n) -> new LinhaTemporada(rs.getLong("id"), rs.getInt("numero"), rs.getLong("semente")))
+			.optional();
+		if (atual.isEmpty()) {
+			return;
+		}
+		long temporadaId = atual.get().id();
+		List<Long> semSorteio = jdbc.sql("""
+				SELECT t.clube_id FROM jogo_treinador t
+				WHERE t.jogo_id = :jogo AND t.clube_id IS NOT NULL
+				  AND NOT EXISTS (SELECT 1 FROM jogo_bonus_treinador_sorteio s
+				                  WHERE s.temporada_id = :temporada AND s.clube_id = t.clube_id)
+				ORDER BY t.clube_id""")
+			.param("jogo", jogoId)
+			.param("temporada", temporadaId)
+			.query(Long.class)
+			.list();
+		if (semSorteio.isEmpty()) {
+			return;
+		}
+		Map<Long, List<Jogador>> planteis = jogos.carregarPlanteis(jogoId);
+		Set<Long> jaTem = new HashSet<>(jdbc.sql("SELECT jogador_id FROM jogo_bonus_treinador WHERE temporada_id = :temporada")
+			.param("temporada", temporadaId)
+			.query(Long.class)
+			.list());
+		for (long clube : new LinkedHashSet<>(semSorteio)) {
+			int inseridos = jdbc.sql("""
+					INSERT INTO jogo_bonus_treinador_sorteio (temporada_id, clube_id) VALUES (:temporada, :clube)
+					ON CONFLICT DO NOTHING""")
+				.param("temporada", temporadaId)
+				.param("clube", clube)
+				.update();
+			if (inseridos == 0) {
+				continue; // outra transação sorteou antes
+			}
+			List<BonusTreinador.Sorteado> sorteados = BonusTreinador.sortear(planteis.getOrDefault(clube, List.of()), jaTem,
+					ParametrosBonusTreinador.padrao(), new SplittableRandom(atual.get().semente() * 59 + clube));
+			for (BonusTreinador.Sorteado sorteado : sorteados) {
+				jdbc.sql("""
+						INSERT INTO jogo_bonus_treinador (temporada_id, jogador_id, clube_id, forca_extra, extra)
+						VALUES (:temporada, :jogador, :clube, :forca, :extra)""")
+					.param("temporada", temporadaId)
+					.param("jogador", sorteado.jogadorId())
+					.param("clube", clube)
+					.param("forca", sorteado.forcaExtra())
+					.param("extra", sorteado.extra())
+					.update();
+				jaTem.add(sorteado.jogadorId());
+			}
+		}
+	}
+
+	/** Bônus do treinador da temporada atual (SPEC §5.3.2, rev. 121); vazio sem temporada. */
+	@Transactional(readOnly = true)
+	public BonusTreinador bonusTreinadorAtual(long jogoId) {
+		return BonusTreinador.de(jdbc.sql("""
+				SELECT b.jogador_id, b.forca_extra, b.extra FROM jogo_bonus_treinador b
+				WHERE b.temporada_id = (SELECT id FROM jogo_temporada WHERE jogo_id = :jogo ORDER BY numero DESC LIMIT 1)""")
+			.param("jogo", jogoId)
+			.query((rs, n) -> new BonusTreinador.Sorteado(rs.getLong("jogador_id"), rs.getInt("forca_extra"), rs.getBoolean("extra")))
+			.list());
 	}
 
 	private void gravarBeneficiados(long temporadaId, long divisaoId, SorteTemporada sorte) {
@@ -148,6 +226,8 @@ public class TemporadaRepositorio {
 		for (Temporada.SorteiosDivisao sorteios : refeita.divisoes()) {
 			gravarBeneficiados(linha.id(), divisaoPorPrioridade.get(sorteios.prioridade()), sorteios.sorte());
 		}
+		// com todos nos clubes, o bônus de cada treinador (rev. 121)
+		garantirBonusTreinador(jogoId);
 	}
 
 	/**
@@ -219,7 +299,7 @@ public class TemporadaRepositorio {
 		jogosPorPrioridade.forEach((prioridade, lista) -> divisoes.add(new Temporada.SorteiosDivisao(prioridade,
 				calendario(lista), sortes.get(prioridade), new BonusArtilharia(
 						temporarios.getOrDefault(prioridade, Set.of()), extras.getOrDefault(prioridade, Set.of())))));
-		return new Temporada(linha.numero(), linha.semente(), divisoes);
+		return new Temporada(linha.numero(), linha.semente(), divisoes, bonusTreinadorAtual(jogoId));
 	}
 
 	/** Remonta as rodadas; a folga é o clube da divisão que não joga na rodada. */
