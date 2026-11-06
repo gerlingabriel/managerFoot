@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 119 — 2026-11-06)
+-   **Status:** versão inicial para revisão (rev. 120 — 2026-11-06)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -14,6 +14,8 @@
     descreve intenção geral ainda não detalhada.
 
 ### Histórico de revisões
+
+-   **rev. 120 (2026-11-06):** pelo usuário (§9.3): o rico enriquece mais devagar. O salário dos clubes fortes sobe: força em campo 35–44 **+20%** (era +10%) e 45–50 **+35%** (era +20%). Simulado em `docs/simulacoes/caixa-dos-ricos.md` (base rev. 119): o terço de cima da 1ª fecha a 6ª temporada com 35 rodadas da folha em vez de 58 (ganha cerca de 3 por temporada em vez de 7); o fundo continua estável (1ª 12, 2ª 13); as vendas sobem de 25 para 31 por liga e temporada. Diminuir o público do líder (65%) foi descartado: a ocupação cai em linha reta até o último e o fundo da 1ª voltava a afundar (21% de negativos). Vale para a máquina e para o usuário (a faixa é a da força em campo atual) a partir da próxima rodada.
 
 -   **rev. 119 (2026-11-06):** pelo usuário (§9.1, §9.2): o fundo da tabela perde menos. O último colocado leva **18%** da torcida (era 15%) e o deslocamento cai 25% na 2ª e na 3ª divisão (**R$ 22.500** e **R$ 11.250**; a 1ª fica com R$ 60.000). Simulado em `docs/simulacoes/caixa-do-fundo.md`: o terço de baixo da 2ª deixa de afundar (de 13 para −5 rodadas da folha em 6 temporadas; agora de 13 para 20), a média da 2ª no fim da 6ª vai de 11 para 37, os clubes negativos de 8% para 2% e o mercado continua girando (vendas de 35 para 25 por liga e temporada). Opções mais fortes (último com 25% ou 35% e deslocamento pela metade) deixavam todos ricos e paravam o mercado. A compra do clube pequeno da máquina depende da regra de lance (rev. 44), não do caixa. Vale nos jogos salvos a partir da próxima rodada.
 
@@ -2606,8 +2608,8 @@ em limites:
 
   | Força em campo do clube | Ajuste |
   |---|---|
-  | 45 a 50 | +20% (usuário) |
-  | 35 a 44 | +10% (usuário) |
+  | 45 a 50 | +35% (usuário, rev. 120; era +20%) |
+  | 35 a 44 | +20% (usuário, rev. 120; era +10%) |
   | 25 a 34 | nenhum |
   | 15 a 24 | −15% (agente) |
   | abaixo de 15 | −30% (agente) |

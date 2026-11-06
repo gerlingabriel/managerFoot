@@ -65,8 +65,8 @@ class CaixaDaRodadaTest {
 		// faixas: abaixo de 15 −30%, 25 a 34 sem ajuste, 35 a 44 +10%, 45 a 50 +20%
 		assertThat(caixa.salario(14)).isEqualTo(Math.round(2_000_00L * Math.pow(1.072, -3) * 0.70));
 		assertThat(caixa.salario(25)).isEqualTo(Math.round(2_000_00L * Math.pow(1.072, 8)));
-		assertThat(caixa.salario(44)).isEqualTo(Math.round(2_000_00L * Math.pow(1.072, 27) * 1.10));
-		assertThat(caixa.salario(45)).isEqualTo(Math.round(2_000_00L * Math.pow(1.072, 28) * 1.20));
+		assertThat(caixa.salario(44)).isEqualTo(Math.round(2_000_00L * Math.pow(1.072, 27) * 1.20));
+		assertThat(caixa.salario(45)).isEqualTo(Math.round(2_000_00L * Math.pow(1.072, 28) * 1.35));
 		assertThat(IntStream.rangeClosed(Jogador.FORCA_MINIMA, Jogador.FORCA_MAXIMA).mapToLong(caixa::salario)).isSorted();
 	}
 
@@ -127,9 +127,9 @@ class CaixaDaRodadaTest {
 	void todosRecebemComAFaixaDaForcaEmCampoDoClube() {
 		List<Jogador> plantel = new java.util.ArrayList<>(java.util.Collections.nCopies(11, jogador(40)));
 		plantel.add(jogador(17));
-		// força em campo 40: faixa +10% para todos, também para o reserva de força 17 (R$ 2.000 → R$ 2.200)
-		assertThat(caixa.folha(plantel)).isEqualTo(11 * Math.round(caixa.salarioSemFaixa(40) * 1.10) + 2_200_00L);
-		assertThat(caixa.salario(17, 40)).isEqualTo(2_200_00L);
+		// força em campo 40: faixa +20% para todos, também para o reserva de força 17 (R$ 2.000 → R$ 2.400)
+		assertThat(caixa.folha(plantel)).isEqualTo(11 * Math.round(caixa.salarioSemFaixa(40) * 1.20) + 2_400_00L);
+		assertThat(caixa.salario(17, 40)).isEqualTo(2_400_00L);
 		// com a faixa pelo jogador (rev. 61), o de força 17 recebe R$ 1.700
 		CaixaDaRodada peloJogador = new CaixaDaRodada(
 				ParametrosEconomia.padrao().comFaixas(ParametrosEconomia.padrao().faixasSalario(), false), ParametrosMoral.padrao());
