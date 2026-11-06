@@ -41,12 +41,22 @@ public final class LeiloesDaRodada {
 	 * @param daMaquina clubes da máquina que estão nas divisões
 	 */
 	public List<Oferta> abrir(List<ClubeNoMercado> daMaquina, String paisDaLiga) {
+		return abrir(daMaquina, paisDaLiga, Set.of());
+	}
+
+	/**
+	 * Como {@link #abrir(List, String)}; quem tem contrato nesta temporada (comprado nela) não vai a
+	 * leilão até a próxima (SPEC §9.5, rev. 81 e 115).
+	 *
+	 * @param comContrato ids dos jogadores com contrato firmado nesta temporada
+	 */
+	public List<Oferta> abrir(List<ClubeNoMercado> daMaquina, String paisDaLiga, Set<Long> comContrato) {
 		List<Oferta> ofertas = new ArrayList<>();
 		for (ClubeNoMercado c : ordenados(daMaquina)) {
 			if (!mercado.precisaVender(c.saldo(), c.plantel())) {
 				continue;
 			}
-			mercado.jogadorParaVender(c.plantel(), paisDaLiga).ifPresent(j -> ofertas.add(new Oferta(j, c.clube().id(),
+			mercado.jogadorParaVender(c.plantel(), paisDaLiga, comContrato).ifPresent(j -> ofertas.add(new Oferta(j, c.clube().id(),
 					c.saldo() < 0 ? 0 : preco.lanceInicialLeilao(j, paisDaLiga))));
 		}
 		return List.copyOf(ofertas);

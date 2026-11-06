@@ -85,7 +85,7 @@ public class LeilaoRepositorio {
 		caixas.abrirCaixas(jogoId);
 		Contexto c = contexto(jogoId);
 		if (!existemLeiloes(t.id(), rodada)) {
-			List<Oferta> ofertas = new ArrayList<>(leiloes.abrir(c.daMaquina(), c.pais()));
+			List<Oferta> ofertas = new ArrayList<>(leiloes.abrir(c.daMaquina(), c.pais(), comContrato(jogoId, t)));
 			ofertas.addAll(porCaixaNegativo(jogoId, t, rodada, c));
 			inserir(t, rodada, ofertas);
 		}
@@ -141,7 +141,7 @@ public class LeilaoRepositorio {
 		caixas.abrirCaixas(jogoId);
 		Contexto c = contexto(jogoId);
 		if (!existemLeiloes(t.id(), rodada)) {
-			List<Oferta> ofertas = new ArrayList<>(leiloes.abrir(c.daMaquina(), c.pais()));
+			List<Oferta> ofertas = new ArrayList<>(leiloes.abrir(c.daMaquina(), c.pais(), comContrato(jogoId, t)));
 			ofertas.addAll(porCaixaNegativo(jogoId, t, rodada, c));
 			inserir(t, rodada, ofertas);
 		}
@@ -395,13 +395,7 @@ public class LeilaoRepositorio {
 	 * renovado. O que já foi a leilão antes desta rodada fica de fora do sorteio.
 	 */
 	private List<Oferta> porCaixaNegativo(long jogoId, LinhaTemporada t, int rodada, Contexto c) {
-		Set<Long> foraDoSorteio = new HashSet<>(jdbc.sql("""
-				SELECT j.id FROM jogo_jogador j JOIN jogo_clube c ON c.id = j.clube_id
-				WHERE c.jogo_id = :jogo AND j.contrato_temporada = :numero""")
-			.param("jogo", jogoId)
-			.param("numero", t.numero())
-			.query(Long.class)
-			.list());
+		Set<Long> foraDoSorteio = comContrato(jogoId, t);
 		foraDoSorteio.addAll(jdbc.sql("SELECT jogador_id FROM jogo_leilao WHERE temporada_id = :temporada AND rodada = :rodada")
 			.param("temporada", t.id())
 			.param("rodada", rodada)
@@ -413,6 +407,17 @@ public class LeilaoRepositorio {
 				.ifPresent(ofertas::add);
 		}
 		return ofertas;
+	}
+
+	/** Jogadores com contrato firmado nesta temporada (renovação ou compra): só vão a leilão na próxima (rev. 81). */
+	private Set<Long> comContrato(long jogoId, LinhaTemporada t) {
+		return new HashSet<>(jdbc.sql("""
+				SELECT j.id FROM jogo_jogador j JOIN jogo_clube c ON c.id = j.clube_id
+				WHERE c.jogo_id = :jogo AND j.contrato_temporada = :numero""")
+			.param("jogo", jogoId)
+			.param("numero", t.numero())
+			.query(Long.class)
+			.list());
 	}
 
 	/** Grava os leilões abertos; o jogador que já foi a leilão antes desta rodada fica de fora. */

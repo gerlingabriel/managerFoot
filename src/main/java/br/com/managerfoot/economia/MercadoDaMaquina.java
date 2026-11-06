@@ -48,7 +48,18 @@ public final class MercadoDaMaquina {
 	 * não deixa a posição abaixo do elenco mínimo. Vazio se ninguém pode sair.
 	 */
 	public Optional<Jogador> jogadorParaVender(List<Jogador> plantel, String paisDaLiga) {
+		return jogadorParaVender(plantel, paisDaLiga, Set.of());
+	}
+
+	/**
+	 * Como {@link #jogadorParaVender(List, String)}, sem os que têm contrato nesta temporada: o comprado
+	 * fica até a próxima, para a compra não virar revenda imediata (SPEC §9.5, rev. 81 e 115).
+	 *
+	 * @param comContrato ids dos jogadores com contrato firmado nesta temporada
+	 */
+	public Optional<Jogador> jogadorParaVender(List<Jogador> plantel, String paisDaLiga, Set<Long> comContrato) {
 		return plantel.stream()
+			.filter(j -> !comContrato.contains(j.id()))
 			.filter(j -> !j.asterisco())
 			.filter(j -> podeSair(plantel, j))
 			.max(Comparator.comparingLong((Jogador j) -> preco.preco(j, paisDaLiga)).thenComparingLong(Jogador::id));

@@ -59,6 +59,16 @@ class MercadoDaMaquinaTest {
 	}
 
 	@Test
+	void compradoNaTemporadaNaoVoltaALeilaoEOProximoMaisCaroSai() {
+		List<Jogador> plantel = new ArrayList<>(plantel(23, 17));
+		plantel.add(jogador(101, Posicao.GOLEIRO, 35));
+		plantel.add(jogador(102, Posicao.ATACANTE, 30));
+		// 101 foi comprado nesta temporada (contrato até a próxima, SPEC §9.5 rev. 81)
+		assertThat(mercado.jogadorParaVender(plantel, "BRA", java.util.Set.of(101L))).map(Jogador::id).contains(102L);
+		assertThat(mercado.jogadorParaVender(plantel, "BRA", java.util.Set.of())).map(Jogador::id).contains(101L);
+	}
+
+	@Test
 	void ninguemSaiQuandoOElencoEstaNoMinimo() {
 		List<Jogador> minimo = new ArrayList<>();
 		minimo.add(jogador(1, Posicao.GOLEIRO, 20));

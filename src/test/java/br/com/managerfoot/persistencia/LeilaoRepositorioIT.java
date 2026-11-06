@@ -55,6 +55,9 @@ class LeilaoRepositorioIT {
 	@Autowired
 	JdbcClient jdbc;
 
+	@Autowired
+	RodadaRepositorio rodadas;
+
 	long jogo;
 	long usuario;
 	long clubeDoUsuario;
@@ -264,6 +267,32 @@ class LeilaoRepositorioIT {
 
 		assertThat(jdbc.sql("SELECT contrato_temporada FROM jogo_jogador WHERE id = :j").param("j", leilao.jogador().id())
 			.query(Integer.class).single()).isEqualTo(1);
+	}
+
+	@Test
+	void maquinaNaoPoeDeVoltaALeilaoQuemComprouNaTemporada() {
+		// o mais caro de todos: sem a regra, seria o primeiro que a máquina venderia
+		Jogador jogador = maisForteDoUsuario();
+		jdbc.sql("UPDATE jogo_jogador SET forca = 50, asterisco = false WHERE id = :j").param("j", jogador.id()).update();
+		saldo(vendedor, RICO);
+		long leilaoId = leiloes.venderPorLeilao(jogo, usuario, jogador.id(), 0);
+		leiloes.preparar(jogo, usuario, 1);
+		long comprador = leiloes.venda(jogo, usuario, leilaoId).orElseThrow().leiloes().get(0).comprador().id();
+		RodadasDeTeste.semDecisoesDoTreinador(jdbc, jogo);
+		RodadasDeTeste.jogarRodada(rodadas, jogo, 1);
+
+		// a compra deixou o comprador abaixo do limite: ele precisa vender na rodada seguinte
+		jdbc.sql("UPDATE jogo_clube SET saldo = :rico WHERE jogo_id = :jogo").param("rico", RICO).param("jogo", jogo).update();
+		saldo(comprador, 0);
+		saldo(clubeDoUsuario, 0);
+		leiloes.preparar(jogo, usuario, 2);
+
+		List<LeilaoNaTela> lista = leiloes.visao(jogo, usuario).orElseThrow().leiloes();
+		assertThat(lista).singleElement().satisfies(l -> {
+			assertThat(l.vendedor().id()).isEqualTo(comprador);
+			assertThat(l.jogador().id()).isNotEqualTo(jogador.id());
+		});
+		assertThat(clubeDe(jogador.id())).isEqualTo(comprador);
 	}
 
 	private Jogador maisForteDoUsuario() {

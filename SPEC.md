@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 114 — 2026-11-05)
+-   **Status:** versão inicial para revisão (rev. 115 — 2026-11-05)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -14,6 +14,8 @@
     descreve intenção geral ainda não detalhada.
 
 ### Histórico de revisões
+
+-   **rev. 115 (2026-11-05):** correção (§9.5), relatada pelo usuário: o jogador do pedido de aumento recusado, vendido em leilão a um clube da máquina, voltava a leilão na rodada seguinte. A compra baixava o caixa do comprador, e a máquina punha à venda o mais caro do plantel, que costumava ser ele. A regra da rev. 81 (comprado tem contrato e só vai a leilão na próxima temporada) passa a valer também para os clubes da máquina.
 
 -   **rev. 114 (2026-11-05):** pelo usuário (§7.4): com expulsão ficou fácil fazer muitos gols; sem expulsão o motor fica igual. Trava das goleadas com expulso: quem tem jogador a mais e já ganha por 2 gols ou mais converte menos a cada gol de vantagem além do primeiro (fator 0,4, recomendação do agente aprovada). Com times iguais, quem tem o expulso perde por 4 ou mais em 5% (era 22%) e o adversário faz 5 ou mais em 3% (era 18%); vitórias, empates e derrotas não mudam. Goleadas de times equilibrados: 1,2% (era 4,0%); gols por partida 2,36 (era 2,46).
 
@@ -2798,6 +2800,9 @@ abaixo da média do clube; o vendido no meio da temporada só é reposto na vira
   "não pode ser vendido naquela rodada". **Proposta do agente:** vale também
   para o jogador comprado, que tem o mesmo contrato até o fim da temporada, para
   a regra ser uma só e a compra não virar revenda imediata.
+  **Correção (rev. 115):** vale também para o comprado por um clube da máquina:
+  quando ela precisa vender, escolhe o mais caro entre os que **não** compraram
+  nesta temporada.
 - **Dependência:** hoje a força dos jogadores não muda (§6.1 em aberto) e
   o salário segue a força atual; o pedido de aumento só tem efeito depois
   da evolução de força e do salário gravado no contrato.
