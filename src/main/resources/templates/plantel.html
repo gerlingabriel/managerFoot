@@ -92,7 +92,7 @@
 <select id="batedor" name="batedor" class="selecao" data-enviar-ao-mudar th:disabled="${travado}">
 <option value="" th:selected="${v.escalacao.batedor == null}">Automático — maior força em campo</option>
 <option th:each="l : ${batedores}" th:value="${l.jogador.id}" th:selected="${v.escalacao.batedor == l.jogador.id}"
-	th:text="|${l.jogador.nome} (${l.jogador.posicao.name().substring(0, 1)} · ${l.jogador.forca}${l.jogador.asterisco ? ' ★' : ''})|">Jogador</option>
+	th:text="|${l.jogador.nome} (${l.jogador.posicao.name().substring(0, 1)} · ${l.jogador.forca}${l.jogador.asterisco or l.asteriscoDaArtilharia ? ' ★' : ''})|">Jogador</option>
 </select>
 <noscript><button type="submit" class="botao-discreto">Definir batedor</button></noscript>
 </form>
@@ -151,6 +151,7 @@
 <td class="jogador-celula">
 <a class="jogador-nome" hx-boost="true" th:href="@{/jogos/{id}/plantel(id=${v.jogoId},ficha=${j.id})}" th:text="${j.nome}" th:attr="aria-label=|Ver ficha de ${j.nome}|">Nome</a>
 <span th:if="${j.asterisco}" class="asterisco" title="jogador com asterisco">★</span>
+<span th:if="${l.asteriscoDaArtilharia}" class="asterisco" title="asterisco temporário do bônus de artilharia, até o fim da temporada">★</span>
 <span th:if="${l.asteriscoDoTreinador}" class="asterisco bonus-treinador" title="asterisco temporário do bônus do treinador, até o fim da temporada">★<sup>T</sup></span>
 <span th:if="${l.bonusExtra}" class="asterisco bonus-treinador" title="bônus extra do treinador na finalização, até o fim da temporada">★<sup>T</sup></span>
 <span th:if="${l.estrangeiro}" class="sigla-pais" th:classappend="${l.equiparado} ? 'nao-conta'" th:text="${l.estrangeiro}" th:title="${l.equiparado} ? |${l.estrangeiro}: não conta como estrangeiro| : |estrangeiro (${l.estrangeiro})|">ARG</span>

@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 124 — 2026-11-06)
+-   **Status:** versão inicial para revisão (rev. 125 — 2026-11-06)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 125 (2026-11-06):** pelo usuário (§5.2): o asterisco temporário do bônus de artilharia aparece no **plantel** e no **leilão** (★, com a dica "asterisco temporário do bônus de artilharia"), como já aparecia na substituição, e conta em "Asteriscos em campo". Antes ficava escondido nessas telas, mas contava no limite de 3 do motor, e o usuário podia passar do limite sem ver. Correção junto (agente): completar a tática passa a contar esse asterisco no limite. Vale o sorteado na divisão do clube do treinador, como no motor; o bônus extra de quem já tem asterisco continua sem marca.
 -   **rev. 124 (2026-11-06):** pelo usuário (§9.4): no lance da máquina, o acréscimo de até 5% conta a força do clube em relação ao **teto da sua divisão** (até 1), não mais até 50: o topo da 2ª passa a disputar o jogador com a 1ª. Simulado em `docs/simulacoes/compra-da-maquina.md`: o topo da 2ª compra em 6% das rodadas (era 2%), o caixa da 2ª cresce mais devagar (mediana no fim da 5ª temporada 48 → 32 rodadas da folha), o campeão da 1ª repete menos (42% → 21%). O fundo da 2ª segue sem comprar (falta caixa) e fica como está, por decisão do usuário; mais jogadores à venda (reserva de quem tem plantel acima de 23) foi descartado por girar demais o mercado. Vale nos jogos salvos a partir do próximo leilão.
 -   **rev. 123 (2026-11-06):** pelo usuário (§7.2): nova tabela de quem finaliza por formação, com mais meias e defensores e menos atacantes (4-4-2 50/40/10; 4-3-3 60/30/10; 3-5-2 54/41/5; 3-4-3 68/27/5; 4-2-4 75/16/9; 5-4-1 40/45/15; 4-5-1 40/50/10; 3-6-1 38/57/5). O 0,01% do goleiro continua, tirado da defesa (agente).
 -   **rev. 122 (2026-11-06):** pelo usuário (§5.3.1): o usuário que assume no meio da temporada o clube sorteado prejudicado tira a penalização. **Agente:** ela sai de vez (não volta se ele deixar o clube) e a divisão não sorteia outro prejudicado; vale também nos jogos salvos, na próxima rodada.
@@ -841,6 +842,12 @@ rankings de artilheiros e o histórico de cartões de cada jogador (§7.4).
 - **Definido (rev. 19):** o jogador que **já tem** asterisco e é sorteado
   ganha um bônus extra de finalização na temporada, do mesmo tamanho do
   bônus do asterisco, que **soma** ao do asterisco.
+- **Definido (rev. 125), pelo usuário — tela:** o asterisco temporário
+  aparece como ★ no plantel, no leilão e na substituição, com a dica
+  "asterisco temporário do bônus de artilharia, até o fim da temporada", e
+  conta em "Asteriscos em campo" e no completar da tática. Vale o sorteado
+  na divisão do clube do treinador (no leilão, a do comprador), como no
+  motor. O bônus extra (de quem já tem asterisco) não tem marca.
 
 O temperamento pode assumir:
 - Calmo.

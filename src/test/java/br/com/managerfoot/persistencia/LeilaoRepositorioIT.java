@@ -301,6 +301,28 @@ class LeilaoRepositorioIT {
 			.max(Comparator.comparingInt(Jogador::forca)).orElseThrow();
 	}
 
+	@Test
+	void oAsteriscoDaArtilhariaApareceNoLeilaoSoSeValeNaDivisaoDoTreinador() {
+		assertThat(leiloes.preparar(jogo, usuario, 1)).isEqualTo(Etapa.LANCES);
+		long jogador = unico().jogador().id();
+		assertThat(unico().asteriscoDaArtilharia()).isFalse();
+		long temporada = jdbc.sql("SELECT id FROM jogo_temporada WHERE jogo_id = :jogo").param("jogo", jogo)
+			.query(Long.class).single();
+		long divisao = jdbc.sql("SELECT divisao_id FROM jogo_clube WHERE id = :clube").param("clube", clubeDoUsuario)
+			.query(Long.class).single();
+		long outra = jdbc.sql("SELECT id FROM jogo_divisao WHERE jogo_id = :jogo AND id <> :divisao LIMIT 1")
+			.param("jogo", jogo).param("divisao", divisao).query(Long.class).single();
+		String sorteia = """
+				INSERT INTO jogo_bonus_artilharia (temporada_id, divisao_id, jogador_id, extra) VALUES (:t, :d, :j, false)
+				ON CONFLICT (temporada_id, jogador_id) DO UPDATE SET divisao_id = :d, extra = false""";
+
+		jdbc.sql(sorteia).param("t", temporada).param("d", outra).param("j", jogador).update();
+		assertThat(unico().asteriscoDaArtilharia()).isFalse();
+
+		jdbc.sql(sorteia).param("t", temporada).param("d", divisao).param("j", jogador).update();
+		assertThat(unico().asteriscoDaArtilharia()).isTrue();
+	}
+
 	private LeilaoNaTela unico() {
 		List<LeilaoNaTela> lista = leiloes.visao(jogo, usuario).orElseThrow().leiloes();
 		assertThat(lista).hasSize(1);

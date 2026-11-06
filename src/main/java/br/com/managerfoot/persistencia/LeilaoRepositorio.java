@@ -456,6 +456,8 @@ public class LeilaoRepositorio {
 			.query(rs -> {
 				meusLances.put(rs.getLong("leilao_id"), rs.getLong("valor"));
 			});
+		// o asterisco temporário da artilharia que valeria no clube do treinador (SPEC §5.2)
+		Set<Long> daArtilharia = TemporadaRepositorio.asteriscosDaArtilharia(jdbc, jogoId, clube);
 		List<LeilaoNaTela> naTela = new ArrayList<>();
 		for (LinhaLeilao l : linhas) {
 			Jogador j = c.jogador(l.jogadorId());
@@ -464,7 +466,8 @@ public class LeilaoRepositorio {
 					c.clube(l.vendedorId()), l.lanceMinimo(), c.moeda().unidadesAcima(l.lanceMinimo()),
 					l.situacao() == Situacao.ABERTO ? impedimento(l, meu, c.moeda()) : null, l.situacao(),
 					l.compradorId() == null ? null : c.clube(l.compradorId()), l.valor(), l.empate(),
-					meusLances.get(l.id()), l.compradorId() != null && l.compradorId() == clube, l.vendedorId() == clube));
+					meusLances.get(l.id()), l.compradorId() != null && l.compradorId() == clube, l.vendedorId() == clube,
+					!j.asterisco() && daArtilharia.contains(j.id())));
 		}
 		boolean aguardando = naTela.stream().anyMatch(l -> l.situacao() == Situacao.ABERTO);
 		return Optional.of(new VisaoLeiloes(rodada, c.moeda(), meu.saldo(), aguardando, naTela));
@@ -684,10 +687,12 @@ public class LeilaoRepositorio {
 	 * @param seuLance o lance do treinador que valeu; nulo se ele não deu
 	 * @param seu o treinador levou o jogador
 	 * @param vendidoPorVoce o jogador era do clube do treinador
+	 * @param asteriscoDaArtilharia tem o asterisco temporário do bônus de artilharia que vale na divisão do
+	 *        treinador (SPEC §5.2)
 	 */
 	public record LeilaoNaTela(long id, Jogador jogador, String estrangeiro, boolean equiparado, Clube vendedor, long lanceMinimo,
 			long minimoNaMoeda, String impedimento, Situacao situacao, Clube comprador, Long valor, boolean empate,
-			Long seuLance, boolean seu, boolean vendidoPorVoce) {
+			Long seuLance, boolean seu, boolean vendidoPorVoce, boolean asteriscoDaArtilharia) {
 	}
 
 	/**

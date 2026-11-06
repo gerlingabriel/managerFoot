@@ -201,6 +201,25 @@ public class TemporadaRepositorio {
 			.list());
 	}
 
+	/**
+	 * Jogadores com o asterisco temporário do bônus de artilharia (SPEC §5.2) que valem para o clube na
+	 * temporada atual: os sorteados na divisão dele, como no motor. Sem o bônus extra (de quem já tem
+	 * asterisco). Vazio se o clube está fora das divisões.
+	 */
+	public Set<Long> asteriscosDaArtilharia(long jogoId, long clubeId) {
+		return asteriscosDaArtilharia(jdbc, jogoId, clubeId);
+	}
+
+	/** Como {@link #asteriscosDaArtilharia(long, long)}, para outros repositórios. */
+	static Set<Long> asteriscosDaArtilharia(JdbcClient jdbc, long jogoId, long clubeId) {
+		return Set.copyOf(jdbc.sql("""
+				SELECT b.jogador_id FROM jogo_bonus_artilharia b JOIN jogo_clube c ON c.divisao_id = b.divisao_id
+				WHERE c.id = :clube AND NOT b.extra
+				  AND b.temporada_id = (SELECT id FROM jogo_temporada WHERE jogo_id = :jogo ORDER BY numero DESC LIMIT 1)""")
+			.param("clube", clubeId).param("jogo", jogoId)
+			.query(Long.class).list());
+	}
+
 	private void gravarBeneficiados(long temporadaId, long divisaoId, SorteTemporada sorte) {
 		for (Clube clube : sorte.beneficiados()) {
 			gravarSorte(temporadaId, divisaoId, clube, false);

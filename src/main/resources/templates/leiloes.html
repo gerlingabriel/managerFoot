@@ -25,6 +25,7 @@
 <span class="pos" th:classappend="|pos-${j.posicao}|" th:text="${j.posicao.name().substring(0, 1)}" th:title="${j.posicao.nome(1)}">G</span>
 <span class="leilao-nome" th:text="${j.nome}">Nome</span>
 <span th:if="${j.asterisco}" class="asterisco" title="jogador com asterisco">★</span>
+<span th:if="${l.asteriscoDaArtilharia}" class="asterisco" title="asterisco temporário do bônus de artilharia, até o fim da temporada">★</span>
 <span class="leilao-forca" th:text="${j.forca}">0</span>
 </span>
 <span class="suave" th:text="|${l.vendedor.nome} · ${#strings.capitalize(#strings.toLowerCase(j.temperamento.name()))}${l.estrangeiro != null ? ' · ' + l.estrangeiro + (l.equiparado ? ' (não conta como estrangeiro)' : '') : ''} · ${l.lanceMinimo == 0 ? 'sem lance mínimo' : 'lance inicial ' + v.moeda.formatar(v.moeda.centavos(l.minimoNaMoeda))}|">Clube · Normal · lance inicial</span>
