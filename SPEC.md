@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 123 — 2026-11-06)
+-   **Status:** versão inicial para revisão (rev. 124 — 2026-11-06)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 124 (2026-11-06):** pelo usuário (§9.4): no lance da máquina, o acréscimo de até 5% conta a força do clube em relação ao **teto da sua divisão** (até 1), não mais até 50: o topo da 2ª passa a disputar o jogador com a 1ª. Simulado em `docs/simulacoes/compra-da-maquina.md`: o topo da 2ª compra em 6% das rodadas (era 2%), o caixa da 2ª cresce mais devagar (mediana no fim da 5ª temporada 48 → 32 rodadas da folha), o campeão da 1ª repete menos (42% → 21%). O fundo da 2ª segue sem comprar (falta caixa) e fica como está, por decisão do usuário; mais jogadores à venda (reserva de quem tem plantel acima de 23) foi descartado por girar demais o mercado. Vale nos jogos salvos a partir do próximo leilão.
 -   **rev. 123 (2026-11-06):** pelo usuário (§7.2): nova tabela de quem finaliza por formação, com mais meias e defensores e menos atacantes (4-4-2 50/40/10; 4-3-3 60/30/10; 3-5-2 54/41/5; 3-4-3 68/27/5; 4-2-4 75/16/9; 5-4-1 40/45/15; 4-5-1 40/50/10; 3-6-1 38/57/5). O 0,01% do goleiro continua, tirado da defesa (agente).
 -   **rev. 122 (2026-11-06):** pelo usuário (§5.3.1): o usuário que assume no meio da temporada o clube sorteado prejudicado tira a penalização. **Agente:** ela sai de vez (não volta se ele deixar o clube) e a divisão não sorteia outro prejudicado; vale também nos jogos salvos, na próxima rodada.
 -   **rev. 121 (2026-11-06):** pelo usuário (§5.3.2): bônus do treinador usuário, para o jogo na 2ª divisão não ficar sem graça ("estado de flow"). Pela força em campo do clube na hora do sorteio: até 30, 3 jogadores com asterisco temporário e +10 de força em campo; de 31 a 40, 2 com +5; acima de 40, nada. Sorteio extra, fora do da artilharia, no início de cada temporada e quando o usuário assume outro clube. Detalhes escolhidos pelo usuário: força em campo, bônus só em campo (não muda salário, preço nem evolução), goleiro fora. Para testar se fica mais equilibrado.
@@ -2858,6 +2859,9 @@ A máquina oferece um pouco abaixo do preço padrão (§9.4).
   `economia.ParametrosMercadoMaquina`, regra em `economia.MercadoDaMaquina`):
   - **Lance:** 10% abaixo do preço, mais até 5% proporcional à força do
     clube (a "preferência pela força do time"); leva o maior.
+    **Definido (rev. 124), pelo usuário:** a força conta em relação ao
+    **teto da divisão do clube** (força ÷ teto, no máximo 1): o clube de
+    força 30 na 2ª (teto 30) dá o mesmo acréscimo que o de força 50 na 1ª.
   - **Quem vende:** o clube abaixo do limite põe em leilão **1 jogador por
     rodada**, o mais caro sem asterisco cuja saída não deixa a posição
     abaixo do elenco mínimo do §9.3 (1 goleiro, 4 defensores, 4 meias, 2

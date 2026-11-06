@@ -573,7 +573,8 @@ public class LeilaoRepositorio {
 			for (Clube clube : d.clubes()) {
 				clubes.put(clube.id(), clube);
 				List<Jogador> plantel = planteis.getOrDefault(clube.id(), List.of());
-				ClubeNoMercado noMercado = new ClubeNoMercado(clube, caixas.saldo(clube.id(), plantel), plantel);
+				ClubeNoMercado noMercado = new ClubeNoMercado(clube, caixas.saldo(clube.id(), plantel), plantel,
+						d.limiteForca());
 				(humanos.contains(clube.id()) ? doUsuario : daMaquina).add(noMercado);
 			}
 		}

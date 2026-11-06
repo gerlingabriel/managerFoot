@@ -110,10 +110,10 @@ public final class LeiloesDaRodada {
 			Map<Long, List<Lance>> lancesHumanos, Set<Long> jaCompraram, String paisDaLiga, RandomGenerator aleatorio) {
 		Map<Long, Estado> estados = new HashMap<>();
 		for (ClubeNoMercado c : daMaquina) {
-			estados.put(c.clube().id(), new Estado(c.clube(), c.saldo(), new ArrayList<>(c.plantel())));
+			estados.put(c.clube().id(), new Estado(c.clube(), c.saldo(), new ArrayList<>(c.plantel()), c.tetoDaDivisao()));
 		}
 		for (ClubeNoMercado c : humanos) {
-			estados.put(c.clube().id(), new Estado(c.clube(), c.saldo(), new ArrayList<>(c.plantel())));
+			estados.put(c.clube().id(), new Estado(c.clube(), c.saldo(), new ArrayList<>(c.plantel()), c.tetoDaDivisao()));
 		}
 		Set<Long> idsHumanos = new HashSet<>();
 		humanos.forEach(c -> idsHumanos.add(c.clube().id()));
@@ -136,7 +136,7 @@ public final class LeiloesDaRodada {
 					continue;
 				}
 				Estado e = estados.get(comprador);
-				mercado.lance(e.clube, e.saldo, e.plantel, jogador, paisDaLiga, oferta.lanceMinimo())
+				mercado.lance(e.clube, e.saldo, e.plantel, jogador, paisDaLiga, oferta.lanceMinimo(), e.teto)
 					.ifPresent(v -> lances.add(new Lance(comprador, v)));
 			}
 			Optional<Lance> vencedor = Leilao.vencedor(lances, oferta.lanceMinimo(), aleatorio);
@@ -162,11 +162,20 @@ public final class LeiloesDaRodada {
 		return clubes.stream().sorted(Comparator.comparingLong(c -> c.clube().id())).toList();
 	}
 
-	/** Clube no mercado: caixa e plantel antes dos leilões. */
-	public record ClubeNoMercado(Clube clube, long saldo, List<Jogador> plantel) {
+	/**
+	 * Clube no mercado: caixa e plantel antes dos leilões.
+	 *
+	 * @param tetoDaDivisao limite de força da divisão do clube, que mede a força dele no lance (rev. 124)
+	 */
+	public record ClubeNoMercado(Clube clube, long saldo, List<Jogador> plantel, int tetoDaDivisao) {
 
 		public ClubeNoMercado {
 			plantel = List.copyOf(plantel);
+		}
+
+		/** Sem divisão conhecida: a força conta até a força máxima. */
+		public ClubeNoMercado(Clube clube, long saldo, List<Jogador> plantel) {
+			this(clube, saldo, plantel, Jogador.FORCA_MAXIMA);
 		}
 	}
 
@@ -193,11 +202,13 @@ public final class LeiloesDaRodada {
 		private final Clube clube;
 		private long saldo;
 		private final List<Jogador> plantel;
+		private final int teto;
 
-		private Estado(Clube clube, long saldo, List<Jogador> plantel) {
+		private Estado(Clube clube, long saldo, List<Jogador> plantel, int teto) {
 			this.clube = clube;
 			this.saldo = saldo;
 			this.plantel = plantel;
+			this.teto = teto;
 		}
 	}
 }

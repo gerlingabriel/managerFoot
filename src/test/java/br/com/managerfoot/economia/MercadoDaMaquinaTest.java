@@ -91,6 +91,20 @@ class MercadoDaMaquinaTest {
 	}
 
 	@Test
+	void forcaDoClubeNoLanceContaPeloTetoDaDivisao() {
+		List<Jogador> plantel = plantel(23, 17);
+		Jogador alvo = jogador(300, Posicao.MEIO_CAMPISTA, 17); // preço R$ 160.000
+		long rico = 10_000_000_00L;
+		long topoDa1a = mercado.lance(new Clube(1, "Topo da 1ª", 50), rico, plantel, alvo, "BRA", 0, 50).orElseThrow();
+		long topoDa2a = mercado.lance(new Clube(2, "Topo da 2ª", 30), rico, plantel, alvo, "BRA", 0, 30).orElseThrow();
+		long acimaDoTeto = mercado.lance(new Clube(3, "Rebaixado", 45), rico, plantel, alvo, "BRA", 0, 30).orElseThrow();
+		long meioDa2a = mercado.lance(new Clube(4, "Meio da 2ª", 15), rico, plantel, alvo, "BRA", 0, 30).orElseThrow();
+		assertThat(topoDa2a).isEqualTo(topoDa1a).isEqualTo(152_000_00L); // 160.000 × 0,95
+		assertThat(acimaDoTeto).isEqualTo(152_000_00L); // acima do teto conta como o teto
+		assertThat(meioDa2a).isEqualTo(148_000_00L); // 160.000 × (0,90 + 0,05 × 15/30) = 148.000
+	}
+
+	@Test
 	void lanceFicaAbaixoDoPrecoEOClubeMaisForteDaUmPoucoMais() {
 		List<Jogador> plantel = plantel(23, 17);
 		Jogador alvo = jogador(300, Posicao.MEIO_CAMPISTA, 17); // preço R$ 160.000

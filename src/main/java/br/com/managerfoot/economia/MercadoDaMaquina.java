@@ -152,23 +152,31 @@ public final class MercadoDaMaquina {
 		return Clube.forcaEmCampo(plantel);
 	}
 
+	/** Como {@link #lance(Clube, long, List, Jogador, String, long, int)}, com a força medida até a força máxima. */
+	public Optional<Long> lance(Clube clube, long saldo, List<Jogador> plantel, Jogador alvo, String paisDaLiga,
+			long lanceMinimo) {
+		return lance(clube, saldo, plantel, alvo, paisDaLiga, lanceMinimo, Jogador.FORCA_MAXIMA);
+	}
+
 	/**
-	 * Lance da máquina num leilão: um pouco abaixo do preço, um pouco mais para o clube mais forte.
-	 * Vazio se o jogador é fraco demais para o time (abaixo do plantel alvo, qualquer força serve,
-	 * rev. 66), se o plantel está cheio, se o lance fica abaixo
+	 * Lance da máquina num leilão: um pouco abaixo do preço, um pouco mais para o clube mais forte
+	 * da sua divisão (SPEC §9.4, rev. 124: a força do clube conta em relação ao teto da divisão, até 1,
+	 * para o topo da 2ª disputar com a 1ª). Vazio se o jogador é fraco demais para o time (abaixo do
+	 * plantel alvo, qualquer força serve, rev. 66), se o plantel está cheio, se o lance fica abaixo
 	 * do mínimo ou se, pago o lance, o caixa não ficaria acima do limite com a folga, já com o novo
 	 * salário.
 	 *
 	 * @param lanceMinimo lance inicial do leilão (zero no leilão sem lance mínimo)
+	 * @param tetoDaDivisao limite de força da divisão do clube
 	 */
 	public Optional<Long> lance(Clube clube, long saldo, List<Jogador> plantel, Jogador alvo, String paisDaLiga,
-			long lanceMinimo) {
+			long lanceMinimo, int tetoDaDivisao) {
 		if (plantel.size() >= Clube.MAXIMO_JOGADORES || plantel.size() >= parametros.plantelAlvo()
 				&& alvo.forca() < forcaEmCampo(plantel) - parametros.interesseAbaixoDoTime()) {
 			return Optional.empty();
 		}
-		double fator = 1 - parametros.descontoLance()
-				+ parametros.acrescimoPelaForca() * clube.forca() / Jogador.FORCA_MAXIMA;
+		double relativa = Math.min(1.0, (double) clube.forca() / Math.max(1, tetoDaDivisao));
+		double fator = 1 - parametros.descontoLance() + parametros.acrescimoPelaForca() * relativa;
 		long valor = preco.redondo(Math.round(preco.preco(alvo, paisDaLiga) * fator));
 		List<Jogador> depois = new ArrayList<>(plantel);
 		depois.add(alvo);
