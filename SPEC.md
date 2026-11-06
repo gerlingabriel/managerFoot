@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 118 — 2026-11-06)
+-   **Status:** versão inicial para revisão (rev. 119 — 2026-11-06)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -14,6 +14,8 @@
     descreve intenção geral ainda não detalhada.
 
 ### Histórico de revisões
+
+-   **rev. 119 (2026-11-06):** pelo usuário (§9.1, §9.2): o fundo da tabela perde menos. O último colocado leva **18%** da torcida (era 15%) e o deslocamento cai 25% na 2ª e na 3ª divisão (**R$ 22.500** e **R$ 11.250**; a 1ª fica com R$ 60.000). Simulado em `docs/simulacoes/caixa-do-fundo.md`: o terço de baixo da 2ª deixa de afundar (de 13 para −5 rodadas da folha em 6 temporadas; agora de 13 para 20), a média da 2ª no fim da 6ª vai de 11 para 37, os clubes negativos de 8% para 2% e o mercado continua girando (vendas de 35 para 25 por liga e temporada). Opções mais fortes (último com 25% ou 35% e deslocamento pela metade) deixavam todos ricos e paravam o mercado. A compra do clube pequeno da máquina depende da regra de lance (rev. 44), não do caixa. Vale nos jogos salvos a partir da próxima rodada.
 
 -   **rev. 118 (2026-11-06):** pelo usuário (§6.1): bônus de crescimento de quem acabou de subir para a 1ª divisão. No 1º turno da temporada seguinte à subida, todo jogador fora da escalação (nem titular nem no banco) ganha 1 ponto por partida da liga, qualquer que seja o resultado, além do sorteio de sempre; vale para o usuário e a máquina. A intenção não é manter o promovido na 1ª, só fazê-lo cair menos depressa. Simulado (`promovidos.md`): caem de volta 73% com ou sem o bônus; quem fica fora da escalação cresce até entrar no banco e o efeito na força em campo é pequeno.
 
@@ -2338,7 +2340,8 @@ reajustados por nova simulação (`docs/simulacoes/economia-caixa.md`):
   20 pontos mais forte soma 15; sorteio de ±8; entre 10% e 100% da
   capacidade.
 - **Despesas de jogo:** 15% da bilheteria no jogo em casa; deslocamento de
-  R$ 60.000 (1ª), R$ 30.000 (2ª) e R$ 15.000 (3ª) no jogo fora.
+  R$ 60.000 (1ª), R$ 22.500 (2ª) e R$ 11.250 (3ª) no jogo fora (**Definido,
+  rev. 119**; eram R$ 30.000 e R$ 15.000).
 - **Saldo inicial:** 10 rodadas da folha do clube.
 - **Resultado na simulação (só o caixa, sem patrocínio nem premiação):**
   dentro de cada divisão os mais fortes lucram mais; os mais fracos da 2ª
@@ -2424,7 +2427,7 @@ reajustados por nova simulação (`docs/simulacoes/economia-caixa.md`):
       campo atual** (cresce e cai com a evolução). **Estádio inicial**: 75%
       da torcida pela força cadastrada (força 50 começa com 60.000).
     - **Ocupação** (fração da torcida): 75% no jogo do líder, caindo em linha
-      reta até 15% no do último; receber o líder soma até 15%, menos quanto
+      reta até 18% no do último (**rev. 119**; era 15%); receber o líder soma até 15%, menos quanto
       pior o mandante (o último não ganha nada); nas 3 últimas rodadas, 1º
       contra 2º soma mais 15%. Até a 5ª rodada a tabela vale aos poucos
       (começa em 45%). Sorteio de ±8%; nunca passa do estádio. Substitui a

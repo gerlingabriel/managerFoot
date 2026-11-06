@@ -94,7 +94,7 @@ class CaixaDaRodadaTest {
 				new Lancamento(TipoLancamento.BILHETERIA, 30_000_00L), new Lancamento(TipoLancamento.CUSTO_DO_JOGO, -4_500_00L),
 				new Lancamento(TipoLancamento.SALARIOS, -1_700_00L));
 		assertThat(caixa.lancamentos(Local.FORA, 2, 0, plantel)).containsExactly(
-				new Lancamento(TipoLancamento.DESLOCAMENTO, -30_000_00L), new Lancamento(TipoLancamento.SALARIOS, -1_700_00L));
+				new Lancamento(TipoLancamento.DESLOCAMENTO, -22_500_00L), new Lancamento(TipoLancamento.SALARIOS, -1_700_00L));
 		assertThat(caixa.lancamentos(Local.FOLGA, 3, 0, plantel))
 			.containsExactly(new Lancamento(TipoLancamento.SALARIOS, -1_700_00L));
 	}

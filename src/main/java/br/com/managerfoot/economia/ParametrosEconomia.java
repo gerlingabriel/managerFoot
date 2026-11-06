@@ -63,7 +63,7 @@ public record ParametrosEconomia(int forcaCapacidadeMinima, int capacidadeMinima
 	 */
 	public static ParametrosEconomia padrao() {
 		return new ParametrosEconomia(12, 5_000, 80_000, List.of(30_00L, 30_00L, 30_00L), 0.45, 0.5, 0.15, 0.08, 0.15,
-				List.of(60_000_00L, 30_000_00L, 15_000_00L), 2_000_00L, 17, 1.072, 10,
+				List.of(60_000_00L, 22_500_00L, 11_250_00L), 2_000_00L, 17, 1.072, 10,
 				List.of(new FaixaSalario(0, 0.70), new FaixaSalario(15, 0.85), new FaixaSalario(25, 1.0),
 						new FaixaSalario(35, 1.10), new FaixaSalario(45, 1.20)), true);
 	}

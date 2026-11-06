@@ -37,6 +37,6 @@ public record ParametrosPublico(double estadioInicialSobreTorcida, double ocupac
 	}
 
 	public static ParametrosPublico padrao() {
-		return new ParametrosPublico(0.75, 0.75, 0.15, 0.15, 0.15, 3, 5, 0.45, 0.08, 0.05, 80_000, 5_000, 6, 0.6);
+		return new ParametrosPublico(0.75, 0.75, 0.18, 0.15, 0.15, 3, 5, 0.45, 0.08, 0.05, 80_000, 5_000, 6, 0.6);
 	}
 }

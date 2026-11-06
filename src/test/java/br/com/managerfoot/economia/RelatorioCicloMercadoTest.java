@@ -107,11 +107,27 @@ class RelatorioCicloMercadoTest {
 			new Cenario("Teto da 2ª 35 e base móvel", true, faixas(0.70, 0.85, 1.10, 1.20), 23, 40, 1.0, 1.0, true, 5),
 			new Cenario("Ingresso R$ 30 (sem mudar a evolução)", true, faixas(0.70, 0.85, 1.10, 1.20), 23, 30, 1.0, 1.0, false));
 
+	/**
+	 * Caixa do fundo da tabela (pedido do usuário, 2026-11-06): o clube pequeno perde menos, sem ficar rico, e consegue
+	 * comprar. Roda com {@code RELATORIO_CAIXA_FUNDO=1} e grava {@code docs/simulacoes/caixa-do-fundo.md}.
+	 */
+	private static final List<Cenario> CAIXA_FUNDO = List.of(
+			new Cenario("Atual: último 15% da torcida, deslocamento R$ 60/30/15 mil", true, faixas(0.70, 0.85, 1.10, 1.20), 23, 30, 1.0),
+			new Cenario("Só deslocamento da 2ª e 3ª pela metade", true, faixas(0.70, 0.85, 1.10, 1.20), 23, 30, 1.0).com(0.15, 0.5),
+			new Cenario("Último 18%", true, faixas(0.70, 0.85, 1.10, 1.20), 23, 30, 1.0).com(0.18, 1.0),
+			new Cenario("Último 18% e deslocamento da 2ª e 3ª −25%", true, faixas(0.70, 0.85, 1.10, 1.20), 23, 30, 1.0).com(0.18, 0.75),
+			new Cenario("Último 20% e deslocamento da 2ª e 3ª −25%", true, faixas(0.70, 0.85, 1.10, 1.20), 23, 30, 1.0).com(0.2, 0.75),
+			new Cenario("Último 25% e deslocamento da 2ª e 3ª pela metade", true, faixas(0.70, 0.85, 1.10, 1.20), 23, 30, 1.0).com(0.25, 0.5),
+			new Cenario("Último 35% e deslocamento da 2ª e 3ª pela metade", true, faixas(0.70, 0.85, 1.10, 1.20), 23, 30, 1.0).com(0.35, 0.5));
+
+	private static final Path SAIDA_CAIXA_FUNDO = Path.of("docs/simulacoes/caixa-do-fundo.md");
+
 	@Test
 	void gerarRelatorio() throws IOException {
 		boolean ajuste = System.getenv("RELATORIO_AJUSTE_CAIXA") != null;
 		boolean promovidos = System.getenv("RELATORIO_PROMOVIDOS") != null;
-		List<Cenario> cenarios = promovidos ? PROMOVIDOS : ajuste ? AJUSTES : CENARIOS;
+		boolean fundo = System.getenv("RELATORIO_CAIXA_FUNDO") != null;
+		List<Cenario> cenarios = fundo ? CAIXA_FUNDO : promovidos ? PROMOVIDOS : ajuste ? AJUSTES : CENARIOS;
 		GeradorBancoPadrao gerador = new GeradorBancoPadrao(ParametrosBancoPadrao.padrao(), ParametrosMotor.padrao());
 		List<GeradorBancoPadrao.PaisGerado> gerados = PaisPadrao.TODOS.stream().map(gerador::gerar).toList();
 		List<Simulacao> simulacoes = new ArrayList<>();
@@ -133,6 +149,12 @@ class RelatorioCicloMercadoTest {
 		if (promovidos) {
 			String md = promovidos(cenarios, simulacoes);
 			Files.writeString(SAIDA_PROMOVIDOS, md);
+			System.out.println(md);
+			return;
+		}
+		if (fundo) {
+			String md = caixaDoFundo(cenarios, simulacoes);
+			Files.writeString(SAIDA_CAIXA_FUNDO, md);
 			System.out.println(md);
 			return;
 		}
@@ -228,6 +250,57 @@ class RelatorioCicloMercadoTest {
 	}
 
 	/** Comparação do ajuste do caixa: saldo em rodadas da folha, clubes negativos e mercado da máquina por temporada. */
+	private static List<Long> deslocamento(List<Long> porDivisao, double fatorAbaixo) {
+		List<Long> l = new ArrayList<>();
+		for (int i = 0; i < porDivisao.size(); i++) {
+			l.add(i == 0 ? porDivisao.get(i) : Math.round(porDivisao.get(i) * fatorAbaixo));
+		}
+		return l;
+	}
+
+	/** Caixa do fundo: saldo por terço e por temporada na 2ª, negativos, compras e vendas por terço. */
+	private static String caixaDoFundo(List<Cenario> cenarios, List<Simulacao> simulacoes) {
+		int ligas = PaisPadrao.TODOS.size() * SEMENTES;
+		StringBuilder md = new StringBuilder(ajusteCaixa(cenarios, simulacoes)
+			.replaceFirst("# Ajuste do caixa: ingresso e salário", "# Caixa do fundo da tabela: público do último e deslocamento")
+			.replace("RELATORIO_AJUSTE_CAIXA", "RELATORIO_CAIXA_FUNDO")
+			.replace("Cada linha muda só o ingresso (todas as divisões) ou o salário de referência; o salário maior também encarece "
+					+ "o preço do jogador, o prêmio, o patrocínio e a obra do estádio, como no jogo.",
+					"Ingresso de R$ 30 em todas as linhas. Cada linha muda a ocupação do último colocado (fração da torcida; o "
+							+ "líder fica com 75%) e o deslocamento da 2ª e da 3ª divisão (a 1ª fica com R$ 60 mil)."));
+		md.append("\n## Saldo do terço de baixo por temporada (rodadas da folha)\n\n| Cenário | Divisão");
+		for (int t = 1; t <= TEMPORADAS; t++) {
+			md.append(" | ").append(t).append("ª");
+		}
+		md.append(" |\n|---|---|").append("---|".repeat(TEMPORADAS)).append("\n");
+		for (int i = 0; i < cenarios.size(); i++) {
+			for (int d = 1; d <= 2; d++) {
+				md.append("| ").append(cenarios.get(i).nome()).append(" | ").append(d).append("ª");
+				for (int t = 1; t <= TEMPORADAS; t++) {
+					Medida m = simulacoes.get(i).temporadas.get(d).get(t);
+					md.append(" | ").append(m == null ? "—" : dec(10 * m.limites[2] / m.n[2]));
+				}
+				md.append(" |\n");
+			}
+		}
+		md.append("\n## Compras e vendas por terço da tabela (por liga e temporada)\n\n")
+			.append("*Compras*: jogadores comprados em leilão pelos clubes da divisão, pelo terço do comprador na hora. ")
+			.append("*Vendas*: pelo terço do vendedor.\n\n")
+			.append("| Cenário | Divisão | Compras topo / meio / fundo | Vendas topo / meio / fundo |\n|---|---|---|---|\n");
+		double n = ligas * (double) TEMPORADAS;
+		for (int i = 0; i < cenarios.size(); i++) {
+			Simulacao s = simulacoes.get(i);
+			for (int d = 0; d < 2; d++) {
+				md.append("| ").append(cenarios.get(i).nome()).append(" | ").append(d + 1).append("ª | ")
+					.append(dec(s.comprasPorTerco[d][0] / n)).append(" / ").append(dec(s.comprasPorTerco[d][1] / n)).append(" / ")
+					.append(dec(s.comprasPorTerco[d][2] / n)).append(" | ")
+					.append(dec(s.vendasPorTerco[d][0] / n)).append(" / ").append(dec(s.vendasPorTerco[d][1] / n)).append(" / ")
+					.append(dec(s.vendasPorTerco[d][2] / n)).append(" |\n");
+			}
+		}
+		return md.toString();
+	}
+
 	private static String ajusteCaixa(List<Cenario> cenarios, List<Simulacao> simulacoes) {
 		int ligas = PaisPadrao.TODOS.size() * SEMENTES;
 		StringBuilder md = new StringBuilder();
@@ -316,7 +389,20 @@ class RelatorioCicloMercadoTest {
 	 * @param salario multiplicador do salário de referência (e com ele do preço, do prêmio e da obra)
 	 */
 	private record Cenario(String nome, boolean peloClube, List<FaixaSalario> faixas, int plantelAlvo, long ingresso,
-			double salario, double crescimentoPromovido, boolean baseMovel, int tetoExtraDaSegunda, int turnosForaCresce) {
+			double salario, double crescimentoPromovido, boolean baseMovel, int tetoExtraDaSegunda, int turnosForaCresce,
+			double ocupacaoUltimo, double fatorDeslocamentoAbaixo) {
+
+		Cenario(String nome, boolean peloClube, List<FaixaSalario> faixas, int plantelAlvo, long ingresso, double salario,
+				double crescimentoPromovido, boolean baseMovel, int tetoExtraDaSegunda, int turnosForaCresce) {
+			this(nome, peloClube, faixas, plantelAlvo, ingresso, salario, crescimentoPromovido, baseMovel, tetoExtraDaSegunda,
+					turnosForaCresce, ParametrosPublico.padrao().ocupacaoUltimo(), 1.0);
+		}
+
+		/** Ocupação do último colocado e fator do deslocamento da 2ª divisão para baixo. */
+		Cenario com(double ultimo, double fatorDeslocamento) {
+			return new Cenario(nome, peloClube, faixas, plantelAlvo, ingresso, salario, crescimentoPromovido, baseMovel,
+					tetoExtraDaSegunda, turnosForaCresce, ultimo, fatorDeslocamento);
+		}
 
 		Cenario(String nome, boolean peloClube, List<FaixaSalario> faixas, int plantelAlvo, long ingresso, double salario,
 				double crescimentoPromovido, boolean baseMovel, int tetoExtraDaSegunda) {
@@ -337,8 +423,11 @@ class RelatorioCicloMercadoTest {
 	private static final class Simulacao {
 
 		private final CaixaDaRodada caixa;
-		private final ParametrosPublico parametros = ParametrosPublico.padrao();
-		private final PublicoDoJogo publico = PublicoDoJogo.padrao();
+		private final ParametrosPublico parametros;
+		private final PublicoDoJogo publico;
+		/** Compras e vendas por divisão (linha) e terço da tabela na hora (coluna), de quem compra e de quem vende. */
+		private final long[][] comprasPorTerco = new long[3][3];
+		private final long[][] vendasPorTerco = new long[3][3];
 		private final AmpliacaoEstadio ampliacao;
 		private final Premiacao premiacao;
 		private final EvolucaoForca evolucao = EvolucaoForca.padrao();
@@ -387,9 +476,15 @@ class RelatorioCicloMercadoTest {
 			ParametrosEconomia e = ParametrosEconomia.padrao().comFaixas(cenario.faixas(), cenario.peloClube());
 			e = new ParametrosEconomia(e.forcaCapacidadeMinima(), e.capacidadeMinima(), e.capacidadeMaxima(),
 					List.of(cenario.ingresso() * 100), e.ocupacaoBase(), e.pesoMoral(), e.pesoAdversario(), e.variacaoPublico(),
-					e.custoDoJogo(), e.deslocamentoPorDivisao(), Math.round(e.salarioReferencia() * cenario.salario()),
+					e.custoDoJogo(), deslocamento(e.deslocamentoPorDivisao(), cenario.fatorDeslocamentoAbaixo()), Math.round(e.salarioReferencia() * cenario.salario()),
 					e.forcaReferencia(), e.crescimentoSalario(), e.rodadasDeFolhaNoInicio(), e.faixasSalario(), e.salarioPeloClube());
 			caixa = new CaixaDaRodada(e, ParametrosMoral.padrao());
+			ParametrosPublico pp = ParametrosPublico.padrao();
+			parametros = new ParametrosPublico(pp.estadioInicialSobreTorcida(), pp.ocupacaoLider(), cenario.ocupacaoUltimo(),
+					pp.bonusAdversario(), pp.bonusDecisivo(), pp.rodadasDecisivas(), pp.rodadaTabelaInteira(), pp.ocupacaoInicio(),
+					pp.variacao(), pp.ocupacaoMinima(), pp.capacidadeMaxima(), pp.bloco(), pp.rodadasDeObra(),
+					pp.ocupacaoMinimaFinal());
+			publico = new PublicoDoJogo(parametros, caixa);
 			preco = new PrecoJogador(ParametrosMercado.padrao().comPrecoSemFaixa(cenario.peloClube()), caixa);
 			mercado = new MercadoDaMaquina(ParametrosMercadoMaquina.padrao().comPlantelAlvo(cenario.plantelAlvo()), preco, caixa);
 			leiloes = new LeiloesDaRodada(mercado, preco);
@@ -720,8 +815,13 @@ class RelatorioCicloMercadoTest {
 			pagoSobrePreco[dv] += valor / (double) preco.preco(jogador, paisDaLiga);
 			porDivisao[dv][dc]++;
 			int tv = terco(vend, posicao, divisaoDe);
+			int tc = terco(comp, posicao, divisaoDe);
 			if (dv == dc) {
-				porTerco[tv][terco(comp, posicao, divisaoDe)]++;
+				porTerco[tv][tc]++;
+			}
+			if (dc < 3 && dv < 3) {
+				comprasPorTerco[dc][tc]++;
+				vendasPorTerco[dv][tv]++;
 			}
 			vendedor[riqueza.get(vend)][tv]++;
 		}
