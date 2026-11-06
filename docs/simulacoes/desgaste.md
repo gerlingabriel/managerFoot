@@ -1,4 +1,4 @@
-# Desgaste da força: por que o clube da 2ª afunda (SPEC rev. 126)
+# Desgaste da força e caixa da 1ª (SPEC rev. 126 e 127)
 
 Estudo de 2026-11-06, a pedido do usuário. Ele assumiu um clube da 2ª divisão. O bônus do treinador (rev. 121) deixou o time mais forte, mas, mesmo com uma campanha razoável, a força geral caiu bastante. Ele queria uma queda menor, ou quase manter.
 
@@ -31,6 +31,24 @@ Jogo completo (`RelatorioJogoCompletoIT`), 6 países × 1 semente × 10 temporad
 - Nas duas, o campeonato fica menos previsível.
 
 Variante descartada no mesmo estudo, para o caixa da 1ª: **V1**, o clube rico (caixa acima de 30 rodadas da folha e plantel acima de 23) põe a reserva mais cara em leilão. As vendas sobem de 16,5 para 49 por temporada (65 na 10ª), mas o caixa da 1ª fica igual (73), porque a venda dentro da divisão só troca o dinheiro de mãos.
+
+## O caixa da 1ª e o estádio do rico (rev. 127)
+
+Desde a rev. 124, o topo da 2ª ganha os leilões que a 1ª ganhava, e a 1ª quase não compra (compra de −1,5 para 0 rodada da folha por temporada). A máquina só põe jogador em leilão abaixo de 10 rodadas da folha de caixa, então o clube rico nunca vende, e o caixa da 1ª crescia sem parar. A V1 (o rico vende reserva) não resolve, porque a venda dentro da divisão só troca o dinheiro de mãos. Falta um gasto que tire dinheiro do jogo.
+
+**E1 (aprovada):** com 3 limites de caixa sobrando depois de pagar a obra, a máquina amplia o estádio até o máximo, sem parar em 105% da torcida. Simulado sobre a V3, nas mesmas condições:
+
+| | V3 | V3 + E1 |
+|---|---|---|
+| Caixa da 1ª nas temporadas 5 / 7 / 10 (rodadas da folha, mediana) | 30 / 34 / 48 | 27 / 32 / 35 |
+| Caixa da 2ª na temporada 10 | 25 | 21 |
+| Clubes da 2ª negativos na 10ª | 14% | 14% |
+| Estádio médio na 10ª, 1ª / 2ª | 52.900 / 14.900 | 55.900 / 16.500 |
+| Vendas na 10ª temporada | 11 | 15 |
+| Força em campo 1ª / 2ª na 10ª | 42,3 / 26,3 | 42,4 / 26,5 |
+| Campeão entre os 3 mais fortes / repete | 52% / 13% | 52% / 13% |
+
+Depois da 5ª temporada, o caixa da 1ª sobe cerca de 1,6 rodada da folha por temporada (3,5 sem o E1). Continua crescendo, mas devagar. Não há manutenção do estádio, então estádio maior que a torcida não custa nada depois da obra.
 
 ## Um clube só, sem o resto da liga
 

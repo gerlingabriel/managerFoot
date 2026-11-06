@@ -19,10 +19,11 @@ public final class AmpliacaoEstadio {
 
 	/** Folga de caixa da máquina para ampliar quando a torcida cresceu, em limites. */
 	private static final double FOLGA_CRESCEU = 1.5;
-	/** Caixa da máquina "com muito dinheiro", em limites, depois de pagar a obra. */
+	/**
+	 * Caixa da máquina "com muito dinheiro", em limites, depois de pagar a obra: amplia até o máximo, sem
+	 * olhar a torcida (SPEC §9.2, rev. 127), para o clube rico ter onde gastar.
+	 */
 	private static final double MUITO_DINHEIRO = 3;
-	/** Até onde a máquina amplia com muito dinheiro, em fração da torcida. */
-	private static final double TETO_COM_DINHEIRO = 1.05;
 
 	private final ParametrosPublico parametros;
 	private final PublicoDoJogo publico;
@@ -52,8 +53,8 @@ public final class AmpliacaoEstadio {
 
 	/**
 	 * A máquina decide ampliar, sem obra em andamento: quando a torcida dos jogos grandes (líder contra
-	 * o 2º) já passa do estádio com o bloco novo e sobra caixa; ou, com muito dinheiro, até um pouco
-	 * acima da torcida.
+	 * o 2º) já passa do estádio com o bloco novo e sobra caixa; ou, com muito dinheiro, até o máximo
+	 * (rev. 127; antes, até 5% acima da torcida).
 	 */
 	public boolean maquinaAmplia(int capacidade, double forcaEmCampo, long saldo, List<Jogador> plantel) {
 		if (!cabe(capacidade)) {
@@ -65,7 +66,7 @@ public final class AmpliacaoEstadio {
 		double jogoGrande = torcida * (parametros.ocupacaoLider() + parametros.bonusAdversario());
 		boolean cresceu = capacidade + parametros.bloco() <= jogoGrande + parametros.bloco() / 2.0
 				&& depois >= limite * FOLGA_CRESCEU;
-		boolean rico = depois >= limite * MUITO_DINHEIRO && capacidade + parametros.bloco() <= torcida * TETO_COM_DINHEIRO;
+		boolean rico = depois >= limite * MUITO_DINHEIRO;
 		return cresceu || rico;
 	}
 }

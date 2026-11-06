@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 126 — 2026-11-06)
+-   **Status:** versão inicial para revisão (rev. 127 — 2026-11-06)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 127 (2026-11-06):** pelo usuário (§9.2): o clube rico da máquina tem onde gastar. Com 3 limites de caixa sobrando depois da obra, a máquina amplia o estádio **até o máximo** (80.000), não mais só até 105% da torcida. Estudo pedido pelo usuário (`docs/simulacoes/desgaste.md`, seção do estádio): desde a rev. 124 a 1ª quase não compra e o caixa dela crescia sem parar (74 rodadas da folha na 10ª temporada); fazer o rico vender reservas só trocava o dinheiro de mãos. Com a rev. 126 e esta, a 1ª fecha a 10ª temporada com 35 e cresce cerca de 1,6 por temporada; força, clubes negativos e equilíbrio iguais. Não há manutenção do estádio. Vale nos jogos salvos a partir da próxima rodada.
 -   **rev. 126 (2026-11-06):** pelo usuário (§6.1): desgaste menor. Dos que jogaram, perdem 1 ponto **1, 2 ou 3** jogadores (vitória, empate, derrota; eram 1, 3 e 5), e o piso passa a ser a **força do clube − 3** (era − 5). Relato do usuário: o clube da 2ª com campanha razoável perdia muita força; no jogo dele, quase todo o plantel de dois clubes da 2ª estava no piso. Simulado em `docs/simulacoes/desgaste.md` (10 temporadas): as divisões mantêm a força inicial (1ª 42,5 → 42,3; 2ª 26,6 → 26,3; antes 39,0 e 22,7), o caixa da 1ª na 10ª temporada fica em 48 rodadas da folha (era 74), o campeão fica menos previsível (entre os 3 mais fortes 82% → 52%). Vale nos jogos salvos a partir da próxima rodada; quem já está abaixo do novo piso não sobe na hora.
 -   **rev. 125 (2026-11-06):** pelo usuário (§5.2): o asterisco temporário do bônus de artilharia aparece no **plantel** e no **leilão** (★, com a dica "asterisco temporário do bônus de artilharia"), como já aparecia na substituição, e conta em "Asteriscos em campo". Antes ficava escondido nessas telas, mas contava no limite de 3 do motor, e o usuário podia passar do limite sem ver. Correção junto (agente): completar a tática passa a contar esse asterisco no limite. Vale o sorteado na divisão do clube do treinador, como no motor; o bônus extra de quem já tem asterisco continua sem marca.
 -   **rev. 124 (2026-11-06):** pelo usuário (§9.4): no lance da máquina, o acréscimo de até 5% conta a força do clube em relação ao **teto da sua divisão** (até 1), não mais até 50: o topo da 2ª passa a disputar o jogador com a 1ª. Simulado em `docs/simulacoes/compra-da-maquina.md`: o topo da 2ª compra em 6% das rodadas (era 2%), o caixa da 2ª cresce mais devagar (mediana no fim da 5ª temporada 48 → 32 rodadas da folha), o campeão da 1ª repete menos (42% → 21%). O fundo da 2ª segue sem comprar (falta caixa) e fica como está, por decisão do usuário; mais jogadores à venda (reserva de quem tem plantel acima de 23) foi descartado por girar demais o mercado. Vale nos jogos salvos a partir do próximo leilão.
@@ -2518,7 +2519,8 @@ reajustados por nova simulação (`docs/simulacoes/economia-caixa.md`):
       rodadas de obra**, uma obra por vez, até 80.000. A **máquina** amplia
       quando o jogo grande (líder contra o 2º) já passa do estádio com o
       bloco novo e sobram 1,5 limite de caixa; ou, com 3 limites sobrando,
-      até 105% da torcida. Na simulação, a 1ª amplia 0,6 vez por clube na 1ª
+      ~~até 105% da torcida~~ **até o máximo (rev. 127, pelo usuário)**, para o
+      clube rico ter onde gastar. Na simulação (rev. 57), a 1ª amplia 0,6 vez por clube na 1ª
       temporada e 0,1 depois; a 2ª e a 3ª quase nunca.
     - **Jogos já salvos (rev. 57, pelo usuário):** mantêm o estádio que os
       clubes têm; o estádio inicial de 75% vale só para jogos novos.

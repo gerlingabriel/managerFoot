@@ -105,6 +105,8 @@ class PublicoDoJogoTest {
 		assertThat(ampliacao.maquinaAmplia(20_000, 45, ampliacao.custo(), plantel)).isFalse();
 		// já do tamanho da torcida e sem dinheiro sobrando: não amplia
 		assertThat(ampliacao.maquinaAmplia(publico.torcida(45), 45, 2 * ampliacao.custo(), plantel)).isFalse();
+		// com muito dinheiro amplia mesmo acima da torcida, até o máximo (rev. 127)
+		assertThat(ampliacao.maquinaAmplia(75_000, 45, rico, plantel)).isTrue();
 		// no máximo nunca
 		assertThat(ampliacao.maquinaAmplia(80_000, 50, rico, plantel)).isFalse();
 	}
