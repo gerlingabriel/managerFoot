@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 122 — 2026-11-06)
+-   **Status:** versão inicial para revisão (rev. 123 — 2026-11-06)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 123 (2026-11-06):** pelo usuário (§7.2): nova tabela de quem finaliza por formação, com mais meias e defensores e menos atacantes (4-4-2 50/40/10; 4-3-3 60/30/10; 3-5-2 54/41/5; 3-4-3 68/27/5; 4-2-4 75/16/9; 5-4-1 40/45/15; 4-5-1 40/50/10; 3-6-1 38/57/5). O 0,01% do goleiro continua, tirado da defesa (agente).
 -   **rev. 122 (2026-11-06):** pelo usuário (§5.3.1): o usuário que assume no meio da temporada o clube sorteado prejudicado tira a penalização. **Agente:** ela sai de vez (não volta se ele deixar o clube) e a divisão não sorteia outro prejudicado; vale também nos jogos salvos, na próxima rodada.
 -   **rev. 121 (2026-11-06):** pelo usuário (§5.3.2): bônus do treinador usuário, para o jogo na 2ª divisão não ficar sem graça ("estado de flow"). Pela força em campo do clube na hora do sorteio: até 30, 3 jogadores com asterisco temporário e +10 de força em campo; de 31 a 40, 2 com +5; acima de 40, nada. Sorteio extra, fora do da artilharia, no início de cada temporada e quando o usuário assume outro clube. Detalhes escolhidos pelo usuário: força em campo, bônus só em campo (não muda salário, preço nem evolução), goleiro fora. Para testar se fica mais equilibrado.
 
@@ -1400,21 +1401,25 @@ Consequências de ficar com um jogador a menos.
 
 Exemplos iniciais de pesos para seleção do finalizador:
 
-**Definido (rev. 106), pelo usuário — pesos do finalizador** (substituem os
-da rev. 6), configuráveis em `ParametrosMotor`. A coluna Goleiro é do agente:
-o 0,01% sai da defesa, como na tabela anterior (o usuário deu a defesa
-inteira: 6%, 5%, 4%, 4%, 6%, 12%, 8%, 4%).
+**Definido (rev. 123), pelo usuário — pesos do finalizador** (substituem os
+da rev. 106), configuráveis em `ParametrosMotor`. A coluna Goleiro é do agente:
+o 0,01% sai da defesa, como nas tabelas anteriores (o usuário deu a defesa
+inteira: 10%, 10%, 5%, 5%, 9%, 15%, 10%, 5%).
 
 | Formação | Atacante | Meio-campista | Defesa | Goleiro |
 |---|---|---|---|---|
-| 4-4-2 | 58% | 36% | 5,99% | 0,01% |
-| 4-3-3 | 70% | 25% | 4,99% | 0,01% |
-| 3-5-2 | 55% | 41% | 3,99% | 0,01% |
-| 3-4-3 | 68% | 28% | 3,99% | 0,01% |
-| 4-2-4 | 78% | 16% | 5,99% | 0,01% |
-| 5-4-1 | 42% | 46% | 11,99% | 0,01% |
-| 4-5-1 | 42% | 50% | 7,99% | 0,01% |
-| 3-6-1 | 38% | 58% | 3,99% | 0,01% |
+| 4-4-2 | 50% | 40% | 9,99% | 0,01% |
+| 4-3-3 | 60% | 30% | 9,99% | 0,01% |
+| 3-5-2 | 54% | 41% | 4,99% | 0,01% |
+| 3-4-3 | 68% | 27% | 4,99% | 0,01% |
+| 4-2-4 | 75% | 16% | 8,99% | 0,01% |
+| 5-4-1 | 40% | 45% | 14,99% | 0,01% |
+| 4-5-1 | 40% | 50% | 9,99% | 0,01% |
+| 3-6-1 | 38% | 57% | 4,99% | 0,01% |
+
+~~Rev. 106: 4-4-2 58/36/5,99; 4-3-3 70/25/4,99; 3-5-2 55/41/3,99; 3-4-3
+68/28/3,99; 4-2-4 78/16/5,99; 5-4-1 42/46/11,99; 4-5-1 42/50/7,99; 3-6-1
+38/58/3,99 (atacante/meio/defesa, goleiro 0,01).~~
 
 ~~Rev. 6: 4-4-2 64/31/4,99; 4-3-3 75/21/3,99; 3-5-2 58/38/3,99; 3-4-3
 74/23/2,99; 4-2-4 82/14/3,99; 5-4-1 45/47/7,99; 4-5-1 43/51/5,99; 3-6-1
