@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 121 — 2026-11-06)
+-   **Status:** versão inicial para revisão (rev. 122 — 2026-11-06)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 122 (2026-11-06):** pelo usuário (§5.3.1): o usuário que assume no meio da temporada o clube sorteado prejudicado tira a penalização. **Agente:** ela sai de vez (não volta se ele deixar o clube) e a divisão não sorteia outro prejudicado; vale também nos jogos salvos, na próxima rodada.
 -   **rev. 121 (2026-11-06):** pelo usuário (§5.3.2): bônus do treinador usuário, para o jogo na 2ª divisão não ficar sem graça ("estado de flow"). Pela força em campo do clube na hora do sorteio: até 30, 3 jogadores com asterisco temporário e +10 de força em campo; de 31 a 40, 2 com +5; acima de 40, nada. Sorteio extra, fora do da artilharia, no início de cada temporada e quando o usuário assume outro clube. Detalhes escolhidos pelo usuário: força em campo, bônus só em campo (não muda salário, preço nem evolução), goleiro fora. Para testar se fica mais equilibrado.
 
 -   **rev. 120 (2026-11-06):** pelo usuário (§9.3): o rico enriquece mais devagar. O salário dos clubes fortes sobe: força em campo 35–44 **+20%** (era +10%) e 45–50 **+35%** (era +20%). Simulado em `docs/simulacoes/caixa-dos-ricos.md` (base rev. 119): o terço de cima da 1ª fecha a 6ª temporada com 35 rodadas da folha em vez de 58 (ganha cerca de 3 por temporada em vez de 7); o fundo continua estável (1ª 12, 2ª 13); as vendas sobem de 25 para 31 por liga e temporada. Diminuir o público do líder (65%) foi descartado: a ocupação cai em linha reta até o último e o fundo da 1ª voltava a afundar (21% de negativos). Vale para a máquina e para o usuário (a faixa é a da força em campo atual) a partir da próxima rodada.
@@ -916,6 +917,11 @@ torne uma vantagem desproporcional.
 - Cada divisão sorteia também **um prejudicado**, só entre os **clubes da
   máquina** que não foram beneficiados. **Clube de usuário nunca é
   prejudicado.**
+- **Definido (rev. 122), pelo usuário:** se um usuário assume no meio da
+  temporada o clube prejudicado (troca de clube ou demissão), a
+  penalização é retirada. **Agente:** sai de vez, não volta se o usuário
+  deixar o clube, e a divisão fica sem prejudicado até a próxima
+  temporada. O beneficiado não muda.
 - Todo clube de usuário com **força média do plantel inteiro abaixo de 40**
   no início da temporada tem o benefício a temporada inteira, sorteado ou
   não; com 40 ou mais, só se for sorteado. **Agente:** se o clube fraco do

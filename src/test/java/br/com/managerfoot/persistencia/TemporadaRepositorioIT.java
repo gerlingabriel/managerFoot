@@ -172,6 +172,46 @@ class TemporadaRepositorioIT {
 	}
 
 	@Test
+	void usuarioQueAssumeOPrejudicadoTiraAPenalizacaoDeVez() {
+		Temporada iniciada = temporadas.iniciarPrimeiraTemporada(jogo, 2026);
+		long anterior = clubeDoUsuario();
+		long prejudicado = iniciada.divisoes().get(0).sorte().prejudicados().iterator().next().id();
+		long prejudicadoB = iniciada.divisoes().get(1).sorte().prejudicados().iterator().next().id();
+
+		jdbc.sql("UPDATE jogo_treinador SET clube_id = ? WHERE jogo_id = ?").params(prejudicado, jogo).update();
+		temporadas.garantirBonusTreinador(jogo);
+
+		Temporada carregada = temporadas.carregarAtual(jogo);
+		assertThat(carregada.divisoes().get(0).sorte().prejudicados()).isEmpty();
+		assertThat(carregada.divisoes().get(0).sorte().beneficiados()).isEqualTo(iniciada.divisoes().get(0).sorte().beneficiados());
+		assertThat(carregada.divisoes().get(1).sorte().prejudicados()).extracting(Clube::id).containsExactly(prejudicadoB);
+
+		// o usuário sai: a penalização não volta
+		jdbc.sql("UPDATE jogo_treinador SET clube_id = ? WHERE jogo_id = ?").params(anterior, jogo).update();
+		temporadas.garantirBonusTreinador(jogo);
+		assertThat(temporadas.carregarAtual(jogo).divisoes().get(0).sorte().prejudicados()).isEmpty();
+	}
+
+	@Test
+	void usuarioQueAssumeOPrejudicadoDoSorteioAntigoTiraAPenalizacao() {
+		temporadas.iniciarPrimeiraTemporada(jogo, 2026);
+		long temporada = contar("SELECT id FROM jogo_temporada WHERE jogo_id = ?");
+		long serieA = contar("SELECT id FROM jogo_divisao WHERE jogo_id = ? AND prioridade = 1");
+		List<Long> clubesA = jdbc.sql("SELECT id FROM jogo_clube WHERE divisao_id = ? ORDER BY id").param(serieA)
+			.query(Long.class).list();
+		jdbc.sql("DELETE FROM jogo_temporada_beneficiado WHERE temporada_id = ? AND divisao_id = ?").params(temporada, serieA).update();
+		jdbc.sql("INSERT INTO jogo_temporada_divisao (temporada_id, divisao_id, beneficiado_id, prejudicado_id) VALUES (?, ?, ?, ?)")
+			.params(temporada, serieA, clubesA.get(0), clubesA.get(1)).update();
+
+		jdbc.sql("UPDATE jogo_treinador SET clube_id = ? WHERE jogo_id = ?").params(clubesA.get(1), jogo).update();
+		temporadas.garantirBonusTreinador(jogo);
+
+		Temporada carregada = temporadas.carregarAtual(jogo);
+		assertThat(carregada.divisoes().get(0).sorte().prejudicados()).isEmpty();
+		assertThat(carregada.divisoes().get(0).sorte().beneficiados()).extracting(Clube::id).containsExactly(clubesA.get(0));
+	}
+
+	@Test
 	void temporadaComecadaAntesDaRev108UsaOBeneficiadoAntigo() {
 		temporadas.iniciarPrimeiraTemporada(jogo, 2026);
 		long temporada = contar("SELECT id FROM jogo_temporada WHERE jogo_id = ?");

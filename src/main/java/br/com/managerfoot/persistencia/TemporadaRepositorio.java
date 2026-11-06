@@ -109,6 +109,7 @@ public class TemporadaRepositorio {
 	 * temporada atual: no início da temporada, quando o usuário assume outro clube e, nos jogos salvos antes da rev.
 	 * 121, na primeira rodada. Quem já sorteou não sorteia de novo; o clube deixado mantém os seus sorteados.
 	 * Chamar antes de preparar qualquer partida, para a rodada ao vivo e o resultado gravado usarem o mesmo bônus.
+	 * Também tira a penalização do prejudicado que o usuário assumiu (§5.3.1, rev. 122).
 	 */
 	@Transactional
 	public void garantirBonusTreinador(long jogoId) {
@@ -121,6 +122,7 @@ public class TemporadaRepositorio {
 			return;
 		}
 		long temporadaId = atual.get().id();
+		retirarPrejudicadoDeUsuario(jogoId, temporadaId);
 		List<Long> semSorteio = jdbc.sql("""
 				SELECT t.clube_id FROM jogo_treinador t
 				WHERE t.jogo_id = :jogo AND t.clube_id IS NOT NULL
@@ -164,6 +166,28 @@ public class TemporadaRepositorio {
 				jaTem.add(sorteado.jogadorId());
 			}
 		}
+	}
+
+	/**
+	 * Clube de usuário nunca é prejudicado (SPEC §5.3.1, rev. 122): o usuário que assume no meio da temporada um clube
+	 * sorteado prejudicado tira a penalização de vez; ela não volta se ele sair, e a divisão não sorteia outro.
+	 */
+	private void retirarPrejudicadoDeUsuario(long jogoId, long temporadaId) {
+		jdbc.sql("""
+				DELETE FROM jogo_temporada_beneficiado b
+				WHERE b.temporada_id = :temporada AND b.prejudicado
+				  AND b.clube_id IN (SELECT clube_id FROM jogo_treinador WHERE jogo_id = :jogo AND clube_id IS NOT NULL)""")
+			.param("temporada", temporadaId)
+			.param("jogo", jogoId)
+			.update();
+		// temporada começada antes da rev. 108, com o sorteio antigo
+		jdbc.sql("""
+				UPDATE jogo_temporada_divisao d SET prejudicado_id = NULL
+				WHERE d.temporada_id = :temporada
+				  AND d.prejudicado_id IN (SELECT clube_id FROM jogo_treinador WHERE jogo_id = :jogo AND clube_id IS NOT NULL)""")
+			.param("temporada", temporadaId)
+			.param("jogo", jogoId)
+			.update();
 	}
 
 	/** Bônus do treinador da temporada atual (SPEC §5.3.2, rev. 121); vazio sem temporada. */
