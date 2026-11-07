@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.SplittableRandom;
@@ -15,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import br.com.managerfoot.dominio.Clube;
 import br.com.managerfoot.dominio.Escalacao;
 import br.com.managerfoot.dominio.Jogador;
+import br.com.managerfoot.dominio.LimiteEstrangeiros;
 import br.com.managerfoot.dominio.Moral;
 import br.com.managerfoot.motor.JogoDecisivo;
 import br.com.managerfoot.motor.EventoPartida;
@@ -312,7 +314,7 @@ public class RodadaRepositorio {
 		List<ProcessamentoRodada.PartidaDaEtapa> jogosDaEtapa = partidasDaEtapa(continental, etapa);
 		Map<Long, List<Jogador>> planteis = comEstrangeiros(doPais, jogosDaEtapa);
 		RodadaAoVivo aoVivo = processamento.prepararContinental(temporada, indice, jogosDaEtapa, planteis, antes,
-				escalacoesDosTreinadores(jogoId, "a continental", doPais, antes, jogosDe(jogosDaEtapa)), substituicoes);
+				escalacoesDosTreinadores(jogoId, "a continental", doPais, antes, jogosDe(jogosDaEtapa), Optional.empty()), substituicoes);
 		ProcessamentoRodada.Resultado resultado = aoVivo.finalizar(moralAntes);
 
 		Copa mataMata = continental.mataMata().orElse(null);
@@ -387,7 +389,7 @@ public class RodadaRepositorio {
 		List<ProcessamentoRodada.PartidaDaEtapa> jogosDaEtapa = partidasDaEtapa(
 				continentais.carregar(jogoId, linha.id()).orElseThrow(), etapa);
 		return processamento.prepararContinental(temporadas.carregarAtual(jogoId), indice, jogosDaEtapa,
-				comEstrangeiros(doPais, jogosDaEtapa), antes, escalacoesDosTreinadores(jogoId, "a continental", doPais, antes, jogosDe(jogosDaEtapa)),
+				comEstrangeiros(doPais, jogosDaEtapa), antes, escalacoesDosTreinadores(jogoId, "a continental", doPais, antes, jogosDe(jogosDaEtapa), Optional.empty()),
 				substituicoes);
 	}
 
@@ -415,7 +417,7 @@ public class RodadaRepositorio {
 		List<ProcessamentoRodada.PartidaDaEtapa> jogosDaEtapa = partidasDoMundial(confrontos, rodada);
 		Map<Long, List<Jogador>> planteis = comEstrangeiros(doPais, jogosDaEtapa);
 		RodadaAoVivo aoVivo = processamento.prepararMundial(temporada, indice, jogosDaEtapa, planteis, antes,
-				escalacoesDosTreinadores(jogoId, "o Mundial", doPais, antes, jogosDe(jogosDaEtapa)), substituicoes);
+				escalacoesDosTreinadores(jogoId, "o Mundial", doPais, antes, jogosDe(jogosDaEtapa), Optional.empty()), substituicoes);
 		ProcessamentoRodada.Resultado resultado = aoVivo.finalizar(moralAntes);
 		for (int i = 0; i < confrontos.size(); i++) {
 			ProcessamentoRodada.PartidaJogada jogada = resultado.partidas().get(i);
@@ -468,7 +470,7 @@ public class RodadaRepositorio {
 		List<ProcessamentoRodada.PartidaDaEtapa> jogosDaEtapa = partidasDoMundial(
 				mundiais.carregar(jogoId, linha.id()).orElseThrow().confrontos(fase), mundiais.rodada(linha.id(), indice));
 		return processamento.prepararMundial(temporadas.carregarAtual(jogoId), indice, jogosDaEtapa, comEstrangeiros(doPais, jogosDaEtapa),
-				antes, escalacoesDosTreinadores(jogoId, "o Mundial", doPais, antes, jogosDe(jogosDaEtapa)), substituicoes);
+				antes, escalacoesDosTreinadores(jogoId, "o Mundial", doPais, antes, jogosDe(jogosDaEtapa), Optional.empty()), substituicoes);
 	}
 
 	/** Os jogos da etapa do Mundial, para o plantel mostrar o próximo. */
@@ -619,9 +621,11 @@ public class RodadaRepositorio {
 
 	private RodadaAoVivo preparar(Temporada temporada, int rodada, long jogoId, Map<Long, List<Jogador>> planteis, Disciplina antes,
 			List<RodadaAoVivo.Substituicao> substituicoes) {
+		Optional<LimiteEstrangeiros> estrangeiros = Optional.of(jogos.limiteEstrangeiros(jogoId));
 		return processamento.preparar(temporada, rodada, planteis, antes,
 				escalacoesDosTreinadores(jogoId, "a rodada " + rodada, planteis, antes,
-						temporada.divisoes().stream().flatMap(d -> d.calendario().jogos().stream()).filter(j -> j.rodada() == rodada).toList()), substituicoes);
+						temporada.divisoes().stream().flatMap(d -> d.calendario().jogos().stream()).filter(j -> j.rodada() == rodada).toList(),
+						estrangeiros), substituicoes, estrangeiros);
 	}
 
 	/**
@@ -643,9 +647,10 @@ public class RodadaRepositorio {
 
 	private RodadaAoVivo prepararCopa(Temporada temporada, int indice, List<Copa.PartidaCopa> jogosDaEtapa, long jogoId,
 			Map<Long, List<Jogador>> planteis, Disciplina antes, List<RodadaAoVivo.Substituicao> substituicoes) {
+		Optional<LimiteEstrangeiros> estrangeiros = Optional.of(jogos.limiteEstrangeiros(jogoId));
 		return processamento.prepararCopa(temporada, indice, jogosDaEtapa, planteis, antes,
 				escalacoesDosTreinadores(jogoId, "a copa", planteis, antes,
-						jogosDaEtapa.stream().map(Copa.PartidaCopa::jogo).toList()), substituicoes);
+						jogosDaEtapa.stream().map(Copa.PartidaCopa::jogo).toList(), estrangeiros), substituicoes, estrangeiros);
 	}
 
 	private static List<Jogo> jogosDe(List<ProcessamentoRodada.PartidaDaEtapa> partidas) {
@@ -655,9 +660,11 @@ public class RodadaRepositorio {
 	/**
 	 * A escalação gravada de cada treinador que joga a etapa, sem suspensos e lesionados. Quem não joga
 	 * fica de fora: a escalação dele, mesmo incompleta, não impede a etapa dos outros.
+	 *
+	 * @param estrangeiros limite de estrangeiros em campo (SPEC §8.4, rev. 130); vazio na continental e no Mundial
 	 */
 	private Map<Long, Escalacao> escalacoesDosTreinadores(long jogoId, String oQue, Map<Long, List<Jogador>> planteis,
-			Disciplina antes, List<Jogo> jogosDaEtapa) {
+			Disciplina antes, List<Jogo> jogosDaEtapa, Optional<LimiteEstrangeiros> estrangeiros) {
 		Set<Long> jogam = new HashSet<>();
 		jogosDaEtapa.forEach(j -> {
 			jogam.add(j.mandante().id());
@@ -670,7 +677,7 @@ public class RodadaRepositorio {
 			}
 			try {
 				doTreinador.put(clubeId, escalacao.escalacao(planteis.getOrDefault(clubeId, List.of()), antes::suspenso,
-						antes::lesionado, ParametrosMotor.padrao().penalti().fatorGoleiroImprovisado()));
+						antes::lesionado, estrangeiros, ParametrosMotor.padrao().penalti().fatorGoleiroImprovisado()));
 			}
 			catch (IllegalStateException e) {
 				throw new IllegalStateException("o clube " + clubeId + " não pode jogar " + oQue + ": " + e.getMessage(), e);

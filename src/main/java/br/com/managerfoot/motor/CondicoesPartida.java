@@ -5,6 +5,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
+import br.com.managerfoot.dominio.LimiteEstrangeiros;
 import br.com.managerfoot.dominio.Sorte;
 
 /**
@@ -18,9 +19,11 @@ import br.com.managerfoot.dominio.Sorte;
  *        ausente tem o limite da temporada inteiro
  * @param decisivo se a partida precisa de vencedor, com prorrogação e pênaltis (SPEC §8.2)
  * @param copa partida da copa nacional, com a zebra do mais fraco (SPEC §8.2, rev. 117); vazia nas demais
+ * @param estrangeiros limite de estrangeiros em campo da liga e da copa nacional (SPEC §8.4, rev. 130); vazio
+ *        sem limite, como na continental e no Mundial
  */
 public record CondicoesPartida(Map<Lado, Sorte> sorte, Set<Long> bonusExtra, Map<Lado, Integer> lesoesPermitidas,
-		Optional<JogoDecisivo> decisivo, Optional<CopaNacional> copa) {
+		Optional<JogoDecisivo> decisivo, Optional<CopaNacional> copa, Optional<LimiteEstrangeiros> estrangeiros) {
 
 	public static final CondicoesPartida NEUTRAS = new CondicoesPartida(Map.of(), Set.of());
 
@@ -30,6 +33,12 @@ public record CondicoesPartida(Map<Lado, Sorte> sorte, Set<Long> bonusExtra, Map
 		lesoesPermitidas = Map.copyOf(Objects.requireNonNull(lesoesPermitidas));
 		Objects.requireNonNull(decisivo);
 		Objects.requireNonNull(copa);
+		Objects.requireNonNull(estrangeiros);
+	}
+
+	public CondicoesPartida(Map<Lado, Sorte> sorte, Set<Long> bonusExtra, Map<Lado, Integer> lesoesPermitidas,
+			Optional<JogoDecisivo> decisivo, Optional<CopaNacional> copa) {
+		this(sorte, bonusExtra, lesoesPermitidas, decisivo, copa, Optional.empty());
 	}
 
 	public CondicoesPartida(Map<Lado, Sorte> sorte, Set<Long> bonusExtra, Map<Lado, Integer> lesoesPermitidas,
@@ -51,12 +60,17 @@ public record CondicoesPartida(Map<Lado, Sorte> sorte, Set<Long> bonusExtra, Map
 
 	/** As mesmas condições numa partida que precisa de vencedor. */
 	public CondicoesPartida comDecisivo(JogoDecisivo jogo) {
-		return new CondicoesPartida(sorte, bonusExtra, lesoesPermitidas, Optional.of(jogo), copa);
+		return new CondicoesPartida(sorte, bonusExtra, lesoesPermitidas, Optional.of(jogo), copa, estrangeiros);
 	}
 
 	/** As mesmas condições numa partida da copa nacional. */
 	public CondicoesPartida comCopa(CopaNacional copaNacional) {
-		return new CondicoesPartida(sorte, bonusExtra, lesoesPermitidas, decisivo, Optional.of(copaNacional));
+		return new CondicoesPartida(sorte, bonusExtra, lesoesPermitidas, decisivo, Optional.of(copaNacional), estrangeiros);
+	}
+
+	/** As mesmas condições com o limite de estrangeiros em campo; vazio é sem limite. */
+	public CondicoesPartida comEstrangeiros(Optional<LimiteEstrangeiros> limite) {
+		return new CondicoesPartida(sorte, bonusExtra, lesoesPermitidas, decisivo, copa, limite);
 	}
 
 	int lesoesPermitidas(Lado lado, int limiteDaTemporada) {

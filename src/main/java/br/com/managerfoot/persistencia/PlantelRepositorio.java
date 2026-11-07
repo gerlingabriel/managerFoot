@@ -17,6 +17,7 @@ import br.com.managerfoot.dominio.Clube;
 import br.com.managerfoot.dominio.EscalacaoDoTreinador;
 import br.com.managerfoot.dominio.Formacao;
 import br.com.managerfoot.dominio.Jogador;
+import br.com.managerfoot.dominio.LimiteEstrangeiros;
 import br.com.managerfoot.dominio.RegraEstrangeiros;
 import br.com.managerfoot.dominio.Lugar;
 import br.com.managerfoot.dominio.Moral;
@@ -98,7 +99,8 @@ public class PlantelRepositorio {
 		}).toList();
 		LongPredicate suspenso = id -> situacoes.getOrDefault(id, Situacao.NENHUMA).suspensao() > 0;
 		LongPredicate lesionado = id -> situacoes.getOrDefault(id, Situacao.NENHUMA).lesao() > 0;
-		List<String> problemas = escalacao.problemas(plantel, suspenso, lesionado);
+		Optional<LimiteEstrangeiros> estrangeiros = limiteDoProximo(jogoId);
+		List<String> problemas = escalacao.problemas(plantel, suspenso, lesionado, estrangeiros);
 		String goleiroImprovisado = escalacao.goleiroImprovisado(plantel, suspenso.or(lesionado)).map(Jogador::nome)
 			.orElse(null);
 
@@ -174,7 +176,19 @@ public class PlantelRepositorio {
 				adversario == null || !(continental || mundial) ? null : continentais.paisesDeFora(jogoId).get(adversario.id()), escalacao,
 				linhas, problemas, goleiroImprovisado, caixas.saldo(clube, plantel), caixas.moeda(jogoId),
 				forcaMediaDoPlantel(clube).orElse(null),
-				adversario == null ? null : forcaMediaDoPlantel(adversario.id()).orElse(null)));
+				adversario == null ? null : forcaMediaDoPlantel(adversario.id()).orElse(null),
+				estrangeiros.map(LimiteEstrangeiros::limite).orElse(null)));
+	}
+
+	/**
+	 * O limite de estrangeiros em campo do próximo jogo (SPEC §8.4, rev. 130): o do país na liga e na copa
+	 * nacional; vazio na continental e no Mundial, que não têm limite.
+	 */
+	private Optional<LimiteEstrangeiros> limiteDoProximo(long jogoId) {
+		RodadaRepositorio.Proximo seguinte = rodadas.proximo(jogoId);
+		return seguinte instanceof RodadaRepositorio.Proximo.EtapaContinental
+				|| seguinte instanceof RodadaRepositorio.Proximo.EtapaMundial ? Optional.empty()
+						: Optional.of(jogos.limiteEstrangeiros(jogoId));
 	}
 
 	/** Força média do plantel inteiro do clube, com lesionados e suspensos; vazio sem jogadores. */
@@ -210,7 +224,7 @@ public class PlantelRepositorio {
 		alterar(jogoId, usuarioId, e -> e.com(formacao).completada(plantel,
 				id -> !situacoes.getOrDefault(id, Situacao.NENHUMA).disponivel(),
 				ParametrosMotor.padrao().asterisco().limiteSemPenalidade(),
-				id -> situacoes.getOrDefault(id, Situacao.NENHUMA).gols()), null, null);
+				id -> situacoes.getOrDefault(id, Situacao.NENHUMA).gols(), limiteDoProximo(jogoId)), null, null);
 	}
 
 	/** Tira todos os jogadores do time e do banco, para a tática escalar de novo (SPEC §10.3, rev. 86). */
@@ -275,10 +289,14 @@ public class PlantelRepositorio {
 		return escalacoes.carregar(clube).orElseGet(() -> {
 			EscalacaoDoTreinador daMaquina = EscalacaoDoTreinador.de(new EscalacaoMaquina(ParametrosMotor.padrao())
 				.escalar(plantel.stream().filter(j -> situacoes(clube).getOrDefault(j.id(), Situacao.NENHUMA)
-					.disponivel()).toList()));
+					.disponivel()).toList(), Optional.of(jogos.limiteEstrangeiros(jogoDoClube(clube)))));
 			escalacoes.gravar(clube, daMaquina);
 			return daMaquina;
 		});
+	}
+
+	private long jogoDoClube(long clube) {
+		return jdbc.sql("SELECT jogo_id FROM jogo_clube WHERE id = :clube").param("clube", clube).query(Long.class).single();
 	}
 
 	/** Gols na temporada atual, amarelos, suspensão e lesão de cada jogador do clube. */
@@ -364,12 +382,15 @@ public class PlantelRepositorio {
 	 * @param saldo caixa do clube em centavos de Real, para saber se pode contratar (rev. 39)
 	 * @param forcaMedia força média do plantel inteiro do clube; nulo sem jogadores
 	 * @param forcaMediaAdversario a do adversário do próximo jogo; nulo sem próximo jogo
+	 * @param limiteEstrangeiros limite de estrangeiros em campo do próximo jogo (SPEC §8.4, rev. 130); nulo na
+	 *        continental e no Mundial
 	 */
 	public record VisaoPlantel(long jogoId, int temporada, int ano, Clube clube, String divisao, int posicao, int pontos, int jogos,
 			int moral, int moralMaxima, Moral.Faixa faixaMoral, int rodada, boolean temporadaEncerrada, String etapaCopa,
 			Integer indiceCopa, String detalheCopa, boolean finalCopa, boolean continental, boolean mundial, Boolean emCasa,
 			Clube adversario, String paisAdversario, EscalacaoDoTreinador escalacao, List<LinhaJogador> jogadores, List<String> problemas,
-			String goleiroImprovisado, long saldo, Moeda moeda, Double forcaMedia, Double forcaMediaAdversario) {
+			String goleiroImprovisado, long saldo, Moeda moeda, Double forcaMedia, Double forcaMediaAdversario,
+			Integer limiteEstrangeiros) {
 
 		/** Só o clube que joga a próxima etapa precisa da escalação completa para seguir. */
 		public boolean escalacaoPendente() {

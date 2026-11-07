@@ -102,7 +102,11 @@
 <h2 id="t-resumo" class="titulo-secao pequeno">Resumo</h2>
 <dl class="resumo">
 <div><dt>Força média dos titulares</dt><dd th:text="${forcaMedia}">0</dd></div>
-<div><dt>Estrangeiros em campo</dt><dd th:text="${estrangeirosEmCampo}">0</dd></div>
+<div><dt>Estrangeiros em campo</dt><dd th:if="${v.limiteEstrangeiros != null}" th:text="|${estrangeirosEmCampo} de ${v.limiteEstrangeiros}|"
+	th:classappend="${estrangeirosEmCampo > v.limiteEstrangeiros} ? 'acima-do-limite'"
+	th:title="${estrangeirosEmCampo > v.limiteEstrangeiros} ? 'Acima do limite: tire um estrangeiro do time para jogar'">0 de 5</dd>
+<dd th:if="${v.limiteEstrangeiros == null}" th:text="|${estrangeirosEmCampo} · sem limite|"
+	title="Sem limite de estrangeiros na continental e no Mundial">0 · sem limite</dd></div>
 <div><dt>Asteriscos em campo</dt><dd th:text="|${asteriscosEmCampo} de ${limiteAsteriscos}|"
 	th:classappend="${asteriscosEmCampo > limiteAsteriscos} ? 'acima-do-limite'"
 	th:title="${asteriscosEmCampo > limiteAsteriscos} ? 'Acima do limite: cada asterisco a mais tira domínio do time'">0 de 3</dd></div>

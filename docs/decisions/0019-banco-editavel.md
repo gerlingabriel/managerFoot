@@ -30,3 +30,9 @@
 - A criação do jogo é a mesma para o banco padrão e para o arquivo; uma regra nova da criação vale para os dois.
 - Criar um jogo de um arquivo grande grava e apaga alguns milhares de jogadores numa transação: leva alguns segundos.
 - O banco com nomes reais que o usuário pediu fica fora do repositório, que é público.
+
+## Adendo (2026-11-07, SPEC rev. 130): limite de estrangeiros por país
+
+- Cada país do arquivo ganhou o campo opcional `limiteEstrangeiros` (0 a 11). Sem ele vale 5, e por isso o formato
+  continua 1: os arquivos antigos são lidos como antes. O valor vai para `molde_pais.limite_estrangeiros` e, na criação,
+  para `jogo.limite_estrangeiros` (V49); o jogo não muda se o banco mudar depois.

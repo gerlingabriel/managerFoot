@@ -308,7 +308,8 @@ public class TrocaRepositorio {
 			List<Jogador> disponiveis = planteis.getOrDefault(clube, List.of()).stream()
 				.filter(j -> !suspensos.contains(j.id())).toList();
 			if (disponiveis.size() >= Escalacao.MINIMO_TITULARES) {
-				escalacoes.gravar(clube, EscalacaoDoTreinador.de(escalacaoMaquina.escalar(disponiveis)));
+				escalacoes.gravar(clube, EscalacaoDoTreinador.de(escalacaoMaquina.escalar(disponiveis,
+						Optional.of(jogos.limiteEstrangeiros(jogoId)))));
 			}
 		}
 		// salário gravado no clube novo do usuário e solto no antigo (rev. 58, como AumentoRepositorio.fixarSalarios)

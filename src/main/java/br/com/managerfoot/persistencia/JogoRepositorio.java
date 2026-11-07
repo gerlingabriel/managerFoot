@@ -25,6 +25,7 @@ import br.com.managerfoot.dominio.Clube;
 import br.com.managerfoot.dominio.Escalacao;
 import br.com.managerfoot.dominio.EscalacaoDoTreinador;
 import br.com.managerfoot.dominio.Jogador;
+import br.com.managerfoot.dominio.LimiteEstrangeiros;
 import br.com.managerfoot.motor.EscalacaoMaquina;
 import br.com.managerfoot.motor.ParametrosMotor;
 import br.com.managerfoot.temporada.ClubeInicial;
@@ -151,10 +152,11 @@ public class JogoRepositorio {
 		ConfiguracaoLiga liga = distribuir(paisMoldeId, semente);
 
 		long jogoId = TabelasLiga.inserir(jdbc, """
-				INSERT INTO jogo (molde_id, pais_codigo, nome_liga, dono_id, semente_criacao, ano_inicial)
-				VALUES (:molde, :codigo, :nome, :dono, :semente, :ano)""",
+				INSERT INTO jogo (molde_id, pais_codigo, nome_liga, dono_id, semente_criacao, ano_inicial, limite_estrangeiros)
+				VALUES (:molde, :codigo, :nome, :dono, :semente, :ano,
+				        (SELECT limite_estrangeiros FROM molde_pais WHERE id = :pais))""",
 				Map.of("molde", pais.moldeId(), "codigo", pais.codigo(), "nome", liga.nome(), "dono", donoId, "semente",
-						semente, "ano", anoInicial));
+						semente, "ano", anoInicial, "pais", paisMoldeId));
 		ConfiguracaoLiga copia = TabelasLiga.JOGO.gravar(jdbc, jogoId, liga);
 		List<Clube> origens = clubes(liga);
 		List<Clube> destinos = clubes(copia);
@@ -301,7 +303,8 @@ public class JogoRepositorio {
 		List<Jogador> plantel = TabelasLiga.JOGO.carregarPlantel(jdbc, clubeId);
 		// elenco abaixo de 11 ainda está em aberto (SPEC §9.3): sem escalação gravada, como os da máquina
 		if (plantel.size() >= Escalacao.MINIMO_TITULARES) {
-			escalacoes.gravar(clubeId, EscalacaoDoTreinador.de(escalacaoMaquina.escalar(plantel)));
+			escalacoes.gravar(clubeId, EscalacaoDoTreinador.de(escalacaoMaquina.escalar(plantel,
+					Optional.of(limiteEstrangeiros(jogoId)))));
 		}
 	}
 
@@ -339,6 +342,17 @@ public class JogoRepositorio {
 			planteis.put(clube.id(), TabelasLiga.JOGO.carregarPlantel(jdbc, clube.id()));
 		}
 		return planteis;
+	}
+
+	/**
+	 * O limite de estrangeiros em campo da liga e da copa nacional do jogo (SPEC §8.4, rev. 130), copiado do
+	 * banco na criação.
+	 */
+	public LimiteEstrangeiros limiteEstrangeiros(long jogoId) {
+		return jdbc.sql("SELECT pais_codigo, limite_estrangeiros FROM jogo WHERE id = :jogo")
+			.param("jogo", jogoId)
+			.query((rs, n) -> new LimiteEstrangeiros(rs.getString("pais_codigo"), rs.getInt("limite_estrangeiros")))
+			.single();
 	}
 
 	/** Plantel de um clube do jogo, inclusive estrangeiro, em ordem de id. */

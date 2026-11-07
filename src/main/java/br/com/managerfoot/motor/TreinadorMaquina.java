@@ -5,11 +5,13 @@ import java.util.List;
 import java.util.Optional;
 
 import br.com.managerfoot.dominio.Jogador;
+import br.com.managerfoot.dominio.LimiteEstrangeiros;
 import br.com.managerfoot.dominio.Posicao;
 
 /**
  * Decisões do treinador controlado pela máquina durante a partida: reage ao goleiro expulso
- * (SPEC §7.4.1) e substitui o lesionado (SPEC §7.5).
+ * (SPEC §7.4.1) e substitui o lesionado (SPEC §7.5). Não põe em campo estrangeiro além do limite (SPEC §8.4,
+ * rev. 130).
  */
 final class TreinadorMaquina {
 
@@ -24,7 +26,7 @@ final class TreinadorMaquina {
 	 * Com goleiro improvisado, põe o goleiro reserva no lugar do atacante mais fraco; sem atacantes,
 	 * do meia mais fraco (regra provisória). Vazio se não houver goleiro no banco ou substituições.
 	 */
-	static Optional<Troca> aposGoleiroExpulso(TimeEmCampo time) {
+	static Optional<Troca> aposGoleiroExpulso(TimeEmCampo time, Optional<LimiteEstrangeiros> estrangeiros) {
 		if (!time.goleiroImprovisado() || time.substituicoesRestantes() <= 0) {
 			return Optional.empty();
 		}
@@ -34,9 +36,10 @@ final class TreinadorMaquina {
 		if (goleiroReserva.isEmpty()) {
 			return Optional.empty();
 		}
-		return maisFraco(time.jogadoresNa(Posicao.ATACANTE))
+		Optional<Troca> troca = maisFraco(time.jogadoresNa(Posicao.ATACANTE))
 			.or(() -> maisFraco(time.jogadoresNa(Posicao.MEIO_CAMPISTA)))
 			.map(sai -> new Troca(sai, goleiroReserva.get()));
+		return troca.filter(t -> permitida(time, t.sai(), t.entra(), estrangeiros));
 	}
 
 	/**
@@ -45,13 +48,15 @@ final class TreinadorMaquina {
 	 * mantenha uma formação permitida. Vazio sem substituições ou sem reserva que sirva: o time fica
 	 * com um a menos.
 	 */
-	static Optional<Troca> aposLesao(TimeEmCampo time, Jogador lesionado) {
+	static Optional<Troca> aposLesao(TimeEmCampo time, Jogador lesionado, Optional<LimiteEstrangeiros> estrangeiros) {
 		if (time.substituicoesRestantes() <= 0) {
 			return Optional.empty();
 		}
 		Comparator<Jogador> maisForte = Comparator.comparingInt(Jogador::forca).reversed()
 			.thenComparingLong(Jogador::id);
-		List<Jogador> banco = time.reservasDisponiveis().stream().sorted(maisForte).toList();
+		List<Jogador> banco = time.reservasDisponiveis().stream().sorted(maisForte)
+			.filter(j -> permitida(time, lesionado, j, estrangeiros))
+			.toList();
 		if (lesionado == time.goleiro()) {
 			return banco.stream()
 				.filter(j -> j.posicao() == Posicao.GOLEIRO)
@@ -63,6 +68,10 @@ final class TreinadorMaquina {
 			.findFirst()
 			.or(() -> banco.stream().filter(j -> time.trocaDeLinhaPermitida(lesionado, j)).findFirst())
 			.map(entra -> new Troca(lesionado, entra));
+	}
+
+	private static boolean permitida(TimeEmCampo time, Jogador sai, Jogador entra, Optional<LimiteEstrangeiros> estrangeiros) {
+		return estrangeiros.map(l -> !l.trocaExcede(time.emCampo(), sai, entra)).orElse(true);
 	}
 
 	private static Optional<Jogador> maisFraco(List<Jogador> jogadores) {

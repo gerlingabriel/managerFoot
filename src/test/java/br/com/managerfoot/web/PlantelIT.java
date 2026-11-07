@@ -153,6 +153,26 @@ class PlantelIT {
 	}
 
 	@Test
+	void estrangeirosAlemDoLimiteFicamEmVermelhoETravamOJogo() throws Exception {
+		java.util.List<Long> titulares = java.util.List.copyOf(escalacoes.carregar(clube).orElseThrow().titulares());
+		String pais = jdbc.sql("SELECT pais_codigo FROM jogo WHERE id = :j").param("j", jogoId).query(String.class).single();
+		jdbc.sql("UPDATE jogo_jogador SET nacionalidade = :p WHERE clube_id = :c").param("p", pais).param("c", clube).update();
+		jdbc.sql("UPDATE jogo_jogador SET nacionalidade = 'URU' WHERE id IN (:ids)").param("ids", titulares.subList(0, 2)).update();
+		jdbc.sql("UPDATE jogo SET limite_estrangeiros = 2 WHERE id = :j").param("j", jogoId).update();
+		mvc.perform(get(plantel).with(como(treinador)))
+			.andExpect(content().string(containsString(">2 de 2</dd>")))
+			.andExpect(content().string(containsString("Escalação válida")));
+
+		jdbc.sql("UPDATE jogo SET limite_estrangeiros = 1 WHERE id = :j").param("j", jogoId).update();
+		mvc.perform(get(plantel).with(como(treinador)))
+			.andExpect(content().string(containsString(">2 de 1</dd>")))
+			.andExpect(content().string(containsString("2 estrangeiros em campo: o limite é 1")))
+			.andExpect(content().string(containsString("Complete a escalação para jogar.")));
+		mvc.perform(post(plantel.replace("/plantel", "/rodada")).param("rodada", "1").with(como(treinador)).with(csrf()))
+			.andExpect(flash().attribute("erro", "Complete a escalação antes de jogar a rodada."));
+	}
+
+	@Test
 	void tirarUmTitularDeixaAEscalacaoIncompletaEVoltarConserta() throws Exception {
 		EscalacaoDoTreinador antes = escalacoes.carregar(clube).orElseThrow();
 		long titular = antes.titulares().iterator().next();

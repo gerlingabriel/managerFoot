@@ -14,6 +14,7 @@ import java.util.SplittableRandom;
 import br.com.managerfoot.dominio.Clube;
 import br.com.managerfoot.dominio.Escalacao;
 import br.com.managerfoot.dominio.Jogador;
+import br.com.managerfoot.dominio.LimiteEstrangeiros;
 import br.com.managerfoot.dominio.Moral;
 import br.com.managerfoot.dominio.ParametrosMoral;
 import br.com.managerfoot.dominio.Sorte;
@@ -117,7 +118,7 @@ public final class ProcessamentoRodada {
 	 */
 	public Resultado jogar(Temporada temporada, int rodada, Map<Long, List<Jogador>> planteis, Disciplina disciplina,
 			Map<Long, Moral> moral, Map<Long, Escalacao> escalacoes) {
-		return preparar(temporada, rodada, planteis, disciplina, escalacoes, List.of()).finalizar(moral);
+		return preparar(temporada, rodada, planteis, disciplina, escalacoes, List.of(), Optional.empty()).finalizar(moral);
 	}
 
 	/**
@@ -126,11 +127,19 @@ public final class ProcessamentoRodada {
 	 * substituição numa partida não mudar as outras.
 	 *
 	 * @param substituicoes as já feitas pelos treinadores nesta rodada
+	 * @param estrangeiros limite de estrangeiros em campo da liga (SPEC §8.4, rev. 130); vazio sem limite
 	 * @throws IllegalArgumentException se nenhuma divisão tem a rodada
 	 * @throws IllegalStateException se uma escalação tem jogador suspenso ou um clube não tem o mínimo para começar
 	 */
 	public RodadaAoVivo preparar(Temporada temporada, int rodada, Map<Long, List<Jogador>> planteis,
 			Disciplina disciplina, Map<Long, Escalacao> escalacoes, List<RodadaAoVivo.Substituicao> substituicoes) {
+		return preparar(temporada, rodada, planteis, disciplina, escalacoes, substituicoes, Optional.empty());
+	}
+
+	/** Como {@link #preparar(Temporada, int, Map, Disciplina, Map, List)}, com o limite de estrangeiros. */
+	public RodadaAoVivo preparar(Temporada temporada, int rodada, Map<Long, List<Jogador>> planteis,
+			Disciplina disciplina, Map<Long, Escalacao> escalacoes, List<RodadaAoVivo.Substituicao> substituicoes,
+			Optional<LimiteEstrangeiros> estrangeiros) {
 		SplittableRandom aleatorio = new SplittableRandom(temporada.semente() ^ (rodada * MISTURA_RODADA));
 		List<RodadaAoVivo.PartidaDaRodada> partidas = new ArrayList<>();
 		List<Temporada.SorteiosDivisao> ordem = temporada.divisoes()
@@ -152,7 +161,8 @@ public final class ProcessamentoRodada {
 								divisao.sorte().de(jogo.visitante())),
 						extras,
 						Map.of(Lado.CASA, lesoesPermitidas(disciplina, jogo.mandante()), Lado.FORA,
-								lesoesPermitidas(disciplina, jogo.visitante())));
+								lesoesPermitidas(disciplina, jogo.visitante())))
+					.comEstrangeiros(estrangeiros);
 				Set<Lado> doUsuario = EnumSet.noneOf(Lado.class);
 				if (escalacoes.containsKey(jogo.mandante().id())) {
 					doUsuario.add(Lado.CASA);
@@ -161,8 +171,10 @@ public final class ProcessamentoRodada {
 					doUsuario.add(Lado.FORA);
 				}
 				partidas.add(new RodadaAoVivo.PartidaDaRodada(divisao.prioridade(), jogo, aleatorio.nextLong(),
-						escalar(jogo.mandante(), divisao.bonus(), temporada.bonusTreinador(), planteis, disciplina, escalacoes),
-						escalar(jogo.visitante(), divisao.bonus(), temporada.bonusTreinador(), planteis, disciplina, escalacoes),
+						escalar(jogo.mandante(), divisao.bonus(), temporada.bonusTreinador(), planteis, disciplina, escalacoes,
+								estrangeiros),
+						escalar(jogo.visitante(), divisao.bonus(), temporada.bonusTreinador(), planteis, disciplina, escalacoes,
+								estrangeiros),
 						doUsuario, condicoes));
 			}
 		}
@@ -179,18 +191,19 @@ public final class ProcessamentoRodada {
 	 * de vencedor. A semente vem da temporada e do índice da etapa no quadro.
 	 *
 	 * @param indice posição da etapa em {@link Copa#quadro}
+	 * @param estrangeiros limite de estrangeiros em campo do país (SPEC §8.4, rev. 130); vazio sem limite
 	 * @throws IllegalArgumentException se a etapa não tem partidas
 	 */
 	public RodadaAoVivo prepararCopa(Temporada temporada, int indice, List<Copa.PartidaCopa> jogos,
 			Map<Long, List<Jogador>> planteis, Disciplina disciplina, Map<Long, Escalacao> escalacoes,
-			List<RodadaAoVivo.Substituicao> substituicoes) {
+			List<RodadaAoVivo.Substituicao> substituicoes, Optional<LimiteEstrangeiros> estrangeiros) {
 		if (jogos.isEmpty()) {
 			throw new IllegalArgumentException("a etapa " + indice + " da copa não tem partidas");
 		}
 		return prepararEtapa(temporada, new SplittableRandom(temporada.semente() ^ ((indice + 1) * MISTURA_ETAPA_COPA)),
 				jogos.stream().map(p -> new PartidaDaEtapa(p.jogo(), p.decisivo(), Optional.of(new CopaNacional(
 						p.confronto().fase() == FaseCopa.DEZESSEIS_AVOS || p.confronto().fase() == FaseCopa.OITAVAS))))
-					.toList(), planteis, disciplina, escalacoes, substituicoes);
+					.toList(), planteis, disciplina, escalacoes, substituicoes, estrangeiros);
 	}
 
 	/**
@@ -208,7 +221,7 @@ public final class ProcessamentoRodada {
 		}
 		return prepararEtapa(temporada,
 				new SplittableRandom(temporada.semente() ^ ((indice + 1) * MISTURA_ETAPA_CONTINENTAL)), jogos, planteis,
-				disciplina, escalacoes, substituicoes);
+				disciplina, escalacoes, substituicoes, Optional.empty());
 	}
 
 	/**
@@ -223,12 +236,12 @@ public final class ProcessamentoRodada {
 			throw new IllegalArgumentException("a etapa " + indice + " do Mundial não tem partidas");
 		}
 		return prepararEtapa(temporada, new SplittableRandom(temporada.semente() ^ ((indice + 1) * MISTURA_ETAPA_MUNDIAL)), jogos,
-				planteis, disciplina, escalacoes, substituicoes);
+				planteis, disciplina, escalacoes, substituicoes, Optional.empty());
 	}
 
 	private RodadaAoVivo prepararEtapa(Temporada temporada, SplittableRandom aleatorio, List<PartidaDaEtapa> jogos,
 			Map<Long, List<Jogador>> planteis, Disciplina disciplina, Map<Long, Escalacao> escalacoes,
-			List<RodadaAoVivo.Substituicao> substituicoes) {
+			List<RodadaAoVivo.Substituicao> substituicoes, Optional<LimiteEstrangeiros> estrangeiros) {
 		List<RodadaAoVivo.PartidaDaRodada> partidas = new ArrayList<>();
 		for (PartidaDaEtapa p : jogos) {
 			Jogo jogo = p.jogo();
@@ -249,6 +262,7 @@ public final class ProcessamentoRodada {
 			if (p.copa().isPresent()) {
 				condicoes = condicoes.comCopa(p.copa().get());
 			}
+			condicoes = condicoes.comEstrangeiros(estrangeiros);
 			Set<Lado> doUsuario = EnumSet.noneOf(Lado.class);
 			if (escalacoes.containsKey(jogo.mandante().id())) {
 				doUsuario.add(Lado.CASA);
@@ -257,8 +271,10 @@ public final class ProcessamentoRodada {
 				doUsuario.add(Lado.FORA);
 			}
 			partidas.add(new RodadaAoVivo.PartidaDaRodada(PRIORIDADE_COPA, jogo, aleatorio.nextLong(),
-					escalar(jogo.mandante(), bonusDe(daCasa), temporada.bonusTreinador(), planteis, disciplina, escalacoes),
-					escalar(jogo.visitante(), bonusDe(deFora), temporada.bonusTreinador(), planteis, disciplina, escalacoes),
+					escalar(jogo.mandante(), bonusDe(daCasa), temporada.bonusTreinador(), planteis, disciplina, escalacoes,
+							estrangeiros),
+					escalar(jogo.visitante(), bonusDe(deFora), temporada.bonusTreinador(), planteis, disciplina, escalacoes,
+							estrangeiros),
 					doUsuario, condicoes));
 		}
 		return new RodadaAoVivo(motor, regras, suspensao, parametrosMoral, partidas, planteis, disciplina,
@@ -296,7 +312,8 @@ public final class ProcessamentoRodada {
 	 * nas duas, o asterisco temporário da temporada.
 	 */
 	private Escalacao escalar(Clube clube, BonusArtilharia artilharia, BonusTreinador doUsuario,
-			Map<Long, List<Jogador>> planteis, Disciplina disciplina, Map<Long, Escalacao> escalacoes) {
+			Map<Long, List<Jogador>> planteis, Disciplina disciplina, Map<Long, Escalacao> escalacoes,
+			Optional<LimiteEstrangeiros> estrangeiros) {
 		// artilharia e bônus do treinador (rev. 121): só em campo, o plantel não muda
 		java.util.function.UnaryOperator<Jogador> bonus = j -> doUsuario.aplicar(artilharia.aplicar(j));
 		Escalacao doTreinador = escalacoes.get(clube.id());
@@ -318,7 +335,7 @@ public final class ProcessamentoRodada {
 			.map(bonus)
 			.toList();
 		try {
-			return escalacao.escalar(disponiveis);
+			return escalacao.escalar(disponiveis, estrangeiros);
 		}
 		catch (IllegalStateException e) {
 			throw new IllegalStateException(clube.nome() + ": " + e.getMessage(), e);

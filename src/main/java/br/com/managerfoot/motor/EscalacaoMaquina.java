@@ -12,6 +12,7 @@ import java.util.Set;
 import br.com.managerfoot.dominio.Escalacao;
 import br.com.managerfoot.dominio.Formacao;
 import br.com.managerfoot.dominio.Jogador;
+import br.com.managerfoot.dominio.LimiteEstrangeiros;
 import br.com.managerfoot.dominio.Posicao;
 
 /**
@@ -22,6 +23,9 @@ import br.com.managerfoot.dominio.Posicao;
  * com os mais fortes de cada posição. No empate, vale a ordem de {@link Formacao}.</li>
  * <li>Troca asteriscos excedentes pelo melhor sem asterisco da mesma posição, perdendo o mínimo
  * de força, até o limite sem penalidade ou até não haver troca.</li>
+ * <li>Com limite de estrangeiros (SPEC §8.4, rev. 130), troca os estrangeiros excedentes pelo melhor que não
+ * conta, da mesma posição ou, sem ele, de outra posição de linha, perdendo o mínimo de força. O banco não
+ * tem limite.</li>
  * <li>Banco: o goleiro reserva mais forte, se houver, e os mais fortes restantes.</li>
  * <li>Se nenhuma formação fecha, improvisa na de menor falta: sem goleiro, o defensor mais fraco
  * (ou o jogador de linha mais fraco) vai para o gol com a força reduzida como no goleiro expulso;
@@ -51,6 +55,15 @@ public final class EscalacaoMaquina {
 	 * @throws IllegalStateException se houver menos de {@link Escalacao#MINIMO_TITULARES} disponíveis
 	 */
 	public Escalacao escalar(List<Jogador> disponiveis) {
+		return escalar(disponiveis, Optional.empty());
+	}
+
+	/**
+	 * Como {@link #escalar(List)}, respeitando o limite de estrangeiros em campo da liga e da copa nacional.
+	 *
+	 * @param estrangeiros vazio na continental e no Mundial, que não têm limite
+	 */
+	public Escalacao escalar(List<Jogador> disponiveis, Optional<LimiteEstrangeiros> estrangeiros) {
 		if (disponiveis.size() < Escalacao.MINIMO_TITULARES) {
 			throw new IllegalStateException("são necessários " + Escalacao.MINIMO_TITULARES
 					+ " jogadores disponíveis para escalar, mas há " + disponiveis.size());
@@ -61,7 +74,7 @@ public final class EscalacaoMaquina {
 		List<Jogador> titulares = null;
 		for (Formacao formacao : Formacao.values()) {
 			if (falta(formacao, porPosicao) == 0) {
-				List<Jogador> candidatos = limitarAsteriscos(completa(formacao, porPosicao), porPosicao);
+				List<Jogador> candidatos = limitar(completa(formacao, porPosicao), porPosicao, disponiveis, estrangeiros);
 				if (titulares == null || soma(candidatos) > soma(titulares)) {
 					escolhida = formacao;
 					titulares = candidatos;
@@ -75,7 +88,7 @@ public final class EscalacaoMaquina {
 					escolhida = formacao;
 				}
 			}
-			titulares = limitarAsteriscos(improvisada(escolhida, porPosicao, disponiveis), porPosicao);
+			titulares = limitar(improvisada(escolhida, porPosicao, disponiveis), porPosicao, disponiveis, estrangeiros);
 		}
 		return new Escalacao(escolhida, titulares, banco(disponiveis, titulares));
 	}
@@ -145,6 +158,54 @@ public final class EscalacaoMaquina {
 	private static Jogador comoPosicao(Jogador jogador, Posicao posicao, int forca) {
 		return new Jogador(jogador.id(), jogador.nome(), posicao, forca, jogador.temperamento(), jogador.asterisco(),
 				jogador.nacionalidade());
+	}
+
+	private List<Jogador> limitar(List<Jogador> titulares, Map<Posicao, List<Jogador>> porPosicao, List<Jogador> disponiveis,
+			Optional<LimiteEstrangeiros> estrangeiros) {
+		List<Jogador> resultado = limitarAsteriscos(titulares, porPosicao);
+		return estrangeiros.map(l -> limitarEstrangeiros(resultado, porPosicao, disponiveis, l)).orElse(resultado);
+	}
+
+	/**
+	 * Troca estrangeiros excedentes pelo melhor que não conta: da mesma posição ou, sem ele, um jogador de linha
+	 * de outra posição atuando na vaga. Quem entra não pode passar o limite de asteriscos. Sem troca possível,
+	 * o time fica como está.
+	 */
+	private List<Jogador> limitarEstrangeiros(List<Jogador> titulares, Map<Posicao, List<Jogador>> porPosicao,
+			List<Jogador> disponiveis, LimiteEstrangeiros limite) {
+		List<Jogador> resultado = new ArrayList<>(titulares);
+		while (limite.excedido(resultado)) {
+			Set<Long> escalados = new HashSet<>();
+			resultado.forEach(j -> escalados.add(j.id()));
+			long asteriscos = resultado.stream().filter(Jogador::asterisco).count();
+			int melhorIndice = -1;
+			Jogador melhorEntra = null;
+			int menorPerda = Integer.MAX_VALUE;
+			for (int i = 0; i < resultado.size(); i++) {
+				Jogador sai = resultado.get(i);
+				if (!limite.conta(sai)) {
+					continue;
+				}
+				boolean cabeAsterisco = sai.asterisco() || asteriscos < limiteAsteriscos;
+				java.util.function.Predicate<Jogador> serve = j -> !limite.conta(j) && !escalados.contains(j.id())
+						&& (!j.asterisco() || cabeAsterisco);
+				Optional<Jogador> entra = porPosicao.get(sai.posicao()).stream().filter(serve).findFirst();
+				if (entra.isEmpty() && sai.posicao() != Posicao.GOLEIRO) {
+					entra = disponiveis.stream().filter(j -> j.posicao() != Posicao.GOLEIRO).filter(serve)
+						.sorted(MAIS_FORTE).findFirst().map(j -> comoPosicao(j, sai.posicao(), j.forca()));
+				}
+				if (entra.isPresent() && sai.forca() - entra.get().forca() < menorPerda) {
+					menorPerda = sai.forca() - entra.get().forca();
+					melhorIndice = i;
+					melhorEntra = entra.get();
+				}
+			}
+			if (melhorEntra == null) {
+				break;
+			}
+			resultado.set(melhorIndice, melhorEntra);
+		}
+		return resultado;
 	}
 
 	private List<Jogador> limitarAsteriscos(List<Jogador> titulares, Map<Posicao, List<Jogador>> porPosicao) {

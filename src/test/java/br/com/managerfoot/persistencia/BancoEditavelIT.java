@@ -140,6 +140,26 @@ class BancoEditavelIT {
 	}
 
 	@Test
+	void limiteDeEstrangeirosVemDoArquivoComPadraoCincoEVaiParaOJogo() throws Exception {
+		ObjectNode raiz = padrao();
+		assertThat(pais(raiz, "BRA").path("limiteEstrangeiros").asInt()).as("o banco padrão traz o padrão").isEqualTo(5);
+		pais(raiz, "BRA").put("limiteEstrangeiros", 3);
+		pais(raiz, "ARG").remove("limiteEstrangeiros");
+
+		BancoEditavel banco = bancos.ler(JSON.writeValueAsBytes(raiz));
+		assertThat(banco.pais("BRA").orElseThrow().limiteEstrangeiros()).isEqualTo(3);
+		assertThat(banco.pais("ARG").orElseThrow().limiteEstrangeiros()).as("sem o campo vale o padrão").isEqualTo(5);
+
+		long jogo = bancos.criarJogo(JSON.writeValueAsBytes(raiz), "BRA", usuario).jogoId();
+		assertThat(jdbc.sql("SELECT limite_estrangeiros FROM jogo WHERE id = :j").param("j", jogo).query(Integer.class).single())
+			.isEqualTo(3);
+
+		pais(raiz, "BRA").put("limiteEstrangeiros", 12);
+		assertThat(problemas(JSON.writeValueAsString(raiz)))
+			.contains("Brasil: “limiteEstrangeiros” precisa ser um número de 0 a 11.");
+	}
+
+	@Test
 	void jogoSalvoOuOutroArquivoNaoEhBanco() {
 		assertThat(problemas("{\"aplicacao\":\"managerFoot\",\"formato\":1,\"tabelas\":{}}")).singleElement().asString().contains("jogo salvo");
 		assertThat(problemas("isto não é json")).singleElement().asString().contains("não é um banco");

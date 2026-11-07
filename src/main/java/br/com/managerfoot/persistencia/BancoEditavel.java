@@ -12,7 +12,9 @@ import java.util.function.Function;
 import br.com.managerfoot.bancopadrao.Regiao;
 import br.com.managerfoot.dominio.Clube;
 import br.com.managerfoot.dominio.Escudo;
+import br.com.managerfoot.dominio.Formacao;
 import br.com.managerfoot.dominio.Jogador;
+import br.com.managerfoot.dominio.LimiteEstrangeiros;
 import br.com.managerfoot.dominio.ModeloEscudo;
 import br.com.managerfoot.dominio.Posicao;
 import br.com.managerfoot.dominio.Temperamento;
@@ -60,10 +62,19 @@ public record BancoEditavel(List<Pais> paises, List<Continental> continentais) {
 	 * @param regiao nula se o país não joga competições continentais nem o Mundial
 	 * @param liga nula se o país só tem clubes para as competições continentais
 	 */
-	public record Pais(String codigo, String nome, Regiao regiao, Optional<FormatoLiga> liga, List<ClubeEditavel> clubes) {
+	/**
+	 * @param limiteEstrangeiros estrangeiros em campo na liga e na copa nacional (SPEC §8.4, rev. 130); no arquivo é
+	 *        opcional, e sem ele vale {@link LimiteEstrangeiros#PADRAO}
+	 */
+	public record Pais(String codigo, String nome, Regiao regiao, Optional<FormatoLiga> liga, List<ClubeEditavel> clubes,
+			int limiteEstrangeiros) {
 
 		public Pais {
 			clubes = List.copyOf(clubes);
+		}
+
+		public Pais(String codigo, String nome, Regiao regiao, Optional<FormatoLiga> liga, List<ClubeEditavel> clubes) {
+			this(codigo, nome, regiao, liga, clubes, LimiteEstrangeiros.PADRAO);
 		}
 	}
 
@@ -114,6 +125,7 @@ public record BancoEditavel(List<Pais> paises, List<Continental> continentais) {
 			p.put("nome", pais.nome());
 			p.put("regiao", pais.regiao() == null ? null : pais.regiao().name());
 			p.put("liga", pais.liga().map(FormatoLiga::nome).orElse(null));
+			p.put("limiteEstrangeiros", pais.limiteEstrangeiros());
 			p.put("divisoes", pais.liga().map(l -> l.divisoes().stream().map(d -> {
 				Map<String, Object> divisao = new LinkedHashMap<>();
 				divisao.put("nome", d.nome());
@@ -260,6 +272,15 @@ public record BancoEditavel(List<Pais> paises, List<Continental> continentais) {
 				regiao = valor(Regiao.class, textoRegiao, onde + ": região");
 			}
 			Optional<FormatoLiga> liga = liga(no, onde);
+			int limiteEstrangeiros = LimiteEstrangeiros.PADRAO;
+			JsonNode noLimite = no.path("limiteEstrangeiros");
+			if (!noLimite.isMissingNode() && !noLimite.isNull()) {
+				if (noLimite.isIntegralNumber() && noLimite.asInt() >= 0 && noLimite.asInt() <= Formacao.TITULARES) {
+					limiteEstrangeiros = noLimite.asInt();
+				} else {
+					problemas.add(onde + ": “limiteEstrangeiros” precisa ser um número de 0 a " + Formacao.TITULARES + ".");
+				}
+			}
 			JsonNode nosClubes = no.path("clubes");
 			if (!nosClubes.isArray() || nosClubes.size() > MAXIMO_CLUBES_POR_PAIS) {
 				problemas.add(onde + ": “clubes” precisa ser uma lista de até " + MAXIMO_CLUBES_POR_PAIS + " clubes.");
@@ -279,7 +300,7 @@ public record BancoEditavel(List<Pais> paises, List<Continental> continentais) {
 			if (problemas.size() > antes) {
 				return Optional.empty();
 			}
-			return Optional.of(new Pais(codigo, nome, regiao, liga, clubes));
+			return Optional.of(new Pais(codigo, nome, regiao, liga, clubes, limiteEstrangeiros));
 		}
 
 		private Optional<FormatoLiga> liga(JsonNode no, String onde) {

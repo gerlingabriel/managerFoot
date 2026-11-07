@@ -145,6 +145,10 @@ public final class Partida {
 		if (terminada()) {
 			throw new IllegalStateException("a partida já terminou");
 		}
+		// limite de estrangeiros em campo (SPEC §8.4, rev. 130)
+		condicoes.estrangeiros().filter(l -> l.trocaExcede(time(lado).emCampo(), sai, entra)).ifPresent(l -> {
+			throw new IllegalArgumentException(l.trocaRecusada());
+		});
 		return registrarSubstituicao(lado, sai, entra);
 	}
 
@@ -462,7 +466,7 @@ public final class Partida {
 		}
 		eventos.add(new EventoPartida(minuto, lado, tipo, infrator));
 		if (tipo.expulsao() && eraGoleiro && ladosDaMaquina.contains(lado)) {
-			TreinadorMaquina.aposGoleiroExpulso(time).ifPresent(t -> registrarSubstituicao(lado, t.sai(), t.entra()));
+			TreinadorMaquina.aposGoleiroExpulso(time, condicoes.estrangeiros()).ifPresent(t -> registrarSubstituicao(lado, t.sai(), t.entra()));
 		}
 	}
 
@@ -488,7 +492,7 @@ public final class Partida {
 	/** Troca automática do lesionado; sem troca possível, ele sai e o time fica com um a menos. */
 	private void tirarLesionado(Lado lado, Jogador lesionado) {
 		TimeEmCampo time = time(lado);
-		TreinadorMaquina.aposLesao(time, lesionado)
+		TreinadorMaquina.aposLesao(time, lesionado, condicoes.estrangeiros())
 			.ifPresentOrElse(t -> registrarSubstituicao(lado, t.sai(), t.entra()), () -> time.expulsar(lesionado));
 	}
 

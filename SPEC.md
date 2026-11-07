@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 129 — 2026-11-07)
+-   **Status:** versão inicial para revisão (rev. 130 — 2026-11-07)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 130 (2026-11-07):** pelo usuário (§8.4): **limite de estrangeiros em campo**. Conta só quem está em campo (o banco pode ter mais), pela regra de quem é estrangeiro no país; vale na liga e na copa nacional, não na continental nem no Mundial. Padrão **5** em todos os países, ajustável por país no banco editável (`limiteEstrangeiros`, de 0 a 11). Acima do limite, o Resumo do plantel mostra "6 de 5" em vermelho, a escalação ganha o problema "6 estrangeiros em campo: o limite é 5" e "Confirmar e jogar" trava; na continental e no Mundial aparece "7 · sem limite". A substituição que estoura é recusada. Tela aprovada (mockup). **Agente:** a máquina troca os estrangeiros excedentes pelo melhor que não conta da mesma posição (ou, sem ele, um jogador de linha de outra posição), perdendo o mínimo de força; o treinador da máquina não põe estrangeiro além do limite ao trocar lesionado ou goleiro expulso; a tática completa o time respeitando o limite. O jogo guarda o limite do banco em que foi criado (migração V49); jogos já criados ficam com 5.
 -   **rev. 129 (2026-11-07):** pelo usuário (§11.4): **sair da gravação**. "Sair", no alto da tela, é parar e voltar depois; não é abandono. No jogo em rede começado, o **convidado** tem "Sair da gravação" no Início, com uma confirmação que avisa que ele não volta mais: o efeito é o de ser tirado pelo administrador (o clube passa à máquina até o fim). O administrador não sai, porque é o centro do jogo; se quiser, apaga a gravação. Tela aprovada (mockup). **Agente:** só entre as rodadas, como "Tirar do jogo"; na sala, antes de a temporada começar, não aparece, porque quem sai poderia entrar de novo pelo link. A §14 deixa de ter tempo limite e abandono em aberto: o tempo limite automático foi recusado na rev. 104.
 -   **rev. 128 (2026-11-06):** pelo usuário (§10.3): **atalho do Enter**. No plantel, com a escalação completa, o Enter segue (confirma e joga, ou começa a próxima temporada); no leilão, confirma os lances, e no resultado vai para a rodada. Antes, o Enter no campo de lance acionava "Não quero nenhum", o primeiro botão do formulário. Detalhes do agente: com uma janela aberta (patrocínio, ficha, janela do clube) o Enter não faz nada; o botão escolhido pelo teclado (Tab) continua respondendo ao Enter; o que ficou com o foco por clique do mouse (tática, T/B/–) não. O botão de retirar todos vira **"✕ Limpar escalação"** em vermelho cheio (opção B do mockup, escolhida pelo usuário). Os botões que o Enter aciona mostram a dica **"Enter ↵"** (some em tela de toque).
 -   **rev. 127 (2026-11-06):** pelo usuário (§9.2): o clube rico da máquina tem onde gastar. Com 3 limites de caixa sobrando depois da obra, a máquina amplia o estádio **até o máximo** (80.000), não mais só até 105% da torcida. Estudo pedido pelo usuário (`docs/simulacoes/desgaste.md`, seção do estádio): desde a rev. 124 a 1ª quase não compra e o caixa dela crescia sem parar (74 rodadas da folha na 10ª temporada); fazer o rico vender reservas só trocava o dinheiro de mãos. Com a rev. 126 e esta, a 1ª fecha a 10ª temporada com 35 e cresce cerca de 1,6 por temporada; força, clubes negativos e equilíbrio iguais. Não há manutenção do estádio. Vale nos jogos salvos a partir da próxima rodada.
@@ -2372,9 +2373,29 @@ administrador, sem ficar fixo no código.
   saído da UE em 2020. Na Argentina não há equiparados. Nenhum país fora da UE
   com acordo semelhante entra no padrão inicial.
 
-**Em aberto:** o **limite** de estrangeiros em campo ainda não existe no jogo;
-hoje o plantel só mostra a contagem. A regra configurável por país fica no
-código (`RegraEstrangeiros`) até haver o editor.
+~~**Em aberto:** o **limite** de estrangeiros em campo ainda não existe no jogo.~~
+**Definido (rev. 130), pelo usuário — limite em campo:**
+- Conta só quem está **em campo**, pela regra acima (o equiparado não conta). O
+  banco pode ter mais; o estrangeiro do banco só entra se houver vaga.
+- Vale na **liga** e na **copa nacional**. A continental e o Mundial **não têm
+  limite**.
+- Padrão **5** em todos os países. O administrador muda no **banco editável**:
+  campo `limiteEstrangeiros` de cada país, de 0 a 11; sem o campo vale 5. O jogo
+  guarda o número do banco em que foi criado; os jogos anteriores ficam com 5.
+- **Tela (aprovada):** no Resumo do plantel, "Estrangeiros em campo" mostra
+  "5 de 5"; acima do limite, "6 de 5" em vermelho, a lista de problemas da
+  escalação diz "6 estrangeiros em campo: o limite é 5" e "Confirmar e jogar"
+  trava. Antes da continental ou do Mundial aparece "7 · sem limite". Na janela
+  do jogo, a substituição que passa do limite é recusada: "Já há 5 estrangeiros
+  em campo, o limite. Para entrar um estrangeiro, tire outro estrangeiro."
+- **Provisório (agente):** a máquina escala respeitando o limite: troca os
+  estrangeiros excedentes pelo melhor que não conta da mesma posição ou, sem ele,
+  por um jogador de linha de outra posição, perdendo o mínimo de força, sem passar
+  o limite de asteriscos. Ao trocar lesionado ou goleiro expulso, o treinador da
+  máquina não põe estrangeiro além do limite (sem troca possível, fica com um a
+  menos, como já acontece sem reserva). Clicar na tática completa o time
+  respeitando o limite, como faz com os asteriscos.
+- A regra de quem conta continua no código (`RegraEstrangeiros`).
 
 **Definido:** **não existe bônus de nacionalidade** na força do time. O
 Elifoot 98 dava +3 por titular do país do clube

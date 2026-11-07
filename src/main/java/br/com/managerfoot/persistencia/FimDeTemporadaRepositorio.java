@@ -4,6 +4,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.SplittableRandom;
@@ -256,7 +257,8 @@ public class FimDeTemporadaRepositorio {
 			List<Jogador> disponiveis = jogos.carregarPlanteis(jogoId).get(novo.id()).stream()
 				.filter(j -> !suspensos.contains(j.id())).toList();
 			if (disponiveis.size() >= Escalacao.MINIMO_TITULARES) {
-				escalacoes.gravar(novo.id(), EscalacaoDoTreinador.de(escalacaoMaquina.escalar(disponiveis)));
+				escalacoes.gravar(novo.id(), EscalacaoDoTreinador.de(escalacaoMaquina.escalar(disponiveis,
+						Optional.of(jogos.limiteEstrangeiros(jogoId)))));
 			}
 			treinadores.put(treinador.getKey(), novo.id());
 			demitidos.put(treinador.getKey(), novo);

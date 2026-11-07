@@ -170,7 +170,7 @@ class SubstituicaoTest {
 		TimeEmCampo time = new TimeEmCampo(new Escalacao(Formacao.F_4_4_2, lista, List.of(GOLEIRO_RESERVA)), 0.5, 5);
 		time.expulsar(time.goleiro());
 
-		TreinadorMaquina.Troca troca = TreinadorMaquina.aposGoleiroExpulso(time).orElseThrow();
+		TreinadorMaquina.Troca troca = TreinadorMaquina.aposGoleiroExpulso(time, java.util.Optional.empty()).orElseThrow();
 
 		assertThat(troca.sai()).isEqualTo(atacanteFraco);
 		assertThat(troca.entra()).isEqualTo(GOLEIRO_RESERVA);
@@ -180,11 +180,11 @@ class SubstituicaoTest {
 	void maquinaNaoTrocaSemGoleiroNoBancoOuSemSubstituicoes() {
 		TimeEmCampo semGoleiro = new TimeEmCampo(new Escalacao(Formacao.F_4_4_2, titulares, List.of(MEIA_RESERVA)), 0.5, 5);
 		semGoleiro.expulsar(semGoleiro.goleiro());
-		assertThat(TreinadorMaquina.aposGoleiroExpulso(semGoleiro)).isEmpty();
+		assertThat(TreinadorMaquina.aposGoleiroExpulso(semGoleiro, java.util.Optional.empty())).isEmpty();
 
 		TimeEmCampo semTrocas = new TimeEmCampo(new Escalacao(Formacao.F_4_4_2, titulares, List.of(GOLEIRO_RESERVA)), 0.5, 0);
 		semTrocas.expulsar(semTrocas.goleiro());
-		assertThat(TreinadorMaquina.aposGoleiroExpulso(semTrocas)).isEmpty();
+		assertThat(TreinadorMaquina.aposGoleiroExpulso(semTrocas, java.util.Optional.empty())).isEmpty();
 	}
 
 	@Test

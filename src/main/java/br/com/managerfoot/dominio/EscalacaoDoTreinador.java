@@ -99,6 +99,17 @@ public record EscalacaoDoTreinador(Formacao formacao, Set<Long> titulares, Set<L
 	 */
 	public EscalacaoDoTreinador completada(List<Jogador> plantel, LongPredicate indisponivel, int limiteAsteriscos,
 			LongToIntFunction gols) {
+		return completada(plantel, indisponivel, limiteAsteriscos, gols, Optional.empty());
+	}
+
+	/**
+	 * Como {@link #completada(List, LongPredicate, int, LongToIntFunction)}; os escolhidos aqui também respeitam
+	 * o limite de estrangeiros em campo (SPEC §8.4, rev. 130), se houver outro jogador na posição.
+	 *
+	 * @param estrangeiros vazio sem limite (continental e Mundial)
+	 */
+	public EscalacaoDoTreinador completada(List<Jogador> plantel, LongPredicate indisponivel, int limiteAsteriscos,
+			LongToIntFunction gols, Optional<LimiteEstrangeiros> estrangeiros) {
 		Collator alfabetica = Collator.getInstance(Locale.of("pt", "BR"));
 		List<Jogador> disponiveis = plantel.stream().filter(j -> !indisponivel.test(j.id()))
 			.sorted(Comparator.comparingInt(Jogador::forca).reversed()
@@ -138,6 +149,7 @@ public record EscalacaoDoTreinador(Formacao formacao, Set<Long> titulares, Set<L
 			return this;
 		}
 		limitarAsteriscos(disponiveis, novosTitulares, novos, limiteAsteriscos);
+		estrangeiros.ifPresent(l -> limitarEstrangeiros(disponiveis, novosTitulares, novos, l, limiteAsteriscos));
 
 		// um de cada posição, com um goleiro só; o resto do banco é dos melhores de linha
 		List<Jogador> restantes = disponiveis.stream().filter(j -> !novosTitulares.contains(j.id())).toList();
@@ -149,6 +161,41 @@ public record EscalacaoDoTreinador(Formacao formacao, Set<Long> titulares, Set<L
 			.filter(id -> !novoBanco.contains(id)).limit(Escalacao.MAXIMO_RESERVAS - novoBanco.size())
 			.forEach(novoBanco::add);
 		return new EscalacaoDoTreinador(formacao, novosTitulares, novoBanco, batedor);
+	}
+
+	/**
+	 * Troca os estrangeiros escolhidos automaticamente além do limite pelo melhor da mesma posição que não conta,
+	 * perdendo o mínimo de força, sem passar o limite de asteriscos.
+	 */
+	private static void limitarEstrangeiros(List<Jogador> disponiveis, Set<Long> escolhidos, Set<Long> novos,
+			LimiteEstrangeiros limite, int limiteAsteriscos) {
+		while (limite.excedido(disponiveis.stream().filter(j -> escolhidos.contains(j.id())).toList())) {
+			long asteriscos = disponiveis.stream().filter(j -> j.asterisco() && escolhidos.contains(j.id())).count();
+			Jogador sai = null;
+			Jogador entra = null;
+			for (Jogador candidato : disponiveis) {
+				if (!limite.conta(candidato) || !novos.contains(candidato.id())) {
+					continue;
+				}
+				boolean cabeAsterisco = candidato.asterisco() || asteriscos < limiteAsteriscos;
+				Optional<Jogador> substituto = disponiveis.stream()
+					.filter(j -> j.posicao() == candidato.posicao() && !limite.conta(j) && !escolhidos.contains(j.id())
+							&& (!j.asterisco() || cabeAsterisco))
+					.findFirst();
+				if (substituto.isPresent()
+						&& (sai == null || candidato.forca() - substituto.get().forca() < sai.forca() - entra.forca())) {
+					sai = candidato;
+					entra = substituto.get();
+				}
+			}
+			if (sai == null) {
+				return;
+			}
+			escolhidos.remove(sai.id());
+			novos.remove(sai.id());
+			escolhidos.add(entra.id());
+			novos.add(entra.id());
+		}
 	}
 
 	/** Troca os asteriscos escolhidos automaticamente além do limite, perdendo o mínimo de força. */
@@ -194,6 +241,17 @@ public record EscalacaoDoTreinador(Formacao formacao, Set<Long> titulares, Set<L
 	 * podem jogar.
 	 */
 	public List<String> problemas(List<Jogador> plantel, LongPredicate suspenso, LongPredicate lesionado) {
+		return problemas(plantel, suspenso, lesionado, Optional.empty());
+	}
+
+	/**
+	 * Como {@link #problemas(List, LongPredicate, LongPredicate)}, com o limite de estrangeiros em campo da liga e
+	 * da copa nacional (SPEC §8.4, rev. 130).
+	 *
+	 * @param estrangeiros vazio sem limite (continental e Mundial)
+	 */
+	public List<String> problemas(List<Jogador> plantel, LongPredicate suspenso, LongPredicate lesionado,
+			Optional<LimiteEstrangeiros> estrangeiros) {
 		LongPredicate indisponivel = suspenso.or(lesionado);
 		Map<Long, Jogador> porId = plantel.stream().collect(Collectors.toMap(Jogador::id, Function.identity()));
 		List<String> problemas = new ArrayList<>();
@@ -218,6 +276,12 @@ public record EscalacaoDoTreinador(Formacao formacao, Set<Long> titulares, Set<L
 				problemas.add("sem goleiro disponível, " + improvisado.get().nome() + " vai para o gol");
 			}
 		}
+		estrangeiros.ifPresent(l -> {
+			int emCampo = l.contar(titulares.stream().map(porId::get).filter(Objects::nonNull).toList());
+			if (emCampo > l.limite()) {
+				problemas.add(l.problema(emCampo));
+			}
+		});
 		return problemas;
 	}
 
@@ -254,7 +318,13 @@ public record EscalacaoDoTreinador(Formacao formacao, Set<Long> titulares, Set<L
 	/** Como {@link #escalacao(List, LongPredicate, double)}, com os lesionados. */
 	public Escalacao escalacao(List<Jogador> plantel, LongPredicate suspenso, LongPredicate lesionado,
 			double fatorGoleiroImprovisado) {
-		List<String> problemas = problemas(plantel, suspenso, lesionado);
+		return escalacao(plantel, suspenso, lesionado, Optional.empty(), fatorGoleiroImprovisado);
+	}
+
+	/** Como {@link #escalacao(List, LongPredicate, LongPredicate, double)}, com o limite de estrangeiros. */
+	public Escalacao escalacao(List<Jogador> plantel, LongPredicate suspenso, LongPredicate lesionado,
+			Optional<LimiteEstrangeiros> estrangeiros, double fatorGoleiroImprovisado) {
+		List<String> problemas = problemas(plantel, suspenso, lesionado, estrangeiros);
 		if (!problemas.isEmpty()) {
 			throw new IllegalStateException("escalação inválida: " + String.join("; ", problemas));
 		}

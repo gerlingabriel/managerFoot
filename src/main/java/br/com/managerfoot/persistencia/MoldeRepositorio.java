@@ -41,6 +41,14 @@ public class MoldeRepositorio {
 				Map.of("molde", moldeId, "codigo", codigo, "nome", nome));
 	}
 
+	/** Limite de estrangeiros em campo na liga e na copa nacional do país (SPEC §8.4, rev. 130). */
+	public void definirLimiteEstrangeiros(long paisId, int limite) {
+		jdbc.sql("UPDATE molde_pais SET limite_estrangeiros = :limite WHERE id = :pais")
+			.param("limite", limite)
+			.param("pais", paisId)
+			.update();
+	}
+
 	/** Cria a competição continental de uma região no molde (SPEC §8.3.6), ainda sem vagas. */
 	public void definirRegiao(long paisId, String regiao) {
 		jdbc.sql("UPDATE molde_pais SET regiao = :regiao WHERE id = :pais").param("regiao", regiao).param("pais", paisId).update();

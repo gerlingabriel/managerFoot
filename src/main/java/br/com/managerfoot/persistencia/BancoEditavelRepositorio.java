@@ -54,12 +54,13 @@ public class BancoEditavelRepositorio {
 
 	/** O molde como banco editável, com os países na ordem em que foram gravados. */
 	BancoEditavel carregar(long moldeId) {
-		record Linha(long id, String codigo, String nome, String regiao, String liga) {
+		record Linha(long id, String codigo, String nome, String regiao, String liga, int limiteEstrangeiros) {
 		}
-		List<Linha> linhas = jdbc.sql("SELECT id, codigo, nome, regiao, nome_liga FROM molde_pais WHERE molde_id = :molde ORDER BY id")
+		List<Linha> linhas = jdbc.sql("""
+				SELECT id, codigo, nome, regiao, nome_liga, limite_estrangeiros FROM molde_pais WHERE molde_id = :molde ORDER BY id""")
 			.param("molde", moldeId)
 			.query((rs, n) -> new Linha(rs.getLong("id"), rs.getString("codigo"), rs.getString("nome"), rs.getString("regiao"),
-					rs.getString("nome_liga")))
+					rs.getString("nome_liga"), rs.getInt("limite_estrangeiros")))
 			.list();
 		List<Pais> paises = new ArrayList<>();
 		for (Linha linha : linhas) {
@@ -68,7 +69,8 @@ public class BancoEditavelRepositorio {
 				.map(c -> new ClubeEditavel(c, treinadores.get(c.id()), moldes.carregarPlantel(c.id())))
 				.toList();
 			paises.add(new Pais(linha.codigo(), linha.nome(), linha.regiao() == null ? null : Regiao.valueOf(linha.regiao()),
-					linha.liga() == null ? Optional.empty() : Optional.of(moldes.carregarFormato(linha.id())), clubes));
+					linha.liga() == null ? Optional.empty() : Optional.of(moldes.carregarFormato(linha.id())), clubes,
+					linha.limiteEstrangeiros()));
 		}
 		List<Continental> continentais = moldes.continentais(moldeId).stream()
 			.map(c -> new Continental(Regiao.valueOf(c.regiao()), c.nome(), c.vagas()))
@@ -168,6 +170,7 @@ public class BancoEditavelRepositorio {
 		List<Long> clubesDoJogado = new ArrayList<>();
 		for (Pais pais : banco.paises()) {
 			long id = moldes.criarPais(molde, pais.codigo(), pais.nome());
+			moldes.definirLimiteEstrangeiros(id, pais.limiteEstrangeiros());
 			if (pais.regiao() != null) {
 				moldes.definirRegiao(id, pais.regiao().name());
 			}
