@@ -96,3 +96,33 @@ document.addEventListener('click', function (e) {
 		avisar();
 	}
 });
+
+// Atalho do Enter (plantel e leilões): segue pelo botão principal da tela, marcado com data-enter, quando
+// não há janela aberta e o foco não está num campo nem num botão ou link escolhido pelo teclado (Tab);
+// o botão que ficou com o foco depois de um clique do mouse (uma tática, T/B/–) não conta. Num campo
+// de um formulário que tem botão principal (o lance do leilão), o Enter usa esse botão, não o primeiro
+// do formulário. O botão desligado (escalação incompleta) não é acionado: o servidor decide tudo.
+(function () {
+	// o Chrome passa o botão para :focus-visible no próprio keydown; por isso guarda como o foco chegou
+	var focoPeloTeclado = false;
+	document.addEventListener('pointerdown', function () { focoPeloTeclado = false; }, true);
+	document.addEventListener('keydown', function (e) {
+		if (e.key === 'Tab') { focoPeloTeclado = true; return; }
+		if (e.key !== 'Enter' || e.isComposing || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+		if (document.querySelector('[role=dialog], .janela-fundo')) return;
+		var alvo = e.target;
+		var principal;
+		if (alvo.matches('input') && alvo.form) {
+			principal = alvo.form.querySelector('[data-enter]');
+			if (!principal) return;
+		} else if (alvo.closest('select, textarea, input, [contenteditable]')
+				|| (alvo.closest('button, a, summary') && focoPeloTeclado)) {
+			return;
+		} else {
+			principal = document.querySelector('[data-enter]');
+		}
+		if (!principal || principal.disabled || principal.getAttribute('aria-disabled') === 'true') return;
+		e.preventDefault();
+		principal.click();
+	});
+})();

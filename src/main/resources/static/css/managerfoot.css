@@ -769,6 +769,15 @@ a.clube-linha:hover { color: var(--texto); background: rgba(242, 201, 76, 0.1); 
 .formacao[aria-pressed="true"] .formacao-estilo { color: #3A3418; }
 
 .retirar-todos { width: 100%; }
+/* Limpar a escalação em vermelho cheio, para não ser confundido com as táticas (escolha do usuário, opção B) */
+.botao-discreto.retirar-todos { background: var(--erro); color: #fff; border: 0; }
+.botao-discreto.retirar-todos:hover:not(:disabled) { filter: brightness(1.1); }
+.botao-discreto.retirar-todos:disabled { opacity: 0.5; cursor: not-allowed; }
+.retirar-icone { margin-right: 6px; font-weight: 700; }
+/* Dica do atalho do Enter nos botões que ele aciona (rev. 128); some em tela de toque, sem teclado */
+.tecla-enter { display: inline-block; white-space: nowrap; margin-left: 10px; padding: 1px 6px; border: 1px solid rgba(26, 26, 18, 0.45); border-radius: 4px;
+	font: 600 12px Barlow, sans-serif; letter-spacing: 0; text-transform: none; vertical-align: middle; opacity: 0.75; }
+@media (hover: none) { .tecla-enter { display: none; } }
 .valida { margin: 0; font-size: 14px; color: #3FB37F; }
 .problemas { margin: 0; padding-left: 18px; font-size: 14px; color: var(--erro-texto); }
 

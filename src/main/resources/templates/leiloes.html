@@ -41,7 +41,7 @@
 </div>
 <div th:unless="${travado}" class="leiloes-acoes">
 <button type="submit" name="nenhum" value="sim" class="botao-contorno">Não quero nenhum</button>
-<button type="submit" class="botao">Confirmar lances</button>
+<button type="submit" class="botao" data-enter>Confirmar lances<kbd class="tecla-enter" aria-hidden="true">Enter ↵</kbd></button>
 </div>
 </form>
 <p class="suave leiloes-nota">Deixe em branco o leilão em que não quer dar lance. Lance mínimo é o lance inicial: nos leilões da máquina, o preço com 20% de desconto; nos de um treinador, o mínimo que ele pediu. Depois do seu OK, a máquina dá os lances dela<th:block th:if="${emRede}">, com os dos outros treinadores; os lances são secretos até o resultado</th:block>. Se todos os leilões estiverem acima do seu caixa, esta etapa é pulada e você vê só o resultado.</p>
@@ -71,7 +71,7 @@
 <th:block th:if="${painel != null}"><section th:replace="~{turno :: painel}"></section></th:block>
 <form th:unless="${venda or travado}" th:action="@{/jogos/{id}/rodada(id=${jogoId})}" method="post" class="leiloes-acoes">
 <input type="hidden" name="rodada" th:value="${v.rodada}">
-<button type="submit" class="botao">Ir para a rodada</button>
+<button type="submit" class="botao" data-enter>Ir para a rodada<kbd class="tecla-enter" aria-hidden="true">Enter ↵</kbd></button>
 </form>
 <p th:if="${venda}" class="suave leiloes-nota">Empate de lances: decidido por sorteio. Sem lance: o jogador fica e só pode ir a leilão de novo depois da próxima rodada. O valor da venda já está no seu caixa e nas finanças.</p>
 <p th:unless="${venda}" class="suave leiloes-nota">Empate de lances: decidido por sorteio. Sem lance: o jogador fica no clube e só volta a leilão depois desta rodada. Quem você comprou está no seu plantel, fora do banco.</p>

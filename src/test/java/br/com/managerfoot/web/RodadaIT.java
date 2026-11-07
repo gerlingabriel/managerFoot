@@ -145,13 +145,15 @@ class RodadaIT {
 		mvc.perform(get(leiloes).with(como(treinador)))
 			.andExpect(status().isOk())
 			.andExpect(content().string(containsString("Leilões antes da rodada 1")))
-			.andExpect(content().string(containsString("Confirmar lances")));
+			.andExpect(content().string(containsString("Confirmar lances")))
+			// o Enter confirma os lances, não "Não quero nenhum" (rev. 128)
+			.andExpect(content().string(containsString("data-enter>Confirmar lances")));
 
 		mvc.perform(post(leiloes).param("rodada", "1").param("nenhum", "sim").with(como(treinador)).with(csrf()))
 			.andExpect(redirectedUrl(leiloes));
 		mvc.perform(get(leiloes).with(como(treinador)))
 			.andExpect(content().string(containsString("Resultado dos leilões")))
-			.andExpect(content().string(containsString("Ir para a rodada")))
+			.andExpect(content().string(containsString("data-enter>Ir para a rodada")))
 			.andExpect(content().string(not(containsString("Confirmar lances"))));
 
 		mvc.perform(post(rodada).param("rodada", "1").with(como(treinador)).with(csrf())).andExpect(redirectedUrl(rodada));

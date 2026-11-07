@@ -205,7 +205,9 @@ class PlantelIT {
 		assertThat(vazia.reservas()).isEmpty();
 		assertThat(vazia.batedor()).isNull();
 		mvc.perform(get(plantel).with(como(treinador))).andExpect(content().string(containsString("0 de 11")))
-			.andExpect(content().string(containsString("Retirar todos os jogadores")));
+			.andExpect(content().string(containsString("Limpar escalação")))
+			// escalação vazia: o botão de jogar (o do Enter, rev. 128) fica desligado
+			.andExpect(content().string(containsString("data-enter aria-describedby=\"jogar-ajuda\" disabled=\"disabled\"")));
 
 		pedir(post(plantel + "/formacao").param("formacao", formacao));
 		EscalacaoDoTreinador depois = escalacoes.carregar(clube).orElseThrow();

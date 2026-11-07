@@ -76,7 +76,7 @@
 </button>
 </form>
 <form th:action="@{/jogos/{id}/plantel/retirar-todos(id=${v.jogoId})}" method="post" hx-boost="true">
-<button type="submit" class="botao-discreto retirar-todos" th:disabled="${travado}">Retirar todos os jogadores</button>
+<button type="submit" class="botao-discreto retirar-todos" th:disabled="${travado}" title="Tira todos os jogadores do time e do banco"><span class="retirar-icone" aria-hidden="true">✕</span>Limpar escalação</button>
 </form>
 <p class="suave pequeno">Clique numa tática para completar o time com os mais fortes.</p>
 <p th:if="${v.problemas.isEmpty()}" class="valida" th:text="${valida}">Escalação válida</p>
@@ -114,15 +114,15 @@
 <form th:if="${v.temporadaEncerrada and !travado}" th:action="@{/jogos/{id}/temporada(id=${v.jogoId})}" method="post" class="pilha-curta" data-envio-unico>
 <input type="hidden" name="temporada" th:value="${v.temporada}">
 <span class="texto" th:text="|Temporada ${v.ano} encerrada: seu clube terminou em ${v.posicao}º.|">Temporada encerrada</span>
-<button type="submit" class="botao botao-largo">OK, começar a próxima</button>
+<button type="submit" class="botao botao-largo" data-enter>OK, começar a próxima<kbd class="tecla-enter" aria-hidden="true">Enter ↵</kbd></button>
 </form>
 <form th:if="${!v.temporadaEncerrada and !travado}" th:action="@{/jogos/{id}/rodada(id=${v.jogoId})}" method="post" class="pilha-curta" data-envio-unico>
 <input type="hidden" name="rodada" th:value="${v.rodada}">
 <input th:if="${v.indiceCopa != null}" type="hidden" name="etapa" th:value="${v.indiceCopa}">
 <input th:if="${v.continental}" type="hidden" name="continental" value="true">
 <input th:if="${v.mundial}" type="hidden" name="mundial" value="true">
-<button type="submit" class="botao botao-largo" th:disabled="${v.escalacaoPendente()}"
-	aria-describedby="jogar-ajuda" th:text="${v.mundial} ? (${v.finalCopa} ? 'Confirmar e jogar a final do Mundial' : 'Confirmar e jogar o Mundial') : (${v.continental} ? (${v.finalCopa} ? 'Confirmar e jogar a final da continental' : 'Confirmar e jogar a continental') : (${v.finalCopa} ? 'Confirmar e jogar a final' : (${v.etapaCopa != null} ? 'Confirmar e jogar a copa' : 'Confirmar e jogar rodada')))">Confirmar e jogar rodada</button>
+<button type="submit" class="botao botao-largo" data-enter th:disabled="${v.escalacaoPendente()}"
+	aria-describedby="jogar-ajuda"><span th:text="${v.mundial} ? (${v.finalCopa} ? 'Confirmar e jogar a final do Mundial' : 'Confirmar e jogar o Mundial') : (${v.continental} ? (${v.finalCopa} ? 'Confirmar e jogar a final da continental' : 'Confirmar e jogar a continental') : (${v.finalCopa} ? 'Confirmar e jogar a final' : (${v.etapaCopa != null} ? 'Confirmar e jogar a copa' : 'Confirmar e jogar rodada')))">Confirmar e jogar rodada</span><kbd class="tecla-enter" aria-hidden="true">Enter ↵</kbd></button>
 <span id="jogar-ajuda" class="suave centro"
 	th:text="${v.escalacaoPendente()} ? 'Complete a escalação para jogar.' : (${!v.problemas.isEmpty()} ? 'Seu clube não joga: dá para seguir com a escalação incompleta.' : (${v.etapaCopa != null} ? |${v.etapaCopa}.| : |Rodada ${v.rodada}.|))">ajuda</span>
 </form>

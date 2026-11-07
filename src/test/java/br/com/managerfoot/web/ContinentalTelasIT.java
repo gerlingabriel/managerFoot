@@ -239,7 +239,7 @@ class ContinentalTelasIT {
 		String tela = mvc.perform(get(plantel).with(como(treinador))).andReturn().getResponse().getContentAsString();
 		assertThat(tela).contains("Seu clube não joga: dá para seguir com a escalação incompleta.")
 			.doesNotContain("Complete a escalação para jogar.");
-		assertThat(tela).containsPattern("<button type=\"submit\" class=\"botao botao-largo\"\\s+aria-describedby=\"jogar-ajuda\"");
+		assertThat(tela).containsPattern("<button type=\"submit\" class=\"botao botao-largo\" data-enter\\s+aria-describedby=\"jogar-ajuda\">");
 		mvc.perform(post(rodada).param("rodada", "3").param("etapa", "0").param("continental", "true")
 			.with(como(treinador)).with(csrf())).andExpect(redirectedUrl(rodada));
 		agora(8);
