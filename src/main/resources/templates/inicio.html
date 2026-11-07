@@ -51,6 +51,8 @@
 	th:attr="aria-label=|Baixar o arquivo de ${j.clube.nome}|">Baixar arquivo</a>
 <a th:if="${j.podeApagar}" th:href="@{/(apagar=${j.jogoId})}" class="botao-discreto botao-link acao-apagar"
 	th:attr="aria-label=|Apagar ${j.clube.nome}|">Apagar</a>
+<a th:if="${j.podeSair}" th:href="@{/(sair=${j.jogoId})}" class="botao-discreto botao-link acao-apagar"
+	th:attr="aria-label=|Sair da gravação do ${j.clube.nome}|">Sair da gravação</a>
 </div>
 </div>
 <form th:action="@{/jogos/arquivo}" method="post" enctype="multipart/form-data" data-envio-unico class="carregar-arquivo">
@@ -100,6 +102,21 @@
 <a th:unless="${apagando.emRede}" th:href="@{/jogos/{id}/arquivo(id=${apagando.jogoId})}" class="botao-contorno">Baixar arquivo</a>
 <form th:action="@{/jogos/{id}/apagar(id=${apagando.jogoId})}" method="post" data-envio-unico>
 <button type="submit" class="botao-perigo">Apagar jogo</button>
+</form>
+</div>
+</div>
+</div>
+<!--/* "Sair da gravação" (SPEC §11.4, rev. 129): o convidado sai de vez do jogo em rede começado. */-->
+<div th:if="${saindo != null}" class="janela-fundo">
+<div role="dialog" aria-modal="true" aria-labelledby="t-sair" class="janela janela-apagar">
+<h2 id="t-sair" class="titulo-secao" th:text="|Sair de vez do jogo do ${saindo.clube.nome}?|">Sair de vez?</h2>
+<p class="texto" th:text="|Você não volta mais a este jogo em rede. O ${saindo.clube.nome} passa a ser da máquina até o fim, e o jogo continua para os outros treinadores. Se todos eles já deram OK, o jogo segue.|">
+Você não volta mais a este jogo em rede.</p>
+<p class="texto pequeno suave">Para parar agora e voltar depois, use "Sair" no alto da tela.</p>
+<div class="acoes-jogo">
+<a th:href="@{/}" class="botao-discreto botao-link" autofocus>Cancelar</a>
+<form th:action="@{/jogos/{id}/rede/sair(id=${saindo.jogoId})}" method="post" data-envio-unico>
+<button type="submit" class="botao-perigo">Sair da gravação</button>
 </form>
 </div>
 </div>

@@ -255,6 +255,34 @@ class TurnoIT {
 			.andExpect(content().string(containsString(aviso)));
 	}
 
+	@Test
+	void soOConvidadoVeSairDaGravacaoNoInicioESaiDeVez() throws Exception {
+		patrocinios.assinar(jogo, admin.id(), PropostasPatrocinio.Tipo.FIXA);
+		patrocinios.assinar(jogo, marcos.id(), PropostasPatrocinio.Tipo.FIXA);
+		mvc.perform(get("/").with(como(admin)))
+			.andExpect(content().string(not(containsString("Sair da gravação"))));
+		mvc.perform(get("/").param("sair", String.valueOf(jogo)).with(como(admin)))
+			.andExpect(content().string(not(containsString("Sair de vez"))));
+		mvc.perform(get("/").with(como(marcos)))
+			.andExpect(content().string(containsString("/?sair=" + jogo)));
+		mvc.perform(get("/").param("sair", String.valueOf(jogo)).with(como(marcos)))
+			.andExpect(status().isOk())
+			.andExpect(content().string(containsString("Sair de vez do jogo do ")))
+			.andExpect(content().string(containsString("Você não volta mais a este jogo em rede.")))
+			.andExpect(content().string(containsString("action=\"/jogos/" + jogo + "/rede/sair\"")));
+		mvc.perform(post("/jogos/" + jogo + "/rede/sair").with(como(admin)).with(csrf()))
+			.andExpect(redirectedUrl("/"))
+			.andExpect(flash().attribute("erro", containsString("apagar a gravação")));
+
+		mvc.perform(post("/jogos/" + jogo + "/rede/sair").with(como(marcos)).with(csrf()))
+			.andExpect(redirectedUrl("/"))
+			.andExpect(flash().attribute("resultado", containsString("O clube agora é da máquina.")));
+		mvc.perform(get("/jogos/" + jogo + "/plantel").with(como(marcos)))
+			.andExpect(status().isNotFound());
+		mvc.perform(post("/jogos/" + jogo + "/rede/sair").with(como(marcos)).with(csrf()))
+			.andExpect(flash().attribute("erro", containsString("não está mais")));
+	}
+
 	private static RequestPostProcessor como(Usuario usuario) {
 		return authentication(AutenticacaoContas.autenticado(usuario));
 	}

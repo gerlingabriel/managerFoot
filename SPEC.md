@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 128 — 2026-11-06)
+-   **Status:** versão inicial para revisão (rev. 129 — 2026-11-07)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 129 (2026-11-07):** pelo usuário (§11.4): **sair da gravação**. "Sair", no alto da tela, é parar e voltar depois; não é abandono. No jogo em rede começado, o **convidado** tem "Sair da gravação" no Início, com uma confirmação que avisa que ele não volta mais: o efeito é o de ser tirado pelo administrador (o clube passa à máquina até o fim). O administrador não sai, porque é o centro do jogo; se quiser, apaga a gravação. Tela aprovada (mockup). **Agente:** só entre as rodadas, como "Tirar do jogo"; na sala, antes de a temporada começar, não aparece, porque quem sai poderia entrar de novo pelo link. A §14 deixa de ter tempo limite e abandono em aberto: o tempo limite automático foi recusado na rev. 104.
 -   **rev. 128 (2026-11-06):** pelo usuário (§10.3): **atalho do Enter**. No plantel, com a escalação completa, o Enter segue (confirma e joga, ou começa a próxima temporada); no leilão, confirma os lances, e no resultado vai para a rodada. Antes, o Enter no campo de lance acionava "Não quero nenhum", o primeiro botão do formulário. Detalhes do agente: com uma janela aberta (patrocínio, ficha, janela do clube) o Enter não faz nada; o botão escolhido pelo teclado (Tab) continua respondendo ao Enter; o que ficou com o foco por clique do mouse (tática, T/B/–) não. O botão de retirar todos vira **"✕ Limpar escalação"** em vermelho cheio (opção B do mockup, escolhida pelo usuário). Os botões que o Enter aciona mostram a dica **"Enter ↵"** (some em tela de toque).
 -   **rev. 127 (2026-11-06):** pelo usuário (§9.2): o clube rico da máquina tem onde gastar. Com 3 limites de caixa sobrando depois da obra, a máquina amplia o estádio **até o máximo** (80.000), não mais só até 105% da torcida. Estudo pedido pelo usuário (`docs/simulacoes/desgaste.md`, seção do estádio): desde a rev. 124 a 1ª quase não compra e o caixa dela crescia sem parar (74 rodadas da folha na 10ª temporada); fazer o rico vender reservas só trocava o dinheiro de mãos. Com a rev. 126 e esta, a 1ª fecha a 10ª temporada com 35 e cresce cerca de 1,6 por temporada; força, clubes negativos e equilíbrio iguais. Não há manutenção do estádio. Vale nos jogos salvos a partir da próxima rodada.
 -   **rev. 126 (2026-11-06):** pelo usuário (§6.1): desgaste menor. Dos que jogaram, perdem 1 ponto **1, 2 ou 3** jogadores (vitória, empate, derrota; eram 1, 3 e 5), e o piso passa a ser a **força do clube − 3** (era − 5). Relato do usuário: o clube da 2ª com campanha razoável perdia muita força; no jogo dele, quase todo o plantel de dois clubes da 2ª estava no piso. Simulado em `docs/simulacoes/desgaste.md` (10 temporadas): as divisões mantêm a força inicial (1ª 42,5 → 42,3; 2ª 26,6 → 26,3; antes 39,0 e 22,7), o caixa da 1ª na 10ª temporada fica em 48 rodadas da folha (era 74), o campeão fica menos previsível (entre os 3 mais fortes 82% → 52%). Vale nos jogos salvos a partir da próxima rodada; quem já está abaixo do novo piso não sobe na hora.
@@ -3566,6 +3567,22 @@ treinadores do jogo tenham conta de administrador.
 - **Provisório (agente):** as decisões de quem sai que ainda esperavam ficam
   resolvidas: o patrocínio não escolhido vira o fixo, o convite para assumir outro
   clube é recusado e os lances guardados nos leilões são apagados.
+- **Definido (rev. 129), pelo usuário — parar × sair de vez:** "Sair", no alto da
+  tela, só encerra a sessão: o treinador volta depois, e o jogo espera o OK dele
+  (deixar o computador ligado sem dar OK também não é abandono). Sair de vez é de
+  dois jeitos: o administrador do jogo tira o treinador ("Tirar do jogo") ou o
+  próprio **convidado** escolhe **"Sair da gravação"** na lista do Início, ao
+  lado de "Continuar", com uma confirmação que avisa que ele não volta mais. O
+  efeito é o mesmo de ser tirado. O administrador não sai do próprio jogo, porque
+  é o centro dele; se quiser, apaga a gravação ("Apagar", rev. 92).
+  - **Tela (aprovada):** "Sair de vez do jogo do <clube>?", com o texto "Você não
+    volta mais a este jogo em rede. O <clube> passa a ser da máquina até o fim, e o
+    jogo continua para os outros treinadores. Se todos eles já deram OK, o jogo
+    segue." e a lembrança de que "Sair", no alto da tela, é para voltar depois.
+  - **Provisório (agente):** só entre as rodadas, como "Tirar do jogo"; com a
+    rodada ao vivo, a tela pede para esperar a rodada terminar. Na sala, antes de
+    a temporada começar, o botão não aparece, porque quem sai poderia entrar de
+    novo pelo link do convite.
 - ~~Como saber que um navegador "caiu" usando polling.~~ Definido (rev. 92):
   sem consulta por 30 s.
 
@@ -3655,7 +3672,7 @@ seções indicadas.
 | # | Questão | Situação |
 |---|---|---|
 | 1 | Plataforma e tecnologia | **Definido:** somente web; stack na §16 |
-| 2 | Modelo multiplayer e desconexões | **Definido** em parte: servidor autoritativo (`docs/decisions/0004`) e regra de desconexão (§11.4). **Em aberto:** tempo limite e abandono |
+| 2 | Modelo multiplayer e desconexões | **Definido:** servidor autoritativo (`docs/decisions/0004`) e regra de desconexão (§11.4). Sem tempo limite automático (rev. 104); abandono pelo "Tirar do jogo" do administrador (rev. 104) ou pelo "Sair da gravação" do convidado (rev. 129) |
 | 3 | Força do clube | **Definido:** força cadastrada obrigatória, com teto por divisão (§4.2–§4.3). **Em aberto:** média simples ou ponderada |
 | 4 | Fórmulas do Elifoot 98 mantidas/alteradas | **Em aberto:** a referência foi inspecionada (`docs/referencia-elifoot98.md` §7) e as divergências estão listadas para decisão |
 | 5 | Progressão de titulares/reservas | **Em aberto** (§6.1); a referência confirma −1 com 50% e âncora ±5 |

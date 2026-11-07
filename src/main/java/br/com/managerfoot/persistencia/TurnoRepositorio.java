@@ -187,6 +187,41 @@ public class TurnoRepositorio {
 		}
 		Momento m = momento(jogoId)
 			.orElseThrow(() -> new IllegalArgumentException("Espere a rodada terminar para tirar alguém do jogo."));
+		return retirar(jogoId, usuarioId, administradorId, m, semente, agora);
+	}
+
+	/**
+	 * O convidado sai de vez do jogo em rede começado, entre as rodadas (SPEC §11.4, rev. 129): o mesmo que
+	 * ser tirado pelo administrador. Quem sai não volta. O administrador não sai; ele apaga a gravação.
+	 *
+	 * @param semente sorteio da temporada seguinte, se o jogo seguir no fim da temporada
+	 * @throws IllegalArgumentException se ele é o administrador, não está no jogo, o jogo não começou ou a
+	 *         rodada está ao vivo; com o motivo para a tela
+	 */
+	@Transactional
+	public Desfecho sairDaGravacao(long jogoId, long usuarioId, long semente, Instant agora) {
+		jogos.travar(jogoId);
+		long administradorId = administrador(jogoId)
+			.orElseThrow(() -> new IllegalArgumentException("Este jogo não é em rede."));
+		if (usuarioId == administradorId) {
+			throw new IllegalArgumentException("O administrador não sai do próprio jogo; ele pode apagar a gravação.");
+		}
+		if (!participantes(jogoId).contains(usuarioId)) {
+			throw new IllegalArgumentException("Você não está mais neste jogo.");
+		}
+		if (!emRede(jogoId)) {
+			throw new IllegalArgumentException("A temporada ainda não começou.");
+		}
+		Momento m = momento(jogoId)
+			.orElseThrow(() -> new IllegalArgumentException("Espere a rodada terminar para sair da gravação."));
+		return retirar(jogoId, usuarioId, administradorId, m, semente, agora);
+	}
+
+	/**
+	 * Tira o treinador do jogo começado (SPEC §11.4, rev. 104 e 129): o clube passa à máquina, as decisões
+	 * que esperavam ficam resolvidas e, se todos os que ficaram já tinham dado OK, o jogo segue.
+	 */
+	private Desfecho retirar(long jogoId, long usuarioId, long administradorId, Momento m, long semente, Instant agora) {
 		trocas.convitePendente(jogoId, usuarioId).ifPresent(c -> trocas.recusar(jogoId, usuarioId, c.id()));
 		if (patrocinios.pendente(jogoId, usuarioId).isPresent()) {
 			patrocinios.assinar(jogoId, usuarioId, PropostasPatrocinio.Tipo.FIXA);

@@ -37,3 +37,11 @@
 
 - Quem sai perde o jogo da lista e não volta: depois que a temporada começa, ninguém entra.
 - O histórico de treinadores do clube continua com o nome de quem saiu nas temporadas já jogadas.
+
+## Complemento (rev. 129, 2026-11-07)
+
+- O convidado também sai de vez, por conta própria: "Sair da gravação" no Início
+  (`TurnoRepositorio.sairDaGravacao`), com o mesmo efeito e as mesmas condições de ser tirado (entre as rodadas,
+  só no jogo começado). As duas entradas usam a mesma rotina (`retirar`).
+- O administrador do jogo não sai; ele apaga a gravação. "Sair", no alto da tela, continua sendo parar e voltar
+  depois.

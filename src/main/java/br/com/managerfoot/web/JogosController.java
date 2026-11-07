@@ -1,5 +1,6 @@
 package br.com.managerfoot.web;
 
+import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -27,6 +28,7 @@ import br.com.managerfoot.dominio.Clube;
 import br.com.managerfoot.multiplayer.Turno;
 import br.com.managerfoot.persistencia.BancoEditavelRepositorio;
 import br.com.managerfoot.persistencia.ContasRepositorio;
+import br.com.managerfoot.persistencia.DecisaoPendenteException;
 import br.com.managerfoot.persistencia.BancoRecusadoException;
 import br.com.managerfoot.persistencia.JogosDoTreinadorRepositorio;
 import br.com.managerfoot.persistencia.JogosDoTreinadorRepositorio.JogoGravado;
@@ -45,6 +47,7 @@ import jakarta.servlet.http.HttpSession;
 @Controller
 class JogosController {
 
+	private static final SecureRandom SEMENTES = new SecureRandom();
 	private static final DateTimeFormatter QUANDO = DateTimeFormatter.ofPattern("dd/MM/yyyy, HH:mm");
 
 	private final JogosDoTreinadorRepositorio jogos;
@@ -75,7 +78,8 @@ class JogosController {
 	}
 
 	@GetMapping("/")
-	String inicio(@AuthenticationPrincipal Usuario usuario, @RequestParam(name = "apagar", required = false) Long apagar, Model model) {
+	String inicio(@AuthenticationPrincipal Usuario usuario, @RequestParam(name = "apagar", required = false) Long apagar,
+			@RequestParam(name = "sair", required = false) Long sair, Model model) {
 		model.addAttribute("usuario", usuario);
 		List<Linha> linhas = jogos.listar(usuario.id()).stream().map(j -> linha(j, usuario.id())).toList();
 		model.addAttribute("jogos", linhas);
@@ -88,7 +92,24 @@ class JogosController {
 		}
 		// janela de confirmação do modelo 16b; id de jogo que não é do usuário não abre nada
 		model.addAttribute("apagando", linhas.stream().filter(l -> l.podeApagar() && Long.valueOf(l.jogoId()).equals(apagar)).findFirst().orElse(null));
+		// confirmação de "Sair da gravação" (SPEC §11.4, rev. 129), só do convidado no jogo em rede começado
+		model.addAttribute("saindo", linhas.stream().filter(l -> l.podeSair() && Long.valueOf(l.jogoId()).equals(sair)).findFirst().orElse(null));
 		return "inicio";
+	}
+
+	/** O convidado sai de vez do jogo em rede começado; o clube passa à máquina (SPEC §11.4, rev. 129). */
+	@PostMapping("/jogos/{jogoId}/rede/sair")
+	String sairDaGravacao(@AuthenticationPrincipal Usuario usuario, @PathVariable long jogoId, RedirectAttributes redirect) {
+		String clube = jogos.listar(usuario.id()).stream().filter(j -> j.jogoId() == jogoId).findFirst()
+			.map(j -> j.clube().nome()).orElse("");
+		try {
+			turnos.sairDaGravacao(jogoId, usuario.id(), SEMENTES.nextLong(), relogio.instant());
+			redirect.addFlashAttribute("resultado", "Você saiu do jogo do " + clube + ". O clube agora é da máquina.");
+		}
+		catch (IllegalArgumentException | DecisaoPendenteException e) {
+			redirect.addFlashAttribute("erro", e.getMessage());
+		}
+		return "redirect:/";
 	}
 
 	@GetMapping("/jogos/novo")
@@ -185,17 +206,17 @@ class JogosController {
 		String onde = j.pais() + " · " + divisao + " · temporada " + j.ano() + ", rodada " + j.rodada();
 		String quando = "Jogado em " + QUANDO.format(j.ultimoAcesso().atZone(ZoneId.systemDefault()));
 		if (j.rede().isEmpty()) {
-			return new Linha(j.jogoId(), j.clube(), divisao, onde, quando, false, false, true);
+			return new Linha(j.jogoId(), j.clube(), divisao, onde, quando, false, false, true, false);
 		}
 		Rede r = j.rede().get();
 		// modelo 18a: o selo, de quem é o jogo e o que ele espera
 		if (r.naSala()) {
 			return new Linha(j.jogoId(), j.clube(), divisao, "Sala de " + r.administrador() + " · " + j.pais()
 					+ " · aguardando o início da temporada", r.treinadores() + (r.treinadores() == 1 ? " treinador" : " treinadores")
-					+ " na sala", true, true, r.souAdministrador());
+					+ " na sala", true, true, r.souAdministrador(), false);
 		}
 		return new Linha(j.jogoId(), j.clube(), divisao, "Jogo de " + r.administrador() + " · " + onde,
-				esperando(j.jogoId(), usuarioId).orElse(quando), true, false, r.souAdministrador());
+				esperando(j.jogoId(), usuarioId).orElse(quando), true, false, r.souAdministrador(), !r.souAdministrador());
 	}
 
 	/** O que o jogo em rede começado está esperando (modelo 18a): o OK de quem vê, o dos outros ou a rodada. */
@@ -221,8 +242,9 @@ class JogosController {
 	 *
 	 * @param naSala jogo em rede que ainda não começou: o botão abre a sala
 	 * @param podeApagar no jogo em rede, só o administrador apaga (SPEC §3.3, rev. 92)
+	 * @param podeSair o convidado sai de vez do jogo em rede começado (SPEC §11.4, rev. 129)
 	 */
 	record Linha(long jogoId, Clube clube, String divisao, String onde, String quando, boolean emRede, boolean naSala,
-			boolean podeApagar) {
+			boolean podeApagar, boolean podeSair) {
 	}
 }

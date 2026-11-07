@@ -264,6 +264,42 @@ class TurnoRepositorioIT {
 			.isThrownBy(() -> turnos.tirarDoJogo(outroJogo, admin.id(), outroAdmin.id(), 0, AGORA));
 	}
 
+	@Test
+	void oConvidadoSaiDaGravacaoEntreAsRodadasEOJogoSegue() {
+		long clubeMarcos = jogos.clubeDoTreinador(jogo, marcos.id()).orElseThrow();
+		assertThatIllegalArgumentException().as("o administrador não sai; ele apaga a gravação")
+			.isThrownBy(() -> turnos.sairDaGravacao(jogo, admin.id(), 0, AGORA))
+			.withMessageContaining("apagar a gravação");
+		jdbc.sql("UPDATE jogo_patrocinio SET escolha = NULL WHERE clube_id = :clube").param("clube", clubeMarcos).update();
+
+		assertThat(turnos.darOk(jogo, admin.id(), Passo.PLANTEL, 0, AGORA)).isEqualTo(Desfecho.AGUARDANDO);
+		Desfecho desfecho = turnos.sairDaGravacao(jogo, marcos.id(), 0, AGORA);
+
+		assertThat(desfecho).as("o único que ficou já tinha dado OK: o jogo segue").isNotEqualTo(Desfecho.AGUARDANDO);
+		assertThat(jogos.clubeDoTreinador(jogo, marcos.id())).as("o clube passou à máquina").isEmpty();
+		assertThat(contar("SELECT count(*) FROM jogo_rede_participante WHERE jogo_id = :id", jogo)).isEqualTo(1);
+		assertThat(contar("SELECT count(*) FROM jogo_escalacao WHERE clube_id = :id", clubeMarcos)).isZero();
+		assertThat(jdbc.sql("SELECT escolha FROM jogo_patrocinio WHERE clube_id = :clube").param("clube", clubeMarcos)
+			.query(String.class).single()).isEqualTo("FIXA");
+		assertThat(jogosDoTreinador.listar(marcos.id())).as("o jogo sai da lista de quem saiu").isEmpty();
+		assertThatIllegalArgumentException().isThrownBy(() -> turnos.sairDaGravacao(jogo, marcos.id(), 0, AGORA))
+			.withMessageContaining("não está mais");
+	}
+
+	@Test
+	void ninguemSaiDaGravacaoComARodadaAoVivoNemNaSala() {
+		ateAoVivo();
+		assertThatIllegalArgumentException().isThrownBy(() -> turnos.sairDaGravacao(jogo, marcos.id(), 0, AGORA))
+			.withMessageContaining("rodada terminar");
+
+		long pais = LigaDeTeste.criarPais(moldes);
+		Usuario outroAdmin = LigaDeTeste.administrador(contas);
+		long naSala = jogosDoTreinador.criarEmRedeComSorteio(pais, outroAdmin.id(), AGORA).jogoId();
+		salas.entrar(salas.visao(naSala, outroAdmin.id()).orElseThrow().convite().orElseThrow().token(), marcos.id(), AGORA);
+		assertThatIllegalArgumentException().isThrownBy(() -> turnos.sairDaGravacao(naSala, marcos.id(), 0, AGORA))
+			.withMessageContaining("não começou");
+	}
+
 	/** Um instante com a partida do treinador em andamento, no começo do jogo. */
 	private Instant comAPartidaEmAndamento(Usuario treinador) {
 		for (int s = 1; s < 600; s += 2) {
