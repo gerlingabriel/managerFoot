@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 131 — 2026-11-07)
+-   **Status:** versão inicial para revisão (rev. 132 — 2026-11-07)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 132 (2026-11-07):** pelo usuário (§10.5): **caixas "Lesões" e "Cartões vermelhos"** no rodapé da janela do jogo do próprio clube ("Parar o jogo no meu clube:"), ao lado de "Continuar". Marcadas, a rodada para sozinha quando o clube do treinador tem um lesionado ou um expulso, e a janela abre; desmarcada "Lesões", a máquina troca o lesionado sem parar. Começam com "Lesões" marcada (como antes) e "Cartões vermelhos" desmarcada; a escolha fica gravada para as próximas rodadas, como o som (migração V50). Na parada pela expulsão, a janela avisa: "Fulano foi expulso (segundo amarelo). O jogo parou para você reorganizar o time; o time segue com 10." Tela aprovada (mockup). **Agente:** no jogo em rede, a parada de cada treinador segue as caixas dele e a regra dos 60 s (§3.3); a expulsão no último minuto não para, como a lesão.
 -   **rev. 131 (2026-11-07):** pelo usuário (§7.4, §7.5, §10.5): **vermelho direto mais raro**, quase nunca no começo do jogo e mais provável com o passar do tempo; a expulsão comum passa a ser por dois amarelos. O vermelho direto era 5% dos cartões em qualquer minuto; agora cresce do zero até **2% no minuto 90**. Expulsões por jogo 0,23 → 0,15, das quais 85% por dois amarelos (eram 52%); até o minuto 15, 2,7% das expulsões (eram 9%). **Trava das goleadas maior por expulso:** com 1 expulso a mais ela começa com **3 gols** de vantagem (era 2); com 2 expulsos, com **5**. **Lesões:** o dobro da frequência e **limite de 3** por clube na temporada (era 2): 0,08 → 0,16 lesão por jogo, cerca de 2,4 por clube na temporada. O quadro da rodada e a janela do jogo mostram **um cartão vermelho por expulso** (antes, um só). Simulado em `docs/simulacoes/cartoes-e-lesoes.md`; opções escolhidas pelo usuário.
 -   **rev. 130 (2026-11-07):** pelo usuário (§8.4): **limite de estrangeiros em campo**. Conta só quem está em campo (o banco pode ter mais), pela regra de quem é estrangeiro no país; vale na liga e na copa nacional, não na continental nem no Mundial. Padrão **5** em todos os países, ajustável por país no banco editável (`limiteEstrangeiros`, de 0 a 11). Acima do limite, o Resumo do plantel mostra "6 de 5" em vermelho, a escalação ganha o problema "6 estrangeiros em campo: o limite é 5" e "Confirmar e jogar" trava; na continental e no Mundial aparece "7 · sem limite". A substituição que estoura é recusada. Tela aprovada (mockup). **Agente:** a máquina troca os estrangeiros excedentes pelo melhor que não conta da mesma posição (ou, sem ele, um jogador de linha de outra posição), perdendo o mínimo de força; o treinador da máquina não põe estrangeiro além do limite ao trocar lesionado ou goleiro expulso; a tática completa o time respeitando o limite. O jogo guarda o limite do banco em que foi criado (migração V49); jogos já criados ficam com 5.
 -   **rev. 129 (2026-11-07):** pelo usuário (§11.4): **sair da gravação**. "Sair", no alto da tela, é parar e voltar depois; não é abandono. No jogo em rede começado, o **convidado** tem "Sair da gravação" no Início, com uma confirmação que avisa que ele não volta mais: o efeito é o de ser tirado pelo administrador (o clube passa à máquina até o fim). O administrador não sai, porque é o centro do jogo; se quiser, apaga a gravação. Tela aprovada (mockup). **Agente:** só entre as rodadas, como "Tirar do jogo"; na sala, antes de a temporada começar, não aparece, porque quem sai poderia entrar de novo pelo link. A §14 deixa de ter tempo limite e abandono em aberto: o tempo limite automático foi recusado na rev. 104.
@@ -3420,8 +3421,16 @@ usuário:
     **prévia simples** dos 11 de cada lado (formação, posição, nome e
     força), mandante à esquerda e visitante à direita.
   - Botão **Continuar** (ou fechar) retoma a partida.
-- **Em aberto:** caixas do Elifoot 98 "Cartões vermelhos" e "Lesões"
-  (provavelmente pausa automática nesses lances); árbitro não existe no
+- ~~**Em aberto:** caixas do Elifoot 98 "Cartões vermelhos" e "Lesões".~~
+  **Definido (rev. 132), pelo usuário:** caixas de marcar no rodapé da janela do
+  jogo do próprio clube, "Parar o jogo no meu clube: [x] Lesões [ ] Cartões
+  vermelhos", ao lado de "Continuar". Marcada, a rodada para sozinha quando o clube
+  tem um lesionado (como já acontecia) ou um expulso, e a janela abre; desmarcada
+  "Lesões", a máquina troca o lesionado sem parar. A escolha vale para as próximas
+  rodadas. Na parada pela expulsão, a janela avisa quem foi expulso, se por
+  segundo amarelo ou vermelho direto, e com quantos o time segue. **Provisório
+  (agente):** em rede, cada treinador decide pelas próprias caixas e a parada segue
+  a regra dos 60 s (§3.3); no último minuto não para. Árbitro não existe no
   domínio e fica fora.
 - Convite de outro clube ao usuário: modelo depois da regra de moral
   (§6.2) e demissão (§5.4).
@@ -3868,7 +3877,7 @@ começa depois que a anterior estiver testada.
     dos gols ligado ou desligado no quadro, mantido para as próximas
     rodadas (migração V14). Fica fora o cabeçalho com estádio e público
     (sem estádio no domínio). As caixas "Cartões vermelhos" e "Lesões"
-    continuam em aberto.
+    entraram na rev. 132.
   - **3f.5 (concluída):** abas Classificação (por divisão, clube do
     usuário em destaque, rebaixados marcados), Artilheiros da temporada
     (por divisão) e de todos os tempos (empatados dividem a posição, 20

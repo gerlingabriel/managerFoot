@@ -220,6 +220,8 @@ class RodadaController {
 			aberta = aberta.filter(j -> j.doUsuario() == null || j.pausada());
 		}
 		aberta.ifPresent(j -> model.addAttribute("janela", j));
+		// caixas "Lesões" e "Cartões vermelhos" da janela do próprio clube (SPEC §10.5, rev. 132)
+		model.addAttribute("paradas", aoVivo.paradas(jogoId, usuario.id()));
 		// quem está na parada em rede tem a janela aberta: a consulta do quadro apagaria a escolha de quem sai e
 		// entra; a contagem da janela consulta e a fecha quando o jogo volta (rev. 102)
 		boolean naParada = e.pausa() != null && e.pausa().minha();
@@ -286,6 +288,16 @@ class RodadaController {
 	String som(@AuthenticationPrincipal Usuario usuario, @PathVariable long jogoId, @RequestParam("ligado") boolean ligado,
 			@RequestParam(name = "janela", required = false) Long janela) {
 		aoVivo.definirSom(jogoId, usuario.id(), ligado);
+		return "redirect:/jogos/" + jogoId + "/rodada" + (janela == null ? "" : "?janela=" + janela);
+	}
+
+	/** As caixas da janela do jogo: se a rodada para sozinha na lesão ou na expulsão do clube (rev. 132). */
+	@PostMapping("/jogos/{jogoId}/rodada/paradas")
+	String paradas(@AuthenticationPrincipal Usuario usuario, @PathVariable long jogoId,
+			@RequestParam(name = "lesoes", defaultValue = "false") boolean lesoes,
+			@RequestParam(name = "vermelhos", defaultValue = "false") boolean vermelhos,
+			@RequestParam(name = "janela", required = false) Long janela) {
+		aoVivo.definirParadas(jogoId, usuario.id(), new RodadaAoVivoRepositorio.Paradas(lesoes, vermelhos));
 		return "redirect:/jogos/" + jogoId + "/rodada" + (janela == null ? "" : "?janela=" + janela);
 	}
 

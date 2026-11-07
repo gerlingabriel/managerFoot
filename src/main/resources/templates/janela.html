@@ -68,6 +68,8 @@
 </div>
 <p th:if="${meu.lesionado != null}" role="alert" class="alerta janela-erro"
 	th:text="|${meu.lesionado.nome} se lesionou. Escolha quem entra no lugar dele; se continuar sem trocar, a troca é automática.|">Fulano se lesionou.</p>
+<p th:if="${meu.expulsao != null}" role="alert" class="alerta janela-erro"
+	th:text="|${meu.expulsao.jogador.nome} foi expulso (${meu.expulsao.tipo.name() == 'SEGUNDO_AMARELO' ? 'segundo amarelo' : 'vermelho direto'}). O jogo parou para você reorganizar o time; o time segue com ${meu.emCampo.size()}.|">Fulano foi expulso.</p>
 <form th:action="@{/jogos/{id}/rodada/substituir(id=${e.jogoId})}" method="post" class="janela-troca">
 <input type="hidden" name="mandante" th:value="${janela.mandanteId}">
 <fieldset class="lista-troca em-campo">
@@ -112,7 +114,16 @@
 </div>
 </section>
 
-<div class="janela-rodape">
+<div class="janela-rodape" th:classappend="${meu != null} ? 'com-caixas'">
+<!--/* Caixas da janela do próprio clube (SPEC §10.5, rev. 132): valem também para as próximas rodadas. */-->
+<form th:if="${meu != null}" th:action="@{/jogos/{id}/rodada/paradas(id=${e.jogoId})}" method="post" class="caixas-parar"
+	role="group" aria-labelledby="t-parar">
+<input type="hidden" name="janela" th:value="${janela.mandanteId}">
+<span id="t-parar" class="suave">Parar o jogo no meu clube:</span>
+<label><input type="checkbox" name="lesoes" value="true" th:checked="${paradas.naLesao}" data-enviar-ao-mudar> Lesões</label>
+<label><input type="checkbox" name="vermelhos" value="true" th:checked="${paradas.noVermelho}" data-enviar-ao-mudar> Cartões vermelhos</label>
+<noscript><button type="submit" class="botao-discreto">Gravar</button></noscript>
+</form>
 <form th:action="@{/jogos/{id}/rodada/continuar(id=${e.jogoId})}" method="post">
 <button type="submit" class="botao-continuar" autofocus>Continuar</button>
 </form>

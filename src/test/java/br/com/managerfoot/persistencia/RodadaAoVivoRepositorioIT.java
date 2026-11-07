@@ -299,6 +299,11 @@ class RodadaAoVivoRepositorioIT {
 	 * rodada 1 (antes do minuto 88, para o minuto seguinte ainda ser da mesma divisão), e devolve a lesão.
 	 */
 	private EventoPartida sementeComLesaoDoUsuarioNaRodada1() {
+		return sementeComEventoDoUsuarioNaRodada1(tipo -> tipo == TipoEvento.LESAO);
+	}
+
+	/** Como {@link #sementeComLesaoDoUsuarioNaRodada1()}, para qualquer tipo de lance. */
+	private EventoPartida sementeComEventoDoUsuarioNaRodada1(java.util.function.Predicate<TipoEvento> tipo) {
 		for (long semente = 0; semente < 400; semente++) {
 			jogo = LigaDeTeste.criarJogo(moldes, jogos, contas);
 			temporadas.iniciarPrimeiraTemporada(jogo, semente);
@@ -313,14 +318,44 @@ class RodadaAoVivoRepositorioIT {
 					continue;
 				}
 				var lesao = rodada.noMinuto(p, Integer.MAX_VALUE).resultado().eventos().stream()
-					.filter(e -> e.tipo() == TipoEvento.LESAO && e.lado() == lado && e.minuto() < 88)
+					.filter(e -> tipo.test(e.tipo()) && e.lado() == lado && e.minuto() < 88)
 					.findFirst();
 				if (lesao.isPresent()) {
 					return lesao.get();
 				}
 			}
 		}
-		throw new AssertionError("nenhuma semente com lesão do usuário na rodada 1");
+		throw new AssertionError("nenhuma semente com o lance do usuário na rodada 1");
+	}
+
+	@Test
+	void comACaixaLesoesDesmarcadaALesaoNaoParaEAMaquinaTroca() {
+		EventoPartida lesao = sementeComLesaoDoUsuarioNaRodada1();
+		assertThat(aoVivo.paradas(jogo, usuario)).as("lesão marcada, vermelho desmarcado").isEqualTo(new RodadaAoVivoRepositorio.Paradas(true, false));
+		aoVivo.definirParadas(jogo, usuario, new RodadaAoVivoRepositorio.Paradas(false, false));
+		aoVivo.iniciar(jogo, usuario, 1, T0);
+
+		// na velocidade normal (0,5 s por minuto), o minuto da lesão mais 3 já passou
+		EstadoRodada depois = estado((long) Math.ceil((lesao.minuto() + 3) * 0.5) + 1);
+		assertThat(depois.pausada()).isFalse();
+		assertThat(depois.janelaQueAbre()).isNull();
+		assertThat(depois.minuto()).isGreaterThan(lesao.minuto());
+	}
+
+	@Test
+	void comACaixaCartoesVermelhosMarcadaAExpulsaoParaEAJanelaMostraOExpulso() {
+		EventoPartida expulsao = sementeComEventoDoUsuarioNaRodada1(TipoEvento::expulsao);
+		aoVivo.definirParadas(jogo, usuario, new RodadaAoVivoRepositorio.Paradas(false, true));
+		aoVivo.iniciar(jogo, usuario, 1, T0);
+
+		EstadoRodada parada = estado(200);
+		assertThat(parada.pausada()).isTrue();
+		assertThat(parada.minuto()).isEqualTo(expulsao.minuto());
+		long mandante = parada.jogoDoUsuario().mandante().id();
+		assertThat(parada.janelaQueAbre()).isEqualTo(mandante);
+		RodadaAoVivoRepositorio.JanelaJogo janela = aoVivo.janela(jogo, usuario, mandante, T0.plusSeconds(200)).orElseThrow();
+		RodadaAoVivoRepositorio.TimeNaJanela meu = janela.doUsuario() == Lado.CASA ? janela.casa() : janela.fora();
+		assertThat(meu.expulsao().jogador().id()).isEqualTo(expulsao.jogador().id());
 	}
 
 	@Test

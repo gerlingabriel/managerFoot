@@ -304,10 +304,12 @@ public class RodadaAoVivoRepositorio {
 		RelogioRodada relogio = relogio(rodada, porDivisao);
 		double progresso = progresso(atual, relogio, velocidade, agora);
 		if (atual.andandoDesde() != null) {
-			Optional<Lesao> lesao = lesaoDeTreinador(rodada, porDivisao, relogio, atual.lesaoAte(), progresso);
+			Optional<Lesao> lesao = paradaDeTreinador(rodada, porDivisao, relogio, atual.lesaoAte(), progresso,
+					paradasDosTreinadores(jogoId));
 			if (lesao.isPresent()) {
-				// lesão num clube de treinador: o relógio para no minuto dela e a janela abre (SPEC §7.5, rev. 69);
-				// no jogo em rede, para todos por até 60 s, como a substituição (§3.3 item 3)
+				// lesão ou expulsão num clube de treinador que marcou a caixa: o relógio para no minuto dela e a janela
+				// abre (SPEC §7.5, rev. 69; §10.5, rev. 132); no jogo em rede, para todos por até 60 s, como a
+				// substituição (§3.3 item 3)
 				progresso = lesao.get().progresso();
 				gravarRelogio(jogoId, progresso, null);
 				jdbc.sql("UPDATE jogo_rodada_ao_vivo SET lesao_ate = :ate WHERE jogo_id = :jogo")
@@ -335,16 +337,36 @@ public class RodadaAoVivoRepositorio {
 				encerrada, velocidade, agora));
 	}
 
-	/** Lesão que para a rodada: em que ponto do relógio e de qual clube. */
+	/** Lesão ou expulsão que para a rodada: em que ponto do relógio e de qual clube. */
 	private record Lesao(double progresso, long clube) {
 	}
 
+	/** As caixas da janela do jogo de um treinador (SPEC §10.5, rev. 132). */
+	public record Paradas(boolean naLesao, boolean noVermelho) {
+
+		boolean para(TipoEvento tipo) {
+			return tipo == TipoEvento.LESAO ? naLesao : tipo.expulsao() && noVermelho;
+		}
+	}
+
+	/** As caixas de cada clube com treinador, pelo id do clube. */
+	private Map<Long, Paradas> paradasDosTreinadores(long jogoId) {
+		Map<Long, Paradas> paradas = new HashMap<>();
+		jdbc.sql("SELECT clube_id, parar_na_lesao, parar_no_vermelho FROM jogo_treinador WHERE jogo_id = :jogo")
+			.param("jogo", jogoId)
+			.query(rs -> {
+				paradas.put(rs.getLong("clube_id"), new Paradas(rs.getBoolean("parar_na_lesao"), rs.getBoolean("parar_no_vermelho")));
+			});
+		return paradas;
+	}
+
 	/**
-	 * A primeira lesão de um clube com treinador entre a última que já pausou e o progresso dado (no jogo
-	 * individual, só o clube do usuário); lesão no último minuto não pausa (não há mais substituição).
+	 * A primeira lesão ou expulsão de um clube com treinador, entre a última que já pausou e o progresso dado, que
+	 * a caixa dele manda parar (no jogo individual, só o clube do usuário); no último minuto não pausa (não há mais
+	 * substituição).
 	 */
-	private static Optional<Lesao> lesaoDeTreinador(RodadaAoVivo rodada, Map<Integer, List<PartidaDaRodada>> porDivisao,
-			RelogioRodada relogio, double lesaoAte, double progresso) {
+	private static Optional<Lesao> paradaDeTreinador(RodadaAoVivo rodada, Map<Integer, List<PartidaDaRodada>> porDivisao,
+			RelogioRodada relogio, double lesaoAte, double progresso, Map<Long, Paradas> paradas) {
 		List<Integer> prioridades = new ArrayList<>(porDivisao.keySet());
 		Lesao primeira = null;
 		for (PartidaDaRodada p : rodada.partidas()) {
@@ -355,7 +377,9 @@ public class RodadaAoVivoRepositorio {
 			Partida inteira = rodada.noMinuto(p, Integer.MAX_VALUE);
 			for (EventoPartida e : inteira.resultado().eventos()) {
 				double g = inicio + e.minuto();
-				if (e.tipo() == TipoEvento.LESAO && p.ladosDoUsuario().contains(e.lado()) && e.minuto() < inteira.minutoFinal()
+				if (p.ladosDoUsuario().contains(e.lado())
+						&& paradas.getOrDefault(p.clube(e.lado()).id(), new Paradas(true, false)).para(e.tipo())
+						&& e.minuto() < inteira.minutoFinal()
 						&& g > lesaoAte && g <= progresso && (primeira == null || g < primeira.progresso())) {
 					primeira = new Lesao(g, p.clube(e.lado()).id());
 				}
@@ -571,6 +595,31 @@ public class RodadaAoVivoRepositorio {
 			.update();
 	}
 
+	/** As caixas "Lesões" e "Cartões vermelhos" da janela do jogo; valem também para as próximas rodadas (rev. 132). */
+	@Transactional
+	public void definirParadas(long jogoId, long usuarioId, Paradas paradas) {
+		exigirClube(jogoId, usuarioId);
+		jdbc.sql("""
+				UPDATE jogo_treinador SET parar_na_lesao = :lesao, parar_no_vermelho = :vermelho
+				WHERE jogo_id = :jogo AND usuario_id = :usuario""")
+			.param("lesao", paradas.naLesao())
+			.param("vermelho", paradas.noVermelho())
+			.param("jogo", jogoId)
+			.param("usuario", usuarioId)
+			.update();
+	}
+
+	/** As caixas do treinador (rev. 132). */
+	@Transactional(readOnly = true)
+	public Paradas paradas(long jogoId, long usuarioId) {
+		return jdbc.sql("SELECT parar_na_lesao, parar_no_vermelho FROM jogo_treinador WHERE jogo_id = :jogo AND usuario_id = :usuario")
+			.param("jogo", jogoId)
+			.param("usuario", usuarioId)
+			.query((rs, n) -> new Paradas(rs.getBoolean("parar_na_lesao"), rs.getBoolean("parar_no_vermelho")))
+			.optional()
+			.orElse(new Paradas(true, false));
+	}
+
 	/** Liga ou desliga o som dos gols; vale também para as próximas rodadas. */
 	@Transactional
 	public void definirSom(long jogoId, long usuarioId, boolean ligado) {
@@ -621,7 +670,10 @@ public class RodadaAoVivoRepositorio {
 					jogo.emCampo(lado).stream().sorted(Comparator.comparing(Jogador::posicao)).toList(),
 					lado == doUsuario ? jogo.reservasDisponiveis(lado) : List.of(), maximo - jogo.substituicoesRestantes(lado),
 					maximo, eventos.stream().filter(e -> e.lado() == lado && e.tipo() == TipoEvento.SUBSTITUICAO).toList(),
-					amarelados, jogo.lesionadoAguardandoTroca(lado).orElse(null)));
+					amarelados, jogo.lesionadoAguardandoTroca(lado).orElse(null),
+					// a expulsão deste minuto, que pode ter parado o jogo (rev. 132)
+					eventos.stream().filter(e -> e.lado() == lado && e.tipo().expulsao() && e.minuto() == minuto).reduce((a, b) -> b)
+						.orElse(null)));
 		}
 		return Optional.of(new JanelaJogo(p.jogo().mandante().id(), minuto, linha.get().andandoDesde() == null,
 				placar(rodada, p, minuto, clube, caixas.publicos(jogoId, List.of(p)), gruposDosMandantes(jogoId, linha.get())), eventos.stream().filter(RodadaAoVivoRepositorio::lance).toList(), doUsuario,
@@ -944,10 +996,11 @@ public class RodadaAoVivoRepositorio {
 	 *
 	 * @param banco reservas que ainda podem entrar; vazio no clube que não é do usuário
 	 * @param lesionado lesionado em campo esperando a troca do usuário (SPEC §7.5); nulo se não há
+	 * @param expulsao expulsão do lado neste minuto, a que para o jogo com a caixa marcada (rev. 132); nula se não há
 	 */
 	public record TimeNaJanela(Clube clube, Formacao formacao, List<Jogador> emCampo, List<Jogador> banco,
 			int substituicoesFeitas, int substituicoesMaximas, List<EventoPartida> substituicoes, Set<Long> amarelados,
-			Jogador lesionado) {
+			Jogador lesionado, EventoPartida expulsao) {
 	}
 
 	/**

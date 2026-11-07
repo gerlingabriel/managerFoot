@@ -289,6 +289,25 @@ class RodadaIT {
 	}
 
 	@Test
+	void asCaixasDaJanelaFicamGravadas() throws Exception {
+		iniciar();
+		long mandante = partidaDoUsuario().jogo().mandante().id();
+		mvc.perform(post(rodada + "/janela").param("mandante", String.valueOf(mandante)).with(como(treinador)).with(csrf()));
+		mvc.perform(get(rodada).param("janela", String.valueOf(mandante)).with(como(treinador)))
+			.andExpect(content().string(containsString("Parar o jogo no meu clube:")))
+			.andExpect(content().string(containsString("name=\"lesoes\" value=\"true\" data-enviar-ao-mudar checked=\"checked\"")))
+			.andExpect(content().string(not(containsString("name=\"vermelhos\" value=\"true\" data-enviar-ao-mudar checked=\"checked\""))));
+
+		// marcar só "Cartões vermelhos": a lesão sai porque a caixa desmarcada não vai no formulário
+		mvc.perform(post(rodada + "/paradas").param("vermelhos", "true").param("janela", String.valueOf(mandante))
+				.with(como(treinador)).with(csrf()))
+			.andExpect(redirectedUrl(rodada + "?janela=" + mandante));
+		mvc.perform(get(rodada).param("janela", String.valueOf(mandante)).with(como(treinador)))
+			.andExpect(content().string(not(containsString("name=\"lesoes\" value=\"true\" data-enviar-ao-mudar checked=\"checked\""))))
+			.andExpect(content().string(containsString("name=\"vermelhos\" value=\"true\" data-enviar-ao-mudar checked=\"checked\"")));
+	}
+
+	@Test
 	void trocaInvalidaVoltaComOMotivo() throws Exception {
 		iniciar();
 		long mandante = partidaDoUsuario().jogo().mandante().id();

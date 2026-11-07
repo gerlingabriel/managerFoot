@@ -1187,6 +1187,10 @@ label.troca-linha:hover { background: rgba(242, 201, 76, 0.08); }
 .titulo-coluna.pequeno { font-size: 16px; }
 
 .janela-rodape { display: flex; justify-content: flex-end; padding: 12px 16px; border-top: 1px solid var(--borda); }
+.janela-rodape.com-caixas { justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.caixas-parar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; font-size: 14px; }
+.caixas-parar label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.caixas-parar input { width: 16px; height: 16px; accent-color: var(--destaque, #F5C84C); }
 
 .botao-continuar {
 	min-height: 44px;
