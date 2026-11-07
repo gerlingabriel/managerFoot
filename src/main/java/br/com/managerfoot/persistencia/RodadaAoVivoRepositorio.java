@@ -341,21 +341,29 @@ public class RodadaAoVivoRepositorio {
 	private record Lesao(double progresso, long clube) {
 	}
 
-	/** As caixas da janela do jogo de um treinador (SPEC §10.5, rev. 132). */
-	public record Paradas(boolean naLesao, boolean noVermelho) {
+	/** As caixas da janela do jogo de um treinador (SPEC §10.5, rev. 132; pênaltis a favor na rev. 133). */
+	public record Paradas(boolean naLesao, boolean noVermelho, boolean naPenalti) {
 
-		boolean para(TipoEvento tipo) {
-			return tipo == TipoEvento.LESAO ? naLesao : tipo.expulsao() && noVermelho;
+		/** As caixas como começam: lesões e pênaltis marcados, vermelhos desmarcado. */
+		public static final Paradas INICIAIS = new Paradas(true, false, true);
+
+		/** O lance para o jogo: a cobrança de pênalti tem o minuto em que ele foi marcado. */
+		boolean para(EventoPartida e) {
+			if (e.penalti()) {
+				return naPenalti;
+			}
+			return e.tipo() == TipoEvento.LESAO ? naLesao : e.tipo().expulsao() && noVermelho;
 		}
 	}
 
 	/** As caixas de cada clube com treinador, pelo id do clube. */
 	private Map<Long, Paradas> paradasDosTreinadores(long jogoId) {
 		Map<Long, Paradas> paradas = new HashMap<>();
-		jdbc.sql("SELECT clube_id, parar_na_lesao, parar_no_vermelho FROM jogo_treinador WHERE jogo_id = :jogo")
+		jdbc.sql("SELECT clube_id, parar_na_lesao, parar_no_vermelho, parar_no_penalti FROM jogo_treinador WHERE jogo_id = :jogo")
 			.param("jogo", jogoId)
 			.query(rs -> {
-				paradas.put(rs.getLong("clube_id"), new Paradas(rs.getBoolean("parar_na_lesao"), rs.getBoolean("parar_no_vermelho")));
+				paradas.put(rs.getLong("clube_id"), new Paradas(rs.getBoolean("parar_na_lesao"), rs.getBoolean("parar_no_vermelho"),
+						rs.getBoolean("parar_no_penalti")));
 			});
 		return paradas;
 	}
@@ -378,7 +386,7 @@ public class RodadaAoVivoRepositorio {
 			for (EventoPartida e : inteira.resultado().eventos()) {
 				double g = inicio + e.minuto();
 				if (p.ladosDoUsuario().contains(e.lado())
-						&& paradas.getOrDefault(p.clube(e.lado()).id(), new Paradas(true, false)).para(e.tipo())
+						&& paradas.getOrDefault(p.clube(e.lado()).id(), Paradas.INICIAIS).para(e)
 						&& e.minuto() < inteira.minutoFinal()
 						&& g > lesaoAte && g <= progresso && (primeira == null || g < primeira.progresso())) {
 					primeira = new Lesao(g, p.clube(e.lado()).id());
@@ -595,15 +603,50 @@ public class RodadaAoVivoRepositorio {
 			.update();
 	}
 
+	/**
+	 * Quem bate o pênalti a favor que espera a cobrança, com a partida pausada (SPEC §12, rev. 133). A escolha é
+	 * gravada como as substituições, com o mesmo jogador saindo e entrando, e só vale para esta cobrança.
+	 *
+	 * @throws IllegalArgumentException se não há pênalti esperando ou o jogador não está em campo, com o motivo
+	 */
+	@Transactional
+	public void escolherBatedor(long jogoId, long usuarioId, long jogadorId, Instant agora) {
+		long clube = exigirClube(jogoId, usuarioId);
+		jogos.travar(jogoId);
+		Linha linha = linha(jogoId, agora).orElseThrow(() -> new IllegalArgumentException("Não há rodada em andamento."));
+		if (linha.andandoDesde() != null) {
+			throw new IllegalArgumentException("O jogo voltou a andar e o pênalti já foi cobrado.");
+		}
+		RodadaAoVivo rodada = preparar(jogoId, linha, substituicoes(jogoId));
+		Map<Integer, List<PartidaDaRodada>> porDivisao = porDivisao(rodada);
+		RelogioRodada relogio = relogio(rodada, porDivisao);
+		PartidaDaRodada partida = rodada.partidas().stream()
+			.filter(p -> p.jogo().mandante().id() == clube || p.jogo().visitante().id() == clube)
+			.findFirst()
+			.orElseThrow(() -> new IllegalArgumentException("Seu clube não joga agora."));
+		Lado lado = partida.jogo().mandante().id() == clube ? Lado.CASA : Lado.FORA;
+		RodadaAoVivo.Substituicao escolha = rodada.escolherBatedor(partida, relogio.minuto(linha.progresso()), lado, jogadorId);
+		jdbc.sql("""
+				INSERT INTO jogo_substituicao_ao_vivo (jogo_id, mandante_id, minuto, lado, sai_id, entra_id)
+				VALUES (:jogo, :mandante, :minuto, :lado, :jogador, :jogador)""")
+			.param("jogo", jogoId)
+			.param("mandante", escolha.mandanteId())
+			.param("minuto", escolha.minuto())
+			.param("lado", escolha.lado().name())
+			.param("jogador", jogadorId)
+			.update();
+	}
+
 	/** As caixas "Lesões" e "Cartões vermelhos" da janela do jogo; valem também para as próximas rodadas (rev. 132). */
 	@Transactional
 	public void definirParadas(long jogoId, long usuarioId, Paradas paradas) {
 		exigirClube(jogoId, usuarioId);
 		jdbc.sql("""
-				UPDATE jogo_treinador SET parar_na_lesao = :lesao, parar_no_vermelho = :vermelho
+				UPDATE jogo_treinador SET parar_na_lesao = :lesao, parar_no_vermelho = :vermelho, parar_no_penalti = :penalti
 				WHERE jogo_id = :jogo AND usuario_id = :usuario""")
 			.param("lesao", paradas.naLesao())
 			.param("vermelho", paradas.noVermelho())
+			.param("penalti", paradas.naPenalti())
 			.param("jogo", jogoId)
 			.param("usuario", usuarioId)
 			.update();
@@ -612,12 +655,15 @@ public class RodadaAoVivoRepositorio {
 	/** As caixas do treinador (rev. 132). */
 	@Transactional(readOnly = true)
 	public Paradas paradas(long jogoId, long usuarioId) {
-		return jdbc.sql("SELECT parar_na_lesao, parar_no_vermelho FROM jogo_treinador WHERE jogo_id = :jogo AND usuario_id = :usuario")
+		return jdbc.sql("""
+				SELECT parar_na_lesao, parar_no_vermelho, parar_no_penalti FROM jogo_treinador
+				WHERE jogo_id = :jogo AND usuario_id = :usuario""")
 			.param("jogo", jogoId)
 			.param("usuario", usuarioId)
-			.query((rs, n) -> new Paradas(rs.getBoolean("parar_na_lesao"), rs.getBoolean("parar_no_vermelho")))
+			.query((rs, n) -> new Paradas(rs.getBoolean("parar_na_lesao"), rs.getBoolean("parar_no_vermelho"),
+					rs.getBoolean("parar_no_penalti")))
 			.optional()
-			.orElse(new Paradas(true, false));
+			.orElse(Paradas.INICIAIS);
 	}
 
 	/** Liga ou desliga o som dos gols; vale também para as próximas rodadas. */
@@ -673,7 +719,8 @@ public class RodadaAoVivoRepositorio {
 					amarelados, jogo.lesionadoAguardandoTroca(lado).orElse(null),
 					// a expulsão deste minuto, que pode ter parado o jogo (rev. 132)
 					eventos.stream().filter(e -> e.lado() == lado && e.tipo().expulsao() && e.minuto() == minuto).reduce((a, b) -> b)
-						.orElse(null)));
+						.orElse(null),
+					lado == doUsuario && jogo.penaltiAguardandoCobranca(lado), jogo.batedorDoPlantelEmCampo(lado).orElse(null)));
 		}
 		return Optional.of(new JanelaJogo(p.jogo().mandante().id(), minuto, linha.get().andandoDesde() == null,
 				placar(rodada, p, minuto, clube, caixas.publicos(jogoId, List.of(p)), gruposDosMandantes(jogoId, linha.get())), eventos.stream().filter(RodadaAoVivoRepositorio::lance).toList(), doUsuario,
@@ -997,10 +1044,12 @@ public class RodadaAoVivoRepositorio {
 	 * @param banco reservas que ainda podem entrar; vazio no clube que não é do usuário
 	 * @param lesionado lesionado em campo esperando a troca do usuário (SPEC §7.5); nulo se não há
 	 * @param expulsao expulsão do lado neste minuto, a que para o jogo com a caixa marcada (rev. 132); nula se não há
+	 * @param penaltiAguardando pênalti a favor esperando a cobrança, para o usuário escolher quem bate (rev. 133)
+	 * @param batedorDoPlantel o batedor escolhido no plantel, se está em campo; nulo é o automático
 	 */
 	public record TimeNaJanela(Clube clube, Formacao formacao, List<Jogador> emCampo, List<Jogador> banco,
 			int substituicoesFeitas, int substituicoesMaximas, List<EventoPartida> substituicoes, Set<Long> amarelados,
-			Jogador lesionado, EventoPartida expulsao) {
+			Jogador lesionado, EventoPartida expulsao, boolean penaltiAguardando, Jogador batedorDoPlantel) {
 	}
 
 	/**

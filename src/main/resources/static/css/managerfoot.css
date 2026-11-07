@@ -1188,6 +1188,10 @@ label.troca-linha:hover { background: rgba(242, 201, 76, 0.08); }
 
 .janela-rodape { display: flex; justify-content: flex-end; padding: 12px 16px; border-top: 1px solid var(--borda); }
 .janela-rodape.com-caixas { justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.janela-penalti { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; margin-top: 10px; border: 1px solid var(--destaque); border-radius: 8px; background: rgba(242, 201, 76, 0.08); }
+.janela-penalti strong { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 18px; color: var(--destaque); text-transform: uppercase; letter-spacing: 0.02em; }
+.janela-penalti-linha { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.janela-penalti-linha .selecao { min-width: 240px; }
 .caixas-parar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; font-size: 14px; }
 .caixas-parar label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
 .caixas-parar input { width: 16px; height: 16px; accent-color: var(--destaque, #F5C84C); }

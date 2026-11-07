@@ -127,3 +127,11 @@
   fim uma vez a mais (custo pequeno). Pausar pelo clique e mudar a
   velocidade não procuram a lesão; a consulta seguinte a encontra e volta o
   relógio para ela.
+
+## Adendo (2026-11-07, SPEC rev. 133): batedor do pênalti na hora
+
+- O pênalti a favor de um clube de treinador fica esperando a cobrança (`Partida.penaltiAguardandoCobranca`) e é cobrado
+  no começo do minuto seguinte, como a troca automática do lesionado. A escolha de quem bate é gravada em
+  `jogo_substituicao_ao_vivo` com `sai_id = entra_id` (`RodadaAoVivo.Substituicao.batedor()`): refazer a partida pela
+  semente aplica a escolha no mesmo minuto das trocas, sem tabela nova nem mudar a preparação da rodada. Ninguém sai, e
+  ela não conta como substituição.

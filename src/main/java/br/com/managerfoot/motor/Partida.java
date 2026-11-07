@@ -57,6 +57,11 @@ public final class Partida {
 	private final List<EventoPartida> eventos = new ArrayList<>();
 	private final Map<Lado, Integer> lesoes = new EnumMap<>(Lado.class);
 	private final Map<Lado, Jogador> lesionadoAguardando = new EnumMap<>(Lado.class);
+	/**
+	 * Pênalti a favor de um time de usuário esperando a cobrança (SPEC §12, rev. 133): marcado num minuto e cobrado no
+	 * começo do seguinte, para o treinador escolher quem bate. O valor é o batedor escolhido; nulo é o do plantel.
+	 */
+	private final Map<Lado, Optional<Jogador>> penaltiAguardando = new EnumMap<>(Lado.class);
 	private int minuto;
 	private int fim;
 	private int golsCasa;
@@ -182,6 +187,31 @@ public final class Partida {
 		return time(lado).formacao();
 	}
 
+	/** Há pênalti a favor do time do usuário esperando a cobrança, no começo do próximo minuto (SPEC §12, rev. 133). */
+	public boolean penaltiAguardandoCobranca(Lado lado) {
+		return penaltiAguardando.containsKey(lado);
+	}
+
+	/**
+	 * Quem bate o pênalti que espera a cobrança (rev. 133).
+	 *
+	 * @throws IllegalArgumentException se não há pênalti esperando ou o jogador não está em campo
+	 */
+	public void escolherBatedor(Lado lado, Jogador batedor) {
+		if (!penaltiAguardando.containsKey(lado)) {
+			throw new IllegalArgumentException("Não há pênalti para cobrar agora.");
+		}
+		if (!time(lado).emCampo().contains(batedor)) {
+			throw new IllegalArgumentException("Quem bate precisa estar em campo.");
+		}
+		penaltiAguardando.put(lado, Optional.of(batedor));
+	}
+
+	/** O batedor do plantel, se está em campo (para a tela mostrar a escolha já feita). */
+	public Optional<Jogador> batedorDoPlantelEmCampo(Lado lado) {
+		return time(lado).batedorPreferidoEmCampo();
+	}
+
 	/** Lesionado do time do usuário ainda em campo, esperando a troca (SPEC §7.5). */
 	public Optional<Jogador> lesionadoAguardandoTroca(Lado lado) {
 		return Optional.ofNullable(lesionadoAguardando.get(lado));
@@ -200,9 +230,24 @@ public final class Partida {
 				tirarLesionado(lado, lesionado);
 			}
 		}
+		// o pênalti marcado no minuto anterior: cobra quem o treinador escolheu, se ainda está em campo, ou o do plantel
+		for (Lado lado : Lado.values()) {
+			Optional<Jogador> escolhido = penaltiAguardando.remove(lado);
+			if (escolhido != null) {
+				Jogador batedor = escolhido.filter(j -> time(lado).emCampo().contains(j))
+					.orElseGet(() -> time(lado).batedorPenalti(aleatorio));
+				registrarFinalizacao(lado, batedor, conversaoPenalti(lado, batedor), true);
+			}
+		}
 		minuto++;
 		if (aleatorio.nextDouble() < parametros.penalti().penaltisPorMinuto()) {
-			cobrarPenalti(sortearQuemDomina());
+			Lado lado = sortearQuemDomina();
+			if (!ladosDaMaquina.contains(lado) && minuto < fim) {
+				// a favor de um time de usuário: a cobrança fica para o começo do minuto seguinte (rev. 133)
+				penaltiAguardando.put(lado, Optional.empty());
+			} else {
+				cobrarPenalti(lado);
+			}
 		} else if (aleatorio.nextDouble() < parametros.chancePorMinuto()) {
 			finalizar(sortearQuemDomina());
 		}

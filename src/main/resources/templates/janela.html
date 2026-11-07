@@ -68,6 +68,21 @@
 </div>
 <p th:if="${meu.lesionado != null}" role="alert" class="alerta janela-erro"
 	th:text="|${meu.lesionado.nome} se lesionou. Escolha quem entra no lugar dele; se continuar sem trocar, a troca é automática.|">Fulano se lesionou.</p>
+<!--/* Pênalti a favor esperando a cobrança (SPEC §12, rev. 133): a escolha é só deste treinador. */-->
+<div th:if="${meu.penaltiAguardando}" role="alert" class="janela-penalti">
+<strong>Pênalti para o seu time!</strong>
+<span class="texto pequeno">Escolha quem bate. Se continuar sem escolher, bate o batedor do plantel.</span>
+<form th:action="@{/jogos/{id}/rodada/batedor(id=${e.jogoId})}" method="post" class="janela-penalti-linha">
+<input type="hidden" name="mandante" th:value="${janela.mandanteId}">
+<label for="batedor-penalti" class="suave">Quem bate</label>
+<select id="batedor-penalti" name="batedor" class="selecao">
+<option th:if="${meu.batedorDoPlantel == null}" value="">Automático — maior força em campo</option>
+<option th:each="j : ${meu.emCampo}" th:value="${j.id}" th:selected="${meu.batedorDoPlantel != null and meu.batedorDoPlantel.id == j.id}"
+	th:text="|${j.nome} (${j.posicao.name().substring(0, 1)} · ${j.forca}${j.asterisco ? ' ★' : ''})${meu.batedorDoPlantel != null and meu.batedorDoPlantel.id == j.id ? ' — batedor do plantel' : ''}|">Jogador</option>
+</select>
+<button type="submit" class="botao">Bater</button>
+</form>
+</div>
 <p th:if="${meu.expulsao != null}" role="alert" class="alerta janela-erro"
 	th:text="|${meu.expulsao.jogador.nome} foi expulso (${meu.expulsao.tipo.name() == 'SEGUNDO_AMARELO' ? 'segundo amarelo' : 'vermelho direto'}). O jogo parou para você reorganizar o time; o time segue com ${meu.emCampo.size()}.|">Fulano foi expulso.</p>
 <form th:action="@{/jogos/{id}/rodada/substituir(id=${e.jogoId})}" method="post" class="janela-troca">
@@ -122,6 +137,7 @@
 <span id="t-parar" class="suave">Parar o jogo no meu clube:</span>
 <label><input type="checkbox" name="lesoes" value="true" th:checked="${paradas.naLesao}" data-enviar-ao-mudar> Lesões</label>
 <label><input type="checkbox" name="vermelhos" value="true" th:checked="${paradas.noVermelho}" data-enviar-ao-mudar> Cartões vermelhos</label>
+<label><input type="checkbox" name="penaltis" value="true" th:checked="${paradas.naPenalti}" data-enviar-ao-mudar> Pênaltis a favor</label>
 <noscript><button type="submit" class="botao-discreto">Gravar</button></noscript>
 </form>
 <form th:action="@{/jogos/{id}/rodada/continuar(id=${e.jogoId})}" method="post">

@@ -35,8 +35,15 @@ public final class RodadaAoVivo {
 	 *
 	 * @param mandanteId identifica a partida na rodada (cada clube joga uma vez por rodada)
 	 * @param minuto minuto já jogado quando a troca foi feita (0 = antes do início)
+	 * @param saiId quem sai; igual a {@code entraId}, é a escolha de quem bate o pênalti que espera a cobrança, e
+	 *        ninguém sai (SPEC §12, rev. 133)
 	 */
 	public record Substituicao(long mandanteId, int minuto, Lado lado, long saiId, long entraId) {
+
+		/** É a escolha do batedor do pênalti, não uma troca. */
+		public boolean batedor() {
+			return saiId == entraId;
+		}
 	}
 
 	/** Uma partida da rodada com tudo o que a reproduz. */
@@ -115,6 +122,22 @@ public final class RodadaAoVivo {
 		return p;
 	}
 
+	/**
+	 * Confere a escolha de quem bate o pênalti que espera a cobrança e a devolve para ser gravada (rev. 133).
+	 *
+	 * @throws IllegalArgumentException se não há pênalti esperando ou o jogador não está em campo
+	 */
+	public Substituicao escolherBatedor(PartidaDaRodada partida, int minuto, Lado lado, long jogadorId) {
+		if (!partida.ladosDoUsuario().contains(lado)) {
+			throw new IllegalArgumentException("Só o treinador do clube escolhe quem bate.");
+		}
+		Partida p = noMinuto(partida, minuto);
+		Jogador batedor = p.emCampo(lado).stream().filter(j -> j.id() == jogadorId).findFirst()
+			.orElseThrow(() -> new IllegalArgumentException("Quem bate precisa estar em campo."));
+		p.escolherBatedor(lado, batedor);
+		return new Substituicao(partida.jogo().mandante().id(), p.minuto(), lado, jogadorId, jogadorId);
+	}
+
 	/** Uma rodada igual a esta com mais uma substituição. */
 	public RodadaAoVivo com(Substituicao substituicao) {
 		List<Substituicao> todas = new ArrayList<>(substituicoes);
@@ -150,7 +173,12 @@ public final class RodadaAoVivo {
 
 	private void aplicarSubstituicoes(Partida p, PartidaDaRodada partida, int minuto) {
 		for (Substituicao s : substituicoes) {
-			if (s.mandanteId() == partida.jogo().mandante().id() && s.minuto() == minuto && !p.terminada()) {
+			if (s.mandanteId() == partida.jogo().mandante().id() && s.minuto() == minuto && !p.terminada() && s.batedor()) {
+				// escolha do batedor do pênalti (rev. 133); se o pênalti já não espera, não vale
+				p.emCampo(s.lado()).stream().filter(j -> j.id() == s.saiId()).findFirst()
+					.filter(j -> p.penaltiAguardandoCobranca(s.lado()))
+					.ifPresent(j -> p.escolherBatedor(s.lado(), j));
+			} else if (s.mandanteId() == partida.jogo().mandante().id() && s.minuto() == minuto && !p.terminada()) {
 				Jogador sai = p.emCampo(s.lado()).stream().filter(j -> j.id() == s.saiId()).findFirst().orElseThrow();
 				Jogador entra = p.reservasDisponiveis(s.lado()).stream().filter(j -> j.id() == s.entraId()).findFirst()
 					.orElseThrow();

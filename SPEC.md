@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 132 — 2026-11-07)
+-   **Status:** versão inicial para revisão (rev. 133 — 2026-11-07)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 133 (2026-11-07):** pelo usuário (§12): **pênalti na hora**. Terceira caixa na janela do jogo, "Pênaltis a favor", que começa marcada. Marcada, o jogo para no pênalti a favor do clube do treinador e a janela mostra "Pênalti para o seu time!" com a lista "Quem bate" (os que estão em campo), com o batedor do plantel já selecionado; "Bater" cobra com o escolhido e "Continuar" sem escolher cobra com o do plantel. Dá para substituir antes da cobrança. O pênalti contra não para. Tela aprovada (mockup). **Agente:** o pênalti a favor de um clube de treinador é marcado num minuto e cobrado no começo do seguinte (com o minuto em que foi marcado), mesmo com a caixa desmarcada; o dos clubes da máquina e o do último minuto continuam cobrados na hora. A escolha é gravada como substituição de um jogador por ele mesmo (`docs/decisions/0010`) e é privada: os outros só veem a cobrança. Migração V51.
 -   **rev. 132 (2026-11-07):** pelo usuário (§10.5): **caixas "Lesões" e "Cartões vermelhos"** no rodapé da janela do jogo do próprio clube ("Parar o jogo no meu clube:"), ao lado de "Continuar". Marcadas, a rodada para sozinha quando o clube do treinador tem um lesionado ou um expulso, e a janela abre; desmarcada "Lesões", a máquina troca o lesionado sem parar. Começam com "Lesões" marcada (como antes) e "Cartões vermelhos" desmarcada; a escolha fica gravada para as próximas rodadas, como o som (migração V50). Na parada pela expulsão, a janela avisa: "Fulano foi expulso (segundo amarelo). O jogo parou para você reorganizar o time; o time segue com 10." Tela aprovada (mockup). **Agente:** no jogo em rede, a parada de cada treinador segue as caixas dele e a regra dos 60 s (§3.3); a expulsão no último minuto não para, como a lesão.
 -   **rev. 131 (2026-11-07):** pelo usuário (§7.4, §7.5, §10.5): **vermelho direto mais raro**, quase nunca no começo do jogo e mais provável com o passar do tempo; a expulsão comum passa a ser por dois amarelos. O vermelho direto era 5% dos cartões em qualquer minuto; agora cresce do zero até **2% no minuto 90**. Expulsões por jogo 0,23 → 0,15, das quais 85% por dois amarelos (eram 52%); até o minuto 15, 2,7% das expulsões (eram 9%). **Trava das goleadas maior por expulso:** com 1 expulso a mais ela começa com **3 gols** de vantagem (era 2); com 2 expulsos, com **5**. **Lesões:** o dobro da frequência e **limite de 3** por clube na temporada (era 2): 0,08 → 0,16 lesão por jogo, cerca de 2,4 por clube na temporada. O quadro da rodada e a janela do jogo mostram **um cartão vermelho por expulso** (antes, um só). Simulado em `docs/simulacoes/cartoes-e-lesoes.md`; opções escolhidas pelo usuário.
 -   **rev. 130 (2026-11-07):** pelo usuário (§8.4): **limite de estrangeiros em campo**. Conta só quem está em campo (o banco pode ter mais), pela regra de quem é estrangeiro no país; vale na liga e na copa nacional, não na continental nem no Mundial. Padrão **5** em todos os países, ajustável por país no banco editável (`limiteEstrangeiros`, de 0 a 11). Acima do limite, o Resumo do plantel mostra "6 de 5" em vermelho, a escalação ganha o problema "6 estrangeiros em campo: o limite é 5" e "Confirmar e jogar" trava; na continental e no Mundial aparece "7 · sem limite". A substituição que estoura é recusada. Tela aprovada (mockup). **Agente:** a máquina troca os estrangeiros excedentes pelo melhor que não conta da mesma posição (ou, sem ele, um jogador de linha de outra posição), perdendo o mínimo de força; o treinador da máquina não põe estrangeiro além do limite ao trocar lesionado ou goleiro expulso; a tática completa o time respeitando o limite. O jogo guarda o limite do banco em que foi criado (migração V49); jogos já criados ficam com 5.
@@ -3662,8 +3663,27 @@ treinadores do jogo tenham conta de administrador.
 **Provisório:** conversão de pênalti de **75%** (média do futebol real).
 Meta de frequência: cerca de 0,3 pênalti por jogo (§7.6).
 
-**Em aberto:** com a escolha prévia no plantel, se ainda deve existir a
-interação especial no momento do pênalti, descrita no início desta seção.
+~~**Em aberto:** com a escolha prévia no plantel, se ainda deve existir a
+interação especial no momento do pênalti.~~ **Definido (rev. 133), pelo usuário
+— pênalti na hora:**
+- Caixa **"Pênaltis a favor"** no rodapé da janela do jogo do próprio clube, junto
+  de "Lesões" e "Cartões vermelhos"; começa **marcada** e vale para as próximas
+  rodadas.
+- Marcada, o jogo **para** no pênalti a favor do clube do treinador e a janela
+  abre com "Pênalti para o seu time!" e a lista **"Quem bate"** (os que estão em
+  campo), com o batedor do plantel já selecionado. **"Bater"** cobra com o
+  escolhido; **"Continuar"** sem escolher cobra com o do plantel (ou o automático,
+  se ele não está em campo). Dá para substituir antes da cobrança.
+- Desmarcada, cobra o do plantel sem parar, como antes. O **pênalti contra não
+  para**.
+- **Provisório (agente):** o pênalti a favor de um clube de treinador é marcado
+  num minuto e cobrado no começo do seguinte, com o minuto em que foi marcado,
+  para a escolha vir antes do resultado. Vale mesmo com a caixa desmarcada (sem
+  diferença visível). O dos clubes da máquina e o do último minuto do tempo
+  continuam cobrados na hora; as partidas só da máquina não mudam. Em rede, a
+  escolha é só do treinador do clube, os outros veem a cobrança, e a parada segue
+  a regra dos 60 s (§3.3). A disputa de pênaltis da copa continua com a ordem do
+  plantel (§8.2).
 
 ## 13. Critérios iniciais de aceitação
 

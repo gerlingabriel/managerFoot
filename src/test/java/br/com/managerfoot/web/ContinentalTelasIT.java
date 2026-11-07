@@ -168,6 +168,8 @@ class ContinentalTelasIT {
 		Clube clube = brasileiroNaContinental();
 		assumir(clube);
 		jogarAteAContinental();
+		// a etapa precisa terminar sozinha: sem parar no pênalti a favor (rev. 133)
+		jdbc.sql("UPDATE jogo_treinador SET parar_no_penalti = false WHERE jogo_id = :j").param("j", jogoId).update();
 
 		mvc.perform(get(plantel).with(como(treinador)))
 			.andExpect(status().isOk())

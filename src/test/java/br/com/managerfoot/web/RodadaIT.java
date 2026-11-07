@@ -295,6 +295,7 @@ class RodadaIT {
 		mvc.perform(post(rodada + "/janela").param("mandante", String.valueOf(mandante)).with(como(treinador)).with(csrf()));
 		mvc.perform(get(rodada).param("janela", String.valueOf(mandante)).with(como(treinador)))
 			.andExpect(content().string(containsString("Parar o jogo no meu clube:")))
+			.andExpect(content().string(containsString("name=\"penaltis\" value=\"true\" data-enviar-ao-mudar checked=\"checked\"")))
 			.andExpect(content().string(containsString("name=\"lesoes\" value=\"true\" data-enviar-ao-mudar checked=\"checked\"")))
 			.andExpect(content().string(not(containsString("name=\"vermelhos\" value=\"true\" data-enviar-ao-mudar checked=\"checked\""))));
 

@@ -304,6 +304,11 @@ class RodadaAoVivoRepositorioIT {
 
 	/** Como {@link #sementeComLesaoDoUsuarioNaRodada1()}, para qualquer tipo de lance. */
 	private EventoPartida sementeComEventoDoUsuarioNaRodada1(java.util.function.Predicate<TipoEvento> tipo) {
+		return sementeComEventoDoUsuarioNaRodada1Por(e -> tipo.test(e.tipo()));
+	}
+
+	/** Como {@link #sementeComLesaoDoUsuarioNaRodada1()}, para qualquer lance. */
+	private EventoPartida sementeComEventoDoUsuarioNaRodada1Por(java.util.function.Predicate<EventoPartida> lance) {
 		for (long semente = 0; semente < 400; semente++) {
 			jogo = LigaDeTeste.criarJogo(moldes, jogos, contas);
 			temporadas.iniciarPrimeiraTemporada(jogo, semente);
@@ -318,7 +323,7 @@ class RodadaAoVivoRepositorioIT {
 					continue;
 				}
 				var lesao = rodada.noMinuto(p, Integer.MAX_VALUE).resultado().eventos().stream()
-					.filter(e -> tipo.test(e.tipo()) && e.lado() == lado && e.minuto() < 88)
+					.filter(e -> lance.test(e) && e.lado() == lado && e.minuto() < 88)
 					.findFirst();
 				if (lesao.isPresent()) {
 					return lesao.get();
@@ -331,8 +336,8 @@ class RodadaAoVivoRepositorioIT {
 	@Test
 	void comACaixaLesoesDesmarcadaALesaoNaoParaEAMaquinaTroca() {
 		EventoPartida lesao = sementeComLesaoDoUsuarioNaRodada1();
-		assertThat(aoVivo.paradas(jogo, usuario)).as("lesão marcada, vermelho desmarcado").isEqualTo(new RodadaAoVivoRepositorio.Paradas(true, false));
-		aoVivo.definirParadas(jogo, usuario, new RodadaAoVivoRepositorio.Paradas(false, false));
+		assertThat(aoVivo.paradas(jogo, usuario)).as("lesão e pênalti marcados, vermelho desmarcado").isEqualTo(RodadaAoVivoRepositorio.Paradas.INICIAIS);
+		aoVivo.definirParadas(jogo, usuario, new RodadaAoVivoRepositorio.Paradas(false, false, false));
 		aoVivo.iniciar(jogo, usuario, 1, T0);
 
 		// na velocidade normal (0,5 s por minuto), o minuto da lesão mais 3 já passou
@@ -345,7 +350,7 @@ class RodadaAoVivoRepositorioIT {
 	@Test
 	void comACaixaCartoesVermelhosMarcadaAExpulsaoParaEAJanelaMostraOExpulso() {
 		EventoPartida expulsao = sementeComEventoDoUsuarioNaRodada1(TipoEvento::expulsao);
-		aoVivo.definirParadas(jogo, usuario, new RodadaAoVivoRepositorio.Paradas(false, true));
+		aoVivo.definirParadas(jogo, usuario, new RodadaAoVivoRepositorio.Paradas(false, true, false));
 		aoVivo.iniciar(jogo, usuario, 1, T0);
 
 		EstadoRodada parada = estado(200);
@@ -356,6 +361,48 @@ class RodadaAoVivoRepositorioIT {
 		RodadaAoVivoRepositorio.JanelaJogo janela = aoVivo.janela(jogo, usuario, mandante, T0.plusSeconds(200)).orElseThrow();
 		RodadaAoVivoRepositorio.TimeNaJanela meu = janela.doUsuario() == Lado.CASA ? janela.casa() : janela.fora();
 		assertThat(meu.expulsao().jogador().id()).isEqualTo(expulsao.jogador().id());
+	}
+
+	@Test
+	void penaltiAFavorParaOJogoEOEscolhidoBateNoMinutoSeguinte() {
+		EventoPartida cobranca = sementeComEventoDoUsuarioNaRodada1Por(EventoPartida::penalti);
+		aoVivo.definirParadas(jogo, usuario, new RodadaAoVivoRepositorio.Paradas(false, false, true));
+		aoVivo.iniciar(jogo, usuario, 1, T0);
+
+		EstadoRodada parada = estado(200);
+		assertThat(parada.pausada()).isTrue();
+		assertThat(parada.minuto()).isEqualTo(cobranca.minuto());
+		long mandante = parada.jogoDoUsuario().mandante().id();
+		assertThat(parada.janelaQueAbre()).isEqualTo(mandante);
+		RodadaAoVivoRepositorio.JanelaJogo janela = aoVivo.janela(jogo, usuario, mandante, T0.plusSeconds(200)).orElseThrow();
+		RodadaAoVivoRepositorio.TimeNaJanela meu = janela.doUsuario() == Lado.CASA ? janela.casa() : janela.fora();
+		assertThat(meu.penaltiAguardando()).isTrue();
+		assertThat(janela.lances()).as("a cobrança ainda não aparece").noneMatch(EventoPartida::penalti);
+
+		Jogador escolhido = meu.emCampo().stream().filter(j -> j.id() != cobranca.jogador().id())
+			.filter(j -> j.posicao() != br.com.managerfoot.dominio.Posicao.GOLEIRO).findFirst().orElseThrow();
+		assertThatThrownBy(() -> aoVivo.escolherBatedor(jogo, usuario, 999_999L, T0.plusSeconds(200)))
+			.isInstanceOf(IllegalArgumentException.class).hasMessageContaining("em campo");
+		aoVivo.escolherBatedor(jogo, usuario, escolhido.id(), T0.plusSeconds(200));
+		Instant continuou = T0.plusSeconds(201);
+		aoVivo.continuar(jogo, usuario, continuou);
+
+		Instant depois = continuou.plusMillis(1200);
+		assertThat(aoVivo.estado(jogo, usuario, depois).orElseThrow().pausada()).as("não para de novo no mesmo pênalti").isFalse();
+		// a escolha fica gravada como substituição de um jogador por ele mesmo, e a partida refeita usa o escolhido
+		List<RodadaAoVivo.Substituicao> gravadas = jdbc.sql("""
+				SELECT mandante_id, minuto, lado, sai_id, entra_id FROM jogo_substituicao_ao_vivo WHERE jogo_id = :j""")
+			.param("j", jogo)
+			.query((rs, n) -> new RodadaAoVivo.Substituicao(rs.getLong("mandante_id"), rs.getInt("minuto"),
+					Lado.valueOf(rs.getString("lado")), rs.getLong("sai_id"), rs.getLong("entra_id")))
+			.list();
+		assertThat(gravadas).singleElement().satisfies(g -> assertThat(g.batedor()).isTrue());
+		RodadaAoVivo refeita = rodadas.preparar(jogo, 1, gravadas);
+		RodadaAoVivo.PartidaDaRodada minha = refeita.partidas().stream().filter(p -> p.jogo().mandante().id() == mandante)
+			.findFirst().orElseThrow();
+		assertThat(refeita.noMinuto(minha, Integer.MAX_VALUE).resultado().eventos())
+			.filteredOn(e -> e.penalti() && e.minuto() == cobranca.minuto() && e.lado() == cobranca.lado()).singleElement()
+			.satisfies(e -> assertThat(e.jogador().id()).isEqualTo(escolhido.id()));
 	}
 
 	@Test

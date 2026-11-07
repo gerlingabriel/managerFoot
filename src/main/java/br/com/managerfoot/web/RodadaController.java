@@ -260,6 +260,26 @@ class RodadaController {
 		return "redirect:/jogos/" + jogoId + "/rodada?janela=" + mandante;
 	}
 
+	/**
+	 * "Bater" no pênalti a favor (SPEC §12, rev. 133): grava quem bate e a partida volta a andar; a cobrança sai no
+	 * minuto seguinte. Sem jogador escolhido, bate o do plantel.
+	 */
+	@PostMapping("/jogos/{jogoId}/rodada/batedor")
+	String bater(@AuthenticationPrincipal Usuario usuario, @PathVariable long jogoId, @RequestParam("mandante") long mandante,
+			@RequestParam(name = "batedor", required = false) Long batedor, RedirectAttributes redirect) {
+		if (batedor != null) {
+			try {
+				aoVivo.escolherBatedor(jogoId, usuario.id(), batedor, relogio.instant());
+			}
+			catch (IllegalArgumentException e) {
+				redirect.addFlashAttribute("erro", e.getMessage());
+				return "redirect:/jogos/" + jogoId + "/rodada?janela=" + mandante;
+			}
+		}
+		aoVivo.continuar(jogoId, usuario.id(), relogio.instant());
+		return "redirect:/jogos/" + jogoId + "/rodada";
+	}
+
 	/** "Continuar" ou fechar a janela: a partida volta a andar. */
 	@PostMapping("/jogos/{jogoId}/rodada/continuar")
 	String continuar(@AuthenticationPrincipal Usuario usuario, @PathVariable long jogoId) {
@@ -296,8 +316,9 @@ class RodadaController {
 	String paradas(@AuthenticationPrincipal Usuario usuario, @PathVariable long jogoId,
 			@RequestParam(name = "lesoes", defaultValue = "false") boolean lesoes,
 			@RequestParam(name = "vermelhos", defaultValue = "false") boolean vermelhos,
+			@RequestParam(name = "penaltis", defaultValue = "false") boolean penaltis,
 			@RequestParam(name = "janela", required = false) Long janela) {
-		aoVivo.definirParadas(jogoId, usuario.id(), new RodadaAoVivoRepositorio.Paradas(lesoes, vermelhos));
+		aoVivo.definirParadas(jogoId, usuario.id(), new RodadaAoVivoRepositorio.Paradas(lesoes, vermelhos, penaltis));
 		return "redirect:/jogos/" + jogoId + "/rodada" + (janela == null ? "" : "?janela=" + janela);
 	}
 
