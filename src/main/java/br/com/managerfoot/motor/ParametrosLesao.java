@@ -14,7 +14,7 @@ import br.com.managerfoot.dominio.Temperamento;
  * @param lesoesPorMinuto chance de um time ter um lesionado em cada minuto
  * @param pesosTemperamento peso de cada temperamento no sorteio de quem se lesiona
  * @param gravidades faixa de cada gravidade
- * @param limitePorTemporada lesões no máximo por clube na temporada (definido pelo usuário: 2)
+ * @param limitePorTemporada lesões no máximo por clube na temporada (definido pelo usuário: 2 na rev. 69, 3 na rev. 131)
  */
 public record ParametrosLesao(double lesoesPorMinuto, Map<Temperamento, Double> pesosTemperamento,
 		Map<GravidadeLesao, Faixa> gravidades, int limitePorTemporada) {
@@ -73,8 +73,8 @@ public record ParametrosLesao(double lesoesPorMinuto, Map<Temperamento, Double> 
 	}
 
 	/**
-	 * Faixas e limite do usuário (rev. 69); frequência (~1,5 por clube por temporada de 38 rodadas,
-	 * antes do limite), proporção 60/30/10 e pesos 5/4/3/2/1 são provisórios do agente.
+	 * Faixas do usuário (rev. 69); frequência (3 por clube por temporada de 38 rodadas, antes do limite) e limite 3
+	 * pelo usuário na rev. 131; proporção 60/30/10 e pesos 5/4/3/2/1 são provisórios do agente.
 	 */
 	public static ParametrosLesao padrao() {
 		Map<Temperamento, Double> pesos = new EnumMap<>(Temperamento.class);
@@ -87,6 +87,7 @@ public record ParametrosLesao(double lesoesPorMinuto, Map<Temperamento, Double> 
 		gravidades.put(GravidadeLesao.LEVE, new Faixa(0.6, 1, 3, 1, 3));
 		gravidades.put(GravidadeLesao.MEDIA, new Faixa(0.3, 3, 6, 3, 6));
 		gravidades.put(GravidadeLesao.GRAVE, new Faixa(0.1, 5, 9, 5, 9));
-		return new ParametrosLesao(1.5 / (38 * 90), pesos, gravidades, 2);
+		// rev. 131, pelo usuário: o dobro da frequência (3 por clube em 38 jogos, antes do limite) e limite 3
+		return new ParametrosLesao(3.0 / (38 * 90), pesos, gravidades, 3);
 	}
 }

@@ -115,9 +115,10 @@ class ProcessamentoRodadaTest {
 	}
 
 	@Test
-	void clubeQueJaTeveDuasLesoesNaTemporadaNaoSeLesionaMais() {
+	void clubeQueJaChegouAoLimiteDeLesoesNaTemporadaNaoSeLesionaMais() {
 		Map<Long, Integer> todosNoLimite = new HashMap<>();
-		PLANTEIS.keySet().forEach(clube -> todosNoLimite.put(clube, 2));
+		int limite = br.com.managerfoot.motor.ParametrosMotor.padrao().lesao().limitePorTemporada();
+		PLANTEIS.keySet().forEach(clube -> todosNoLimite.put(clube, limite));
 		Disciplina noLimite = new Disciplina(Map.of(), Map.of(), Map.of(), todosNoLimite);
 		Temporada temporada = TEMPORADA;
 		for (int rodada = 1; rodada <= 10; rodada++) {

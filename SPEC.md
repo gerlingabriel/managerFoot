@@ -1,6 +1,6 @@
 # SPEC.md --- Especificação inicial do simulador de futebol
 
--   **Status:** versão inicial para revisão (rev. 130 — 2026-11-07)
+-   **Status:** versão inicial para revisão (rev. 131 — 2026-11-07)
 -   **Objetivo:** registrar os requisitos conhecidos, separar regras
     aprovadas de hipóteses e orientar a implementação incremental.
 -   **Referência de mecânicas:**
@@ -15,6 +15,7 @@
 
 ### Histórico de revisões
 
+-   **rev. 131 (2026-11-07):** pelo usuário (§7.4, §7.5, §10.5): **vermelho direto mais raro**, quase nunca no começo do jogo e mais provável com o passar do tempo; a expulsão comum passa a ser por dois amarelos. O vermelho direto era 5% dos cartões em qualquer minuto; agora cresce do zero até **2% no minuto 90**. Expulsões por jogo 0,23 → 0,15, das quais 85% por dois amarelos (eram 52%); até o minuto 15, 2,7% das expulsões (eram 9%). **Trava das goleadas maior por expulso:** com 1 expulso a mais ela começa com **3 gols** de vantagem (era 2); com 2 expulsos, com **5**. **Lesões:** o dobro da frequência e **limite de 3** por clube na temporada (era 2): 0,08 → 0,16 lesão por jogo, cerca de 2,4 por clube na temporada. O quadro da rodada e a janela do jogo mostram **um cartão vermelho por expulso** (antes, um só). Simulado em `docs/simulacoes/cartoes-e-lesoes.md`; opções escolhidas pelo usuário.
 -   **rev. 130 (2026-11-07):** pelo usuário (§8.4): **limite de estrangeiros em campo**. Conta só quem está em campo (o banco pode ter mais), pela regra de quem é estrangeiro no país; vale na liga e na copa nacional, não na continental nem no Mundial. Padrão **5** em todos os países, ajustável por país no banco editável (`limiteEstrangeiros`, de 0 a 11). Acima do limite, o Resumo do plantel mostra "6 de 5" em vermelho, a escalação ganha o problema "6 estrangeiros em campo: o limite é 5" e "Confirmar e jogar" trava; na continental e no Mundial aparece "7 · sem limite". A substituição que estoura é recusada. Tela aprovada (mockup). **Agente:** a máquina troca os estrangeiros excedentes pelo melhor que não conta da mesma posição (ou, sem ele, um jogador de linha de outra posição), perdendo o mínimo de força; o treinador da máquina não põe estrangeiro além do limite ao trocar lesionado ou goleiro expulso; a tática completa o time respeitando o limite. O jogo guarda o limite do banco em que foi criado (migração V49); jogos já criados ficam com 5.
 -   **rev. 129 (2026-11-07):** pelo usuário (§11.4): **sair da gravação**. "Sair", no alto da tela, é parar e voltar depois; não é abandono. No jogo em rede começado, o **convidado** tem "Sair da gravação" no Início, com uma confirmação que avisa que ele não volta mais: o efeito é o de ser tirado pelo administrador (o clube passa à máquina até o fim). O administrador não sai, porque é o centro do jogo; se quiser, apaga a gravação. Tela aprovada (mockup). **Agente:** só entre as rodadas, como "Tirar do jogo"; na sala, antes de a temporada começar, não aparece, porque quem sai poderia entrar de novo pelo link. A §14 deixa de ter tempo limite e abandono em aberto: o tempo limite automático foi recusado na rev. 104.
 -   **rev. 128 (2026-11-06):** pelo usuário (§10.3): **atalho do Enter**. No plantel, com a escalação completa, o Enter segue (confirma e joga, ou começa a próxima temporada); no leilão, confirma os lances, e no resultado vai para a rodada. Antes, o Enter no campo de lance acionava "Não quero nenhum", o primeiro botão do formulário. Detalhes do agente: com uma janela aberta (patrocínio, ficha, janela do clube) o Enter não faz nada; o botão escolhido pelo teclado (Tab) continua respondendo ao Enter; o que ficou com o foco por clique do mouse (tática, T/B/–) não. O botão de retirar todos vira **"✕ Limpar escalação"** em vermelho cheio (opção B do mockup, escolhida pelo usuário). Os botões que o Enter aciona mostram a dica **"Enter ↵"** (some em tela de toque).
@@ -1635,6 +1636,22 @@ ficar com a jogada no meio: 50/50 vira 75/25, 60/40 vira 90/10. Se passar de
   Sem expulso a mais: diferença de 4+ em 1,8% e 5+ de um time em 0,7%. Quem tem
   o expulso continua perdendo 76% e empatando 13%: a trava só segura o placar.
   Parâmetro `travaGoleadaComExpulsao` em `ParametrosDisciplina` (1 = sem trava).
+- **Definido (rev. 131), pelo usuário — trava por expulso a mais:** a trava começa
+  depois de **2 gols livres por expulso a mais**: com 1 expulso a mais, a partir de
+  **3 gols** de vantagem (3: × 0,4; 4: × 0,16…); com 2, a partir de **5**. Simulado
+  em `docs/simulacoes/cartoes-e-lesoes.md` (times iguais, já com o vermelho da rev.
+  131): com 1 expulso, quem o tem perde por 3+ em 29% (com a regra anterior, 19%);
+  com 2, perde por 5+ em 22% (antes, 5%) e o adversário faz 5+ em 31% (antes, 14%). Parâmetro `golsLivresPorExpulso` em `ParametrosDisciplina`.
+- **Definido (rev. 131), pelo usuário — vermelho direto pelo minuto:** a fração dos
+  cartões que é vermelho direto começa em zero e cresce em linha reta até **2% no
+  minuto 90** (era 5% em qualquer minuto); na prorrogação vale a do 90. A expulsão
+  comum passa a ser por dois amarelos: 0,15 expulsão por jogo (era 0,23), 85% por
+  dois amarelos (era 52%), 2,7% até o minuto 15 (era 9%), 24% no 1º tempo (era
+  36%). Parâmetros `proporcaoVermelhoDireto` (no minuto 90) e
+  `crescimentoVermelhoDireto` (expoente do minuto; 1 = linha reta).
+- **Definido (rev. 131), pelo usuário — tela:** com dois expulsos, o quadro da
+  rodada e a janela do jogo mostram **dois cartões vermelhos** ao lado do time (um
+  por expulso).
 - **Provisório (agente):** quem sai lesionado sem substituto não conta. Conta a
   diferença de expulsos: um de cada lado se anula, e cada expulso a mais multiplica
   de novo por 1,5. A chance de cada lance virar gol não muda.
@@ -1700,8 +1717,14 @@ ser reiniciado ao fim da temporada.
 
 **Definido (rev. 69), pelo usuário** (substitui o limite de cinco e o
 aumento sazonal de risco acima):
-- **No máximo 2 lesões por clube por temporada** (limite absoluto; cada
-  lesão conta, mesmo que seja do mesmo jogador). Zera na virada da temporada.
+- ~~**No máximo 2 lesões por clube por temporada**~~ **3 na rev. 131**, pelo
+  usuário (limite absoluto; cada lesão conta, mesmo que seja do mesmo jogador).
+  Zera na virada da temporada.
+- **Definido (rev. 131), pelo usuário:** as lesões estavam mais raras que as
+  expulsões. A frequência dobra (3 por clube em 38 jogos, antes do limite; era
+  1,5): 0,16 lesão por jogo (era 0,08), cerca de 2,4 por clube na temporada (era
+  1,2), e 58% dos clubes chegam ao limite. Simulado em
+  `docs/simulacoes/cartoes-e-lesoes.md`.
 - **Gravidade:** jogos fora e perda de força permanente, sorteados dentro da
   faixa:
 

@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test;
 import br.com.managerfoot.dominio.Escalacao;
 import br.com.managerfoot.dominio.Formacao;
 
-/** Trava das goleadas com expulso (SPEC §7.4, rev. 114). Sementes fixas: o resultado se repete. */
+/** Trava das goleadas com expulso (SPEC §7.4, rev. 114 e 131). Sementes fixas: o resultado se repete. */
 class TravaGoleadaExpulsaoTest {
 
 	private static final int PARTIDAS = 20_000;
@@ -45,10 +45,28 @@ class TravaGoleadaExpulsaoTest {
 
 		// um gol travado vira chute perdido, que sorteia defesa/trave/fora: o resto da partida muda um pouco
 		assertThat(com.comExpulso).isCloseTo(sem.comExpulso, org.assertj.core.data.Percentage.withPercentage(1));
-		assertThat(com.adversarioCincoOuMais).isLessThan(sem.adversarioCincoOuMais / 3);
-		// a trava só começa com 2 gols de vantagem: quem perde continua perdendo
+		// com 1 expulso a trava começa em 3 gols de vantagem; com 2, em 5 (rev. 131)
+		assertThat(com.adversarioCincoOuMais).isLessThan(sem.adversarioCincoOuMais / 2);
+		// a trava só começa depois dos gols livres: quem perde continua perdendo
 		assertThat((double) com.punidoPerde / com.comExpulso)
 			.isCloseTo((double) sem.punidoPerde / sem.comExpulso, org.assertj.core.data.Offset.offset(0.01));
+	}
+
+	@Test
+	void golsLivresCrescemComOsExpulsosAMais() {
+		ParametrosDisciplina d = ParametrosDisciplina.padrao();
+		assertThat(d.golsLivresPorExpulso()).isEqualTo(2);
+		assertThatIllegalArgumentException().isThrownBy(() -> d.comGolsLivresPorExpulso(0));
+	}
+
+	@Test
+	void vermelhoDiretoComecaEmZeroECresceAteOMinuto90() {
+		ParametrosDisciplina d = ParametrosDisciplina.padrao();
+		assertThat(d.proporcaoVermelhoDireto(0)).isZero();
+		assertThat(d.proporcaoVermelhoDireto(45)).isCloseTo(0.01, org.assertj.core.data.Offset.offset(1e-9));
+		assertThat(d.proporcaoVermelhoDireto(90)).isCloseTo(0.02, org.assertj.core.data.Offset.offset(1e-9));
+		assertThat(d.proporcaoVermelhoDireto(120)).as("na prorrogação vale a do 90").isEqualTo(d.proporcaoVermelhoDireto(90));
+		assertThat(d.comVermelhoDireto(0.05, 0).proporcaoVermelhoDireto(1)).as("expoente 0: igual no jogo todo").isEqualTo(0.05);
 	}
 
 	@Test

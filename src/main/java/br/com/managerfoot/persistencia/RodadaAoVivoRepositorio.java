@@ -768,8 +768,8 @@ public class RodadaAoVivoRepositorio {
 		return new PlacarAoVivo(p.jogo().mandante(), p.jogo().visitante(), publicos.get(p.jogo().mandante().id()),
 				golsCasa, golsFora,
 				p.jogo().mandante().id() == clube || p.jogo().visitante().id() == clube, ultimo,
-				eventos.stream().anyMatch(e -> EXPULSOES.contains(e.tipo()) && e.lado() == Lado.CASA),
-				eventos.stream().anyMatch(e -> EXPULSOES.contains(e.tipo()) && e.lado() == Lado.FORA), partida.prorrogacao(),
+				(int) eventos.stream().filter(e -> EXPULSOES.contains(e.tipo()) && e.lado() == Lado.CASA).count(),
+				(int) eventos.stream().filter(e -> EXPULSOES.contains(e.tipo()) && e.lado() == Lado.FORA).count(), partida.prorrogacao(),
 				penaltis.map(d -> d.gols(Lado.CASA)).orElse(null), penaltis.map(d -> d.gols(Lado.FORA)).orElse(null),
 				p.prioridade() == ProcessamentoRodada.PRIORIDADE_COPA && decisivo.isEmpty() && grupo == null,
 				volta.map(JogoDecisivo::golsCasaAntes).orElse(null), volta.map(JogoDecisivo::golsForaAntes).orElse(null), passa,
@@ -977,6 +977,7 @@ public class RodadaAoVivoRepositorio {
 	 *
 	 * @param publico pagantes, o mesmo que o avanço grava (modelo 1a)
 	 * @param ultimoLance gol, cartão, lesão ou pênalti defendido mais recente; nulo se não houve (SPEC rev. 33)
+	 * @param expulsosCasa expulsos do mandante; a tela mostra um cartão vermelho por expulso (rev. 131)
 	 * @param prorrogacao a partida da copa foi para a prorrogação
 	 * @param penaltisCasa gols do mandante na disputa de pênaltis, depois do fim; nulo sem disputa
 	 * @param primeiroJogo a ida de um confronto da copa
@@ -985,7 +986,7 @@ public class RodadaAoVivoRepositorio {
 	 * @param grupo nos grupos da continental, o nome do grupo ("Grupo C"); nulo fora deles
 	 */
 	public record PlacarAoVivo(Clube mandante, Clube visitante, int publico, int golsCasa, int golsFora, boolean doUsuario,
-			EventoPartida ultimoLance, boolean expulsaoCasa, boolean expulsaoFora, boolean prorrogacao, Integer penaltisCasa,
+			EventoPartida ultimoLance, int expulsosCasa, int expulsosFora, boolean prorrogacao, Integer penaltisCasa,
 			Integer penaltisFora, boolean primeiroJogo, Integer idaCasa, Integer idaFora, Clube passa, String grupo) {
 
 		/** É a volta da copa: a tela mostra a ida e o total (modelo 12b). */

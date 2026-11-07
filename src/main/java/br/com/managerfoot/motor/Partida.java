@@ -286,15 +286,18 @@ public final class Partida {
 	}
 
 	/**
-	 * Trava das goleadas com expulso (SPEC §7.4, rev. 114): com jogador a mais e 2 gols ou mais de vantagem,
-	 * a conversão cai a cada gol de vantagem além do primeiro. Sem expulso a mais vale 1, e o motor não muda.
+	 * Trava das goleadas com expulso (SPEC §7.4, rev. 114 e 131): com jogador a mais, a conversão cai a cada gol de
+	 * vantagem além dos livres (2 por expulso a mais: com 1, a partir de 3 gols; com 2, a partir de 5). Sem expulso a
+	 * mais vale 1, e o motor não muda.
 	 */
 	private double travaComExpulsao(Lado lado) {
 		int vantagem = gols(lado) - gols(lado.adversario());
-		if (expulsos(lado.adversario()) <= expulsos(lado) || vantagem < 2) {
+		int aMais = expulsos(lado.adversario()) - expulsos(lado);
+		int livres = parametros.disciplina().golsLivresPorExpulso() * aMais;
+		if (aMais <= 0 || vantagem <= livres) {
 			return 1;
 		}
-		return Math.pow(parametros.disciplina().travaGoleadaComExpulsao(), vantagem - 1);
+		return Math.pow(parametros.disciplina().travaGoleadaComExpulsao(), vantagem - livres);
 	}
 
 	/** Expulsos por cartão até agora; quem sai lesionado sem substituto não conta. */
@@ -450,7 +453,7 @@ public final class Partida {
 
 		Jogador infrator = Sorteio.ponderado(emCampo, j -> disciplina.peso(j.temperamento()), aleatorio);
 		TipoEvento tipo;
-		if (aleatorio.nextDouble() < disciplina.proporcaoVermelhoDireto()) {
+		if (aleatorio.nextDouble() < disciplina.proporcaoVermelhoDireto(minuto)) {
 			tipo = TipoEvento.CARTAO_VERMELHO;
 		} else if (time.amarelos(infrator) >= 1) {
 			tipo = TipoEvento.SEGUNDO_AMARELO;

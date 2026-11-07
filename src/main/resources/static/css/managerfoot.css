@@ -959,7 +959,8 @@ a.clube-linha:hover { color: var(--texto); background: rgba(242, 201, 76, 0.1); 
 .ultimo-lance { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 15px; color: var(--texto-claro); }
 .lance-texto { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-.lance, .expulsao { flex: none; }
+.lance, .expulsao, .expulsoes { flex: none; }
+.expulsoes { display: inline-flex; gap: 2px; }
 .lance.gol { width: 14px; height: 14px; border-radius: 50%; background: var(--texto); box-shadow: inset 0 0 0 3px #1A1A12, 0 0 0 1px var(--texto); }
 .lance.amarelo { width: 10px; height: 14px; border-radius: 2px; background: var(--destaque); }
 .lance.vermelho { width: 10px; height: 14px; border-radius: 2px; background: var(--erro); }

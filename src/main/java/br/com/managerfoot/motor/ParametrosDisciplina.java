@@ -11,7 +11,8 @@ import br.com.managerfoot.dominio.Temperamento;
  * (metas da §7.6: ~2 amarelos e 0,1–0,2 expulsão por jogo).
  *
  * @param cartoesPorMinuto chance de cartão por minuto para um time só de jogadores "normais"
- * @param proporcaoVermelhoDireto fração dos cartões que é vermelho direto
+ * @param proporcaoVermelhoDireto fração dos cartões que é vermelho direto no minuto 90; antes, ela segue
+ *        {@code crescimentoVermelhoDireto}
  * @param sensibilidadeTemperamento expoente aplicado à soma dos pesos do time em relação a um time
  *        só de "normais"; 0 = temperamento não muda a frequência, 1 = proporcional
  * @param pesosTemperamento peso de cada temperamento na roleta de quem recebe o cartão
@@ -22,11 +23,25 @@ import br.com.managerfoot.dominio.Temperamento;
  *        {@code chancePorMinuto}, por expulso a mais (SPEC §7.4, rev. 99)
  * @param travaGoleadaComExpulsao trava das goleadas com expulso (SPEC §7.4, rev. 114): quem tem jogador a mais
  *        e já ganha por 2 gols ou mais tem a conversão multiplicada por este fator a cada gol de vantagem além do
- *        primeiro; 1 = sem trava. Sem expulso a mais, nada muda
+ *        primeiro livre; 1 = sem trava. Sem expulso a mais, nada muda
+ * @param crescimentoVermelhoDireto expoente do minuto na chance de vermelho direto (SPEC §7.4, rev. 131): a fração
+ *        no minuto m é {@code proporcaoVermelhoDireto × (m / 90)^expoente}; 0 = igual no jogo todo, 1 = cresce em
+ *        linha reta do zero. Na prorrogação vale a do minuto 90
+ * @param golsLivresPorExpulso gols de vantagem sem trava por expulso a mais (rev. 131): a trava começa quando a
+ *        vantagem passa de {@code golsLivresPorExpulso × expulsos a mais}
  */
 public record ParametrosDisciplina(double cartoesPorMinuto, double proporcaoVermelhoDireto,
 		double sensibilidadeTemperamento, Map<Temperamento, Double> pesosTemperamento, double bonusDominioPorExpulsao,
-		double dominioMaximo, double chancesExtrasPorExpulsao, double travaGoleadaComExpulsao) {
+		double dominioMaximo, double chancesExtrasPorExpulsao, double travaGoleadaComExpulsao,
+		double crescimentoVermelhoDireto, int golsLivresPorExpulso) {
+
+	/** Sem crescimento do vermelho direto e com a trava a partir de 2 gols, como antes da rev. 131. */
+	public ParametrosDisciplina(double cartoesPorMinuto, double proporcaoVermelhoDireto, double sensibilidadeTemperamento,
+			Map<Temperamento, Double> pesosTemperamento, double bonusDominioPorExpulsao, double dominioMaximo,
+			double chancesExtrasPorExpulsao, double travaGoleadaComExpulsao) {
+		this(cartoesPorMinuto, proporcaoVermelhoDireto, sensibilidadeTemperamento, pesosTemperamento, bonusDominioPorExpulsao,
+				dominioMaximo, chancesExtrasPorExpulsao, travaGoleadaComExpulsao, 0, 1);
+	}
 
 	public ParametrosDisciplina {
 		Objects.requireNonNull(pesosTemperamento, "pesos de temperamento são obrigatórios");
@@ -55,6 +70,31 @@ public record ParametrosDisciplina(double cartoesPorMinuto, double proporcaoVerm
 		if (dominioMaximo <= 0.5 || dominioMaximo >= 1) {
 			throw new IllegalArgumentException("dominioMaximo deve ficar entre 0,5 e 1");
 		}
+		if (crescimentoVermelhoDireto < 0) {
+			throw new IllegalArgumentException("crescimentoVermelhoDireto não pode ser negativo");
+		}
+		if (golsLivresPorExpulso < 1) {
+			throw new IllegalArgumentException("golsLivresPorExpulso deve ser ao menos 1");
+		}
+	}
+
+	/** Fração dos cartões que é vermelho direto no minuto (rev. 131). */
+	public double proporcaoVermelhoDireto(int minuto) {
+		return proporcaoVermelhoDireto * Math.pow(Math.min(minuto, 90) / 90.0, crescimentoVermelhoDireto);
+	}
+
+	/** Cópia com outra regra do vermelho direto (calibração e testes). */
+	public ParametrosDisciplina comVermelhoDireto(double proporcao, double crescimento) {
+		return new ParametrosDisciplina(cartoesPorMinuto, proporcao, sensibilidadeTemperamento, pesosTemperamento,
+				bonusDominioPorExpulsao, dominioMaximo, chancesExtrasPorExpulsao, travaGoleadaComExpulsao, crescimento,
+				golsLivresPorExpulso);
+	}
+
+	/** Cópia com outro começo da trava das goleadas (calibração e testes). */
+	public ParametrosDisciplina comGolsLivresPorExpulso(int gols) {
+		return new ParametrosDisciplina(cartoesPorMinuto, proporcaoVermelhoDireto, sensibilidadeTemperamento,
+				pesosTemperamento, bonusDominioPorExpulsao, dominioMaximo, chancesExtrasPorExpulsao, travaGoleadaComExpulsao,
+				crescimentoVermelhoDireto, gols);
 	}
 
 	public double peso(Temperamento temperamento) {
@@ -71,13 +111,16 @@ public record ParametrosDisciplina(double cartoesPorMinuto, double proporcaoVerm
 		pesos.put(Temperamento.VIOLENTO, 8.0);
 		// expulsão: o adversário fica com 50% a mais da chance da jogada, até 99/1 (rev. 98, pelo usuário), e com
 		// um lance extra por minuto com 2 vezes a chance normal (rev. 99; docs/simulacoes/expulsao.md)
-		// trava das goleadas com expulso: 0,4 por gol de vantagem além do primeiro (rev. 114, recomendação aprovada)
-		return new ParametrosDisciplina(2.15 / 90 / 2, 0.05, 0.25, pesos, 0.5, 0.99, 2.0, 0.4);
+		// trava das goleadas com expulso: 0,4 por gol (rev. 114), a partir de 3 gols com 1 expulso a mais e de 5 com 2
+		// (rev. 131, pelo usuário); vermelho direto em 2% dos cartões no minuto 90, crescendo do zero (rev. 131, pelo
+		// usuário; docs/simulacoes/cartoes-e-lesoes.md)
+		return new ParametrosDisciplina(2.15 / 90 / 2, 0.02, 0.25, pesos, 0.5, 0.99, 2.0, 0.4, 1, 2);
 	}
 
 	/** Cópia com outra trava das goleadas com expulso (calibração e testes). */
 	public ParametrosDisciplina comTravaGoleada(double trava) {
 		return new ParametrosDisciplina(cartoesPorMinuto, proporcaoVermelhoDireto, sensibilidadeTemperamento,
-				pesosTemperamento, bonusDominioPorExpulsao, dominioMaximo, chancesExtrasPorExpulsao, trava);
+				pesosTemperamento, bonusDominioPorExpulsao, dominioMaximo, chancesExtrasPorExpulsao, trava,
+				crescimentoVermelhoDireto, golsLivresPorExpulso);
 	}
 }
